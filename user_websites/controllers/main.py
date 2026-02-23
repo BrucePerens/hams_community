@@ -108,8 +108,8 @@ class UserWebsitesController(http.Controller):
                 avatar_url = f"/web/image/res.users/{user.id}/avatar_128" if user.avatar_128 else ""
 
                 return request.render(page.view_id.xml_id, {
-                    'main_object': page,
-                    'profile_user': user,
+                    'main_object': page.with_user(request.env.user),
+                    'profile_user': user.with_user(request.env.user),
                     'is_owner': request.env.user.id == user.id,
                     'default_title': f"{user.name}'s Homepage",
                     'default_description': f"Welcome to the personal site of {user.name}.",
@@ -131,8 +131,8 @@ class UserWebsitesController(http.Controller):
                 page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 is_member = request.env.user in group.odoo_group_id.user_ids
                 return request.render(page.view_id.xml_id, {
-                    'main_object': page,
-                    'profile_group': group,
+                    'main_object': page.with_user(request.env.user),
+                    'profile_group': group.with_user(request.env.user),
                     'is_owner': is_member,
                     'default_title': f"{group.name} Homepage",
                     'default_description': f"Welcome to the official page of {group.name}.",
@@ -242,12 +242,12 @@ class UserWebsitesController(http.Controller):
         )
 
         return request.render('website_blog.blog_post_short', {
-            'posts': posts,
-            'blog': posts and posts[0].blog_id or (blogs[0] if blogs else False),
-            'blogs': blogs, 
-            'main_object': main_object, 
-            'profile_user': user,     
-            'profile_group': group,   
+            'posts': posts.with_user(request.env.user),
+            'blog': (posts[0].blog_id if posts else blogs[0]).with_user(request.env.user) if (posts or blogs) else False,
+            'blogs': blogs.with_user(request.env.user), 
+            'main_object': main_object.with_user(request.env.user), 
+            'profile_user': user.with_user(request.env.user) if user else None,     
+            'profile_group': group.with_user(request.env.user) if group else None,   
             'blog_url': blog_url,
             'tag': tag,
             'search': search,

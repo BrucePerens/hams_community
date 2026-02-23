@@ -34,8 +34,8 @@ class KnowledgeArticle(models.Model):
     member_ids = fields.Many2many('res.users', 'knowledge_article_member_rel', 'article_id', 'user_id', string="Shared Members")
 
     # --- Custom Implementation Fields ---
-    helpful_count = fields.Integer(string="Helpful Votes", default=0, tracking=True)
-    unhelpful_count = fields.Integer(string="Unhelpful Votes", default=0, tracking=True)
+    helpful_count = fields.Integer(string="Helpful Votes", default=0)
+    unhelpful_count = fields.Integer(string="Unhelpful Votes", default=0)
 
     # --- Constraints ---
     @api.constrains('parent_id')
