@@ -53,7 +53,7 @@ Our community relies on safe, respectful content. If you see a page or blog post
 ### 3.1. Core Architecture & Design Patterns
 * **Lazy JIT Provisioning:** Websites and Blogs do not exist upon user creation. They are provisioned Just-In-Time when the owner visits their slug root and triggers a POST request to `create_site`. This ensures explicit user consent to publish.
 * **Shared Blog Container:** To prevent database bloat, all user blog posts are housed in a single standard `blog.blog` record named exactly `"Community Blog"`. The controller dynamically filters standard Odoo views by the `owner_user_id` so users perceive they have isolated blogs.
-* **Proxy Ownership Pattern:** Standard users cannot create `ir.ui.view` or `website.page` records due to Odoo core security. The module circumvents this securely by explicitly assigning the `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via `.sudo()` exclusively for the database write. **Never use raw SQL to alter `create_uid`.**
+* **Proxy Ownership Pattern:** Standard users cannot create `ir.ui.view` or `website.page` records due to Odoo core security. The module circumvents this securely by explicitly assigning the `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated Service Account (`.with_user(svc_uid)`) exclusively for the database write. **Never use raw SQL to alter `create_uid`.**
 
 ### 3.2. Programmatic User Enrollment
 To enroll a user via API, XML-RPC, or external module, follow these steps strictly:
@@ -75,7 +75,7 @@ Users cannot manage content without the base module security group.
     })
 
 **3. Programmatic Page Provisioning (Optional):**
-If you must pre-provision a page, you must use `.sudo()` combined with the Proxy Ownership field.
+If you must pre-provision a page, use the Service Account combined with the `owner_user_id` field to bypass `ir.ui.view` creation limits while retaining proper ownership.
 
     slug = user.website_slug
     home_url = f"/{slug}/home"
@@ -89,7 +89,8 @@ If you must pre-provision a page, you must use `.sudo()` combined with the Proxy
         'owner_user_id': user.id,
         'arch': f'''<t name="Home" t-name="user_websites.home_{slug}">...</t>''',
     }
-    page = self.env['website.page'].sudo().create(page_vals)
+    svc_uid = self.env.ref('user_websites.user_user_websites_service_account').id
+    page = self.env['website.page'].with_user(svc_uid).create(page_vals)
 
 ### 3.3. Development Constraints (Odoo 19)
 If extending this module, adhere to the following Odoo 19 strict requirements:

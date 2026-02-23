@@ -35,6 +35,10 @@ The `user_websites` module enables decentralized content creation. It employs th
 
 ## 3. 🐍 Public API & Extensibility Methods
 
+### Frontend Widget Extensibility (The Dropzone)
+* **Context Provider:** The module dynamically injects `<meta name="user_websites_slug" content="...">` into the layout `<head>`. Vanilla JS widgets MUST query this meta tag to discover the current page owner's slug statelessly, rather than parsing the URL.
+* **Snippet Dropzone:** The module provides a `user_websites_snippet_category` template with an empty `user_websites_snippets_body` div. Dependent modules MUST use `xpath` to inject their custom profile widgets (e.g., stats, recent logs) into this dropzone to maintain strict Open Source Isolation.
+
 ### Programmatic Setup & Hooks
 * **`res.users._get_user_id_by_slug(slug)`**: A high-performance `@tools.ormcache` method. ALWAYS use this instead of `search()` in frontend controllers.
 * **`user_websites.owned.mixin`**: Inherit this in your custom models (e.g., `ham.equipment`) to instantly inherit the Proxy Ownership security rules via `self._check_proxy_ownership_write(vals)`.

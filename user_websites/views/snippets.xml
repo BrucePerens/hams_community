@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The Generic Integration Point for Dependent Modules -->
+    <template id="user_websites_snippet_category" inherit_id="website.snippets" name="User Websites Snippets">
+        <xpath expr="//div[@id='snippet_structure']" position="before">
+            <div id="snippet_user_websites" class="o_panel">
+                <div class="o_panel_header"><i class="fa fa-address-card-o"/> Profile Widgets</div>
+                <div class="o_panel_body" id="user_websites_snippets_body">
+                    <!-- Dependent modules (like ham_shack) will xpath their snippets into this body -->
+                </div>
+            </div>
+        </xpath>
+    </template>
+</odoo>

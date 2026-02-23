@@ -31,6 +31,12 @@
     </template>
 
     <template id="layout_inherit_user_navbar" inherit_id="website.layout" name="User Navbar Global">
+        <xpath expr="//head" position="inside">
+            <!-- Universal Context Provider for Frontend JS Widgets -->
+            <t t-if="resolved_slug">
+                <meta name="user_websites_slug" t-att-content="resolved_slug"/>
+            </t>
+        </xpath>
         <xpath expr="//header" position="after">
             <t t-if="resolved_slug">
                 <t t-call="user_websites.user_navbar"/>

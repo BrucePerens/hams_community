@@ -131,3 +131,22 @@ class TestQWebContext(odoo.tests.common.HttpCase):
             response.content, 
             "Public guests should successfully render the layout with the report button injected."
         )
+
+    def test_05_meta_slug_context_provider(self):
+        """
+        Verify that the universal context provider meta tag is injected into the head
+        for downstream JS widgets to consume safely.
+        """
+        response = self.url_open(f'/{self.user_render.website_slug}/home')
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertIn(
+            b'name="user_websites_slug"', 
+            response.content, 
+            "The layout MUST inject the user_websites_slug meta tag into the DOM."
+        )
+        self.assertIn(
+            f'content="{self.user_render.website_slug}"'.encode('utf-8'), 
+            response.content, 
+            "The meta tag MUST contain the correct resolved_slug."
+        )

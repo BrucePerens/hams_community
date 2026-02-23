@@ -44,6 +44,7 @@ This module enables:
         # Templates
         'views/user_websites_templates.xml',
         'views/website_layout.xml',
+        'views/snippets.xml',
     ],
     'assets': {
         'web.assets_frontend': [

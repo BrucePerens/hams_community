@@ -35,7 +35,7 @@ This module employs several advanced design patterns to ensure scalability and s
 
 * **Lazy JIT Provisioning:** Websites and Blogs do not exist upon user creation. They are provisioned "Just-In-Time" when the owner visits their slug root and triggers the creation process, ensuring explicit user consent.
 * **Shared Blog Container:** To prevent database bloat, all user blog posts are housed in a single standard `blog.blog` record named "Community Blog". The controller dynamically filters standard Odoo views by the `owner_user_id`.
-* **Proxy Ownership Pattern:** Standard Odoo users cannot create `ir.ui.view` or `website.page` records due to core security. The module securely circumvents this by explicitly assigning an `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via `.sudo()` *strictly* for the database write.
+* **Proxy Ownership Pattern:** Standard Odoo users cannot create `ir.ui.view` or `website.page` records due to core security. The module securely circumvents this by explicitly assigning an `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated Service Account (`.with_user(svc_uid)`) *strictly* for the database write.
 
 ## 🧪 Testing
 
