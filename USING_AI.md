@@ -1,4 +1,10 @@
-# What Non-Technical People Should Know About AI
+--
+title: "What People Should Know About AI"
+author: "Bruce Perens <bruce@perens.com> +1 510-4PERENS"
+date: "2026-02-23"
+---
+# What People Should Know About AI
+- Bruce Perens <bruce@perens.com> +1 510-4PERENS.
 
 ## 1. The Reality of Working with AI
 

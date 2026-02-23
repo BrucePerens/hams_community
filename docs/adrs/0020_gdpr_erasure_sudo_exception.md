@@ -1,4 +1,4 @@
-# ADR 0017: GDPR Erasure `.sudo()` Exception
+# ADR 0020: GDPR Erasure `.sudo()` Exception
 
 *Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
 
