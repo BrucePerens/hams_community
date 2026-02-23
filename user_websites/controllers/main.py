@@ -10,7 +10,7 @@ from odoo.tools import consteq
 from werkzeug.urls import url_encode, url_parse
 import werkzeug
 import logging
-from .hooks import install_knowledge_docs
+from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
 

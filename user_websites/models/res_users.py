@@ -247,3 +247,6 @@ class ResUsers(models.Model):
         self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)]).unlink()
         self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)]).unlink()
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})
+
+        if hasattr(super(), '_execute_gdpr_erasure'):
+            super()._execute_gdpr_erasure()
