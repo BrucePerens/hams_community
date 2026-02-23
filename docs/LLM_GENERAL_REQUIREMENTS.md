@@ -11,12 +11,10 @@ This document defines the strict operational parameters for the Large Language M
 ### 🗣️ Communication & Tone Mandates
 * **No Praise or Flattery:** You are STRICTLY FORBIDDEN from praising the user. Deliver information directly and professionally without conversational fluff.
 * **No Repetitive Compliance Announcements:** Do not emit statements confirming compliance with basic formatting or encoding rules that have already been established. Reserve compliance summaries exclusively for complex architectural, security, or Burn List evaluations.
-
 * **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a `data/documentation.html` file, and you MUST inject it via a `post_init_hook` in `hooks.py` as a soft dependency (checking `if 'knowledge.article' in env:`).
 * **System Master Documentation Mandate:** Any new user-facing features MUST be added to `docs/SYSTEM_USER_GUIDE.md`. Any new API endpoints MUST be added to `docs/SYSTEM_APIs.md`.
 
 * **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
-
 * [ ] **Documentation:** Are `README.md`, the module's `LLM_DOCUMENTATION.md`, its copy in `docs/modules/`, `data/documentation.html`, `docs/SYSTEM_USER_GUIDE.md`, and `docs/SYSTEM_APIs.md` updated?
 
 ### 🔄 Protocol Completeness & Multi-Step Execution (The "Finish the Job" Mandate)
@@ -110,13 +108,68 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 ### 📦 JSON Artifact Extraction Format (AEF 4.0)
 To completely bypass Unix/Linux terminal input buffer limits, you MUST use the AEF 4.0 JSON schema.
-
 **JSON Safety & Selective URL-Encoding (`url-encoded`):**
 To eliminate the "Backslash Plunge" (JSON parsing failures caused by unescaped quotes), default to Selective URL-Encoding for any file containing complex regex, Windows paths, or UI-crashing tags.
 * Specify `"encoding": "url-encoded"`.
 * Selectively percent-encode ONLY: `"` (`"`), `\` (`\`), `<` (`<`), `>` (`>`), and `&` (`&`). Do NOT globally encode spaces or newlines.
 * If a file is standard plain text/markdown without hazards, you may specify `"encoding": "utf-8"` with standard JSON escaping.
-
 **Rules for Standard Output:**
 * Output exactly **one** fenced code block formatted as ` ```json `.
-* The `content` value MUST be a JSON array of strings (one string per line, including trailing `\n`). NEVER output Base64.
+* The `content` value MUST be a JSON array of strings (one string per line, including trailing `\n`).
+NEVER output Base64.
+
+### 🛠️ Operation Types & Schemas
+The AEF extraction script supports three `operation` types for files: `overwrite` (default), `search-and-replace`, and `diff`.
+
+**1. Overwrite (Default)**
+Replaces the entire file. Use the standard schema:
+```json
+{
+  "path": "path/to/file.py",
+  "operation": "overwrite",
+  "encoding": "utf-8",
+  "content": [
+    "full file content...\n"
+  ]
+}
+```
+
+**2. Search and Replace**
+Replaces specific blocks of code. You MUST provide a `blocks` array. Each block contains `search` and `replace` arrays containing exact, unaltered lines.
+```json
+{
+  "path": "path/to/file.py",
+  "operation": "search-and-replace",
+  "encoding": "utf-8",
+  "blocks": [
+    {
+      "search": [
+        "    def old_method(self):\n",
+        "        pass\n"
+      ],
+      "replace": [
+        "    def new_method(self):\n",
+        "        return True\n"
+      ]
+    }
+  ]
+}
+```
+
+**3. Unified Diff**
+Applies a standard patch. The `content` array MUST contain a valid Unified Diff format compatible with `patch -p1`.
+```json
+{
+  "path": "path/to/file.py",
+  "operation": "diff",
+  "encoding": "utf-8",
+  "content": [
+    "--- a/path/to/file.py\n",
+    "+++ b/path/to/file.py\n",
+    "@@ -10,3 +10,3 @@\n",
+    " def my_func():\n",
+    "-    return False\n",
+    "+    return True\n"
+  ]
+}
+```
