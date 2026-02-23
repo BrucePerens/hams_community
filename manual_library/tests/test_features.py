@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+import odoo.tests
+
+@odoo.tests.common.tagged('post_install', '-at_install')
+class TestManualFeatures(odoo.tests.common.HttpCase):
+
+    def setUp(self):
+        super(TestManualFeatures, self).setUp()
+        
+        self.searchable_article = self.env['knowledge.article'].create({
+            'name': 'How to deploy Python',
+            'body': '<p>This is a guide about deploying python web applications.</p>',
+            'is_published': True,
+        })
+        
+        self.hidden_article = self.env['knowledge.article'].create({
+            'name': 'Secret Python Configs',
+            'body': '<p>Do not share these configs.</p>',
+            'is_published': False,
+        })
+
+    def test_01_search_functionality(self):
+        """Verify the search route correctly identifies published content and hides unpublished."""
+        self.authenticate(None, None)
+        
+        # Search by title keyword
+        response = self.url_open('/manual/search?search=deploy')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'How to deploy Python', response.content)
+        
+        # Search by body keyword
+        response_body = self.url_open('/manual/search?search=applications')
+        self.assertIn(b'How to deploy Python', response_body.content)
+        
+        # Ensure hidden content is NOT returned in search results
+        response_hidden = self.url_open('/manual/search?search=Secret')
+        self.assertNotIn(b'Secret Python Configs', response_hidden.content, "Unpublished articles must never appear in public search results.")
+
+    def test_02_article_feedback_submission(self):
+        """Verify the feedback controller securely increments the helpful counter via sudo."""
+        self.authenticate(None, None)
+        
+        self.assertEqual(self.searchable_article.helpful_count, 0)
+        self.assertEqual(self.searchable_article.unhelpful_count, 0)
+        
+        # Submit a 'Helpful' rating
+        response = self.url_open('/manual/feedback', data={
+            'csrf_token': odoo.http.Request.csrf_token(self),
+            'article_id': self.searchable_article.id,
+            'is_helpful': '1'
+        }, method='POST')
+        
+        # Check that the database counter was incremented
+        self.searchable_article.invalidate_recordset(['helpful_count'])
+        self.assertEqual(self.searchable_article.helpful_count, 1, "The helpful_count integer should be incremented.")
+        
+        # Verify safe redirection
+        self.assertIn(
+            b'feedback_submitted=1', 
+            response.url.encode(), 
+            "The controller must append the success parameter and redirect safely."
+        )
+
+    def test_03_negative_feedback_submission(self):
+        """Verify the feedback controller securely increments the unhelpful counter via sudo."""
+        self.authenticate(None, None)
+        
+        self.assertEqual(self.searchable_article.unhelpful_count, 0)
+        
+        # Submit a 'Not Helpful' rating
+        response = self.url_open('/manual/feedback', data={
+            'csrf_token': odoo.http.Request.csrf_token(self),
+            'article_id': self.searchable_article.id,
+            'is_helpful': '0'
+        }, method='POST')
+        
+        # Check that the database counter was incremented
+        self.searchable_article.invalidate_recordset(['unhelpful_count'])
+        self.assertEqual(self.searchable_article.unhelpful_count, 1, "The unhelpful_count integer should be incremented.")

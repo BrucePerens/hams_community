@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+# Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+import ast
+from odoo.tests.common import HttpCase, tagged
+
+@tagged('post_install', '-at_install')
+class TestSubscriptionsAndDigest(HttpCase):
+
+    def setUp(self):
+        super(TestSubscriptionsAndDigest, self).setUp()
+        
+        # 1. Create a Content Owner
+        self.creator = self.env['res.users'].create({
+            'name': 'Content Creator',
+            'login': 'creator_test',
+            'email': 'creator@example.com',
+            'website_slug': 'creator-test',
+            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+        })
+        
+        # 2. Create a Follower
+        self.follower = self.env['res.users'].create({
+            'name': 'Enthusiastic Follower',
+            'login': 'follower_test',
+            'email': 'follower@example.com',
+            'website_slug': 'follower-test',
+            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+        })
+        
+        # Subscribe Follower to Creator's Partner
+        self.creator.partner_id.message_subscribe(partner_ids=[self.follower.partner_id.id])
+
+        # 3. Create a recent post
+        blog = self.env['blog.blog'].search([('name', '=', 'Community Blog')], limit=1)
+        if not blog:
+            blog = self.env['blog.blog'].create({'name': 'Community Blog'})
+            
+        self.env['blog.post'].create({
+            'name': 'My New Weekly Recipe',
+            'blog_id': blog.id,
+            'owner_user_id': self.creator.id,
+            'is_published': True,
+            'website_published': True  # Explicitly set mixin field for testing environments
+        })
+
+    def test_01_weekly_digest_and_unsubscribe_headers(self):
+        """
+        Verify that the cron correctly generates emails, successfully injects the 
+        List-Unsubscribe headers, and that the unsubscribe route works.
+        """
+        # Execute the cron job method directly
+        self.env['blog.post'].send_weekly_digest()
+        
+        # Find the generated email natively linked to the recipient partner
+        mail = self.env['mail.mail'].search([
+            ('recipient_ids', 'in', [self.follower.partner_id.id]),
+            ('subject', 'ilike', 'Weekly Update from Content Creator')
+        ], limit=1)
+        
+        self.assertTrue(mail, "The system must generate a mail.mail record for the follower.")
+        
+        # Extract headers (FIXED: Replaced dangerous eval() with safe ast.literal_eval)
+        headers_dict = ast.literal_eval(mail.headers) if mail.headers else {}
+        self.assertIn('List-Unsubscribe', headers_dict, "The email must contain the List-Unsubscribe header.")
+        self.assertIn('List-Unsubscribe-Post', headers_dict, "The email must contain the List-Unsubscribe-Post header.")
+        
+        # Extract the unsubscribe URL from the header (it's wrapped in angle brackets)
+        unsub_url_raw = headers_dict['List-Unsubscribe']
+        unsub_url = unsub_url_raw.strip('<>')
+        
+        self.assertTrue('/website/unsubscribe/res.partner/' in unsub_url, "The URL must map to the correct controller route.")
+        
+        # Verify the follower is currently subscribed
+        self.assertIn(self.follower.partner_id, self.creator.partner_id.message_follower_ids.mapped('partner_id'))
+        
+        # Simulate hitting the unsubscribe URL via an unauthenticated session (public user)
+        self.authenticate(None, None)
+        # Extract just the path for url_open (stripping the base_url)
+        path = unsub_url.split(self.env['ir.config_parameter'].get_param('web.base.url'))[-1]
+        
+        response = self.url_open(path)
+        self.assertEqual(response.status_code, 200, "The unsubscribe route should render a success page.")
+        self.assertIn(b'Unsubscribed Successfully', response.content)
+        
+        # Verify the follower has actually been removed
+        self.creator.partner_id.invalidate_recordset(['message_follower_ids'])
+        self.assertNotIn(
+            self.follower.partner_id, 
+            self.creator.partner_id.message_follower_ids.mapped('partner_id'),
+            "The follower must be removed from the record after accessing a valid unsubscribe link."
+        )
+
+    def test_02_invalid_unsubscribe_token(self):
+        """
+        Ensure that malicious actors cannot spoof the unsubscription URL to 
+        force-remove other users from mailing lists.
+        """
+        # Attempt an unsubscribe with a forged token
+        fake_token = "1234abcd5678"
+        url = f"/website/unsubscribe/res.partner/{self.creator.partner_id.id}/{self.follower.partner_id.id}/{fake_token}"
+        
+        self.authenticate(None, None)
+        response = self.url_open(url)
+        
+        self.assertEqual(response.status_code, 403, "The controller must return a 403 Forbidden for invalid tokens.")
+        
+        # Verify the user is STILL subscribed
+        self.creator.partner_id.invalidate_recordset(['message_follower_ids'])
+        self.assertIn(
+            self.follower.partner_id, 
+            self.creator.partner_id.message_follower_ids.mapped('partner_id'),
+            "The follower must not be removed if the token is invalid."
+        )

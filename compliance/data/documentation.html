@@ -1,0 +1,64 @@
+<h1 class="mb-4">Site Owner's Guide to Regulatory Compliance</h1>
+<p class="lead text-muted">A comprehensive guide for community administrators regarding GDPR, CCPA, ePrivacy, WCAG, and platform moderation regulations.</p>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">1. Data Privacy &amp; Protection (GDPR &amp; CCPA)</h2>
+<p>Modern data protection laws like the General Data Protection Regulation (GDPR) in Europe and the California Consumer Privacy Act (CCPA) mandate strict handling of personal data. This platform is built with <strong>Privacy by Design</strong>.</p>
+<ul>
+    <li><strong>Data Minimization:</strong> The platform avoids unnecessary data collection. System view counters operate without logging Personally Identifiable Information (PII) or IP addresses.</li>
+    <li><strong>Data Portability (Right to Access):</strong> Users have the right to request a copy of their data. The platform provides an automated JSON export tool at <code>/my/privacy</code>.</li>
+    <li><strong>Right to Erasure (Right to be Forgotten):</strong> Users must be able to delete their accounts and data. An automated hard-delete facility is available at <code>/my/privacy</code>, which immediately unlinks all authored pages and blogs.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">2. Cookie Consent (ePrivacy Directive)</h2>
+<p>The ePrivacy Directive (often called the "Cookie Law") requires explicit user consent before storing non-essential cookies (like analytics or marketing trackers) on a user's device.</p>
+<ul>
+    <li><strong>Native Integration:</strong> This module automatically enforces Odoo's native Cookie Consent Bar across all active websites.</li>
+    <li><strong>Compliance Protocol:</strong> Do not bypass this bar by hardcoding third-party tracking scripts into your website templates. All trackers must hook into the core framework's consent state.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">3. Web Accessibility (WCAG 2.1 AA)</h2>
+<p>The Web Content Accessibility Guidelines (WCAG) ensure that web content is accessible to people with disabilities, including visual, auditory, physical, speech, cognitive, and neurological disabilities. Many jurisdictions now legally require WCAG 2.1 AA compliance.</p>
+<ul>
+    <li><strong>Semantic HTML:</strong> The platform mandates proper tag hierarchy (e.g., using <code>&lt;button&gt;</code> instead of styled <code>&lt;div&gt;</code> elements) for screen readers.</li>
+    <li><strong>Keyboard Navigability:</strong> All interactive elements must be fully navigable via the <code>Tab</code> key with visible focus states.</li>
+    <li><strong>ARIA Labels:</strong> Icon-only buttons (like the moderation flag) are equipped with <code>aria-label</code> attributes to describe their function to assistive technologies.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">4. Platform Moderation (Digital Services Act / DSA)</h2>
+<p>Regulations governing user-generated content, such as the EU's Digital Services Act (DSA), require platforms to have transparent, accessible, and fair moderation processes.</p>
+<ul>
+    <li><strong>Notice and Action Mechanism:</strong> The platform features a persistent "Report Violation" button on user-generated content, allowing guests and users to report abuse.</li>
+    <li><strong>Reporter Shielding:</strong> To prevent retaliation, the identity of the complainant is strictly shielded from the content owner via ORM Record Rules.</li>
+    <li><strong>Fair Appeals:</strong> The automated Three-Strike suspension system is paired with a built-in appeals process, ensuring users can contest moderation decisions.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">5. Required Legal Boilerplates</h2>
+<p>To operate legally, your website must publicly display specific policy documents. The <code>compliance</code> module automatically provisions editable, AGPL-3 compatible templates for:</p>
+<ul>
+    <li><strong>Privacy Policy</strong> (<code>/privacy</code>)</li>
+    <li><strong>Cookie Policy</strong> (<code>/cookie-policy</code>)</li>
+    <li><strong>Terms of Service</strong> (<code>/terms</code>)</li>
+</ul>
+<div class="alert alert-info mt-3">
+    <i class="fa fa-info-circle" aria-hidden="true"></i> <em>These pages are provisioned using non-destructive <code>noupdate="1"</code> XML. This ensures that any manual edits you make to these policies using the Odoo website builder will never be overwritten during future module upgrades.</em>
+</div>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">Module Compliance Statement: Global Compliance</h2>
+<p><strong>How the <code>compliance</code> module complies with the above regulations:</strong></p>
+<ul>
+    <li><strong>ePrivacy:</strong> Directly enforces the activation of the core <code>cookies_bar</code> upon installation.</li>
+    <li><strong>Transparency:</strong> Automatically provisions the required legal boilerplate pages (Privacy Policy, Cookie Policy, Terms of Service) utilizing standard Odoo website pages.</li>
+    <li><strong>WCAG:</strong> The generated QWeb templates for the legal pages utilize semantic HTML structures (<code>&lt;h1&gt;</code> through <code>&lt;h4&gt;</code>, standard lists) and respect standard theme contrasts.</li>
+</ul>

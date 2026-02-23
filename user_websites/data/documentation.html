@@ -1,0 +1,71 @@
+<h1 class="mb-4">User Websites Module Documentation</h1>
+<p class="lead text-muted"><strong>Version:</strong> Odoo 19 Community<br/>
+<strong>Summary:</strong> Enables decentralized, multi-tenant content creation within a single Odoo instance, allowing users to build personal or group-managed websites and blogs.</p>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">1. System Configuration</h2>
+<p>Administrators can configure global module behaviors by navigating to <strong>Settings &gt; General Settings &gt; User Websites</strong>.</p>
+<ul class="mb-4">
+    <li><strong>Global Page Limit:</strong> Define the default maximum number of web pages a standard user can create. (Note: A user-specific limit defined on their profile will override this global setting).</li>
+    <li><strong>User Websites Administrators:</strong> Assign specific users to the administrative group. These users receive full access to manage all group sites, personal sites, and content violation reports.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">2. End-User Guide</h2>
+<p>The User Websites module allows you to host your own personal corner of the community or collaborate with others on a group page.</p>
+
+<h4 class="mt-4">2.1. Managing Your Personal Website &amp; Blog</h4>
+<ul>
+    <li><strong>Your URL:</strong> Your personal website is located at <code>/&lt;your-username&gt;/home</code>. Your blog is located at <code>/&lt;your-username&gt;/blog</code>.</li>
+    <li><strong>Getting Started:</strong> Your site is not created automatically. To build it, navigate to your personal URL while logged in. The system will prompt you to create your homepage.</li>
+    <li><strong>Editing:</strong> Once created, use the standard Odoo website builder to drag and drop blocks, write text, and publish your pages.</li>
+</ul>
+
+<h4 class="mt-4">2.2. Joining the Community Directory</h4>
+<p>By default, your website is hidden from the public community list to protect your privacy. To make your site discoverable:</p>
+<ol>
+    <li>Go to your <strong>Preferences</strong> (My Profile).</li>
+    <li>Navigate to the <strong>User Websites</strong> tab.</li>
+    <li>Check the box labeled <strong>"Show in Public Directory"</strong>.</li>
+</ol>
+
+<h4 class="mt-4">2.3. Group Websites</h4>
+<p>If you are part of a User Website Group (like a club, committee, or project team), you share ownership of a group website.</p>
+<ul>
+    <li>Group sites function exactly like personal sites but are located at the group's specific URL.</li>
+    <li>Any member of the group can edit pages and publish blog posts on behalf of the group.</li>
+</ul>
+
+<h4 class="mt-4">2.4. Reporting Content Violations</h4>
+<p>If you see a page or blog post that violates community guidelines:</p>
+<ol>
+    <li>Click the <strong>Report Violation</strong> button (marked with a flag icon) located at the bottom of the content.</li>
+    <li>Submit the report.</li>
+</ol>
+<div class="alert alert-info mt-3">
+    <i class="fa fa-info-circle" aria-hidden="true"></i> <em>Note: To protect you against retaliation, the owner of the content cannot see who reported them, nor can they view the report itself. It goes directly to the site administrators.</em>
+</div>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">3. Integrator &amp; Developer Guide</h2>
+
+<h4 class="mt-4">3.1. Core Architecture &amp; Security</h4>
+<ul>
+    <li><strong>Lazy JIT Provisioning:</strong> Websites and Blogs do not exist upon user creation. They are provisioned Just-In-Time to ensure explicit user consent to publish.</li>
+    <li><strong>Shared Blog Container:</strong> All user blog posts are housed in a single standard <code>blog.blog</code> record named "Community Blog" to prevent database bloat.</li>
+    <li><strong>Proxy Ownership Pattern:</strong> Standard users cannot create views or pages natively. The module securely circumvents this by explicitly assigning the <code>owner_user_id</code> upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via <code>.sudo()</code> strictly for the database write.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">4. Regulatory Compliance Statement</h2>
+<p><strong>How the <code>user_websites</code> module complies with regulations:</strong></p>
+<ul>
+    <li><strong>GDPR / CCPA (Data Portability &amp; Erasure):</strong> Provides the <code>/my/privacy</code> portal dashboard, allowing users to export their generated content to a machine-readable JSON format and permanently hard-delete all their pages, blogs, and directory listings instantly.</li>
+    <li><strong>ePrivacy (Cookies):</strong> Uses privacy-friendly server-side view counters (<code>view_count</code>) instead of tracking cookies. It relies natively on Odoo's framework consent state.</li>
+    <li><strong>WCAG 2.1 AA:</strong> All frontend templates and modals use semantic HTML. Icon-only buttons (like the Report Violation flag and trash icons) include <code>aria-label</code> or <code>title</code> attributes. It uses proper heading hierarchies within page layouts.</li>
+    <li><strong>DSA (Digital Services Act):</strong> Features a built-in "Report Violation" tool that strictly shields the reporter's identity from the content owner. It enforces a Three-Strike moderation system with an automated suspension and an integrated appeals process.</li>
+</ul>

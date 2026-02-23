@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record model="ir.module.category" id="module_category_user_websites">
+            <field name="name">User Websites</field>
+            <field name="description">User rights for the User Websites module.</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record model="res.groups.privilege" id="privilege_user_websites">
+            <field name="name">Website Access</field>
+            <field name="category_id" ref="module_category_user_websites"/>
+        </record>
+
+        <record id="group_user_websites_user" model="res.groups">
+            <field name="name">User Website Owner</field>
+            <field name="privilege_id" ref="privilege_user_websites"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="group_user_websites_administrator" model="res.groups">
+            <field name="name">Administrator</field>
+            <field name="privilege_id" ref="privilege_user_websites"/>
+            <field name="implied_ids" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+        </record>
+        
+        <record id="group_user_websites_service_account" model="res.groups">
+            <field name="name">Service Account: User Websites Provisioning</field>
+        </record>
+        
+        <record id="website_page_group_rule" model="ir.rule">
+            <field name="name">Website Page Group Rule</field>
+            <field name="model_id" ref="website.model_website_page"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('user_websites_group_id.odoo_group_id.user_ids', 'in', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="blog_post_group_rule" model="ir.rule">
+            <field name="name">Blog Post Group Rule</field>
+            <field name="model_id" ref="website_blog.model_blog_post"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('user_websites_group_id.odoo_group_id.user_ids', 'in', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+    </data>
+
+    <data>
+        <record id="content_violation_report_user_rule" model="ir.rule">
+            <field name="name">Content Violation Report User Rule</field>
+            <field name="model_id" ref="model_content_violation_report"/>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="domain_force">['|', ('create_uid', '=', user.id), ('reported_by_user_id', '=', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="content_violation_report_admin_rule" model="ir.rule">
+            <field name="name">Content Violation Report Admin Rule</field>
+            <field name="model_id" ref="model_content_violation_report"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_administrator'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="website_page_private_rule" model="ir.rule">
+            <field name="name">Website Page Private Rule</field>
+            <field name="model_id" ref="website.model_website_page"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('owner_user_id', '=', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="blog_post_private_rule" model="ir.rule">
+            <field name="name">Blog Post Private Rule</field>
+            <field name="model_id" ref="website_blog.model_blog_post"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('owner_user_id', '=', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="blog_blog_private_rule" model="ir.rule">
+            <field name="name">Blog Private Rule</field>
+            <field name="model_id" ref="website_blog.model_blog_blog"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+    </data>
+</odoo>

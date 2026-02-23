@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="user_user_websites_service_account" model="res.users">
+            <field name="name">System Provisioner</field>
+            <field name="login">sys_provisioner</field>
+            <field name="active" eval="True"/>
+            <field name="groups_id" eval="[(6, 0, [ref('user_websites.group_user_websites_service_account')])]"/>
+        </record>
+        
+        <record id="seq_content_violation_report" model="ir.sequence">
+            <field name="name">Content Violation Report</field>
+            <field name="code">content.violation.report</field>
+            <field name="prefix">RPT/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="email_template_content_violation" model="mail.template">
+            <field name="name">Content Violation Report</field>
+            <field name="model_id" ref="user_websites.model_content_violation_report"/>
+            <field name="subject">Content Violation Report: {{ object.target_url }}</field>
+            <field name="email_from">{{ (object.reported_by_user_id.email or object.reported_by_email) }}</field>
+            <field name="email_to">{{ object.env['ham.security.utils']._get_system_param('user_websites.company_abuse_email') or user.company_id.email or 'abuse@yourcompany.com' }}</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px;">
+                    <p>A new content violation has been reported:</p>
+                    <ul>
+                        <li><b>URL:</b> <t t-out="object.target_url"/></li>
+                        <li><b>Details:</b> <t t-out="object.description"/></li>
+                    </ul>
+                </div>
+            </field>
+        </record>
+
+        <record id="email_template_weekly_digest" model="mail.template">
+            <field name="name">User Websites: Weekly Digest</field>
+            <field name="model_id" ref="website_blog.model_blog_post"/>
+            <field name="subject">Weekly Update from {{ ctx.get('author_name') }}</field>
+            <field name="email_from">{{ user.company_id.email or 'noreply@yourcompany.com' }}</field>
+            <field name="email_to">{{ ctx.get('email_to') }}</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px; font-family: Arial, sans-serif;">
+                    <h2>Weekly Update from <t t-out="ctx.get('author_name')"/></h2>
+                    <p>Here are the latest posts published this week:</p>
+                    <ul>
+                        <t t-out="ctx.get('post_links')"/>
+                    </ul>
+                    <hr style="margin-top: 30px; border: none; border-top: 1px solid #eee;" />
+                    <p style="color: #888; font-size: 12px;">
+                        You are receiving this email because you subscribed to updates from this user or group.<br/>
+                        <a t-attf-href="{{ ctx.get('unsub_url') }}" style="color: #888; text-decoration: underline;">Unsubscribe from these updates</a>
+                    </p>
+                </div>
+            </field>
+        </record>
+
+        <record id="ir_cron_send_weekly_digest" model="ir.cron">
+            <field name="name">User Websites: Send Weekly Subscriptions Digest</field>
+            <field name="model_id" ref="website_blog.model_blog_post"/>
+            <field name="state">code</field>
+            <field name="code">model.send_weekly_digest()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">weeks</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

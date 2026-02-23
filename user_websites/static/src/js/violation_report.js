@@ -1,0 +1,55 @@
+/** @odoo-module **/
+
+import publicWidget from "@web/legacy/js/public/public_widget";
+
+publicWidget.registry.ViolationReportModal = publicWidget.Widget.extend({
+    selector: '.user-websites-report-container',
+    
+    /**
+     * @override
+     */
+    start: function () {
+        this._super.apply(this, arguments);
+        
+        // Find the modal element in the DOM
+        const modalElement = document.getElementById('reportViolationModal');
+        if (modalElement) {
+            // Listen for the Bootstrap 5 'show' event, which fires right before the modal becomes visible
+            modalElement.addEventListener('show.bs.modal', this._onModalShow.bind(this));
+        }
+    },
+
+    /**
+     * Handles the modal opening event.
+     * Injects the URL and resets the form to clear any previous inputs.
+     * @param {Event} ev
+     */
+    _onModalShow: function (ev) {
+        // The button that triggered the modal is available via ev.relatedTarget in Bootstrap 5
+        const button = ev.relatedTarget;
+        if (!button) {
+            return;
+        }
+
+        const url = button.getAttribute('data-url');
+        const modal = ev.currentTarget;
+        
+        // 1. Inject the target URL
+        const modalUrlInput = modal.querySelector('input[name="url"]');
+        if (modalUrlInput) {
+            modalUrlInput.value = url;
+        }
+
+        // 2. Clear previous user input (Description & Email)
+        const descriptionInput = modal.querySelector('textarea[name="description"]');
+        if (descriptionInput) {
+            descriptionInput.value = '';
+        }
+
+        const emailInput = modal.querySelector('input[name="email"]');
+        if (emailInput) {
+            emailInput.value = '';
+        }
+    },
+});
+

@@ -1,0 +1,34 @@
+<h1 class="mb-4">Manual Library Documentation</h1>
+<p class="lead text-muted"><strong>Version:</strong> Odoo 19 Community<br/>
+<strong>Summary:</strong> A clean-room, open-source implementation of a hierarchical documentation and knowledge-base system for Odoo Community.</p>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">1. System Overview</h2>
+<p>The Manual Library provides a drop-in replacement for the proprietary Odoo Enterprise <code>knowledge</code> module. It allows other modules to install and manage documentation via standard Odoo XML data loading without requiring an Enterprise license.</p>
+<ul>
+    <li><strong>Hierarchical Documentation:</strong> Organize articles in a nested tree structure for easy navigation.</li>
+    <li><strong>API Interoperability:</strong> Implements the core <code>knowledge.article</code> API so XML data files from other modules install seamlessly.</li>
+    <li><strong>Rich Text Editing:</strong> Utilizes Odoo's standard HTML editor for content creation.</li>
+</ul>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">2. Security &amp; Access Control</h2>
+<p>The module implements a granular three-tier access system:</p>
+<ol>
+    <li><strong>Manual Administrator:</strong> Full CRUD (Create, Read, Update, Delete) access to all articles and hierarchies.</li>
+    <li><strong>Internal User (Standard):</strong> Contextual read access to articles marked as 'workspace' or 'shared' based on internal permissions. Cannot mutate data.</li>
+    <li><strong>Public Guest:</strong> Contextual read access exclusively to articles where <code>is_published</code> is True. Strictly blocked from all mutation attempts.</li>
+</ol>
+
+<hr class="mt-4 mb-4"/>
+
+<h2 class="mt-4">3. Regulatory Compliance Statement</h2>
+<p><strong>How the <code>manual_library</code> module complies with regulations:</strong></p>
+<ul>
+    <li><strong>GDPR (Data Minimization):</strong> The module operates purely on internal documentation and public guides. The frontend feedback system tracks "Helpful/Unhelpful" votes anonymously without logging Personally Identifiable Information (PII) or IP addresses.</li>
+    <li><strong>WCAG 2.1 AA (Accessibility):</strong> The dynamically generated frontend Table of Contents (TOC) and hierarchical sidebar use proper semantic HTML nesting (<code>&lt;nav&gt;</code>, <code>&lt;ul&gt;</code>, <code>&lt;li&gt;</code>). Interactive search forms and dropdown buttons include explicit <code>aria-label</code> attributes for screen readers.</li>
+    <li><strong>Clean-Room Implementation (Legal Compliance):</strong> The module legally complies with the Abstraction-Filtration-Comparison test to provide API interoperability. It does not contain any literal or non-literal copied code, logic, or proprietary UI designs from Odoo Enterprise.</li>
+    <li><strong>Frontend Framework Compliance:</strong> Adheres to modern Odoo 19 standards by strictly utilizing Vanilla JS and standard OWL concepts for the TOC generation, completely avoiding deprecated jQuery dependencies.</li>
+</ul>
