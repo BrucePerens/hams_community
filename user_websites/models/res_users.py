@@ -244,8 +244,12 @@ class ResUsers(models.Model):
         """
         self.ensure_one()
         svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)]).unlink()
-        self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)]).unlink()
+        
+        # [%ANCHOR: gdpr_sudo_erasure]
+        # ADR-0017: sudo() is required here to ensure cascaded data not owned by the service account is successfully purged.
+        self.env['website.page'].sudo().search([('owner_user_id', '=', self.id)]).unlink()  # burn-ignore
+        self.env['blog.post'].sudo().search([('owner_user_id', '=', self.id)]).unlink()  # burn-ignore
+        
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})
 
         if hasattr(super(), '_execute_gdpr_erasure'):

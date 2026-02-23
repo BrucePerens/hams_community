@@ -18,7 +18,7 @@ class TestComplianceHooks(TransactionCase):
         # Manually trigger the hook to ensure execution during the test transaction
         post_init_hook(self.env)
         
-        article = self.env['knowledge.article'].sudo().search([
+        article = self.env['knowledge.article'].search([
             ('name', '=', 'Site Owner\'s Guide to Regulatory Compliance')
         ], limit=1)
         
@@ -49,10 +49,9 @@ class TestComplianceHooks(TransactionCase):
 
         post_init_hook(self.env)
         
-        websites = self.env['website'].sudo().search([])
+        websites = self.env['website'].search([])
         for website in websites:
             self.assertTrue(
                 website.cookies_bar, 
                 f"Cookie bar must be enabled on website: {website.name}"
             )
-

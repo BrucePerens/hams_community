@@ -19,6 +19,7 @@ class UserWebsitesController(http.Controller):
     # --- 1. Community Directory ---
     @http.route('/community', type='http', auth="public", website=True)
     def community_directory(self, **kwargs):
+        # [%ANCHOR: controller_community_directory]
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         users = request.env['res.users'].with_user(svc_uid).search([
             ('privacy_show_in_directory', '=', True),
@@ -33,6 +34,7 @@ class UserWebsitesController(http.Controller):
     # --- 2. Abuse Reporting ---
     @http.route('/website/report_violation', type='http', auth="public", methods=['POST'], website=True)
     def submit_violation_report(self, url='', description='', email='', website_honeypot='', **kwargs):
+        # [%ANCHOR: controller_submit_violation_report]
         url = url.strip()[:2000]
         description = description.strip()[:5000]
         
@@ -89,6 +91,7 @@ class UserWebsitesController(http.Controller):
     # --- 3. Home Page Routing, Caching & View Tracking ---
     @http.route(['/<string:website_slug>', '/<string:website_slug>/home', '/<string:website_slug>/home/'], type='http', auth="public", website=True)
     def user_websites_home(self, website_slug, **kwargs):
+        # [%ANCHOR: controller_user_websites_home]
         slug_lower = website_slug.lower()
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -118,7 +121,7 @@ class UserWebsitesController(http.Controller):
                 })
             raise werkzeug.exceptions.NotFound()
 
-        # Fallback to Groups (Uncached fallback since we don't have the group model to edit in this phase)
+        # Fallback to Groups
         group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
         if group:
             page = request.env['website.page'].with_user(svc_uid).search([
@@ -144,6 +147,7 @@ class UserWebsitesController(http.Controller):
     # --- 4. Site Creation ---
     @http.route(['/<string:website_slug>/create_site'], type='http', auth="user", methods=['POST'], website=True)
     def create_site(self, website_slug, **kwargs):
+        # [%ANCHOR: controller_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -184,6 +188,7 @@ class UserWebsitesController(http.Controller):
     # --- 5. Blog Routing ---
     @http.route(['/<string:website_slug>/blog', '/<string:website_slug>/blog/'], type='http', auth="public", website=True)
     def user_blog_index(self, website_slug, tag=None, search=None, date_begin=None, date_end=None, **kwargs):
+        # [%ANCHOR: controller_user_blog_index]
         slug_lower = website_slug.lower()
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -260,6 +265,7 @@ class UserWebsitesController(http.Controller):
     # --- 6. Blog Creation ---
     @http.route(['/<string:website_slug>/create_blog'], type='http', auth="user", methods=['POST'], website=True)
     def create_blog_post(self, website_slug, **kwargs):
+        # [%ANCHOR: controller_create_blog_post]
         slug_lower = website_slug.lower()
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -305,6 +311,7 @@ class UserWebsitesController(http.Controller):
     # --- 7. Documentation ---
     @http.route('/user-websites/documentation', type='http', auth="user", website=True)
     def user_websites_documentation(self, **kwargs):
+        # [%ANCHOR: controller_user_websites_documentation]
         if 'knowledge.article' in request.env:
             article = install_knowledge_docs(request.env)
             if article and hasattr(article, 'website_url') and article.website_url:
@@ -315,6 +322,7 @@ class UserWebsitesController(http.Controller):
     # --- 8. Moderation Appeals ---
     @http.route('/website/submit_appeal', type='http', auth="user", methods=['POST'], website=True)
     def submit_appeal(self, reason='', **kwargs):
+        # [%ANCHOR: controller_submit_appeal]
         reason = reason.strip()[:5000]
         user = request.env.user
         
@@ -335,6 +343,7 @@ class UserWebsitesController(http.Controller):
     # --- 9. Subscriptions & Unsubscribes ---
     @http.route('/<string:website_slug>/subscribe', type='http', auth="user", methods=['POST'], website=True)
     def subscribe_to_site(self, website_slug, **kwargs):
+        # [%ANCHOR: controller_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -344,12 +353,13 @@ class UserWebsitesController(http.Controller):
         target_record = user.partner_id if user else group
         if target_record:
             target_record.with_user(svc_uid).message_subscribe(partner_ids=[request.env.user.partner_id.id])
-            
+        
         referrer = request.httprequest.referrer or '/'
         return request.redirect(f"{referrer}?subscribed=1")
 
     @http.route('/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<string:token>', type='http', auth="public", website=True)
     def unsubscribe_digest(self, model_name, record_id, partner_id, token, **kwargs):
+        # [%ANCHOR: controller_unsubscribe_digest]
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
             
@@ -374,6 +384,7 @@ class UserWebsitesController(http.Controller):
     # --- 10. GDPR Privacy & Data Subject Access ---
     @http.route(['/my/privacy'], type='http', auth="user", website=True)
     def my_privacy_dashboard(self, **kwargs):
+        # [%ANCHOR: controller_my_privacy_dashboard]
         """Renders the frontend portal dashboard for data portability and right to erasure."""
         return request.render('user_websites.portal_my_privacy', {
             'default_title': "My Privacy Dashboard"
@@ -381,6 +392,7 @@ class UserWebsitesController(http.Controller):
 
     @http.route(['/my/privacy/export'], type='http', auth="user", website=True)
     def export_user_data(self, **kwargs):
+        # [%ANCHOR: controller_export_user_data]
         """Compiles user generated content into a machine-readable JSON format for data portability."""
         user = request.env.user
         data = user._get_gdpr_export_data()
@@ -394,6 +406,7 @@ class UserWebsitesController(http.Controller):
 
     @http.route(['/my/privacy/delete_content'], type='http', auth="user", methods=['POST'], website=True)
     def delete_user_content(self, **kwargs):
+        # [%ANCHOR: controller_delete_user_content]
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content."""
         request.env.user._execute_gdpr_erasure()
         return request.redirect('/my/privacy?erased=1')
