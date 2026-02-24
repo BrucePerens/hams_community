@@ -71,7 +71,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'type': 'qweb',
             'website_published': True,
             'is_published': True,
-            'owner_user_id': user.id
+            'owner_user_id': user.id,
+            'view_id': self.env.ref('user_websites.template_default_home').id
         })
         response = self.url_open(f'/{user.website_slug}/home')
         self.assertEqual(response.status_code, 200)

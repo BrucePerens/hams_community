@@ -489,7 +489,8 @@ class UserWebsitesController(http.Controller):
         if odoo.tools.config.get('test_enable'):
             user = request.env['res.users'].with_context(active_test=False).browse(user_id)
             user._execute_gdpr_erasure()
-            user.write({
+            svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            user.with_user(svc_uid).write({
                 'name': f'Anonymized User {user_id}',
                 'login': f'deleted_{user_id}',
                 'email': False,

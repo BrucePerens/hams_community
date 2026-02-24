@@ -28,7 +28,11 @@ class UserWebsitesSecurityUtils(models.AbstractModel):
         """
         # [%ANCHOR: get_service_uid]
         uid = self.env['ir.model.data'].sudo()._xmlid_to_res_id(xml_id)
-        if not self.env['res.users'].sudo().browse(uid).active:
+        if not uid:
+            raise AccessError(_("Security Alert: Service Account '%s' not found.") % xml_id)
+        self.env.cr.execute("SELECT active FROM res_users WHERE id = %s", (uid,))
+        res = self.env.cr.fetchone()
+        if not res or not res[0]:
             raise AccessError(_("Security Alert: Service Account is disabled."))
         return uid
 

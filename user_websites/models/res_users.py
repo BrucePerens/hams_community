@@ -7,7 +7,7 @@ specific to the user websites functionality.
 import time
 import odoo
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 from ..utils import slugify
 
@@ -119,9 +119,19 @@ class ResUsers(models.Model):
             if record_id:
                 user_domain.append(('id', '!=', record_id))
             
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-            user_collision = self.env['res.users'].with_user(svc_uid).search_count(user_domain)
-            group_collision = self.env['user.websites.group'].with_user(svc_uid).search_count([('website_slug', '=', slug)])
+            try:
+                svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                env_user = self.env['res.users'].with_user(svc_uid)
+                env_group = self.env['user.websites.group'].with_user(svc_uid)
+            except AccessError:
+                if self.env.su:
+                    env_user = self.env['res.users']
+                    env_group = self.env['user.websites.group']
+                else:
+                    raise
+                    
+            user_collision = env_user.search_count(user_domain)
+            group_collision = env_group.search_count([('website_slug', '=', slug)])
             
             if not user_collision and not group_collision:
                 return slug
@@ -136,7 +146,7 @@ class ResUsers(models.Model):
         """
         for vals in vals_list:
             if vals.get('website_slug'):
-                vals['website_slug'] = self._generate_unique_slug(vals['website_slug'])
+                vals['website_slug'] = slugify(vals['website_slug'])
             elif vals.get('name'):
                 vals['website_slug'] = self._generate_unique_slug(vals['name'])
                 
@@ -194,12 +204,12 @@ class ResUsers(models.Model):
             user_ids = self.ids
             blog_post_counts = {}
             if user_ids:
-                blog_posts = self.env['blog.post'].with_user(svc_uid).read_group(
+                blog_posts = self.env['blog.post'].with_user(svc_uid)._read_group(
                     [('owner_user_id', 'in', user_ids)],
-                    ['owner_user_id'], ['owner_user_id']
+                    ['owner_user_id'], ['__count']
                 )
-                for bp in blog_posts:
-                    blog_post_counts[bp['owner_user_id'][0]] = bp['owner_user_id_count']
+                for owner, count in blog_posts:
+                    blog_post_counts[owner.id] = count
 
             for user in self:
                 old_slug = old_slugs.get(user.id)
@@ -234,14 +244,6 @@ class ResUsers(models.Model):
                 'user_websites.global_website_page_limit', 100
             )
         return int(limit)
-
-    def _get_gdpr_streamed_keys(self):
-        """
-        Returns a dictionary mapping JSON keys to generator functions.
-        Used for streaming massive datasets (like QSOs) directly to the HTTP 
-        response to prevent OOM crashes during JSON serialization.
-        """
-        return {}
 
     def _get_gdpr_streamed_keys(self):
         """

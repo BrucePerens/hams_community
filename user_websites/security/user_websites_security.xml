@@ -98,6 +98,28 @@
             <field name="perm_unlink" eval="True"/>
         </record>
 
+        <record id="website_page_published_read_rule" model="ir.rule">
+            <field name="name">Website Page Published Read Rule</field>
+            <field name="model_id" ref="website.model_website_page"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('website_published', '=', True)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="blog_post_published_read_rule" model="ir.rule">
+            <field name="name">Blog Post Published Read Rule</field>
+            <field name="model_id" ref="website_blog.model_blog_post"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('is_published', '=', True)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
         <record id="blog_blog_private_rule" model="ir.rule">
             <field name="name">Blog Private Rule</field>
             <field name="model_id" ref="website_blog.model_blog_blog"/>

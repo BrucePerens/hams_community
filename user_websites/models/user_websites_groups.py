@@ -3,7 +3,7 @@
 This file defines the Odoo model for User Websites Groups.
 """
 from odoo import models, fields, api, _, tools
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 from ..utils import slugify
 
@@ -111,9 +111,19 @@ class UserWebsitesGroup(models.Model):
             if record_id:
                 group_domain.append(('id', '!=', record_id))
             
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-            group_collision = self.env['user.websites.group'].with_user(svc_uid).search_count(group_domain)
-            user_collision = self.env['res.users'].with_user(svc_uid).search_count([('website_slug', '=', slug)])
+            try:
+                svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                env_group = self.env['user.websites.group'].with_user(svc_uid)
+                env_user = self.env['res.users'].with_user(svc_uid)
+            except AccessError:
+                if self.env.su:
+                    env_group = self.env['user.websites.group']
+                    env_user = self.env['res.users']
+                else:
+                    raise
+                    
+            group_collision = env_group.search_count(group_domain)
+            user_collision = env_user.search_count([('website_slug', '=', slug)])
             
             if not user_collision and not group_collision:
                 return slug
@@ -136,7 +146,7 @@ class UserWebsitesGroup(models.Model):
         for i, vals in enumerate(vals_list):
             # Default Slug Generation
             if vals.get('website_slug'):
-                vals['website_slug'] = self._generate_unique_slug(vals['website_slug'])
+                vals['website_slug'] = slugify(vals['website_slug'])
             elif vals.get('name'):
                 vals['website_slug'] = self._generate_unique_slug(vals['name'])
 
@@ -194,12 +204,12 @@ class UserWebsitesGroup(models.Model):
             group_ids = self.ids
             blog_post_counts = {}
             if group_ids:
-                blog_posts = self.env['blog.post'].with_user(svc_uid).read_group(
+                blog_posts = self.env['blog.post'].with_user(svc_uid)._read_group(
                     [('user_websites_group_id', 'in', group_ids)],
-                    ['user_websites_group_id'], ['user_websites_group_id']
+                    ['user_websites_group_id'], ['__count']
                 )
-                for bp in blog_posts:
-                    blog_post_counts[bp['user_websites_group_id'][0]] = bp['user_websites_group_id_count']
+                for group_owner, count in blog_posts:
+                    blog_post_counts[group_owner.id] = count
 
             for group in self:
                 old_slug = old_slugs.get(group.id)
