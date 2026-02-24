@@ -30,9 +30,10 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
     @api.model
     def _check_proxy_ownership_create(self, vals_list):
         """Validates that the current user is legally allowed to assign the provided ownership."""
-        if not self.env.su and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
-            for vals in vals_list:
-                if vals.get('owner_user_id') and vals.get('owner_user_id') != self.env.user.id:
+        if self.env.su or self.env.user.has_group('user_websites.group_user_websites_administrator') or self.env.user.has_group('user_websites.group_user_websites_service_account'):
+            return
+        for vals in vals_list:
+            if vals.get('owner_user_id') and vals.get('owner_user_id') != self.env.user.id:
                     raise AccessError(_("You cannot create a record owned by another user."))
                 if vals.get('user_websites_group_id'):
                     svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
@@ -42,6 +43,7 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
 
     def _check_proxy_ownership_write(self, vals):
         """Prevents malicious actors from spoofing or transferring ownership after creation."""
-        if not self.env.su and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
-            if 'owner_user_id' in vals or 'user_websites_group_id' in vals:
-                raise AccessError(_("You cannot transfer ownership of a record to another user or group."))
+        if self.env.su or self.env.user.has_group('user_websites.group_user_websites_administrator') or self.env.user.has_group('user_websites.group_user_websites_service_account'):
+            return
+        if 'owner_user_id' in vals or 'user_websites_group_id' in vals:
+            raise AccessError(_("You cannot transfer ownership of a record to another user or group."))

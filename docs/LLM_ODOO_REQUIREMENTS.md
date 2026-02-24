@@ -56,7 +56,8 @@ Your pre-training data is heavily biased toward older versions of Odoo (e.g., Od
 ### 🚨 Critical Security Anti-Patterns (The "Never Do This" List)
 Security in Odoo and Python relies on avoiding well-documented pitfalls. You must actively audit your code against these vulnerabilities:
 * **SQL Injection (SQLi):** Never use string formatting (`f-strings`, `.format()`, or `%`) directly inside `self.env.cr.execute()`. Always use parameterized psycopg2 queries (e.g., `cr.execute("SELECT... WHERE id = %s", (user_id,))`). **Linter Warning:** The project linter uses an AST parser to trace variable assignments. Formatting an unsafe string to an intermediate variable before passing it to `cr.execute()` will still trigger a critical failure.
-* **Cross-Site Scripting (XSS):** Never use the legacy `<t t-raw="..."/>` in QWeb. Use `<t t-out="..."/>`. If rendering raw HTML is strictly necessary, sanitize it in Python and wrap it in `markupsafe.Markup()`.
+* **Cross-Site Scripting (XSS):** Never use the legacy `<t t-raw="..."/>` in QWeb. Use `<t t-out="..."/>`.
+If rendering raw HTML is strictly necessary, sanitize it in Python and wrap it in `markupsafe.Markup()`.
 * **Stored XSS in Chatter (`message_post`):** Never pass raw, unescaped user input into `message_post()` or `message_subscribe()` body attributes. Odoo renders these natively as HTML. Always use `html.escape()` on input variables.
 * **DOM-Based XSS in JavaScript:** Never inject unescaped JSON/REST API data directly into DOM elements (`.innerHTML`) or mapping libraries (like `Leaflet.bindPopup`) using template literals. Always pass the variables through a dedicated `escapeHTML` function.
 * **Remote Code Execution (RCE):** Never use Python's native `eval()` or `exec()`.
@@ -76,8 +77,10 @@ Use `ast.literal_eval()` for simple data structures, or `odoo.tools.safe_eval.sa
 **🎯 Linter Synchronization & Exemption Rule:**
 * Whenever a new rule or architectural trap is added to the Burn List above, you **MUST** simultaneously update the `RULES` array or AST visitor in `check_burn_list.py` to programmatically enforce the new constraint across the codebase.
 * **Linter Improvement Mandate:** You have permission to improve the linter (`check_burn_list.py`). However, improving it MUST only cause it to catch more errors and to catch them better. You must NEVER relax it, remove rules, or downgrade errors for the convenience of the LLM.
-* **The `# burn-ignore-sudo` Prohibition (ADR-0052):** Generic `# burn-ignore` tags are strictly prohibited. You are STRICTLY FORBIDDEN from unilaterally appending `# burn-ignore-sudo` to bypass linter checks out of convenience. It is reserved EXCLUSIVELY for the specific cryptographic fetching of `database.secret` and GDPR `unlink()` cascades. Furthermore, it MUST be cross-referenced with a Semantic Anchor to an automated unit test (e.g., `# burn-ignore-sudo: Tested by [\ANCHOR: test_gdpr]`).
-* **The `audit-ignore` Verification Protocol (ADR-0052):** The linter flags certain architectural patterns (like crons or mail templates) with `[AUDIT]` warnings. You may append `# audit-ignore-mail: Tested by [\ANCHOR: ...]`, `# audit-ignore-search: Tested by [\ANCHOR: ...]`, or `<!-- audit-ignore-cron: Tested by [\ANCHOR: ...] -->` to suppress these warnings, but **ONLY AFTER** you have built an automated test that mathematically proves the architectural requirement (e.g., `_trigger()` batching for crons, or exact `model_id` matching for mail templates) is fully implemented.
+* **The `# burn-ignore-sudo` Prohibition (ADR-0052):** Generic `# burn-ignore` tags are strictly prohibited. You are STRICTLY FORBIDDEN from unilaterally appending `# burn-ignore-sudo` to bypass linter checks out of convenience. It is reserved EXCLUSIVELY for the specific cryptographic fetching of `database.secret` and GDPR `unlink()` cascades. Furthermore, it MUST be cross-referenced with a Semantic Anchor to an automated unit test (e.g., `# burn-ignore-sudo: Tested by [\\ANCHOR: test_gdpr]`).
+* **The `audit-ignore` Verification Protocol (ADR-0052):** The linter flags certain architectural patterns (like crons or mail templates) with `[AUDIT]` warnings. You may append `# audit-ignore-mail: Tested by [\\ANCHOR: ...]`, `# audit-ignore-search: Tested by [\\ANCHOR: ...]`, or `<!-- audit-ignore-cron: Tested by [\\ANCHOR: ...] -->` to suppress these warnings, but **ONLY AFTER** you have built an automated test that mathematically proves the architectural requirement (e.g., `_trigger()` batching for crons, or exact `model_id` matching for mail templates) is fully implemented.
+* `<!-- audit-ignore-xpath: Tested by [%ANCHOR: unique_name] -->`: Allowed on `<xpath>` XML nodes ONLY if an automated test mathematically proves the injected fragment successfully appears in the compiled `arch` or rendered HTML.
+Inventing or using unauthorized bypass tags, or omitting the test anchor, constitutes a critical security violation.
 
 ---
 
@@ -119,7 +122,7 @@ You are strictly **FORBIDDEN** from using `.sudo()` as a crutch to bypass access
     * **Skeleton Key Prevention (RPC & SSTI):**
         * Methods on the utility model MUST be prefixed with an underscore (`_get_...`) to strictly block public XML-RPC / JSON-RPC execution.
         * `_get_system_param` MUST implement a strict hardcoded `frozenset` whitelist. You MUST NEVER add cryptographic keys (like `database.secret`) to this whitelist, as QWeb template injection could expose it.
-        * If a controller strictly requires a cryptographic secret (e.g., for HMAC signing), it must bypass the utility and use `.sudo().get_param('database.secret')` inline, appending `# burn-ignore-sudo: Tested by [\ANCHOR: ...]` to the line to explicitly declare the security exception to the linter.
+        * If a controller strictly requires a cryptographic secret (e.g., for HMAC signing), it must bypass the utility and use `.sudo().get_param('database.secret')` inline, appending `# burn-ignore-sudo: Tested by [\\ANCHOR: ...]` to the line to explicitly declare the security exception to the linter.
 * **The "Service Account" Pattern (Dedicated Execution Context):**
     * **Context:** The system needs to perform an elevated background task, API token validation, or cryptographic operation triggered by an unauthenticated or under-privileged user.
     * **Mandate:** Do NOT use `.sudo()`. Instead:

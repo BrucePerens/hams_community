@@ -5,6 +5,7 @@ This file extends the built-in Odoo `res.users` model to add fields and logic
 specific to the user websites functionality.
 """
 import time
+import odoo
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from psycopg2 import IntegrityError
@@ -295,7 +296,8 @@ class ResUsers(models.Model):
             if not pages:
                 break
             pages.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_pages]
-            self.env.cr.commit()
+            if not odoo.tools.config.get('test_enable'):
+                self.env.cr.commit()
             time.sleep(0.1) # ADR-0022 Batch Rate Limiting
             
         while True:
@@ -303,7 +305,8 @@ class ResUsers(models.Model):
             if not posts:
                 break
             posts.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_posts]
-            self.env.cr.commit()
+            if not odoo.tools.config.get('test_enable'):
+                self.env.cr.commit()
             time.sleep(0.1) # ADR-0022 Batch Rate Limiting
         
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})

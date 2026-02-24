@@ -27,7 +27,10 @@ class UserWebsitesSecurityUtils(models.AbstractModel):
         Prefix '_' prevents XML-RPC Skeleton Key exposure.
         """
         # [%ANCHOR: get_service_uid]
-        return self.env['ir.model.data'].sudo()._xmlid_to_res_id(xml_id)
+        uid = self.env['ir.model.data'].sudo()._xmlid_to_res_id(xml_id)
+        if not self.env['res.users'].sudo().browse(uid).active:
+            raise AccessError(_("Security Alert: Service Account is disabled."))
+        return uid
 
     @api.model
     def _notify_cache_invalidation(self, model_name, key_value):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import odoo
 from odoo import models, fields, api, tools, _
 
 class ResUsersModeration(models.Model):
@@ -43,7 +44,7 @@ class ResUsersModeration(models.Model):
                     self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
 
         res = super(ResUsersModeration, self).write(vals)
-        if 'website_slug' in vals:
+        if 'website_slug' in vals or 'active' in vals:
             # Invalidate the cache via registry in Odoo 19+
             self.env.registry.clear_cache()
         return res
@@ -73,7 +74,8 @@ class ResUsersModeration(models.Model):
             if not pages:
                 break
             pages.with_user(svc_uid).write({'is_published': False, 'website_published': False})
-            self.env.cr.commit()
+            if not odoo.tools.config.get('test_enable'):
+                self.env.cr.commit()
             time.sleep(0.1) # ADR-0022 Batch Rate Limiting
             
         # 2. Unpublish Blog Posts iteratively
@@ -85,7 +87,8 @@ class ResUsersModeration(models.Model):
             if not blogs:
                 break
             blogs.with_user(svc_uid).write({'is_published': False})
-            self.env.cr.commit()
+            if not odoo.tools.config.get('test_enable'):
+                self.env.cr.commit()
             time.sleep(0.1) # ADR-0022 Batch Rate Limiting
 
         for user in self:

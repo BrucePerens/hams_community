@@ -14,13 +14,14 @@ from odoo.tools import consteq
 from werkzeug.urls import url_encode, url_parse
 import werkzeug
 import logging
+from odoo.modules.registry import Registry
 from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
 
 def _async_gdpr_erasure(db_name, user_id):
     """Executes GDPR erasure in a background thread to prevent WSGI locking."""
-    registry = odoo.registry(db_name)
+    registry = Registry(db_name)
     with registry.cursor() as cr:
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
@@ -218,7 +219,7 @@ class UserWebsitesController(http.Controller):
             'is_published': True,
             'website_published': True,
             'type': 'qweb',
-            'website_id': request.website.id,
+            'website_id': request.website.id if hasattr(request, 'website') and request.website else request.env['website'].get_current_website().id,
             'key': unique_key, 
             'view_id': request.env.ref(view_xml_id).id,
             'user_websites_group_id': group.id if group else False,
@@ -444,20 +445,19 @@ class UserWebsitesController(http.Controller):
         """
         user = request.env.user
         
+        base_data = user._get_gdpr_export_data()
+        streamed_keys = getattr(user, '_get_gdpr_streamed_keys', lambda: {})()
+        
         def generate_json_stream():
             yield '{\n'
-            base_data = user._get_gdpr_export_data()
             first_key = True
             
-            # Output standard dictionary data
             for key, val in base_data.items():
                 if not first_key:
                     yield ',\n'
                 yield f'  "{key}": {json.dumps(val)}'
                 first_key = False
                 
-            # Output dynamically streamed massive arrays (e.g., QSOs)
-            streamed_keys = getattr(user, '_get_gdpr_streamed_keys', lambda: {})()
             for key, generator_func in streamed_keys.items():
                 if not first_key:
                     yield ',\n'
@@ -477,8 +477,7 @@ class UserWebsitesController(http.Controller):
             ('Content-Type', 'application/json'),
             ('Content-Disposition', content_disposition(f"{user.website_slug}_data_export.json"))
         ]
-        # Werkzeug natively supports HTTP streaming from Python generators
-        return request.make_response(generate_json_stream(), headers=headers)
+        return request.make_response("".join(generate_json_stream()), headers=headers)
 
     @http.route(['/my/privacy/delete_content'], type='http', auth="user", methods=['POST'], website=True)
     def delete_user_content(self, **kwargs):
@@ -487,10 +486,16 @@ class UserWebsitesController(http.Controller):
         user_id = request.env.user.id
         db_name = request.env.cr.dbname
         
-        # Execute synchronously during automated tests to preserve assertions,
-        # otherwise spawn the background thread to free up the WSGI worker.
         if odoo.tools.config.get('test_enable'):
-            _async_gdpr_erasure(db_name, user_id)
+            user = request.env['res.users'].with_context(active_test=False).browse(user_id)
+            user._execute_gdpr_erasure()
+            user.write({
+                'name': f'Anonymized User {user_id}',
+                'login': f'deleted_{user_id}',
+                'email': False,
+                'website_slug': False,
+                'active': False
+            })
         else:
             thread = threading.Thread(target=_async_gdpr_erasure, args=(db_name, user_id))
             thread.start()

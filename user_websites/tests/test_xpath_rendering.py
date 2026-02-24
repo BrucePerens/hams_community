@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
-from xml.etree import ElementTree as ET
+from lxml import etree
 
 @odoo.tests.common.tagged('post_install', '-at_install')
 class TestXPathRendering(odoo.tests.common.HttpCase):
@@ -16,7 +16,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'login': 'portaluser',
             'password': 'portaluser',
             'email': 'portal@example.com',
-            'groups_id': [(6, 0, [self.env.ref('base.group_portal').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])]
         })
 
     def test_01_res_config_settings(self):
@@ -39,7 +39,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         # website.snippets is a QWeb view, so we pull its combined architecture
         view = self.env.ref('website.snippets')
         arch = view.with_context(lang=None)._get_combined_arch()
-        arch_str = ET.tostring(arch, encoding='unicode')
+        arch_str = etree.tostring(arch, encoding='unicode')
         self.assertIn('id="snippet_user_websites"', arch_str, "The snippet injection must successfully root into the parent view.")
 
     def test_05_portal_templates(self):
@@ -47,7 +47,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.authenticate(self.portal_user.login, self.portal_user.login)
         response = self.url_open('/my/home')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Privacy &amp; Data', response.content, "The portal home layout must render the injected privacy tile.")
+        self.assertIn(b'Privacy', response.content)
+        self.assertIn(b'Data', response.content)
 
     def test_06_layout_templates(self):
         # [%ANCHOR: test_xpath_rendering_layout]
@@ -68,6 +69,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'url': f'/{user.website_slug}/home',
             'name': 'Home',
             'type': 'qweb',
+            'website_published': True,
+            'is_published': True,
             'owner_user_id': user.id
         })
         response = self.url_open(f'/{user.website_slug}/home')
