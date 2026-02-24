@@ -15,13 +15,13 @@ class BlogPost(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         self._check_proxy_ownership_create(vals_list)
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(BlogPost, self.with_user(svc_uid)).create(vals_list)
 
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(BlogPost, self.with_user(svc_uid)).write(vals)
 
     @api.model
@@ -31,13 +31,13 @@ class BlogPost(models.Model):
         Implements stateless batching via ir.config_parameter and _trigger() to 
         prevent database transaction timeouts on large subscriber bases.
         """
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         one_week_ago = fields.Datetime.now() - timedelta(days=7)
         
         recent_posts = self.env['blog.post'].with_user(svc_uid).search([
             ('is_published', '=', True),
             ('create_date', '>=', one_week_ago)
-        ])
+        ], limit=50000)
         
         if not recent_posts:
             self.env['ir.config_parameter'].with_user(svc_uid).set_param('ham.user_websites.last_digest_key', '')
@@ -57,7 +57,7 @@ class BlogPost(models.Model):
             digests[key].append(post)
 
         sorted_keys = sorted(digests.keys(), key=lambda k: f"{k[0]}_{k[1].id}")
-        last_processed_str = self.env['ham.security.utils']._get_system_param('ham.user_websites.last_digest_key', '')
+        last_processed_str = self.env['user_websites.security.utils']._get_system_param('ham.user_websites.last_digest_key', '')
         
         start_idx = 0
         if last_processed_str:
@@ -76,8 +76,8 @@ class BlogPost(models.Model):
         if not template:
             return
 
-        base_url = self.env['ham.security.utils']._get_system_param('web.base.url')
-        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore
+        base_url = self.env['user_websites.security.utils']._get_system_param('web.base.url')
+        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]
 
         for owner_model, owner_record in batch_keys:
             posts = digests[(owner_model, owner_record)]
@@ -101,17 +101,17 @@ class BlogPost(models.Model):
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
                 }
                 
-                send_fn = template.with_context(
+                # Restored clean, native Odoo mail compilation
+                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
                     author_name=author_name,
                     post_links=post_links,
                     email_to=partner.email,
                     unsub_url=unsub_url
-                ).send_mail
-                send_fn(
+                ).send_mail(
                     posts[0].id, 
                     force_send=False, 
                     email_values={
-                        'headers': headers,
+                        'headers': repr(headers),
                         'recipient_ids': [(4, partner.id)],
                         'email_to': partner.email,
                     }

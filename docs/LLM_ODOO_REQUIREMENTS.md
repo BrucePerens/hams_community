@@ -21,14 +21,20 @@ Your pre-training data is heavily biased toward older versions of Odoo (e.g., Od
 * **Mail Templates (`mail.template`):** Did I verify that the `model_id` of the XML template exactly matches the model of the record ID passed to `send_mail()`? (A mismatch will silently fail to queue the email).
 * **Token Generation (`_sign_token`):** Did I call `_sign_token()` on a model that does not explicitly possess an `access_token` database field (like `res.partner`)? (Must generate a stateless HMAC token using `database.secret`).
 * **Messaging & Followers (`mail.thread`):** Did I call `message_post()` or `message_subscribe()` directly on `res.users`? (Must be called on the underlying `user.partner_id`).
-* **Cron Jobs (`ir.cron`):** Did I include `numbercall`? (Must be removed; Odoo 18+ runs crons indefinitely if `active="True"`).
-* **Cron Batching:** Does my cron job process all records in one massive loop? (Must use record limits and `_trigger()` for queue batching).
+* **N+1 Database Locks:** Did I execute `.search()`, `.browse()`, or `.write()` inside a `for` loop? (Must pre-fetch data into an O(1) Python dictionary and execute bulk operations outside the loop per ADR-0022).
+* **O(N²) CPU Lockups:** Did I write a nested `for` loop iterating over an ORM recordset? (Must use dictionary hash maps to group and match data in O(1) time).
+* **Unbounded Searches (OOM Crashes):** Did I call `.search()` without a `limit` parameter on a potentially massive table like `ham.qso`? (Must mathematically bound the domain or paginate to protect daemon memory).
+* **Cron Jobs (`ir.cron`):** Did I include `numbercall`?
+(Must be removed; Odoo 18+ runs crons indefinitely if `active="True"`).
+* **Cron Batching:** Does my cron job process all records in one massive loop?
+(Must use record limits and `_trigger()` for queue batching).
 * **ORM Caching:** Did I call `.clear_caches()` on a method or model class? This is deprecated in Odoo 19+. The cache must be cleared globally using `self.env.registry.clear_cache()`.
 * **ORM Ambiguity:** Did I call `self.search()` or `self.create()`? (Must use the explicit `self.env['model.name'].search()` for clarity and safety).
 * **Environment Mutation:** Did I assign a value to `self.env.context`? (Must use the immutable `self.with_context(...)` pattern).
 * **Kanban Views:** Did I use `<t t-name="kanban-box">`? (Must be `<t t-name="card">`).
 * **List Views:** Did I use `<tree>` instead of `<list>`? (Must be `<list>`).
 * **Search Views:** Did I include `expand="0"` or `string="..."` inside `<group>` tags? (Must be removed; group tags are simplified).
+* **Website Snippet Injection:** Did I attempt to XPath directly into `id="snippet_structure"`? (Must use structural anchors like `/*` with `position="inside"` to survive Odoo 19 UI refactors).
 * **Security Groups (`res.groups`):** Did I use `category_id`? (Must be `privilege_id`).
 * 🚨 **Group Users & Relational Mappings (`res.groups`):** Did I map users to a group using `name="users"`? (You **MUST** use `name="user_ids"`). Odoo 18+ strictly enforces the `_ids` suffix for Many2many/One2many fields in XML data files.
 * **HTTP Routes:** Did I use `type="json"`? (Must use `type="jsonrpc"`).
@@ -39,7 +45,8 @@ Your pre-training data is heavily biased toward older versions of Odoo (e.g., Od
 * **Frontend JavaScript:** Am I using jQuery (`$`) or `useService("company")`? (Must use pure Vanilla JS or modern OWL components).
 * **Hierarchy Recursion (`_check_recursion`):** Did I use `_check_recursion()`? (Must use `_has_cycle()` instead, as `_check_recursion()` is deprecated in Odoo 18+ and evaluates oppositely).
 * **Global Uniqueness Checks (`search_count` without `sudo`):** Did I validate uniqueness (like slugs) using `search` or `search_count` without `.sudo()`? (Must use `.sudo()` to prevent Record Rules from hiding existing records, which causes collisions).
-* **Sudo CRUD Escalation (`.sudo().create`, etc.):** Did I chain `.sudo()` to a mutative database operation (`create`, `write`, `unlink`) inside an `@api.model` or public controller method? (You MUST NEVER do this unless explicitly operating within an isolated `@api.model` cron context. Use Native Idioms instead).
+* **Sudo CRUD Escalation (`.sudo().create`, etc.):** Did I chain `.sudo()` to a mutative database operation (`create`, `write`, `unlink`) inside an `@api.model` or public controller method?
+(You MUST NEVER do this unless explicitly operating within an isolated `@api.model` cron context. Use Native Idioms instead).
 * **Global Uniqueness Scoping:** When using `.sudo().search()` to validate the global uniqueness of a slug or ID, the `.sudo()` context MUST be dropped immediately after the boolean check. Do not reuse the elevated recordset to perform writes.
 * **System Parameters:** Did I use `.sudo().get_param()` inline? (Must use `env['ham.security.utils']._get_system_param()` to centralize escalations).
 * **XML ID Lookups:** Did I use `.sudo()._xmlid_to_res_id()` inline? (Must use `env['ham.security.utils']._get_service_uid()` to centralize and RAM-cache escalations).
@@ -52,24 +59,25 @@ Security in Odoo and Python relies on avoiding well-documented pitfalls. You mus
 * **Cross-Site Scripting (XSS):** Never use the legacy `<t t-raw="..."/>` in QWeb. Use `<t t-out="..."/>`. If rendering raw HTML is strictly necessary, sanitize it in Python and wrap it in `markupsafe.Markup()`.
 * **Stored XSS in Chatter (`message_post`):** Never pass raw, unescaped user input into `message_post()` or `message_subscribe()` body attributes. Odoo renders these natively as HTML. Always use `html.escape()` on input variables.
 * **DOM-Based XSS in JavaScript:** Never inject unescaped JSON/REST API data directly into DOM elements (`.innerHTML`) or mapping libraries (like `Leaflet.bindPopup`) using template literals. Always pass the variables through a dedicated `escapeHTML` function.
-* **Remote Code Execution (RCE):** Never use Python's native `eval()` or `exec()`. Use `ast.literal_eval()` for simple data structures, or `odoo.tools.safe_eval.safe_eval` for Odoo domains/contexts. Do not use the `pickle` module or `yaml.load()` (without SafeLoader) as they are vulnerable to insecure deserialization. Use `json` instead.
+* **Remote Code Execution (RCE):** Never use Python's native `eval()` or `exec()`.
+Use `ast.literal_eval()` for simple data structures, or `odoo.tools.safe_eval.safe_eval` for Odoo domains/contexts. Do not use the `pickle` module or `yaml.load()` (without SafeLoader) as they are vulnerable to insecure deserialization. Use `json` instead.
 * **CSRF Bypasses:** Never add `csrf=False` to a standard frontend form route to bypass errors. Forms must include the `<input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>` tag. `csrf=False` is strictly reserved for API webhooks secured via HMAC.
 * **Weak Cryptography:** Never use `md5` or `sha1` for hashing. Use `hashlib.sha256` or stronger. Never use the pseudo-random `random` module for generating security tokens; use `secrets.token_hex()` or `os.urandom()`.
 * **IDOR (Insecure Direct Object Reference) via Sudo:** Never pass an ID directly from a frontend request into a `sudo().browse(id)` call without first independently verifying that the current user owns that record.
 * **RPC IDOR via Missing Context Validation:** Never write a public `action_*` method (or any method without a leading underscore) that utilizes the Service Account Pattern (`with_user`) or `.sudo()` without first explicitly asserting that the requesting user owns the target record (e.g., `if self.env.user.id != self.id:`). Without this check, any authenticated user can trigger the method via XML-RPC against another user's record, resulting in unauthorized data mutation or denial of service.
 * **RPC Mass Assignment:** Did I pass an un-whitelisted `vals` or `**kwargs` dictionary directly from a public method/controller into `create()` or `write()`? (You MUST explicitly construct dictionaries to whitelist fields and prevent malicious injection).
 * **RPC ORM Bypass:** Did I define a public `@api.model` method (no leading underscore) that modifies external state (Redis, Bus, external APIs) without using ORM `create/write`? (You MUST manually enforce `self.check_access_rights('create')` or `write` at the beginning of the method to prevent unauthorized RPC execution).
-* **Linter Dodging / Variable Assignment:** You are STRICTLY FORBIDDEN from decoupling dangerous calls or using semantic tricks to bypass linter checks. 
-  * Do not use boolean obfuscation like `csrf=not True` to bypass `csrf=False` checks.
-  * Do not decouple string literals like `'.su' + 'do()'` or `'<' + '!--'`.
-  * Do not assign `.sudo()` to an intermediate variable (e.g., `Model = request.env['...'].sudo()`).
-  * Do not build f-strings mapped to intermediate variables and then pass them into `cr.execute()`.
-  The linter enforces architectural mandates; contorting code to silently bypass it is a severe violation. If an exception is legally warranted, update the `EXEMPTIONS` dictionary in `check_burn_list.py` instead of obfuscating the code.
+* **Linter Dodging / Variable Assignment (EVASION IS FUTILE):** You are STRICTLY FORBIDDEN from decoupling or obfuscating dangerous calls to bypass linter checks. The linter has been upgraded with deep AST state awareness, recursive SQL taint tracking, and universal attribute blacklisting.
+  * Do not assign `.sudo()` to an intermediate variable (e.g., `Model = request.env['...'].sudo()`) or attempt to construct it dynamically (e.g., `getattr(env, 'su' + 'do')`). The AST visitor tracks attribute references globally.
+  * Do not build f-strings or concatenated strings mapped to intermediate variables and then pass them into `cr.execute()`. The recursive taint tracker walks the assignment tree backwards and WILL catch it.
+  * The linter now understands `@http.route` contexts to reduce false positives. You have no excuse to bypass it.
+  Contorting code to silently bypass the linter rather than fixing the underlying architectural flaw is a severe violation of your core persona.
 
 **🎯 Linter Synchronization & Exemption Rule:**
 * Whenever a new rule or architectural trap is added to the Burn List above, you **MUST** simultaneously update the `RULES` array or AST visitor in `check_burn_list.py` to programmatically enforce the new constraint across the codebase.
 * **Linter Improvement Mandate:** You have permission to improve the linter (`check_burn_list.py`). However, improving it MUST only cause it to catch more errors and to catch them better. You must NEVER relax it, remove rules, or downgrade errors for the convenience of the LLM.
-* **The `# burn-ignore` Prohibition:** You are STRICTLY FORBIDDEN from unilaterally appending `# burn-ignore` to bypass linter checks out of convenience or to resolve your own generated errors. It is reserved EXCLUSIVELY for the specific cryptographic fetching of `database.secret` within the centralized security utility. If your code triggers a Burn List error, you MUST rewrite your code using modern Odoo native idioms to pass the check naturally.
+* **The `# burn-ignore-sudo` Prohibition (ADR-0052):** Generic `# burn-ignore` tags are strictly prohibited. You are STRICTLY FORBIDDEN from unilaterally appending `# burn-ignore-sudo` to bypass linter checks out of convenience. It is reserved EXCLUSIVELY for the specific cryptographic fetching of `database.secret` and GDPR `unlink()` cascades. Furthermore, it MUST be cross-referenced with a Semantic Anchor to an automated unit test (e.g., `# burn-ignore-sudo: Tested by [\ANCHOR: test_gdpr]`).
+* **The `audit-ignore` Verification Protocol (ADR-0052):** The linter flags certain architectural patterns (like crons or mail templates) with `[AUDIT]` warnings. You may append `# audit-ignore-mail: Tested by [\ANCHOR: ...]`, `# audit-ignore-search: Tested by [\ANCHOR: ...]`, or `<!-- audit-ignore-cron: Tested by [\ANCHOR: ...] -->` to suppress these warnings, but **ONLY AFTER** you have built an automated test that mathematically proves the architectural requirement (e.g., `_trigger()` batching for crons, or exact `model_id` matching for mail templates) is fully implemented.
 
 ---
 
@@ -111,7 +119,7 @@ You are strictly **FORBIDDEN** from using `.sudo()` as a crutch to bypass access
     * **Skeleton Key Prevention (RPC & SSTI):**
         * Methods on the utility model MUST be prefixed with an underscore (`_get_...`) to strictly block public XML-RPC / JSON-RPC execution.
         * `_get_system_param` MUST implement a strict hardcoded `frozenset` whitelist. You MUST NEVER add cryptographic keys (like `database.secret`) to this whitelist, as QWeb template injection could expose it.
-        * If a controller strictly requires a cryptographic secret (e.g., for HMAC signing), it must bypass the utility and use `.sudo().get_param('database.secret')` inline, appending `# burn-ignore` to the line to explicitly declare the security exception to the linter.
+        * If a controller strictly requires a cryptographic secret (e.g., for HMAC signing), it must bypass the utility and use `.sudo().get_param('database.secret')` inline, appending `# burn-ignore-sudo: Tested by [\ANCHOR: ...]` to the line to explicitly declare the security exception to the linter.
 * **The "Service Account" Pattern (Dedicated Execution Context):**
     * **Context:** The system needs to perform an elevated background task, API token validation, or cryptographic operation triggered by an unauthenticated or under-privileged user.
     * **Mandate:** Do NOT use `.sudo()`. Instead:
@@ -152,6 +160,7 @@ You are strictly **FORBIDDEN** from using `.sudo()` as a crutch to bypass access
 ### ⚙️ Configuration Views
 * **Inheritance:** Must inherit `base.res_config_settings_view_form`.
 * **Structure:** Target the form directly using `xpath expr="//form" position="inside"`. Do **not** try to locate internal divs like `div[hasclass('settings')]` as they are fragile.
+* **Snippets:** Target snippet menus using `xpath expr="/*" position="inside"` rather than explicitly checking for legacy IDs like `snippet_structure`.
 * **Isolation:** Create a new `div` block with `class="app_settings_block"` and a unique `data-key` (e.g., `data-key="my_module"`) to create a dedicated sidebar entry.
 
 ### 🖥️ Frontend JavaScript & UX
@@ -159,7 +168,7 @@ You are strictly **FORBIDDEN** from using `.sudo()` as a crutch to bypass access
 * **Native Toast Notifications:** Frontend feedback for transient actions (e.g., successfully submitting a form, handled via URL parameters like `?success=1`) MUST trigger Odoo's native notification bus (Toast messages) rather than relying solely on static inline text renders.
 
 ### 🌍 Internationalization (i18n)
-* **Translation Architecture:** Every user-facing module MUST include an `i18n/` directory containing a base `module_name.pot` file. 
+* **Translation Architecture:** Every user-facing module MUST include an `i18n/` directory containing a base `module_name.pot` file.
 * **Required Languages:** The module MUST also contain `.po` translated files for the seven most popular languages: German (`de.po`), Spanish (`es.po`), French (`fr.po`), Italian (`it.po`), Japanese (`ja.po`), Dutch (`nl.po`), and Portuguese (`pt.po`).
 * **Implementation:** Ensure all user-facing strings in Python (using `_()`), XML, and QWeb templates are properly marked for Odoo's translation engine.
 
@@ -168,7 +177,7 @@ You are strictly **FORBIDDEN** from using `.sudo()` as a crutch to bypass access
 * **Prohibition:** You are strictly **FORBIDDEN** from implementing custom, hardcoded cookie banners or third-party consent scripts. All tracking must hook into the core framework's consent state.
 * **Data Portability & Erasure (GDPR/CCPA):** Any module that stores Personally Identifiable Information (PII) or user-generated content MUST integrate into the global GDPR framework by extending `res.users`:
     * **Export:** Override `_get_gdpr_export_data(self)` to append the user's records to the export dictionary.
-    * **Erasure:** Override `_execute_gdpr_erasure(self)` to permanently hard-delete (`.sudo().unlink()`) the user's data.
+    * **Erasure:** Override `_execute_gdpr_erasure(self)` to permanently hard-delete (`.sudo().unlink()`) the user's data. **CRITICAL:** You are STRICTLY FORBIDDEN from relying on database-level `ondelete='cascade'` constraints to handle data destruction. You MUST programmatically execute the deletion in this hook to guarantee execution at the ORM layer.
 
 ### 🔍 SEO & Discovery
 * **OpenGraph Automation:** Public-facing, user-generated content pages (e.g., Profiles, Portfolios, Blogs) MUST dynamically inject OpenGraph (`<meta property="og:..."/>`) tags to ensure rich social media previews. This is achieved by passing `default_title`, `default_description`, and `default_image` keys into the QWeb rendering dictionary used by `website.layout`.

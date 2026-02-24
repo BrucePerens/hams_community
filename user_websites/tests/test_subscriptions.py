@@ -15,7 +15,7 @@ class TestSubscriptionsAndDigest(HttpCase):
             'login': 'creator_test',
             'email': 'creator@example.com',
             'website_slug': 'creator-test',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
         
         # 2. Create a Follower
@@ -24,7 +24,7 @@ class TestSubscriptionsAndDigest(HttpCase):
             'login': 'follower_test',
             'email': 'follower@example.com',
             'website_slug': 'follower-test',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
         
         # Subscribe Follower to Creator's Partner
@@ -48,6 +48,9 @@ class TestSubscriptionsAndDigest(HttpCase):
         Verify that the cron correctly generates emails, successfully injects the 
         List-Unsubscribe headers, and that the unsubscribe route works.
         """
+        # [%ANCHOR: test_weekly_digest_secret]
+        # [%ANCHOR: test_weekly_digest_mail_template]
+        # [%ANCHOR: test_unsubscribe_secret]
         # Execute the cron job method directly
         self.env['blog.post'].send_weekly_digest()
         
@@ -58,6 +61,10 @@ class TestSubscriptionsAndDigest(HttpCase):
         ], limit=1)
         
         self.assertTrue(mail, "The system must generate a mail.mail record for the follower.")
+        
+        # Assert Service Account Role Execution
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        self.assertEqual(mail.create_uid.id, svc_uid, "Email generation MUST execute strictly under the User Websites Service Account.")
         
         # Extract headers (FIXED: Replaced dangerous eval() with safe ast.literal_eval)
         headers_dict = ast.literal_eval(mail.headers) if mail.headers else {}

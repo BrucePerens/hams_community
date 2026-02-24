@@ -27,7 +27,7 @@
             <field name="name">Manual Library System</field>
             <field name="login">manual_library_sys</field>
             <field name="active" eval="True"/>
-            <field name="groups_id" eval="[(6, 0, [ref('manual_library.group_manual_library_service_account')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('manual_library.group_manual_library_service_account')])]"/>
         </record>
 
         <record id="knowledge_article_admin_rule" model="ir.rule">

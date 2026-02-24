@@ -4,6 +4,7 @@
 This file extends the built-in Odoo `res.users` model to add fields and logic
 specific to the user websites functionality.
 """
+import time
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from psycopg2 import IntegrityError
@@ -117,7 +118,7 @@ class ResUsers(models.Model):
             if record_id:
                 user_domain.append(('id', '!=', record_id))
             
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             user_collision = self.env['res.users'].with_user(svc_uid).search_count(user_domain)
             group_collision = self.env['user.websites.group'].with_user(svc_uid).search_count([('website_slug', '=', slug)])
             
@@ -156,14 +157,27 @@ class ResUsers(models.Model):
         # --- Content Lifecycle Policy ---
         if 'active' in vals and not vals['active']:
             users_to_archive = self.ids
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-            self.env['website.page'].with_user(svc_uid).search([
-                ('owner_user_id', 'in', users_to_archive)
-            ]).write({'website_published': False})
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             
-            self.env['blog.post'].with_user(svc_uid).search([
-                ('owner_user_id', 'in', users_to_archive)
-            ]).write({'is_published': False})
+            while True:
+                pages = self.env['website.page'].with_user(svc_uid).search([
+                    ('owner_user_id', 'in', users_to_archive),
+                    ('website_published', '=', True)
+                ], limit=5000)
+                if not pages:
+                    break
+                pages.write({'website_published': False})
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+                
+            while True:
+                posts = self.env['blog.post'].with_user(svc_uid).search([
+                    ('owner_user_id', 'in', users_to_archive),
+                    ('is_published', '=', True)
+                ], limit=5000)
+                if not posts:
+                    break
+                posts.write({'is_published': False})
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
 
         try:
             result = super(ResUsers, self).write(vals)
@@ -173,23 +187,36 @@ class ResUsers(models.Model):
 
         # --- 301 Redirect Automation ---
         if 'website_slug' in vals:
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-            redirect_env = self.env['website.redirect'].with_user(svc_uid)
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            redirect_env = self.env['website.rewrite'].with_user(svc_uid)
+            
+            user_ids = self.ids
+            blog_post_counts = {}
+            if user_ids:
+                blog_posts = self.env['blog.post'].with_user(svc_uid).read_group(
+                    [('owner_user_id', 'in', user_ids)],
+                    ['owner_user_id'], ['owner_user_id']
+                )
+                for bp in blog_posts:
+                    blog_post_counts[bp['owner_user_id'][0]] = bp['owner_user_id_count']
+
             for user in self:
                 old_slug = old_slugs.get(user.id)
                 new_slug = user.website_slug
                 if old_slug and new_slug and old_slug != new_slug:
                     redirects = [{
+                        'name': f'Redirect {old_slug} to {new_slug}',
                         'url_from': f'/{old_slug}',
                         'url_to': f'/{new_slug}',
-                        'type': '301',
+                        'redirect_type': '301',
                         'website_id': False,
                     }]
-                    if self.env['blog.post'].with_user(svc_uid).search_count([('owner_user_id', '=', user.id)]) > 0:
+                    if blog_post_counts.get(user.id, 0) > 0:
                         redirects.append({
+                            'name': f'Redirect {old_slug} blog to {new_slug} blog',
                             'url_from': f'/{old_slug}/blog',
                             'url_to': f'/{new_slug}/blog',
-                            'type': '301',
+                            'redirect_type': '301',
                             'website_id': False,
                         })
                     redirect_env.create(redirects)
@@ -202,21 +229,37 @@ class ResUsers(models.Model):
         self.ensure_one()
         limit = self.website_page_limit
         if not limit or limit <= 0:
-            limit = self.env['ham.security.utils']._get_system_param(
+            limit = self.env['user_websites.security.utils']._get_system_param(
                 'user_websites.global_website_page_limit', 100
             )
         return int(limit)
+
+    def _get_gdpr_streamed_keys(self):
+        """
+        Returns a dictionary mapping JSON keys to generator functions.
+        Used for streaming massive datasets (like QSOs) directly to the HTTP 
+        response to prevent OOM crashes during JSON serialization.
+        """
+        return {}
+
+    def _get_gdpr_streamed_keys(self):
+        """
+        Returns a dictionary mapping JSON keys to generator functions.
+        Used for streaming massive datasets (like QSOs) directly to the HTTP 
+        response to prevent OOM crashes during JSON serialization.
+        """
+        return {}
 
     def _get_gdpr_export_data(self):
         """
         Returns a dictionary of all personal data and authored content for GDPR portability.
         """
         self.ensure_one()
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        pages = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)])
-        blogs = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)])
-        reports = self.env['content.violation.report'].with_user(svc_uid).search([('reported_by_user_id', '=', self.id)])
-        appeals = self.env['content.violation.appeal'].with_user(svc_uid).search([('user_id', '=', self.id)])
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        pages = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
+        blogs = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
+        reports = self.env['content.violation.report'].with_user(svc_uid).search([('reported_by_user_id', '=', self.id)], limit=10000)
+        appeals = self.env['content.violation.appeal'].with_user(svc_uid).search([('user_id', '=', self.id)], limit=10000)
         
         return {
             'user': {
@@ -243,12 +286,25 @@ class ResUsers(models.Model):
         Executes the GDPR right to erasure by hard-deleting all authored content.
         """
         self.ensure_one()
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         # [%ANCHOR: gdpr_sudo_erasure]
         # ADR-0017: sudo() is required here to ensure cascaded data not owned by the service account is successfully purged.
-        self.env['website.page'].sudo().search([('owner_user_id', '=', self.id)]).unlink()  # burn-ignore
-        self.env['blog.post'].sudo().search([('owner_user_id', '=', self.id)]).unlink()  # burn-ignore
+        while True:
+            pages = self.env['website.page'].search([('owner_user_id', '=', self.id)], limit=5000)
+            if not pages:
+                break
+            pages.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_pages]
+            self.env.cr.commit()
+            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            
+        while True:
+            posts = self.env['blog.post'].search([('owner_user_id', '=', self.id)], limit=5000)
+            if not posts:
+                break
+            posts.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_posts]
+            self.env.cr.commit()
+            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
         
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})
 

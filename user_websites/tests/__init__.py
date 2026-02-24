@@ -16,3 +16,5 @@ from . import test_subscriptions
 from . import test_privacy_gdpr
 from . import test_sdk_extensibility
 from . import test_audit_edge_cases
+from . import test_security_utils
+from . import test_xpath_rendering

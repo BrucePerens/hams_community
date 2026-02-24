@@ -207,3 +207,33 @@ msgstr "Segnalazioni di violazione ricevute"
 #: model:ir.model.fields,help:user_websites.field_res_users__received_violation_report_ids
 msgid "Reports filed against content owned by this user."
 msgstr "Segnalazioni presentate contro i contenuti di questo utente."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal approved. User has been pardoned and suspension lifted."
+msgstr "Ricorso approvato. L'utente è stato perdonato e la sospensione è stata revocata."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal rejected. Suspension remains active."
+msgstr "Ricorso respinto. La sospensione rimane attiva."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_report.py:0
+#, python-format
+msgid "Strike applied to owner. Current strike count: %s"
+msgstr "Ammonizione applicata al proprietario. Numero attuale di ammonizioni: %s"
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."
+msgstr "🚨 **AZIONE AUTOMATIZZATA:** L'utente è stato sospeso dalla funzione Siti Web a causa dell'accumulo di 3 o più ammonizioni per violazione. Tutto il contenuto personale è stato nascosto."
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
+msgstr "✅ **AZIONE DI MODERAZIONE:** L'utente è stato perdonato. Sospensione revocata e conteggio delle ammonizioni azzerato. (Nota: i contenuti precedentemente nascosti rimangono tali fino al ripristino manuale)."

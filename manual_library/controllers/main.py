@@ -24,7 +24,7 @@ class ManualLibraryController(http.Controller):
                 raise werkzeug.exceptions.NotFound()
 
         # 2. Fetch root articles for the sidebar navigation and group dynamically
-        root_articles = request.env['knowledge.article'].search([('parent_id', '=', False)])
+        root_articles = request.env['knowledge.article'].search([('parent_id', '=', False)], limit=5000)
         
         workspace_articles = root_articles.filtered(lambda a: a.internal_permission in ('read', 'write'))
         private_articles = root_articles.filtered(lambda a: a.internal_permission == 'none' and a.create_uid == request.env.user and not a.member_ids)
@@ -70,10 +70,10 @@ class ManualLibraryController(http.Controller):
             domain += ['|', ('name', 'ilike', search), ('body', 'ilike', search)]
         
         # Removed .sudo() to allow native Record Rules to filter visibility by user persona
-        articles = request.env['knowledge.article'].search(domain)
-        
+        articles = request.env['knowledge.article'].search(domain, limit=1000)
+    
         # Fetch and group root articles for the sidebar navigation
-        root_articles = request.env['knowledge.article'].search([('parent_id', '=', False)])
+        root_articles = request.env['knowledge.article'].search([('parent_id', '=', False)], limit=5000)
         workspace_articles = root_articles.filtered(lambda a: a.internal_permission in ('read', 'write'))
         private_articles = root_articles.filtered(lambda a: a.internal_permission == 'none' and a.create_uid == request.env.user and not a.member_ids)
         shared_articles = root_articles.filtered(lambda a: a.internal_permission == 'none' and request.env.user in a.member_ids)

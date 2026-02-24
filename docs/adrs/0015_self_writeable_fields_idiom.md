@@ -1,12 +1,10 @@
 # ADR 0015: The "Self-Writeable Fields" Idiom
 
-*Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
-
 ## Status
 Accepted
 
 ## Context
-Users frequently need to update their own preferences (e.g., `privacy_show_in_directory`, `website_page_limit`). These fields exist on the `res.users` model. By default, Odoo restricts write access on `res.users` strictly to system administrators. Historically, developers bypassed this by using `.sudo().write()` inside frontend controllers, which is an anti-pattern that can lead to Mass Assignment vulnerabilities if the controller payload isn't strictly validated.
+Users frequently need to update their own preferences (e.g., `grid_privacy_level`, `lotw_password`, `privacy_show_in_directory`). These fields exist on the `res.users` model. By default, Odoo restricts write access on `res.users` strictly to system administrators. Historically, developers bypassed this by using `.sudo().write()` inside frontend controllers, which is an anti-pattern that can lead to Mass Assignment vulnerabilities if the controller payload isn't strictly validated.
 
 ## Decision
 To allow users to modify their preferences securely, we mandate the use of Odoo's native "Self-Writeable Fields" idiom.

@@ -18,7 +18,7 @@ class WebsitePage(models.Model):
         owner_ids = [vals.get('owner_user_id') for vals in vals_list if vals.get('owner_user_id')]
         if owner_ids:
             unique_owner_ids = list(set(owner_ids))
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             users = self.env['res.users'].with_user(svc_uid).browse(unique_owner_ids)
             user_limits = {user.id: user._get_page_limit() for user in users}
             
@@ -42,16 +42,16 @@ class WebsitePage(models.Model):
                     raise ValidationError(_("You have reached your limit of %s website pages.") % user_limits[o_id])
                     
         # 3. Apply Service Account to safely bypass standard ir.ui.view creation restrictions
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(WebsitePage, self.with_user(svc_uid)).create(vals_list)
 
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(WebsitePage, self.with_user(svc_uid)).write(vals)
 
     def unlink(self):
         self.check_access('unlink')
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(WebsitePage, self.with_user(svc_uid)).unlink()

@@ -17,7 +17,7 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
             'login': 'sdktester',
             'email': 'sdk@example.com',
             'website_slug': 'sdktester',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
 
     def test_01_gdpr_export_hook(self):
@@ -63,7 +63,7 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
             'name': 'Intruder',
             'login': 'intruder2',
             'website_slug': 'intruder2',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
         
         # Intruder attempts to create a page but assigns ownership to SDK Tester

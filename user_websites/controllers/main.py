@@ -3,6 +3,10 @@
 import json
 import hashlib
 import hmac
+import threading
+import time
+import traceback
+import odoo
 from odoo import http, _
 from odoo.http import request, content_disposition
 from odoo.exceptions import AccessError
@@ -14,17 +18,53 @@ from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
 
+def _async_gdpr_erasure(db_name, user_id):
+    """Executes GDPR erasure in a background thread to prevent WSGI locking."""
+    registry = odoo.registry(db_name)
+    with registry.cursor() as cr:
+        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
+        try:
+            user = env['res.users'].with_context(active_test=False).browse(user_id)
+            if user.exists():
+                user._execute_gdpr_erasure()
+                
+                # Anonymize standard PII since Odoo relies heavily on create_uid
+                user.write({
+                    'name': f'Anonymized User {user_id}',
+                    'login': f'deleted_{user_id}',
+                    'email': False,
+                    'website_slug': False,
+                    'active': False
+                })
+                env.cr.commit()
+        except Exception as e:
+            env.cr.rollback()
+            _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
+            try:
+                admin_uid = env['user_websites.security.utils']._get_service_uid('base.user_admin')
+                admin = env['res.users'].with_context(active_test=False).browse(admin_uid)
+                error_details = traceback.format_exc()
+                admin.partner_id.activity_schedule(
+                    'mail.mail_activity_data_todo',
+                    user_id=admin_uid,
+                    summary=f"FAILED GDPR Erasure for User ID {user_id}",
+                    note=f"The background GDPR erasure process failed. Exception: {e}<br/><pre>{error_details}</pre>"
+                )
+                env.cr.commit()
+            except Exception as inner_e:
+                _logger.critical(f"Failed to notify admin of GDPR erasure failure: {inner_e}")
+
 class UserWebsitesController(http.Controller):
 
     # --- 1. Community Directory ---
     @http.route('/community', type='http', auth="public", website=True)
     def community_directory(self, **kwargs):
         # [%ANCHOR: controller_community_directory]
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         users = request.env['res.users'].with_user(svc_uid).search([
             ('privacy_show_in_directory', '=', True),
             ('website_slug', '!=', False)
-        ])
+        ], limit=5000)
         return request.render('user_websites.community_directory', {
             'users': users,
             'default_title': "Community Directory",
@@ -64,7 +104,7 @@ class UserWebsitesController(http.Controller):
 
         content_owner_id = False
         
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = request.env['website.page'].with_user(svc_uid).search([('url', '=', url)], limit=1)
         if page and page.owner_user_id:
             content_owner_id = page.owner_user_id.id
@@ -93,7 +133,7 @@ class UserWebsitesController(http.Controller):
     def user_websites_home(self, website_slug, **kwargs):
         # [%ANCHOR: controller_user_websites_home]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
 
@@ -122,7 +162,8 @@ class UserWebsitesController(http.Controller):
             raise werkzeug.exceptions.NotFound()
 
         # Fallback to Groups
-        group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
+        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         if group:
             page = request.env['website.page'].with_user(svc_uid).search([
                 ('url', '=', f'/{group.website_slug}/home'),
@@ -149,10 +190,11 @@ class UserWebsitesController(http.Controller):
     def create_site(self, website_slug, **kwargs):
         # [%ANCHOR: controller_create_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
+        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_uid = request.env.user.id
         resolved_slug = None
@@ -190,10 +232,11 @@ class UserWebsitesController(http.Controller):
     def user_blog_index(self, website_slug, tag=None, search=None, date_begin=None, date_end=None, **kwargs):
         # [%ANCHOR: controller_user_blog_index]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
+        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         if not user and not group:
             raise werkzeug.exceptions.NotFound()
@@ -215,12 +258,12 @@ class UserWebsitesController(http.Controller):
             main_object = group
             meta_title = f"{group.name}'s Blog"
 
-        posts = request.env['blog.post'].with_user(svc_uid).search(domain)
+        posts = request.env['blog.post'].with_user(svc_uid).search(domain, limit=1000)
         
         blogs = request.env['blog.blog'].with_user(svc_uid).search([
             ('name', '=', 'Community Blog'),
             '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
-        ])
+        ], limit=1)
 
         def blog_url(tag=None, date_begin=None, date_end=None, search=None):
             url = request.httprequest.path
@@ -267,10 +310,11 @@ class UserWebsitesController(http.Controller):
     def create_blog_post(self, website_slug, **kwargs):
         # [%ANCHOR: controller_create_blog_post]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
+        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         resolved_slug = None
 
@@ -327,11 +371,11 @@ class UserWebsitesController(http.Controller):
         user = request.env.user
         
         if user.is_suspended_from_websites and reason:
-            svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             existing = request.env['content.violation.appeal'].with_user(svc_uid).search([
                 ('user_id', '=', user.id), 
                 ('state', '=', 'new')
-            ])
+            ], limit=1)
             if not existing:
                 request.env['content.violation.appeal'].create({
                     'user_id': user.id,
@@ -345,10 +389,11 @@ class UserWebsitesController(http.Controller):
     def subscribe_to_site(self, website_slug, **kwargs):
         # [%ANCHOR: controller_subscribe_to_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group = request.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', website_slug)], limit=1)
+        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_record = user.partner_id if user else group
         if target_record:
@@ -363,12 +408,12 @@ class UserWebsitesController(http.Controller):
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
             
-        svc_uid = request.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         record = request.env[model_name].with_user(svc_uid).browse(record_id)
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
             
-        db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore
+        db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_unsubscribe_secret]
         message = f"{model_name}-{record_id}-{partner_id}".encode('utf-8')
         expected_token = hmac.new(db_secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
         
@@ -393,20 +438,62 @@ class UserWebsitesController(http.Controller):
     @http.route(['/my/privacy/export'], type='http', auth="user", website=True)
     def export_user_data(self, **kwargs):
         # [%ANCHOR: controller_export_user_data]
-        """Compiles user generated content into a machine-readable JSON format for data portability."""
+        """
+        Compiles user generated content into a machine-readable JSON format for data portability.
+        Utilizes ADR-0022 Streaming Generators to prevent OOM crashes on massive exports.
+        """
         user = request.env.user
-        data = user._get_gdpr_export_data()
         
-        json_data = json.dumps(data, indent=4)
+        def generate_json_stream():
+            yield '{\n'
+            base_data = user._get_gdpr_export_data()
+            first_key = True
+            
+            # Output standard dictionary data
+            for key, val in base_data.items():
+                if not first_key:
+                    yield ',\n'
+                yield f'  "{key}": {json.dumps(val)}'
+                first_key = False
+                
+            # Output dynamically streamed massive arrays (e.g., QSOs)
+            streamed_keys = getattr(user, '_get_gdpr_streamed_keys', lambda: {})()
+            for key, generator_func in streamed_keys.items():
+                if not first_key:
+                    yield ',\n'
+                yield f'  "{key}": [\n'
+                first_item = True
+                for item in generator_func():
+                    if not first_item:
+                        yield ',\n'
+                    yield f'    {json.dumps(item)}'
+                    first_item = False
+                yield '\n  ]'
+                first_key = False
+                
+            yield '\n}'
+
         headers = [
             ('Content-Type', 'application/json'),
             ('Content-Disposition', content_disposition(f"{user.website_slug}_data_export.json"))
         ]
-        return request.make_response(json_data, headers=headers)
+        # Werkzeug natively supports HTTP streaming from Python generators
+        return request.make_response(generate_json_stream(), headers=headers)
 
     @http.route(['/my/privacy/delete_content'], type='http', auth="user", methods=['POST'], website=True)
     def delete_user_content(self, **kwargs):
         # [%ANCHOR: controller_delete_user_content]
-        """Fulfills the 'Right to Erasure' by permanently unlinking all owned content."""
-        request.env.user._execute_gdpr_erasure()
-        return request.redirect('/my/privacy?erased=1')
+        """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
+        user_id = request.env.user.id
+        db_name = request.env.cr.dbname
+        
+        # Execute synchronously during automated tests to preserve assertions,
+        # otherwise spawn the background thread to free up the WSGI worker.
+        if odoo.tools.config.get('test_enable'):
+            _async_gdpr_erasure(db_name, user_id)
+        else:
+            thread = threading.Thread(target=_async_gdpr_erasure, args=(db_name, user_id))
+            thread.start()
+            
+        request.session.logout()
+        return request.redirect('/web/login?erased=1')

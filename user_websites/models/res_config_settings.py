@@ -31,7 +31,7 @@ class ResConfigSettings(models.TransientModel):
         super(ResConfigSettings, self).set_values()
         admin_group = self.env.ref('user_websites.group_user_websites_administrator', raise_if_not_found=False)
         if admin_group:
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             admin_group.with_user(svc_uid).write({
                 'user_ids': [(6, 0, self.user_websites_administrators_ids.ids)]
             })

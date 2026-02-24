@@ -17,7 +17,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             'login': 'edgeuser',
             'email': 'edge@example.com',
             'website_slug': 'edgeuser',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
 
     def test_01_gdpr_erasure_suspended_user(self):
@@ -46,12 +46,13 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         self.assertFalse(page.exists(), "Suspended user content must be fully unlinked on GDPR erasure, not just unpublished.")
 
     def test_02_cron_batching_resumption(self):
+        # [%ANCHOR: test_cron_batching_resumption]
         """
         Verify that the weekly digest cron successfully parses the last_digest_key 
         and resumes processing from the correct index.
         """
         # Ensure a clean state for the system parameter
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('ham.user_websites.last_digest_key', '')
         
         blog = self.env['blog.blog'].search([('name', '=', 'Community Blog')], limit=1)
@@ -75,7 +76,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         
         # Because the key was set to our test user, the batching logic should skip them.
         # If there are no users after them in the DB state, the cron should cleanly finish and clear the key.
-        final_key = self.env['ham.security.utils']._get_system_param('ham.user_websites.last_digest_key')
+        final_key = self.env['user_websites.security.utils']._get_system_param('ham.user_websites.last_digest_key')
         self.assertFalse(final_key, "Cron must safely clear the digest key after completing the remaining queue.")
 
     def test_03_service_account_tamper_resistance(self):
@@ -83,7 +84,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         Verify that if the Zero-Sudo Service Account is tampered with (e.g., archived), 
         the proxy ownership mixin fails closed securely.
         """
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         svc_user = self.env['res.users'].browse(svc_uid)
         
         # Simulate an administrator accidentally archiving the crucial service account
@@ -98,3 +99,30 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 'type': 'qweb',
                 'owner_user_id': self.test_user.id
             })
+
+    def test_04_bdd_ormcache_query_counting_slugs(self):
+        """
+        BDD: Given ADR-0049 Cache Verification
+        When resolving slugs repeatedly
+        Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger SQL.
+        """
+        user = self.env['res.users'].create({
+            'name': 'Cache User',
+            'login': 'cache_user',
+            'website_slug': 'cacheuser'
+        })
+        
+        # 1. Prime the cache
+        self.env['res.users']._get_user_id_by_slug('cacheuser')
+        
+        # 2. Verify 0 queries on hit
+        with self.assertQueryCount(0):
+            self.env['res.users']._get_user_id_by_slug('cacheuser')
+            
+        # 3. Trigger Invalidation
+        user.write({'website_slug': 'newslug'})
+        
+        # 4. Verify cache was cleared (next call must execute SQL)
+        with self.assertRaises(AssertionError, msg="Cache invalidation failed: Expected SQL queries to be executed."):
+            with self.assertQueryCount(0):
+                self.env['res.users']._get_user_id_by_slug('newslug')

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, tools
+import time
+from odoo import models, fields, api, tools, _
 
 class ResUsersModeration(models.Model):
     """
@@ -30,11 +31,17 @@ class ResUsersModeration(models.Model):
             return False
         # Case-insensitive search requires ilike, but cache key is exact.
         # We lowercase the slug in the controller to ensure cache hits.
-        svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user = self.env['res.users'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
         return user.id if user else False
 
     def write(self, vals):
+        # [%ANCHOR: slug_cache_invalidation]
+        if 'website_slug' in vals:
+            for user in self:
+                if user.website_slug:
+                    self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+
         res = super(ResUsersModeration, self).write(vals)
         if 'website_slug' in vals:
             # Invalidate the cache via registry in Odoo 19+
@@ -42,6 +49,11 @@ class ResUsersModeration(models.Model):
         return res
 
     def unlink(self):
+        # [%ANCHOR: slug_cache_invalidation_unlink]
+        for user in self:
+            if user.website_slug:
+                self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+
         # Invalidate ORM cache before deleting the records via registry in Odoo 19+
         self.env.registry.clear_cache()
         return super(ResUsersModeration, self).unlink()
@@ -49,22 +61,39 @@ class ResUsersModeration(models.Model):
     def action_suspend_user_websites(self):
         """Forcefully unpublishes all user content and flags them as suspended."""
         svc_uid = self.env.ref('user_websites.user_user_websites_service_account').id
+        
+        user_ids = self.ids
+        
+        # 1. Unpublish Pages iteratively
+        while True:
+            pages = self.env['website.page'].search([
+                ('owner_user_id', 'in', user_ids),
+                '|', ('is_published', '=', True), ('website_published', '=', True)
+            ], limit=5000)
+            if not pages:
+                break
+            pages.with_user(svc_uid).write({'is_published': False, 'website_published': False})
+            self.env.cr.commit()
+            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            
+        # 2. Unpublish Blog Posts iteratively
+        while True:
+            blogs = self.env['blog.post'].search([
+                ('owner_user_id', 'in', user_ids),
+                ('is_published', '=', True)
+            ], limit=5000)
+            if not blogs:
+                break
+            blogs.with_user(svc_uid).write({'is_published': False})
+            self.env.cr.commit()
+            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+
         for user in self:
             user.is_suspended_from_websites = True
             
-            # 1. Unpublish Pages
-            pages = self.env['website.page'].search([('owner_user_id', '=', user.id)])
-            if pages:
-                pages.with_user(svc_uid).write({'is_published': False, 'website_published': False})
-                
-            # 2. Unpublish Blog Posts
-            blogs = self.env['blog.post'].search([('owner_user_id', '=', user.id)])
-            if blogs:
-                blogs.with_user(svc_uid).write({'is_published': False})
-
             # Note: We use Odoo's mail.thread on the underlying partner to log the suspension
             user.partner_id.message_post(
-                body="🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished.",
+                body=_("🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."),
                 subtype_xmlid="mail.mt_note"
             )
 
@@ -74,6 +103,6 @@ class ResUsersModeration(models.Model):
             user.violation_strike_count = 0
             user.is_suspended_from_websites = False
             user.partner_id.message_post(
-                body="✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored).",
+                body=_("✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."),
                 subtype_xmlid="mail.mt_note"
             )

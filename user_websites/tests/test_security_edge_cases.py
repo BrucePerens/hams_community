@@ -12,14 +12,14 @@ class TestSecurityEdgeCases(TransactionCase):
             'name': 'Owner User',
             'login': 'owner',
             'website_slug': 'owner',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
         
         self.user_intruder = self.env['res.users'].create({
             'name': 'Intruder User',
             'login': 'intruder',
             'website_slug': 'intruder',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
 
         self.test_group = self.env['user.websites.group'].create({

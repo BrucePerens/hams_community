@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 
 class ContentViolationReport(models.Model):
     _name = 'content.violation.report'
@@ -48,6 +48,6 @@ class ContentViolationReport(models.Model):
                     owner.action_suspend_user_websites()
                     
                 report.message_post(
-                    body=f"Strike applied to owner. Current strike count: {owner.violation_strike_count}",
+                    body=_("Strike applied to owner. Current strike count: %s") % owner.violation_strike_count,
                     subtype_xmlid="mail.mt_note"
                 )

@@ -15,7 +15,7 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
             'email': 'privacy@example.com',
             'website_slug': 'privacy-tester',
             'privacy_show_in_directory': True,
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])],
         })
 
         # Create some test data for the user
@@ -78,6 +78,8 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
         self.assertTrue(self.user_privacy.privacy_show_in_directory)
 
         # Trigger Erasure
+        # [%ANCHOR: test_gdpr_erasure_pages]
+        # [%ANCHOR: test_gdpr_erasure_posts]
         response = self.url_open('/my/privacy/delete_content', data={
             'csrf_token': odoo.http.Request.csrf_token(self)
         }, method='POST')

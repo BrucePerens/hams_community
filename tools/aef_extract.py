@@ -28,12 +28,12 @@ def parse_json_and_write_files(input_text, base_dir="."):
     try:
         payload = json.loads(payload_text, strict=False)
     except json.JSONDecodeError as e:
-        print(f"\u274c JSON decoding failed: {e}")
+        print(f"❌ JSON decoding failed: {e}")
         sys.exit(1)
 
     version = payload.get("aef_version", "legacy")
     files = payload.get("files", [])
-    print(f"\U0001f50d Found {len(files)} files to process (AEF {version})...")
+    print(f"🔍 Found {len(files)} files to process (AEF {version})...")
 
     abs_base_dir = os.path.abspath(base_dir)
 
@@ -49,7 +49,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
         # SECURITY: Path Traversal Protection
         full_path = os.path.abspath(os.path.join(abs_base_dir, filepath))
         if not full_path.startswith(abs_base_dir):
-            print(f"\U0001f6a8 SECURITY ALERT: Path traversal blocked for '{filepath}'.")
+            print(f"🚨 SECURITY ALERT: Path traversal blocked for '{filepath}'.")
             continue
 
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
@@ -58,7 +58,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
             if operation == "search-and-replace":
                 blocks = file_data.get("blocks", [])
                 if not os.path.exists(full_path):
-                    print(f"\u274c Error: File not found for patching: {filepath}")
+                    print(f"❌ Error: File not found for patching: {filepath}")
                     continue
                     
                 with open(full_path, 'r', encoding='utf-8') as f:
@@ -79,24 +79,58 @@ def parse_json_and_write_files(input_text, base_dir="."):
                         replace_text = "".join(replace_raw) if isinstance(replace_raw, list) else replace_raw
                         
                     match_count = file_text.count(search_text)
+                    search_regex = None
+                    
                     if match_count == 0:
-                        print(f"\u274c Error: Search block {idx+1} not found in {filepath}. Aborting file patch to prevent corruption.")
+                        # Fallback: Ignore whitespace differences
+                        parts = [re.escape(p) for p in re.split(r'\s+', search_text) if p]
+                        if parts:
+                            pattern = r'\s+'.join(parts)
+                            search_regex = re.compile(pattern)
+                            matches = list(search_regex.finditer(file_text))
+                            match_count = len(matches)
+                            
+                            if match_count == 1:
+                                print(f"⚠️  Note: Search block {idx+1} matched using flexible whitespace fallback.")
+                                # Determine leading/trailing spaces to correctly trim replace_text
+                                search_leading_ws_match = re.match(r'^\s*', search_text)
+                                search_trailing_ws_match = re.search(r'\s*$', search_text)
+                                search_leading_ws = search_leading_ws_match.group() if search_leading_ws_match else ""
+                                search_trailing_ws = search_trailing_ws_match.group() if search_trailing_ws_match else ""
+                                
+                                if replace_text.startswith(search_leading_ws):
+                                    replace_text = replace_text[len(search_leading_ws):]
+                                if replace_text.endswith(search_trailing_ws) and len(search_trailing_ws) > 0:
+                                    replace_text = replace_text[:-len(search_trailing_ws)]
+
+                    if match_count == 0:
+                        print(f"❌ Error: Search block {idx+1} not found in {filepath}. Aborting file patch to prevent corruption.")
                         abort_file = True
                         break
                     elif match_count > 1:
-                        print(f"\u274c Error: Search block {idx+1} matches {match_count} times in {filepath}. Aborting due to ambiguity.")
+                        print(f"❌ Error: Search block {idx+1} matches {match_count} times in {filepath}. Aborting due to ambiguity.")
                         abort_file = True
                         break
                     
-                    valid_blocks.append((search_text, replace_text))
+                    valid_blocks.append((search_text, replace_text, search_regex))
                 
                 if abort_file:
                     continue
                     
                 # Phase 2: Execution in memory
-                for search_text, replace_text in valid_blocks:
-                    file_text = file_text.replace(search_text, replace_text)
-                    
+                for search_text, replace_text, search_regex in valid_blocks:
+                    if search_regex:
+                        match = search_regex.search(file_text)
+                        if match:
+                            start, end = match.span()
+                            matched_str = match.group()
+                            actual_leading_ws = re.match(r'^\s*', matched_str).group()
+                            actual_trailing_ws = re.search(r'\s*$', matched_str).group()
+                            final_replace = actual_leading_ws + replace_text + actual_trailing_ws
+                            file_text = file_text[:start] + final_replace + file_text[end:]
+                    else:
+                        file_text = file_text.replace(search_text, replace_text, 1)
+                        
                 # Phase 3: Atomic write
                 tmp_path = full_path + ".tmp"
                 with open(tmp_path, 'w', encoding='utf-8') as f:
@@ -105,7 +139,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
                     shutil.copymode(full_path, tmp_path)
                 os.replace(tmp_path, full_path)
                 
-                print(f"\u2705 Patched (search-and-replace): {filepath}")
+                print(f"✅ Patched (search-and-replace): {filepath}")
                 continue
 
             if encoding == "base64":
@@ -136,7 +170,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
                 if os.path.exists(full_path):
                     shutil.copymode(full_path, tmp_path)
                 os.replace(tmp_path, full_path)
-                print(f"\u2705 Wrote: {filepath}")
+                print(f"✅ Wrote: {filepath}")
                 
             elif operation == "diff":
                 patch_path = full_path + ".patch"
@@ -149,10 +183,10 @@ def parse_json_and_write_files(input_text, base_dir="."):
                     shutil.copy2(full_path, backup_path)
                     
                 try:
-                    subprocess.run(["patch", "-p1", "--no-backup-if-mismatch", "-i", os.path.abspath(patch_path)], cwd=abs_base_dir, check=True)
-                    print(f"\u2705 Patched (diff): {filepath}")
+                    subprocess.run(["patch", "-p1", "--ignore-whitespace", "--no-backup-if-mismatch", "-i", os.path.abspath(patch_path)], cwd=abs_base_dir, check=True)
+                    print(f"✅ Patched (diff): {filepath}")
                 except Exception as e:
-                    print(f"\u274c Error applying diff to {filepath}: {e}. Rolling back to prevent corruption.")
+                    print(f"❌ Error applying diff to {filepath}: {e}. Rolling back to prevent corruption.")
                     if os.path.exists(backup_path):
                         shutil.copy2(backup_path, full_path)
                 finally:
@@ -161,10 +195,10 @@ def parse_json_and_write_files(input_text, base_dir="."):
                     if os.path.exists(patch_path):
                         os.remove(patch_path)
             else:
-                print(f"\u274c Unknown operation '{operation}' for {filepath}")
+                print(f"❌ Unknown operation '{operation}' for {filepath}")
 
         except Exception as e:
-            print(f"\u274c Error processing {filepath}: {e}")
+            print(f"❌ Error processing {filepath}: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Extract files from AEF output.")
@@ -178,21 +212,21 @@ def main():
             with open(args.input_file, 'r', encoding='utf-8') as f:
                 input_text = f.read()
         else:
-            print(f"\u274c File not found: {args.input_file}")
+            print(f"❌ File not found: {args.input_file}")
             sys.exit(1)
     else:
-        print("\U0001f4e5 Reading from Standard Input (Press Ctrl+D to finish)...")
+        print("📥 Reading from Standard Input (Press Ctrl+D to finish)...")
         try:
             input_text = sys.stdin.read()
         except KeyboardInterrupt:
             sys.exit(0)
 
     if not input_text.strip():
-        print("\u274c No content received.")
+        print("❌ No content received.")
         sys.exit(1)
 
     parse_json_and_write_files(input_text)
-    print("\n\U0001f3c1 Processing complete.")
+    print("\n🏁 Processing complete.")
 
 if __name__ == "__main__":
     main()

@@ -35,7 +35,7 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
                 if vals.get('owner_user_id') and vals.get('owner_user_id') != self.env.user.id:
                     raise AccessError(_("You cannot create a record owned by another user."))
                 if vals.get('user_websites_group_id'):
-                    svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                    svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
                     group = self.env['user.websites.group'].with_user(svc_uid).browse(vals['user_websites_group_id'])
                     if self.env.user not in group.member_ids:
                         raise AccessError(_("You cannot create a record for a group you do not belong to."))

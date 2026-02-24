@@ -15,7 +15,7 @@ class TestPageLimits(TransactionCase):
             'email': 'limited@example.com',
             'website_slug': 'limiteduser',
             'website_page_limit': 2,
-            'groups_id': [(6, 0, [
+            'group_ids': [(6, 0, [
                 self.env.ref('base.group_user').id, 
                 self.env.ref('user_websites.group_user_websites_user').id
             ])],
@@ -28,7 +28,7 @@ class TestPageLimits(TransactionCase):
             'email': 'global@example.com',
             'website_slug': 'globaluser',
             'website_page_limit': 0,
-            'groups_id': [(6, 0, [
+            'group_ids': [(6, 0, [
                 self.env.ref('base.group_user').id, 
                 self.env.ref('user_websites.group_user_websites_user').id
             ])],

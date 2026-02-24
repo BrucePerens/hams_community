@@ -1,7 +1,5 @@
 # ADR 0008: Proxy Ownership Pattern
 
-*Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
-
 ## Status
 Accepted
 

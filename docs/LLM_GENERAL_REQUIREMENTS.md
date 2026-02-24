@@ -1,6 +1,6 @@
 # LLM OPERATIONAL MANDATES & DEVELOPMENT STANDARDS
 
-*Copyright © Bruce Perens K6BP. All Rights Reserved. AGPL-3
+*Copyright © Bruce Perens K6BP. All Rights Reserved. This software is proprietary and confidential.*
 
 This document defines the strict operational parameters for the Large Language Model (LLM) and the universal development standards for **any software project** created in this environment.
 
@@ -11,10 +11,12 @@ This document defines the strict operational parameters for the Large Language M
 ### 🗣️ Communication & Tone Mandates
 * **No Praise or Flattery:** You are STRICTLY FORBIDDEN from praising the user. Deliver information directly and professionally without conversational fluff.
 * **No Repetitive Compliance Announcements:** Do not emit statements confirming compliance with basic formatting or encoding rules that have already been established. Reserve compliance summaries exclusively for complex architectural, security, or Burn List evaluations.
+
 * **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a `data/documentation.html` file, and you MUST inject it via a `post_init_hook` in `hooks.py` as a soft dependency (checking `if 'knowledge.article' in env:`).
 * **System Master Documentation Mandate:** Any new user-facing features MUST be added to `docs/SYSTEM_USER_GUIDE.md`. Any new API endpoints MUST be added to `docs/SYSTEM_APIs.md`.
 
 * **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
+
 * [ ] **Documentation:** Are `README.md`, the module's `LLM_DOCUMENTATION.md`, its copy in `docs/modules/`, `data/documentation.html`, `docs/SYSTEM_USER_GUIDE.md`, and `docs/SYSTEM_APIs.md` updated?
 
 ### 🔄 Protocol Completeness & Multi-Step Execution (The "Finish the Job" Mandate)
@@ -59,7 +61,7 @@ You **MUST** explicitly output a high-level summary of your compliance checks in
 * **Whistleblower Shielding:** Abuse reports filed *against* a user are the data property of the **originator**, NOT the target. Data exports MUST NEVER expose these reports to the target user.
 
 ### 📡 Daemons & External Polling (See ADR-0001)
-* **Ethical Crawling:** All outbound HTTP requests MUST use the designated User-Agent and utilize `HEAD` requests to evaluate `ETag` and `Last-Modified` headers before downloading.
+* **Ethical Crawling:** All outbound HTTP requests MUST use the designated `hams.com` User-Agent and utilize `HEAD` requests to evaluate `ETag` and `Last-Modified` headers before downloading.
 * **Anti-Thundering Herd:** Scheduled systemd timers MUST include the `RandomizedDelaySec` directive.
 * **Cryptographic Checksums:** Downloaded payloads MUST be cryptographically hashed (SHA-256) and compared against persistent storage before database mutations occur.
 
@@ -73,7 +75,7 @@ You **MUST** explicitly output a high-level summary of your compliance checks in
 
 ### 🛡️ Security Patterns (See ADR-0002)
 * **Least Privilege:** All database operations must default to the permissions of the current user.
-* **The Zero-Sudo Service Account Pattern:** The raw `.sudo()` method is STRICTLY FORBIDDEN. To elevate privileges, you MUST retrieve a specific Service Account UID via `<module>.security.utils._get_service_uid()` and execute using the `with_user(svc_uid)` idiom.
+* **The Zero-Sudo Service Account Pattern:** The raw `.sudo()` method is STRICTLY FORBIDDEN. To elevate privileges, you MUST retrieve a specific Service Account UID via `ham.security.utils._get_service_uid()` and execute using the `with_user(svc_uid)` idiom.
 
 ---
 
@@ -85,6 +87,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 * **Documentation Boundaries (See ADR-0007):** Ensure strict separation of concerns between `deploy/` (tactical CLI steps) and `docs/runbooks/` (strategic maps). Runbooks MUST NOT contain step-by-step CLI commands.
 * **Semantic Anchors (See ADR-0004):** Code MUST be permanently mapped to documentation using explicit anchors (e.g., `# [%ANCHOR: unique_name]`). Numerical citation markers (e.g., ``) are strictly forbidden.
 * **Behavior-Driven Development (BDD):** User Stories in `docs/stories/` MUST explicitly include "Given / When / Then" acceptance criteria. When writing unit tests, you MUST strictly translate these BDD criteria into Python assertions.
+* **Fast-Fail Testing (See ADR-0044):** Test runners and deployment scripts (`START.sh`) MUST front-load all static analysis and linters to instantly abort on errors before invoking heavy environment rebuilds.
 * **Threat Modeling (STRIDE):** Any new module introducing a security boundary (e.g., APIs, authentication, commerce) MUST have a corresponding threat profile documenting mitigations against Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege.
 * **Keep a Changelog:** All substantive changes to the architecture or feature set MUST be recorded in a centralized `CHANGELOG.md` to provide immediate context for future LLM sessions.
 
@@ -97,6 +100,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 * [ ] **Reliability:** Are tests present covering the BDD Acceptance Criteria for all 3 personas (Owner, User, Guest)?
 * [ ] **Documentation:** Are `README.md`, `LLM_DOCUMENTATION.md`, and `data/documentation.html` updated?
 * [ ] **Agile/Ops Sync:** Have the Stories, Journeys, Runbooks, and Changelog been updated? Are CLI commands kept out of Runbooks?
+* [ ] **Linter Bypass Coverage (ADR-0052):** If I added an `audit-ignore` or `burn-ignore` tag, did I concurrently write an exhaustive automated test to prove the bypassed logic behaves safely?
 * [ ] **Exactness Verification:** If a diff or patch was utilized, is the replacement code completely unabridged within its scope? Are the context lines 100% accurate?
 * [ ] **Anchor Preservation:** Have all pre-existing Semantic Anchors been preserved and accurately placed?
 * [ ] **Protocol Completeness:** If I altered how files are transmitted, did I ensure the extraction scripts can actually decode my new format?
@@ -108,68 +112,13 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 ### 📦 JSON Artifact Extraction Format (AEF 4.0)
 To completely bypass Unix/Linux terminal input buffer limits, you MUST use the AEF 4.0 JSON schema.
+
 **JSON Safety & Selective URL-Encoding (`url-encoded`):**
 To eliminate the "Backslash Plunge" (JSON parsing failures caused by unescaped quotes), default to Selective URL-Encoding for any file containing complex regex, Windows paths, or UI-crashing tags.
 * Specify `"encoding": "url-encoded"`.
-* Selectively percent-encode ONLY: `"` (`"`), `\` (`\`), `<` (`<`), `>` (`>`), and `&` (`&`). Do NOT globally encode spaces or newlines.
+* Selectively percent-encode ONLY: `"` (`%22`), `\` (`%5C`), `<` (`%3C`), `>` (`%3E`), and `&` (`%26`). Do NOT globally encode spaces or newlines.
 * If a file is standard plain text/markdown without hazards, you may specify `"encoding": "utf-8"` with standard JSON escaping.
+
 **Rules for Standard Output:**
 * Output exactly **one** fenced code block formatted as ` ```json `.
-* The `content` value MUST be a JSON array of strings (one string per line, including trailing `\n`).
-NEVER output Base64.
-
-### 🛠️ Operation Types & Schemas
-The AEF extraction script supports three `operation` types for files: `overwrite` (default), `search-and-replace`, and `diff`.
-
-**1. Overwrite (Default)**
-Replaces the entire file. Use the standard schema:
-```json
-{
-  "path": "path/to/file.py",
-  "operation": "overwrite",
-  "encoding": "utf-8",
-  "content": [
-    "full file content...\n"
-  ]
-}
-```
-
-**2. Search and Replace**
-Replaces specific blocks of code. You MUST provide a `blocks` array. Each block contains `search` and `replace` arrays containing exact, unaltered lines.
-```json
-{
-  "path": "path/to/file.py",
-  "operation": "search-and-replace",
-  "encoding": "utf-8",
-  "blocks": [
-    {
-      "search": [
-        "    def old_method(self):\n",
-        "        pass\n"
-      ],
-      "replace": [
-        "    def new_method(self):\n",
-        "        return True\n"
-      ]
-    }
-  ]
-}
-```
-
-**3. Unified Diff**
-Applies a standard patch. The `content` array MUST contain a valid Unified Diff format compatible with `patch -p1`.
-```json
-{
-  "path": "path/to/file.py",
-  "operation": "diff",
-  "encoding": "utf-8",
-  "content": [
-    "--- a/path/to/file.py\n",
-    "+++ b/path/to/file.py\n",
-    "@@ -10,3 +10,3 @@\n",
-    " def my_func():\n",
-    "-    return False\n",
-    "+    return True\n"
-  ]
-}
-```
+* The `content` value MUST be a JSON array of strings (one string per line, including trailing `\n`). NEVER output Base64.

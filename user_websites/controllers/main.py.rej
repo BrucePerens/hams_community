@@ -1,0 +1,11 @@
+--- user_websites/controllers/main.py
++++ user_websites/controllers/main.py
+@@ -31,7 +31,7 @@
+                     env.cr.commit()
+         except Exception as e:
+             env.cr.rollback()
+             _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
+             try:
+-                admin_uid = env['ham.security.utils']._get_service_uid('base.user_admin')
++                admin_uid = env['user_websites.security.utils']._get_service_uid('base.user_admin')
+                 admin = env['res.users'].with_context(active_test=False).browse(admin_uid)

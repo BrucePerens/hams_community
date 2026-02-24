@@ -2,7 +2,7 @@
 """
 This file defines the Odoo model for User Websites Groups.
 """
-from odoo import models, fields, api, _
+from odoo import models, fields, api, _, tools
 from odoo.exceptions import ValidationError
 from psycopg2 import IntegrityError
 from ..utils import slugify
@@ -74,6 +74,15 @@ class UserWebsitesGroup(models.Model):
             if record.website_slug and record.website_slug in RESERVED_SLUGS:
                 raise ValidationError(_("The slug '%s' is reserved and cannot be used.") % record.website_slug)
 
+    @api.model
+    @tools.ormcache('slug')
+    def _get_group_id_by_slug(self, slug):
+        if not slug:
+            return False
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        group = self.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
+        return group.id if group else False
+
     # --- Slug Generation & Management ---
 
     @api.model
@@ -102,7 +111,7 @@ class UserWebsitesGroup(models.Model):
             if record_id:
                 group_domain.append(('id', '!=', record_id))
             
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             group_collision = self.env['user.websites.group'].with_user(svc_uid).search_count(group_domain)
             user_collision = self.env['res.users'].with_user(svc_uid).search_count([('website_slug', '=', slug)])
             
@@ -147,7 +156,7 @@ class UserWebsitesGroup(models.Model):
                 indices_needing_groups.append(i)
 
         if groups_to_create_vals:
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             new_odoo_groups = self.env['res.groups'].with_user(svc_uid).create(groups_to_create_vals)
             for i, new_group in zip(indices_needing_groups, new_odoo_groups):
                 vals_list[i]['odoo_group_id'] = new_group.id
@@ -156,7 +165,12 @@ class UserWebsitesGroup(models.Model):
 
     def write(self, vals):
         old_slugs = {}
+        # [%ANCHOR: group_slug_cache_invalidation]
         if 'website_slug' in vals:
+            for group in self:
+                if group.website_slug:
+                    self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+
             if vals.get('website_slug'):
                 if len(self) == 1:
                     vals['website_slug'] = self._generate_unique_slug(vals['website_slug'], record_id=self.id)
@@ -173,25 +187,47 @@ class UserWebsitesGroup(models.Model):
 
         # --- 301 Redirect Automation ---
         if 'website_slug' in vals:
-            svc_uid = self.env['ham.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-            redirect_env = self.env['website.redirect'].with_user(svc_uid)
+            self.env.registry.clear_cache()
+            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            redirect_env = self.env['website.rewrite'].with_user(svc_uid)
+            
+            group_ids = self.ids
+            blog_post_counts = {}
+            if group_ids:
+                blog_posts = self.env['blog.post'].with_user(svc_uid).read_group(
+                    [('user_websites_group_id', 'in', group_ids)],
+                    ['user_websites_group_id'], ['user_websites_group_id']
+                )
+                for bp in blog_posts:
+                    blog_post_counts[bp['user_websites_group_id'][0]] = bp['user_websites_group_id_count']
+
             for group in self:
                 old_slug = old_slugs.get(group.id)
                 new_slug = group.website_slug
                 if old_slug and new_slug and old_slug != new_slug:
                     redirects = [{
+                        'name': f'Redirect {old_slug} to {new_slug}',
                         'url_from': f'/{old_slug}',
                         'url_to': f'/{new_slug}',
-                        'type': '301',
+                        'redirect_type': '301',
                         'website_id': False,
                     }]
-                    if self.env['blog.post'].with_user(svc_uid).search_count([('user_websites_group_id', '=', group.id)]) > 0:
+                    if blog_post_counts.get(group.id, 0) > 0:
                         redirects.append({
+                            'name': f'Redirect {old_slug} blog to {new_slug} blog',
                             'url_from': f'/{old_slug}/blog',
                             'url_to': f'/{new_slug}/blog',
-                            'type': '301',
+                            'redirect_type': '301',
                             'website_id': False,
                         })
                     redirect_env.create(redirects)
 
         return result
+
+    def unlink(self):
+        # [%ANCHOR: group_slug_cache_invalidation_unlink]
+        for group in self:
+            if group.website_slug:
+                self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+        self.env.registry.clear_cache()
+        return super(UserWebsitesGroup, self).unlink()

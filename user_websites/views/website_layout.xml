@@ -2,11 +2,11 @@
 <odoo>
     <template id="layout_inherit_report_violation" inherit_id="website.layout" name="Report Violation Global">
         
-        <xpath expr="//footer" position="after">
+        <xpath expr="//footer" position="after"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
             <t t-call="user_websites.report_violation_modal"/>
         </xpath>
 
-        <xpath expr="//footer" position="before">
+        <xpath expr="//footer" position="before"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
             <t t-set="is_user_content" t-value="False"/>
             <t t-set="is_owner" t-value="False"/>
 

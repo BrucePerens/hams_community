@@ -18,5 +18,5 @@ access_user_websites_group_svc,user.websites.group svc,model_user_websites_group
 access_blog_blog_svc,blog.blog svc,website_blog.model_blog_blog,user_websites.group_user_websites_service_account,1,1,1,1
 access_res_users_svc,res.users svc,base.model_res_users,user_websites.group_user_websites_service_account,1,1,1,1
 access_res_groups_svc,res.groups svc,base.model_res_groups,user_websites.group_user_websites_service_account,1,1,1,1
-access_website_redirect_svc,website.redirect svc,website.model_website_redirect,user_websites.group_user_websites_service_account,1,1,1,1
+access_website_rewrite_svc,website.rewrite svc,website.model_website_rewrite,user_websites.group_user_websites_service_account,1,1,1,1
 access_ir_ui_view_svc,ir.ui.view svc,base.model_ir_ui_view,user_websites.group_user_websites_service_account,1,1,1,1

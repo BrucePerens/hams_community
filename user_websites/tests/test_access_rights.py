@@ -13,7 +13,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
             'login': 'testuser1',
             'email': 'testuser1@example.com',
             'website_slug': 'testuser1',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
         })
 
         self.websites_admin_user = self.env['res.users'].create({
@@ -21,7 +21,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
             'login': 'websitesadmin',
             'email': 'websitesadmin@example.com',
             'website_slug': 'websitesadmin',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.user_websites_admin_group.id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.user_websites_admin_group.id])],
             'password': 'websitesadmin' 
         })
 
@@ -30,7 +30,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
             'login': 'reguser',
             'email': 'reguser@example.com',
             'website_slug': 'reguser',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
             'password': 'reguser' 
         })
 

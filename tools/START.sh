@@ -2,10 +2,11 @@
 
 # Resolve project root dynamically based on script location
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR"
+COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
-# Allow passing a target module to test (defaults to user_websites)
-TARGET_MODULE="${1:-user_websites}"
+# Allow passing a target module to test, with defaults.
+TARGET_MODULE="${1:-manual_library,compliance,user_websites}"
 
 # Generate an ephemeral secure password for the test environment
 export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
@@ -19,19 +20,27 @@ if [ -d "$DIR/$TARGET_MODULE" ]; then
     fi
 fi
 
-echo "🔥 Running Odoo 19+ Burn List Check..."
+echo "🔥 Running Odoo 19+ Burn List & Syntax Check..."
 python3 "$DIR/tools/check_burn_list.py" "$DIR"
-if [ $? -ne 0 ]; then
-    echo "🛑 Halting startup due to Burn List violations. Please review the output above."
-    exit 1
+if [ $? -ne 0 ];
+then
+    echo "🛑 Halting startup due to Syntax or Burn List violations. Please review the output above."
+exit 1
 fi
 
-echo "🧪 Pre-flight and Burn List checks passed. Rebuilding database and running tests for ${TARGET_MODULE}..."
+echo "⚓ Running Semantic Anchor Traceability Check..."
+python3 "$DIR/tools/verify_anchors.py"
+if [ $? -ne 0 ];
+then
+    echo "🛑 Halting startup due to missing Semantic Anchors. Please restore them."
+exit 1
+fi
+
+echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Rebuilding database and running tests for ${TARGET_MODULE}..."
 
 # Use --if-exists to prevent halting if the database was previously deleted manually
-runuser -u odoo -- dropdb --if-exists db1
-runuser -u odoo -- \
-  /usr/bin/odoo -c /etc/odoo/odoo.conf \
+dropdb --if-exists db1 || true
+/usr/bin/odoo \
   --addons-path="$ADDONS_PATH" \
   --dev=all -d db1 \
   -i base,$TARGET_MODULE \

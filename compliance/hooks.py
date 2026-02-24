@@ -45,7 +45,7 @@ def post_init_hook(env):
     1. Enforces the use of Odoo's native cookie consent banner.
     2. Installs the regulatory documentation via the Knowledge API.
     """
-    websites = env['website'].search([])
+    websites = env['website'].search([], limit=10000)
     
     # Safely check if the target field exists in the current Odoo version
     if 'cookies_bar' in env['website']._fields:

@@ -207,3 +207,33 @@ msgstr "Informes de infracción recibidos"
 #: model:ir.model.fields,help:user_websites.field_res_users__received_violation_report_ids
 msgid "Reports filed against content owned by this user."
 msgstr "Informes presentados contra el contenido propiedad de este usuario."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal approved. User has been pardoned and suspension lifted."
+msgstr "Apelación aprobada. El usuario ha sido perdonado y la suspensión levantada."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal rejected. Suspension remains active."
+msgstr "Apelación rechazada. La suspensión permanece activa."
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_report.py:0
+#, python-format
+msgid "Strike applied to owner. Current strike count: %s"
+msgstr "Advertencia aplicada al propietario. Número actual de advertencias: %s"
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."
+msgstr "🚨 **ACCIÓN AUTOMATIZADA:** El usuario ha sido suspendido de la función de Sitios Web debido a la acumulación de 3 o más advertencias de violación. Todo el contenido personal ha sido despublicado."
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
+msgstr "✅ **ACCIÓN DE MODERACIÓN:** El usuario ha sido perdonado. Suspensión levantada y contador de advertencias restablecido a 0. (Nota: El contenido previamente despublicado permanece despublicado hasta que se restaure manualmente)."

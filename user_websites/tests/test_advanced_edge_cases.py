@@ -12,7 +12,7 @@ class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
             'login': 'emptyuser',
             'email': 'empty@example.com',
             'website_slug': 'emptyuser',
-            'groups_id': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])],
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])],
         })
 
         self.doomed_group = self.env['user.websites.group'].create({

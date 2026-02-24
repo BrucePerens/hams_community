@@ -207,3 +207,33 @@ msgstr "受信した違反報告"
 #: model:ir.model.fields,help:user_websites.field_res_users__received_violation_report_ids
 msgid "Reports filed against content owned by this user."
 msgstr "このユーザーが所有するコンテンツに対して提出された報告。"
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal approved. User has been pardoned and suspension lifted."
+msgstr "申し立てが承認されました。ユーザーは免責され、停止は解除されました。"
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_appeal.py:0
+#, python-format
+msgid "Appeal rejected. Suspension remains active."
+msgstr "申し立ては却下されました。停止は有効なままです。"
+
+#. module: user_websites
+#: code:addons/user_websites/models/content_violation_report.py:0
+#, python-format
+msgid "Strike applied to owner. Current strike count: %s"
+msgstr "所有者にストライクが適用されました。現在のストライク数: %s"
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."
+msgstr "🚨 **自動アクション:** ユーザーは、3回以上の違反ストライクが蓄積されたため、ウェブサイト機能から停止されました。すべての個人コンテンツは非公開になりました。"
+
+#. module: user_websites
+#: code:addons/user_websites/models/res_users_moderation.py:0
+#, python-format
+msgid "✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
+msgstr "✅ **モデレーションアクション:** ユーザーは免責されました。停止が解除され、ストライク数が0にリセットされました。（注：以前に非公開になったコンテンツは、手動で復元されるまで非公開のままです）。"
