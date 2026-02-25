@@ -7,6 +7,7 @@ ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
 # Allow passing a target module to test, with defaults.
 TARGET_MODULE="${1:-manual_library,compliance,user_websites}"
+DB_NAME="test_${TARGET_MODULE//,/_}"
 
 # If the user passed additional arguments (like --test-tags simulation), use those.
 # Otherwise, default to testing all tests in the target modules.
@@ -44,14 +45,14 @@ then
 exit 1
 fi
 
-echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Booting DB and running tests..."
+echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Booting DB ($DB_NAME) and running tests..."
 
 # Use BOTH -i and -u.
 # -i ensures missing modules install into the DB.
 # -u ensures existing modules reload their Python code (and tests) from disk.
 /usr/bin/odoo \
   --addons-path="$ADDONS_PATH" \
-  -d db1 \
+  -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   -u "$TARGET_MODULE" \
   --test-enable \

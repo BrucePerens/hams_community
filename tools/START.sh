@@ -6,7 +6,8 @@ COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/..
 ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
 # Allow passing a target module to test, with defaults.
-TARGET_MODULE="${1:-manual_library,compliance,user_websites}"
+TARGET_MODULE="${1:-manual_library,compliance,user_websites,user_websites_seo}"
+DB_NAME="test_${TARGET_MODULE//,/_}"
 
 # Generate an ephemeral secure password for the test environment
 export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
@@ -36,14 +37,14 @@ then
 exit 1
 fi
 
-echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Rebuilding database and running tests for ${TARGET_MODULE}..."
+echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Rebuilding database ($DB_NAME) and running tests for ${TARGET_MODULE}..."
 
 # Use --if-exists to prevent halting if the database was previously deleted manually
-dropdb --if-exists db1 || true
+dropdb --if-exists "$DB_NAME" || true
 /usr/bin/odoo \
   --addons-path="$ADDONS_PATH" \
-  --dev=all -d db1 \
-  -i all \
+  --dev=all -d "$DB_NAME" \
+  -i "$TARGET_MODULE" \
   --test-enable \
-  --test-tags /$TARGET_MODULE \
+  --test-tags "/$TARGET_MODULE" \
   --stop-after-init

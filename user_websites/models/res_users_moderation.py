@@ -38,15 +38,17 @@ class ResUsersModeration(models.Model):
 
     def write(self, vals):
         # [%ANCHOR: slug_cache_invalidation]
-        if 'website_slug' in vals:
+        if 'website_slug' in vals or 'active' in vals:
             for user in self:
                 if user.website_slug:
                     self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
 
         res = super(ResUsersModeration, self).write(vals)
-        if 'website_slug' in vals or 'active' in vals:
-            # Invalidate the cache via registry in Odoo 19+
-            self.env.registry.clear_cache()
+        
+        # Emit NOTIFY for the new slug if it changed
+        if 'website_slug' in vals and vals['website_slug']:
+            self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', vals['website_slug'])
+            
         return res
 
     def unlink(self):
@@ -55,8 +57,6 @@ class ResUsersModeration(models.Model):
             if user.website_slug:
                 self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
 
-        # Invalidate ORM cache before deleting the records via registry in Odoo 19+
-        self.env.registry.clear_cache()
         return super(ResUsersModeration, self).unlink()
 
     def action_suspend_user_websites(self):

@@ -8,11 +8,26 @@ from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
+from odoo import tools
+
 class WebsitePage(models.Model):
     _name = 'website.page'
     _inherit = ['website.page', 'user_websites.owned.mixin']
 
     view_count = fields.Integer(string="View Count", default=0, help="Privacy-friendly tracking of page views.")
+
+    @api.model
+    @tools.ormcache('url', 'website_id')
+    def _get_page_id_by_url(self, url, website_id):
+        if not url:
+            return False
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        page = self.with_user(svc_uid).search([
+            ('url', '=', url),
+            ('website_published', '=', True),
+            '|', ('website_id', '=', False), ('website_id', '=', website_id)
+        ], limit=1)
+        return page.id if page else False
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -67,33 +82,39 @@ class WebsitePage(models.Model):
                         raise AccessError(_("Access Denied: You do not have permission to modify this page."))
         return super(WebsitePage, self).check_access_rule(operation)
 
-    def check_access_rule(self, operation):
-        """
-        Proactively catch write/unlink access violations for standard users on pages they don't own.
-        This prevents Odoo's core `ir.rule` engine from generating massive amounts of INFO log spam 
-        (cybercrud) every time an internal user visits a public page and the frontend evaluates 
-        if they should see the 'Edit' button.
-        """
-        if operation in ('write', 'unlink') and not self.env.su and self:
-            if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
-                for page in self:
-                    is_owner = page.owner_user_id.id == self.env.user.id
-                    is_group_member = page.user_websites_group_id and self.env.user.id in page.user_websites_group_id.odoo_group_id.user_ids.ids
-                    if not is_owner and not is_group_member:
-                        from odoo.exceptions import AccessError
-                        raise AccessError(_("Access Denied: You do not have permission to modify this page."))
-        return super(WebsitePage, self).check_access_rule(operation)
-
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
+        
+        # Identify URLs to invalidate before mutating
+        pages_to_invalidate = [p.url for p in self if p.url]
+        
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        return super(WebsitePage, self.with_user(svc_uid)).write(vals)
+        res = super(WebsitePage, self.with_user(svc_uid)).write(vals)
+        
+        # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
+        if 'url' in vals or 'website_published' in vals or 'is_published' in vals:
+            utils = self.env['user_websites.security.utils']
+            for url in pages_to_invalidate:
+                utils._notify_cache_invalidation('website.page', url)
+            if 'url' in vals and vals['url'] not in pages_to_invalidate:
+                utils._notify_cache_invalidation('website.page', vals['url'])
+                
+        return res
 
     def unlink(self):
         self.check_access('unlink')
+        
+        pages_to_invalidate = [p.url for p in self if p.url]
+        
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        return super(WebsitePage, self.with_user(svc_uid)).unlink()
+        res = super(WebsitePage, self.with_user(svc_uid)).unlink()
+        
+        utils = self.env['user_websites.security.utils']
+        for url in pages_to_invalidate:
+            utils._notify_cache_invalidation('website.page', url)
+            
+        return res
 
     @api.model
     def _flush_redis_view_counters(self):

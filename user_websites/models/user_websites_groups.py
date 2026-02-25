@@ -197,7 +197,11 @@ class UserWebsitesGroup(models.Model):
 
         # --- 301 Redirect Automation ---
         if 'website_slug' in vals:
-            self.env.registry.clear_cache()
+            # Send targeted NOTIFY to prevent global cache wipe
+            for group in self:
+                if group.website_slug:
+                    self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+                    
             svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             redirect_env = self.env['website.rewrite'].with_user(svc_uid)
             
@@ -239,5 +243,4 @@ class UserWebsitesGroup(models.Model):
         for group in self:
             if group.website_slug:
                 self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
-        self.env.registry.clear_cache()
         return super(UserWebsitesGroup, self).unlink()

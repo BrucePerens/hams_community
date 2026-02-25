@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ham_cf_purge_queue_svc,ham.cloudflare.purge.queue svc,model_ham_cloudflare_purge_queue,ham_cloudflare.group_cloudflare_service,1,1,1,1
+access_ham_cf_purge_queue_admin,ham.cloudflare.purge.queue admin,model_ham_cloudflare_purge_queue,user_websites.group_user_websites_administrator,1,1,1,1

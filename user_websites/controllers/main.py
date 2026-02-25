@@ -27,6 +27,13 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 redis_client = redis.Redis(connection_pool=redis_pool)
 
+def _async_redis_incr(page_id):
+    """Fire-and-forget Redis increment to prevent WSGI thread blocking."""
+    try:
+        redis_client.incr(f"views:page:{page_id}")
+    except Exception:
+        pass
+
 def _async_gdpr_erasure(db_name, user_id):
     """Executes GDPR erasure in a background thread to prevent WSGI locking."""
     registry = Registry(db_name)
@@ -170,25 +177,20 @@ class UserWebsitesController(http.Controller):
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
 
         if user:
-            page = request.env['website.page'].with_user(svc_uid).search([
-                ('url', '=', f'/{user.website_slug}/home'),
-                ('website_published', '=', True),
-                '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
-            ], limit=1)
+            website_id = request.website.id if hasattr(request, 'website') and request.website else False
+            page_id = request.env['website.page']._get_page_id_by_url(f'/{user.website_slug}/home', website_id)
+            page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
             
-            if page:
+            if page and page.exists():
                 if not odoo.tools.config.get('test_enable'):
-                    try:
-                        redis_client.incr(f"views:page:{page.id}")
-                    except redis.RedisError as e:
-                        _logger.error(f"Redis view increment failed: {e}")
+                    threading.Thread(target=_async_redis_incr, args=(page.id,), daemon=True).start()
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
                 # Retrieve avatar for OpenGraph og:image if available
                 avatar_url = f"/web/image/res.users/{user.id}/avatar_128"
 
-                return request.render(page.view_id.xml_id, {
+                response = request.render(page.view_id.xml_id, {
                     'main_object': page.with_user(request.env.user),
                     'profile_user': user.with_user(request.env.user),
                     'is_owner': request.env.user.id == user.id,
@@ -197,26 +199,31 @@ class UserWebsitesController(http.Controller):
                     'default_image': avatar_url,
                     'resolved_slug': user.website_slug
                 })
+                
+                if request.env.user._is_public():
+                    response.headers['Cache-Control'] = 'public, max-age=60'
+                    # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
+                    if 'ham.cloudflare.purge.queue' in request.env:
+                        response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
+                        response.headers['Cache-Tag'] = f"site-{user.website_slug}"
+                return response
+                
             raise werkzeug.exceptions.NotFound()
 
         # Fallback to Groups
         if group:
-            page = request.env['website.page'].with_user(svc_uid).search([
-                ('url', '=', f'/{group.website_slug}/home'),
-                ('website_published', '=', True),
-                '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
-            ], limit=1)
+            website_id = request.website.id if hasattr(request, 'website') and request.website else False
+            page_id = request.env['website.page']._get_page_id_by_url(f'/{group.website_slug}/home', website_id)
+            page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
 
-            if page:
+            if page and page.exists():
                 if not odoo.tools.config.get('test_enable'):
-                    try:
-                        redis_client.incr(f"views:page:{page.id}")
-                    except redis.RedisError as e:
-                        _logger.error(f"Redis view increment failed: {e}")
+                    threading.Thread(target=_async_redis_incr, args=(page.id,), daemon=True).start()
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
+                    
                 is_member = request.env.user in group.odoo_group_id.user_ids
-                return request.render(page.view_id.xml_id, {
+                response = request.render(page.view_id.xml_id, {
                     'main_object': page.with_user(request.env.user),
                     'profile_group': group.with_user(request.env.user),
                     'is_owner': is_member,
@@ -224,6 +231,13 @@ class UserWebsitesController(http.Controller):
                     'default_description': f"Welcome to the official page of {group.name}.",
                     'resolved_slug': group.website_slug
                 })
+                
+                if request.env.user._is_public():
+                    response.headers['Cache-Control'] = 'public, max-age=60'
+                    if 'ham.cloudflare.purge.queue' in request.env:
+                        response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
+                        response.headers['Cache-Tag'] = f"site-{group.website_slug}"
+                return response
 
         raise werkzeug.exceptions.NotFound()
 
@@ -350,7 +364,7 @@ class UserWebsitesController(http.Controller):
             step=step
         )
 
-        return request.render('website_blog.blog_post_short', {
+        response = request.render('website_blog.blog_post_short', {
             'posts': posts.with_user(request.env.user),
             'blog': (posts[0].blog_id if posts else blogs[0]).with_user(request.env.user) if (posts or blogs) else False,
             'blogs': blogs.with_user(request.env.user), 
@@ -365,6 +379,13 @@ class UserWebsitesController(http.Controller):
             'default_description': f"Read the latest updates and posts on {meta_title}.",
             'resolved_slug': resolved_slug
         })
+        
+        if request.env.user._is_public():
+            response.headers['Cache-Control'] = 'public, max-age=60'
+            if 'ham.cloudflare.purge.queue' in request.env:
+                response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
+                response.headers['Cache-Tag'] = f"site-{resolved_slug}"
+        return response
 
     # --- 6. Blog Creation ---
     @http.route(['/<string:website_slug>/create_blog'], type='http', auth="user", methods=['POST'], website=True)

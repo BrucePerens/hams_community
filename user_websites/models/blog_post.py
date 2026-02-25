@@ -12,26 +12,27 @@ class BlogPost(models.Model):
 
     view_count = fields.Integer(string="View Count", default=0, help="Privacy-friendly tracking of post views.")
 
+    def _get_blog_urls(self):
+        """Helper method to construct the blog index URLs for Cloudflare cache invalidation."""
+        urls = set()
+        for post in self:
+            if post.owner_user_id and post.owner_user_id.website_slug:
+                urls.add(f"/{post.owner_user_id.website_slug}/blog")
+            elif post.user_websites_group_id and post.user_websites_group_id.website_slug:
+                urls.add(f"/{post.user_websites_group_id.website_slug}/blog")
+        return list(urls)
+
     @api.model_create_multi
     def create(self, vals_list):
         self._check_proxy_ownership_create(vals_list)
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        return super(BlogPost, self.with_user(svc_uid)).create(vals_list)
-
-    def check_access_rule(self, operation):
-        """
-        Proactively catch write/unlink access violations to prevent ir.rule INFO log spam
-        when the frontend evaluates edit capabilities.
-        """
-        if operation in ('write', 'unlink') and not self.env.su and self:
-            if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
-                for post in self:
-                    is_owner = post.owner_user_id.id == self.env.user.id
-                    is_group_member = post.user_websites_group_id and self.env.user.id in post.user_websites_group_id.odoo_group_id.user_ids.ids
-                    if not is_owner and not is_group_member:
-                        from odoo.exceptions import AccessError
-                        raise AccessError(_("Access Denied: You do not have permission to modify this post."))
-        return super(BlogPost, self).check_access_rule(operation)
+        posts = super(BlogPost, self.with_user(svc_uid)).create(vals_list)
+        
+        utils = self.env['user_websites.security.utils']
+        for url in posts._get_blog_urls():
+            utils._notify_cache_invalidation('blog.post', url)
+            
+        return posts
 
     def check_access_rule(self, operation):
         """
@@ -51,8 +52,34 @@ class BlogPost(models.Model):
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
+        
+        urls_to_invalidate = self._get_blog_urls()
+        
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        return super(BlogPost, self.with_user(svc_uid)).write(vals)
+        res = super(BlogPost, self.with_user(svc_uid)).write(vals)
+        
+        if 'is_published' in vals or 'name' in vals or 'content' in vals:
+            new_urls = self._get_blog_urls()
+            all_urls = set(urls_to_invalidate + new_urls)
+            utils = self.env['user_websites.security.utils']
+            for url in all_urls:
+                utils._notify_cache_invalidation('blog.post', url)
+                
+        return res
+
+    def unlink(self):
+        self.check_access('unlink')
+        
+        urls_to_invalidate = self._get_blog_urls()
+        
+        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        res = super(BlogPost, self.with_user(svc_uid)).unlink()
+        
+        utils = self.env['user_websites.security.utils']
+        for url in urls_to_invalidate:
+            utils._notify_cache_invalidation('blog.post', url)
+            
+        return res
 
     @api.model
     def send_weekly_digest(self):
