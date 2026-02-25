@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import http
 from odoo.http import request
+from odoo.exceptions import AccessError
 import werkzeug.exceptions
 
 class ManualLibraryController(http.Controller):
@@ -18,9 +19,9 @@ class ManualLibraryController(http.Controller):
             try:
                 article_id = int(article_slug.split('-')[0])
                 article = request.env['knowledge.article'].browse(article_id)
-                if not article.exists():
+                if not article.exists() or not article.active:
                     raise werkzeug.exceptions.NotFound()
-            except (ValueError, IndexError):
+            except (ValueError, IndexError, AccessError):
                 raise werkzeug.exceptions.NotFound()
 
         # 2. Fetch root articles for the sidebar navigation and group dynamically

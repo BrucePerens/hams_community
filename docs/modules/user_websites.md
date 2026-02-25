@@ -76,7 +76,7 @@ To enroll a user via a dependent module (e.g., automatically upon subscription p
 Users **cannot** manage content without the base module security group.
 ```python
 group_user_websites = self.env.ref('user_websites.group_user_websites_user')
-user.write({'groups_id': [(4, group_user_websites.id)]})
+user.write({'group_ids': [(4, group_user_websites.id)]})
 ```
 
 ### Step 2: Programmatic Page Provisioning (Service Account Proxy)

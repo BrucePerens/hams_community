@@ -48,3 +48,25 @@ class TestManualRobustness(odoo.tests.common.HttpCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn(b"<script>alert('XSS')</script>", response.content, "The raw malicious string must not be rendered.")
         self.assertIn(b"&lt;script&gt;alert(&#39;XSS&#39;)&lt;/script&gt;", response.content, "The search term must be safely escaped via t-out.")
+
+    def test_03_active_child_of_archived_parent(self):
+        """
+        Verify that an active child article whose parent is archived 
+        gracefully degrades and does not crash the dynamic sidebar generation.
+        """
+        child_article = self.env['knowledge.article'].create({
+            'name': 'Active Child',
+            'body': '<p>Child Body</p>',
+            'is_published': True,
+            'parent_id': self.article_archived.id
+        })
+        
+        self.authenticate(None, None)
+        
+        # Accessing the child directly should work (it is individually active)
+        response = self.url_open(child_article.website_url)
+        self.assertEqual(response.status_code, 200, "Active child should render successfully despite parent state.")
+        self.assertIn(b'Active Child', response.content)
+        
+        # The archived parent MUST NOT appear anywhere in the sidebar or breadcrumbs
+        self.assertNotIn(b'Archived Article', response.content, "Archived parent must remain hidden from the UI hierarchy.")

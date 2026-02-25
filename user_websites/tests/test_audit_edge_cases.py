@@ -125,3 +125,77 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         # 4. Verify cache was cleared (next call must execute SQL)
         user_id = self.env['res.users']._get_user_id_by_slug('newslug')
         self.assertEqual(user_id, user.id, "The new slug must resolve correctly, proving the cache was cleared.")
+
+    def test_05_bdd_ormcache_query_counting_group_slugs(self):
+        """
+        BDD: Given ADR-0049 Cache Verification
+        When resolving group slugs repeatedly
+        Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger SQL.
+        """
+        group = self.env['user.websites.group'].create({
+            'name': 'Cache Group',
+            'website_slug': 'cachegroup'
+        })
+        
+        # 1. Prime the cache
+        self.env['user.websites.group']._get_group_id_by_slug('cachegroup')
+        
+        # 2. Verify 0 queries on hit
+        with self.assertQueryCount(0):
+            self.env['user.websites.group']._get_group_id_by_slug('cachegroup')
+            
+        # 3. Trigger Invalidation
+        group.write({'website_slug': 'newcachegroup'})
+        
+        # 4. Verify cache was cleared (next call must execute SQL)
+        group_id = self.env['user.websites.group']._get_group_id_by_slug('newcachegroup')
+        self.assertEqual(group_id, group.id, "The new group slug must resolve correctly, proving the cache was cleared.")
+
+    def test_06_cron_redis_flush_batching(self):
+        # [%ANCHOR: test_cron_redis_flush]
+        """
+        BDD: Given the _flush_redis_view_counters cron
+        When it processes a batch of Redis view keys and the cursor is not 0
+        Then it MUST update the Postgres records, delete the processed keys,
+        and call _trigger() to schedule the next batch (ADR-0022).
+        """
+        from unittest.mock import patch, MagicMock
+
+        page = self.env['website.page'].create({
+            'url': f'/{self.test_user.website_slug}/redis-flush-test',
+            'name': 'Redis Flush Test',
+            'type': 'qweb',
+            'owner_user_id': self.test_user.id
+        })
+        
+        initial_views = page.view_count
+        
+        with patch('user_websites.models.website_page.redis.Redis') as mock_redis:
+            mock_client = MagicMock()
+            mock_redis.return_value = mock_client
+            
+            # Simulate scan returning a cursor of 5 (more data) and one key
+            mock_client.scan.return_value = (5, [f"views:page:{page.id}"])
+            
+            # Simulate pipeline execution returning the view count '42' and a DEL success '1'
+            mock_pipeline = MagicMock()
+            mock_client.pipeline.return_value = mock_pipeline
+            mock_pipeline.execute.return_value = ['42', 1]
+            
+            cron = self.env.ref('user_websites.ir_cron_flush_view_counters', raise_if_not_found=False)
+            if not cron:
+                self.fail("Cron record ir_cron_flush_view_counters not found.")
+                
+            with patch.object(type(cron), '_trigger') as mock_trigger:
+                self.env['website.page']._flush_redis_view_counters()
+                
+                # Verify Postgres was updated
+                page.invalidate_recordset(['view_count'])
+                self.assertEqual(page.view_count, initial_views + 42, "PostgreSQL view_count must be incremented by the Redis value.")
+                
+                # Verify pipeline operations
+                mock_pipeline.get.assert_called_with(f"views:page:{page.id}")
+                mock_pipeline.delete.assert_called_with(f"views:page:{page.id}")
+                
+                # Verify looping via _trigger
+                mock_trigger.assert_called_once()

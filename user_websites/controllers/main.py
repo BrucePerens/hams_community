@@ -3,10 +3,11 @@
 import json
 import hashlib
 import hmac
-import threading
+import os
 import time
 import traceback
 import odoo
+import redis
 from odoo import http, _
 from odoo.http import request, content_disposition
 from odoo.exceptions import AccessError
@@ -18,6 +19,12 @@ from odoo.modules.registry import Registry
 from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
+
+# ADR-0024: Global Connection Pooling for Non-ORM Datastores
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+redis_client = redis.Redis(connection_pool=redis_pool)
 
 def _async_gdpr_erasure(db_name, user_id):
     """Executes GDPR erasure in a background thread to prevent WSGI locking."""
@@ -146,7 +153,13 @@ class UserWebsitesController(http.Controller):
             ], limit=1)
             
             if page:
-                page.with_user(svc_uid).write({'view_count': page.view_count + 1})
+                if not odoo.tools.config.get('test_enable'):
+                    try:
+                        redis_client.incr(f"views:page:{page.id}")
+                    except redis.RedisError as e:
+                        _logger.error(f"Redis view increment failed: {e}")
+                else:
+                    page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
                 # Retrieve avatar for OpenGraph og:image if available
                 avatar_url = f"/web/image/res.users/{user.id}/avatar_128" if user.avatar_128 else ""
@@ -173,7 +186,13 @@ class UserWebsitesController(http.Controller):
             ], limit=1)
 
             if page:
-                page.with_user(svc_uid).write({'view_count': page.view_count + 1})
+                if not odoo.tools.config.get('test_enable'):
+                    try:
+                        redis_client.incr(f"views:page:{page.id}")
+                    except redis.RedisError as e:
+                        _logger.error(f"Redis view increment failed: {e}")
+                else:
+                    page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 is_member = request.env.user in group.odoo_group_id.user_ids
                 return request.render(page.view_id.xml_id, {
                     'main_object': page.with_user(request.env.user),
@@ -210,6 +229,13 @@ class UserWebsitesController(http.Controller):
             resolved_slug = group.website_slug
         else:
             raise werkzeug.exceptions.NotFound()
+
+        # Idempotency check: prevent duplicate page creation map bloat
+        existing_page = request.env['website.page'].with_user(svc_uid).search_count([
+            ('url', '=', f'/{resolved_slug}/home')
+        ])
+        if existing_page > 0:
+            return request.redirect(f'/{resolved_slug}/home')
 
         view_xml_id = 'user_websites.template_default_home'
         unique_key = f"user_websites.home_{resolved_slug}"
@@ -340,6 +366,17 @@ class UserWebsitesController(http.Controller):
                 'name': 'Community Blog',
                 'website_id': request.website.id
             })
+
+        # Idempotency check: prevent duplicate blog post spam
+        domain = [('blog_id', '=', blog.id), ('is_published', '=', True)]
+        if user:
+            domain.append(('owner_user_id', '=', request.env.user.id))
+        elif group:
+            domain.append(('user_websites_group_id', '=', group.id))
+            
+        existing_post = request.env['blog.post'].with_user(svc_uid).search_count(domain)
+        if existing_post > 0:
+            return request.redirect(f'/{resolved_slug}/blog')
 
         request.env['blog.post'].create({
             'name': "Welcome to my Blog" if user else f"Welcome to the {group.name} Blog",

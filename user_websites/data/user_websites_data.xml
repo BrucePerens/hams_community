@@ -64,5 +64,15 @@
             <field name="interval_type">weeks</field>
             <field name="active" eval="True"/>
         </record>
+
+        <record id="ir_cron_flush_view_counters" model="ir.cron"> <!-- audit-ignore-cron: Tested by [%ANCHOR: test_cron_redis_flush] -->
+            <field name="name">User Websites: Flush Redis View Counters</field>
+            <field name="model_id" ref="website.model_website_page"/>
+            <field name="state">code</field>
+            <field name="code">model._flush_redis_view_counters()</field>
+            <field name="interval_number">15</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+        </record>
     </data>
 </odoo>

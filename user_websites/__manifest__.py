@@ -24,6 +24,9 @@ This module enables:
         'mail',
         'portal',
     ],
+    'external_dependencies': {
+        'python': ['redis'],
+    },
     'data': [
         # Security
         'security/user_websites_security.xml',

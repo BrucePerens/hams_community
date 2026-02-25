@@ -70,3 +70,8 @@ class TestSecurityEdgeCases(TransactionCase):
         """Ensure intruder cannot modify the private group record itself."""
         with self.assertRaises(AccessError):
             self.test_group.with_user(self.user_intruder).write({'name': 'Hacked Group Name'})
+
+    def test_06_intruder_cannot_unlink_group_page(self):
+        """Ensure intruder cannot delete a Group page they do not have membership in."""
+        with self.assertRaises(AccessError, msg="Record rules must block non-members from unlinking group pages."):
+            self.group_page.with_user(self.user_intruder).unlink()

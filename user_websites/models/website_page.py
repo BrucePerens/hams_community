@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+import os
+import redis
+import logging
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 class WebsitePage(models.Model):
     _name = 'website.page'
@@ -22,14 +27,14 @@ class WebsitePage(models.Model):
             users = self.env['res.users'].with_user(svc_uid).browse(unique_owner_ids)
             user_limits = {user.id: user._get_page_limit() for user in users}
             
-            existing_pages = self.env['website.page'].with_user(svc_uid).search_read(
-                [('owner_user_id', 'in', unique_owner_ids)], 
-                ['owner_user_id']
-            )
-            
             existing_counts = {u_id: 0 for u_id in unique_owner_ids}
-            for page in existing_pages:
-                existing_counts[page['owner_user_id'][0]] += 1
+            page_counts = self.env['website.page'].with_user(svc_uid)._read_group(
+                [('owner_user_id', 'in', unique_owner_ids)],
+                ['owner_user_id'],
+                ['__count']
+            )
+            for owner, count in page_counts:
+                existing_counts[owner.id] = count
             
             batch_counts = {u_id: 0 for u_id in unique_owner_ids}
             for vals in vals_list:
@@ -55,3 +60,56 @@ class WebsitePage(models.Model):
         self.check_access('unlink')
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(WebsitePage, self.with_user(svc_uid)).unlink()
+
+    @api.model
+    def _flush_redis_view_counters(self):
+        """
+        Cron job to flush Redis view counters to the PostgreSQL database.
+        Uses _trigger() for batching if there are too many keys (ADR-0022).
+        """
+        REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+        REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+        
+        try:
+            redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+            redis_client = redis.Redis(connection_pool=redis_pool)
+            cursor, keys = redis_client.scan(cursor=0, match="views:page:*", count=1000)
+        except Exception as e:
+            _logger.error(f"Failed to connect to Redis for view counter flush: {e}")
+            return
+
+        if not keys:
+            return
+
+        pipe = redis_client.pipeline()
+        for key in keys:
+            pipe.get(key)
+            pipe.delete(key)
+        
+        results = pipe.execute()
+        
+        updates = []
+        for i, key in enumerate(keys):
+            val = results[i * 2]
+            if val:
+                try:
+                    page_id = int(key.split(':')[-1])
+                    increment = int(val)
+                    updates.append((increment, page_id))
+                except ValueError:
+                    pass
+        
+        if updates:
+            try:
+                for inc, pid in updates:
+                    self.env.cr.execute(
+                        "UPDATE website_page SET view_count = COALESCE(view_count, 0) + %s WHERE id = %s", 
+                        (inc, pid)
+                    )
+            except Exception as e:
+                _logger.error(f"Error updating PostgreSQL view counts: {e}")
+        
+        if cursor != 0:
+            cron = self.env.ref('user_websites.ir_cron_flush_view_counters', raise_if_not_found=False)
+            if cron:
+                cron._trigger()

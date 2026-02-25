@@ -19,3 +19,4 @@ from . import test_audit_edge_cases
 from . import test_security_utils
 from . import test_xpath_rendering
 from . import test_robustness_and_boundaries
+from . import test_simulation

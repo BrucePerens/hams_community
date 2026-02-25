@@ -73,3 +73,36 @@ class TestRobustnessAndBoundaries(odoo.tests.common.HttpCase):
             
         self.assertEqual(len(data['pages']), 0)
         self.assertEqual(len(data['blog_posts']), 0)
+
+    def test_05_gdpr_export_streaming_json_escaping(self):
+        """
+        Verify that the custom JSON streaming generator safely escapes
+        dangerous characters (newlines, quotes, backslashes) in user content.
+        """
+        self.authenticate(self.user_test.login, self.user_test.login)
+        
+        # Create content with aggressive string breaks
+        malicious_html = '<p>He said, "Hello\nWorld!" &amp; \'test\'</p>'
+        self.env['website.page'].create({
+            'url': f'/{self.user_test.website_slug}/nasty',
+            'name': 'Nasty Page',
+            'type': 'qweb',
+            'arch': malicious_html,
+            'owner_user_id': self.user_test.id
+        })
+        
+        response = self.url_open('/my/privacy/export', data={
+            'csrf_token': odoo.http.Request.csrf_token(self)
+        }, method='POST')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        try:
+            data = json.loads(response.content)
+            self.assertEqual(
+                data['pages'][0]['content'], 
+                malicious_html, 
+                "The JSON parser must successfully decode the escaped payload exactly as it was inputted."
+            )
+        except json.JSONDecodeError as e:
+            self.fail(f"Custom JSON generator produced invalid JSON due to character escaping failure: {e}")

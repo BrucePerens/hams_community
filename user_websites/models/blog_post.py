@@ -34,29 +34,24 @@ class BlogPost(models.Model):
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         one_week_ago = fields.Datetime.now() - timedelta(days=7)
         
-        recent_posts = self.env['blog.post'].with_user(svc_uid).search([
-            ('is_published', '=', True),
-            ('create_date', '>=', one_week_ago)
-        ], limit=50000)
+        # Use _read_group to find authors with recent posts without loading all posts into memory (OOM prevention)
+        post_groups = self.env['blog.post'].with_user(svc_uid)._read_group(
+            [('is_published', '=', True), ('create_date', '>=', one_week_ago)],
+            ['owner_user_id', 'user_websites_group_id']
+        )
         
-        if not recent_posts:
+        digests_keys = set()
+        for owner_user, group_owner in post_groups:
+            if owner_user:
+                digests_keys.add(('res.partner', owner_user.partner_id))
+            elif group_owner:
+                digests_keys.add(('user.websites.group', group_owner))
+                
+        if not digests_keys:
             self.env['ir.config_parameter'].with_user(svc_uid).set_param('ham.user_websites.last_digest_key', '')
             return
 
-        digests = {}
-        for post in recent_posts:
-            if post.owner_user_id:
-                key = ('res.partner', post.owner_user_id.partner_id)
-            elif post.user_websites_group_id:
-                key = ('user.websites.group', post.user_websites_group_id)
-            else:
-                continue
-                
-            if key not in digests:
-                digests[key] = []
-            digests[key].append(post)
-
-        sorted_keys = sorted(digests.keys(), key=lambda k: f"{k[0]}_{k[1].id}")
+        sorted_keys = sorted(list(digests_keys), key=lambda k: f"{k[0]}_{k[1].id}")
         last_processed_str = self.env['user_websites.security.utils']._get_system_param('ham.user_websites.last_digest_key', '')
         
         start_idx = 0
@@ -77,10 +72,42 @@ class BlogPost(models.Model):
             return
 
         base_url = self.env['user_websites.security.utils']._get_system_param('web.base.url')
-        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]
+        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [\ANCHOR: test_weekly_digest_secret]
+
+        # ADR-0022: Pre-fetch posts for the entire batch outside the loop to prevent N+1 queries
+        partner_ids = [k[1].id for k in batch_keys if k[0] == 'res.partner']
+        group_ids = [k[1].id for k in batch_keys if k[0] == 'user.websites.group']
+        
+        domain = [('is_published', '=', True), ('create_date', '>=', one_week_ago)]
+        if partner_ids and group_ids:
+            domain.extend(['|', ('owner_user_id.partner_id', 'in', partner_ids), ('user_websites_group_id', 'in', group_ids)])
+        elif partner_ids:
+            domain.append(('owner_user_id.partner_id', 'in', partner_ids))
+        elif group_ids:
+            domain.append(('user_websites_group_id', 'in', group_ids))
+            
+        batch_posts = self.env['blog.post'].with_user(svc_uid).search(domain, limit=1000)
+        
+        # Map the pre-fetched posts in O(1) time
+        posts_by_owner = {}
+        for post in batch_posts:
+            if post.owner_user_id:
+                key = ('res.partner', post.owner_user_id.partner_id.id)
+            elif post.user_websites_group_id:
+                key = ('user.websites.group', post.user_websites_group_id.id)
+            else:
+                continue
+                
+            if key not in posts_by_owner:
+                posts_by_owner[key] = []
+            posts_by_owner[key].append(post)
 
         for owner_model, owner_record in batch_keys:
-            posts = digests[(owner_model, owner_record)]
+            # Retrieve from map instead of database
+            posts = posts_by_owner.get((owner_model, owner_record.id), [])
+            if not posts:
+                continue
+
             followers = owner_record.message_follower_ids.mapped('partner_id')
             if not followers:
                 continue
@@ -101,8 +128,7 @@ class BlogPost(models.Model):
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
                 }
                 
-                # Restored clean, native Odoo mail compilation
-                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
+                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [\ANCHOR: test_weekly_digest_mail_template]
                     author_name=author_name,
                     post_links=post_links,
                     email_to=partner.email,

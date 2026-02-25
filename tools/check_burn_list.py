@@ -16,8 +16,8 @@ ERROR_RULES = [
     (r'\.xml$', re.compile(r'expr\s*=\s*["\'].*?id=["\']snippet_structure["\'].*?["\']'), "CRITICAL FRAGILE XPATH: 'snippet_structure' was removed in Odoo 19. Use `expr=\"/*\"` with `position=\"inside\"` instead."),
     (r'\.xml$', re.compile(r'name\s*=\s*["\']category_id["\']'), "Legacy security: Use 'privilege_id' instead of 'category_id' for res.groups."),
     (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']users["\']'), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use name='user_ids' instead of 'users' for res.groups mapping in Odoo 18+."),
-    (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']groups_id["\']'), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use name='group_ids' instead of 'groups_id' for res.users mapping in Odoo 18+."),
-    (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use 'group_ids' instead of 'groups_id' when assigning groups to res.users in Odoo 18+."),
+    (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']groups_id["\']'), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use name='group_ids' instead of 'group_ids' for res.users mapping in Odoo 18+."),
+    (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use 'group_ids' instead of 'group_ids' when assigning groups to res.users in Odoo 18+."),
     (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
     (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends.")
 ]
