@@ -50,6 +50,6 @@ class ContentViolationReport(models.Model):
                     owner.action_suspend_user_websites()
                     
                 report.message_post(
-                    body=_("Strike applied to owner. Current strike count: %s") % owner.violation_strike_count,
+                    body=_("You applied a strike to the owner. Current strike count: %s") % owner.violation_strike_count,
                     subtype_xmlid="mail.mt_note"
                 )

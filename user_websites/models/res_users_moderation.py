@@ -96,7 +96,7 @@ class ResUsersModeration(models.Model):
             
             # Note: We use Odoo's mail.thread on the underlying partner to log the suspension
             user.partner_id.message_post(
-                body=_("🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."),
+                body=_("🚨 **AUTOMATED ACTION:** The system suspended this user for accumulating 3 or more violation strikes and unpublished their personal content."),
                 subtype_xmlid="mail.mt_note"
             )
 
@@ -106,6 +106,6 @@ class ResUsersModeration(models.Model):
             user.violation_strike_count = 0
             user.is_suspended_from_websites = False
             user.partner_id.message_post(
-                body=_("✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."),
+                body=_("✅ **MODERATION ACTION:** You pardoned this user. The system lifted their suspension and reset their strike count to 0. (Note: Previously unpublished content remains unpublished until manually restored)."),
                 subtype_xmlid="mail.mt_note"
             )

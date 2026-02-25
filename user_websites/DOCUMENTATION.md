@@ -4,7 +4,7 @@
 
 **Module Name:** `user_websites`
 **Version:** Odoo 19 Community
-**Summary:** Enables decentralized, multi-tenant content creation within a single Odoo instance, allowing users to build personal or group-managed websites and blogs.
+**Summary:** Lets users build personal or group-managed websites and blogs inside a single Odoo instance.
 
 **Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER be given dependencies on `ham_*` modules or anything else from the proprietary codebase.
 

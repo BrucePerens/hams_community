@@ -54,13 +54,13 @@
                 <t t-if="request.env.user.is_suspended_from_websites">
                     <div class="alert alert-danger shadow-sm" role="alert">
                         <h4 class="alert-heading fw-bold"><i class="fa fa-ban me-2"/> Account Suspended</h4>
-                        <p>Your user website and blog features have been suspended due to community guideline violations. All your content is currently unpublished.</p>
+                        <p>We suspended your website and blog features because of community guideline violations. We also unpublished your content.</p>
                         <hr/>
                         
                         <t t-set="existing_appeal" t-value="request.env.user.appeal_ids.filtered(lambda a: a.state == 'new')"/>
                         
                         <t t-if="existing_appeal">
-                            <p class="mb-0 text-dark fw-bold"><i class="fa fa-clock-o me-1"/> You have a pending appeal under review by the administrators.</p>
+                            <p class="mb-0 text-dark fw-bold"><i class="fa fa-clock-o me-1"/> We are currently reviewing your appeal.</p>
                         </t>
                         <t t-else="">
                             <form action="/website/submit_appeal" method="post">
@@ -236,7 +236,7 @@
                         <i class="fa fa-check-circle text-success" style="font-size: 4rem;"/>
                         <h2 class="mt-4 fw-bold">Unsubscribed Successfully</h2>
                         <p class="lead text-muted mt-3">
-                            You have been successfully removed from the mailing list for <strong t-out="record_name"/>. 
+                            We successfully removed you from the mailing list for <strong t-out="record_name"/>. 
                             You will no longer receive weekly digests for this site.
                         </p>
                         <a href="/" class="btn btn-primary mt-4">Return to Homepage</a>

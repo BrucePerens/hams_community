@@ -24,7 +24,7 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
         },
         {
             content: "Check Pending Status Rendered",
-            trigger: 'p:contains("You have a pending appeal under review")',
+            trigger: 'p:contains("We are currently reviewing your appeal.")',
             run: () => {}
         }
     ],

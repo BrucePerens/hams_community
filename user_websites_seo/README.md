@@ -2,7 +2,7 @@
 
 *Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
 
-This module is a lightweight domain extension for `user_websites`. It bridges the platform's multi-tenant shared blog architecture with Odoo's native frontend SEO engine.
+This module is a lightweight domain extension for `user_websites`. It connects our shared blog architecture with Odoo's native frontend SEO engine.
 
 ## Technical Implementation
 * **Model Injection:** It fuses the `website.seo.metadata` mixin into the `res.users` and `user.websites.group` models.

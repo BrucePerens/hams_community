@@ -211,29 +211,29 @@ msgstr "このユーザーが所有するコンテンツに対して提出され
 #. module: user_websites
 #: code:addons/user_websites/models/content_violation_appeal.py:0
 #, python-format
-msgid "Appeal approved. User has been pardoned and suspension lifted."
-msgstr "申し立てが承認されました。ユーザーは免責され、停止は解除されました。"
+msgid "Appeal approved. You pardoned the user and lifted their suspension."
+msgstr "申し立てが承認されました。ユーザーを免責し、停止を解除しました。"
 
 #. module: user_websites
 #: code:addons/user_websites/models/content_violation_appeal.py:0
 #, python-format
-msgid "Appeal rejected. Suspension remains active."
-msgstr "申し立ては却下されました。停止は有効なままです。"
+msgid "Appeal rejected. The user remains suspended."
+msgstr "申し立ては却下されました。ユーザーは引き続き停止されています。"
 
 #. module: user_websites
 #: code:addons/user_websites/models/content_violation_report.py:0
 #, python-format
-msgid "Strike applied to owner. Current strike count: %s"
-msgstr "所有者にストライクが適用されました。現在のストライク数: %s"
+msgid "You applied a strike to the owner. Current strike count: %s"
+msgstr "所有者にストライクを適用しました。現在のストライク数: %s"
 
 #. module: user_websites
 #: code:addons/user_websites/models/res_users_moderation.py:0
 #, python-format
-msgid "🚨 **AUTOMATED ACTION:** User has been suspended from the Websites feature due to accumulating 3 or more violation strikes. All personal content has been unpublished."
-msgstr "🚨 **自動アクション:** ユーザーは、3回以上の違反ストライクが蓄積されたため、ウェブサイト機能から停止されました。すべての個人コンテンツは非公開になりました。"
+msgid "🚨 **AUTOMATED ACTION:** The system suspended this user for accumulating 3 or more violation strikes and unpublished their personal content."
+msgstr "🚨 **自動アクション:** システムは3回以上の違反ストライクが蓄積されたため、このユーザーを停止し、個人コンテンツを非公開にしました。"
 
 #. module: user_websites
 #: code:addons/user_websites/models/res_users_moderation.py:0
 #, python-format
-msgid "✅ **MODERATION ACTION:** User has been pardoned. Suspension lifted and strike count reset to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
-msgstr "✅ **モデレーションアクション:** ユーザーは免責されました。停止が解除され、ストライク数が0にリセットされました。（注：以前に非公開になったコンテンツは、手動で復元されるまで非公開のままです）。"
+msgid "✅ **MODERATION ACTION:** You pardoned this user. The system lifted their suspension and reset their strike count to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
+msgstr "✅ **モデレーションアクション:** このユーザーを免責しました。システムは停止を解除し、ストライク数を0にリセットしました。（注：以前に非公開になったコンテンツは、手動で復元されるまで非公開のままです）。"

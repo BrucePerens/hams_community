@@ -30,16 +30,16 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
         // Map URL query parameters to specific notification messages
         if (urlParams.has('report_submitted')) {
             title = "Success";
-            message = "Your report has been submitted for review.";
+            message = "We received your report and will review it.";
         } else if (urlParams.has('appeal_submitted')) {
             title = "Submitted";
-            message = "Your appeal has been received and is pending review.";
+            message = "We received your appeal and are reviewing it.";
         } else if (urlParams.has('subscribed')) {
             title = "Subscribed";
             message = "You will now receive weekly email digests for this site.";
         } else if (urlParams.has('erased')) {
             title = "Content Deleted";
-            message = "Your personal pages and blog posts have been permanently erased from our servers.";
+            message = "We permanently erased your personal pages and blog posts from our servers.";
         }
 
         if (message) {
