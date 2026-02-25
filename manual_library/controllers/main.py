@@ -103,10 +103,11 @@ class ManualLibraryController(http.Controller):
             if article.exists():
                 # Escalate to Service Account ONLY for the write operation since guests lack write permissions
                 svc_uid = request.env.ref('manual_library.user_manual_library_service_account').id
+                svc_article = request.env['knowledge.article'].with_user(svc_uid).browse(article.id)
                 if is_helpful == '1':
-                    article.with_user(svc_uid).write({'helpful_count': article.helpful_count + 1})
+                    svc_article.write({'helpful_count': svc_article.helpful_count + 1})
                 else:
-                    article.with_user(svc_uid).write({'unhelpful_count': article.unhelpful_count + 1})
+                    svc_article.write({'unhelpful_count': svc_article.unhelpful_count + 1})
         except Exception:
             # Silently fail on bad input to prevent brute-force discovery
             pass

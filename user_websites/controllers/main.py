@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import os
 import time
+import threading
 import traceback
 import odoo
 import redis
@@ -65,16 +66,35 @@ def _async_gdpr_erasure(db_name, user_id):
 class UserWebsitesController(http.Controller):
 
     # --- 1. Community Directory ---
-    @http.route('/community', type='http', auth="public", website=True)
-    def community_directory(self, **kwargs):
+    @http.route(['/community', '/community/page/<int:page>'], type='http', auth="public", website=True)
+    def community_directory(self, page=1, **kwargs):
         # [%ANCHOR: controller_community_directory]
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        users = request.env['res.users'].with_user(svc_uid).search([
+        
+        domain = [
             ('privacy_show_in_directory', '=', True),
             ('website_slug', '!=', False)
-        ], limit=5000)
+        ]
+        
+        step = 24
+        total_users = request.env['res.users'].with_user(svc_uid).search_count(domain)
+        
+        users = request.env['res.users'].with_user(svc_uid).search(
+            domain, 
+            limit=step,
+            offset=(page - 1) * step
+        )
+        
+        pager = request.website.pager(
+            url='/community',
+            total=total_users,
+            page=page,
+            step=step,
+        )
+        
         return request.render('user_websites.community_directory', {
             'users': users,
+            'pager': pager,
             'default_title': "Community Directory",
             'default_description': "Discover the personal websites and blogs created by our community members."
         })
@@ -144,6 +164,10 @@ class UserWebsitesController(http.Controller):
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
+        group = None
+        if not user:
+            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
 
         if user:
             page = request.env['website.page'].with_user(svc_uid).search([
@@ -162,7 +186,7 @@ class UserWebsitesController(http.Controller):
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
                 # Retrieve avatar for OpenGraph og:image if available
-                avatar_url = f"/web/image/res.users/{user.id}/avatar_128" if user.avatar_128 else ""
+                avatar_url = f"/web/image/res.users/{user.id}/avatar_128"
 
                 return request.render(page.view_id.xml_id, {
                     'main_object': page.with_user(request.env.user),
@@ -176,8 +200,6 @@ class UserWebsitesController(http.Controller):
             raise werkzeug.exceptions.NotFound()
 
         # Fallback to Groups
-        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
-        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         if group:
             page = request.env['website.page'].with_user(svc_uid).search([
                 ('url', '=', f'/{group.website_slug}/home'),
@@ -213,8 +235,10 @@ class UserWebsitesController(http.Controller):
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
-        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
+        group = None
+        if not user:
+            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_uid = request.env.user.id
         resolved_slug = None
@@ -256,14 +280,16 @@ class UserWebsitesController(http.Controller):
 
     # --- 5. Blog Routing ---
     @http.route(['/<string:website_slug>/blog', '/<string:website_slug>/blog/'], type='http', auth="public", website=True)
-    def user_blog_index(self, website_slug, tag=None, search=None, date_begin=None, date_end=None, **kwargs):
+    def user_blog_index(self, website_slug, tag=None, search=None, date_begin=None, date_end=None, page=1, **kwargs):
         # [%ANCHOR: controller_user_blog_index]
         slug_lower = website_slug.lower()
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
-        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
+        group = None
+        if not user:
+            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         if not user and not group:
             raise werkzeug.exceptions.NotFound()
@@ -278,14 +304,22 @@ class UserWebsitesController(http.Controller):
 
         if user:
             domain.append(('owner_user_id', '=', user.id))
-            main_object = user
+            main_object = request.env['res.users']
             meta_title = f"{user.name}'s Blog"
         else:
             domain.append(('user_websites_group_id', '=', group.id))
-            main_object = group
+            main_object = request.env['user.websites.group']
             meta_title = f"{group.name}'s Blog"
 
-        posts = request.env['blog.post'].with_user(svc_uid).search(domain, limit=1000)
+        page_num = int(page)
+        step = 10
+        total_posts = request.env['blog.post'].with_user(svc_uid).search_count(domain)
+        
+        posts = request.env['blog.post'].with_user(svc_uid).search(
+            domain, 
+            limit=step, 
+            offset=(page_num - 1) * step
+        )
         
         blogs = request.env['blog.blog'].with_user(svc_uid).search([
             ('name', '=', 'Community Blog'),
@@ -311,16 +345,16 @@ class UserWebsitesController(http.Controller):
 
         pager = request.website.pager(
             url=f"/{resolved_slug}/blog",
-            total=len(posts),
-            page=1,
-            step=len(posts) if posts else 10
+            total=total_posts,
+            page=page_num,
+            step=step
         )
 
         return request.render('website_blog.blog_post_short', {
             'posts': posts.with_user(request.env.user),
             'blog': (posts[0].blog_id if posts else blogs[0]).with_user(request.env.user) if (posts or blogs) else False,
             'blogs': blogs.with_user(request.env.user), 
-            'main_object': main_object.with_user(request.env.user), 
+            'main_object': main_object, 
             'profile_user': user.with_user(request.env.user) if user else None,     
             'profile_group': group.with_user(request.env.user) if group else None,   
             'blog_url': blog_url,
@@ -340,8 +374,10 @@ class UserWebsitesController(http.Controller):
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
-        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
+        group = None
+        if not user:
+            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         resolved_slug = None
 
@@ -430,8 +466,10 @@ class UserWebsitesController(http.Controller):
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
-        group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
-        group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
+        group = None
+        if not user:
+            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_record = user.partner_id if user else group
         if target_record:

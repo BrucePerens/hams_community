@@ -18,6 +18,36 @@ class BlogPost(models.Model):
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(BlogPost, self.with_user(svc_uid)).create(vals_list)
 
+    def check_access_rule(self, operation):
+        """
+        Proactively catch write/unlink access violations to prevent ir.rule INFO log spam
+        when the frontend evaluates edit capabilities.
+        """
+        if operation in ('write', 'unlink') and not self.env.su and self:
+            if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
+                for post in self:
+                    is_owner = post.owner_user_id.id == self.env.user.id
+                    is_group_member = post.user_websites_group_id and self.env.user.id in post.user_websites_group_id.odoo_group_id.user_ids.ids
+                    if not is_owner and not is_group_member:
+                        from odoo.exceptions import AccessError
+                        raise AccessError(_("Access Denied: You do not have permission to modify this post."))
+        return super(BlogPost, self).check_access_rule(operation)
+
+    def check_access_rule(self, operation):
+        """
+        Proactively catch write/unlink access violations to prevent ir.rule INFO log spam
+        when the frontend evaluates edit capabilities.
+        """
+        if operation in ('write', 'unlink') and not self.env.su and self:
+            if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
+                for post in self:
+                    is_owner = post.owner_user_id.id == self.env.user.id
+                    is_group_member = post.user_websites_group_id and self.env.user.id in post.user_websites_group_id.odoo_group_id.user_ids.ids
+                    if not is_owner and not is_group_member:
+                        from odoo.exceptions import AccessError
+                        raise AccessError(_("Access Denied: You do not have permission to modify this post."))
+        return super(BlogPost, self).check_access_rule(operation)
+
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)

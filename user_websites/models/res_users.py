@@ -178,6 +178,8 @@ class ResUsers(models.Model):
                 if not pages:
                     break
                 pages.write({'website_published': False})
+                if not odoo.tools.config.get('test_enable'):
+                    self.env.cr.commit()
                 time.sleep(0.1) # ADR-0022 Batch Rate Limiting
                 
             while True:
@@ -188,6 +190,8 @@ class ResUsers(models.Model):
                 if not posts:
                     break
                 posts.write({'is_published': False})
+                if not odoo.tools.config.get('test_enable'):
+                    self.env.cr.commit()
                 time.sleep(0.1) # ADR-0022 Batch Rate Limiting
 
         try:

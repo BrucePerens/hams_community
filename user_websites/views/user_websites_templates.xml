@@ -168,6 +168,9 @@
                         <p class="text-muted">No public websites available yet.</p>
                     </div>
                 </div>
+                <div class="d-flex justify-content-center mt-4 mb-4">
+                    <t t-call="website.pager"/>
+                </div>
             </div>
         </t>
     </template>
