@@ -74,7 +74,7 @@ To keep the web interface fast, we run these Python scripts separately in the `d
 We are strict about keeping our documentation tied to reality.
 
 ### Semantic Anchors *(See ADR-0004)*
-Instead of saying "Look at line 45 in main.py," we put specific tags in the code like `# [%ANCHOR: check_user_login]`. Our docs point to these tags. If we move the code, we move the tag with it. This means our documentation never breaks when we refactor.
+Instead of saying "Look at line 45 in main.py," we put specific tags in the code like `# [%ANCHOR: example_check_user_login]`. Our docs point to these tags. If we move the code, we move the tag with it. This means our documentation never breaks when we refactor.
 
 ### Where to find things:
 * **`docs/adrs/`:** Where we explain *why* we made big technical choices.

@@ -30,7 +30,7 @@ class CloudflareIPBan(models.Model):
         success, result = ban_ip(ip_address, mode=mode, notes=notes)
         
         if success:
-            self.create({
+            self.env['cloudflare.ip.ban'].create({
                 'ip_address': ip_address,
                 'mode': mode,
                 'notes': notes,
@@ -39,7 +39,7 @@ class CloudflareIPBan(models.Model):
             })
             return True
         else:
-            self.create({
+            self.env['cloudflare.ip.ban'].create({
                 'ip_address': ip_address,
                 'mode': mode,
                 'notes': f"Failed to deploy: {result}",

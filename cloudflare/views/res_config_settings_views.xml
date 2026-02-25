@@ -7,7 +7,9 @@
         <field name="arch" type="xml">
             
             
-            <xpath expr="//form" position="inside"> 
+            <!-- [%ANCHOR: xpath_rendering_cf_settings] -->
+            <!-- Verified by [%ANCHOR: test_xpath_rendering_settings] -->
+            <xpath expr="//form" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_settings] -->
                 <div class="app_settings_block" data-string="Cloudflare" data-key="cloudflare">
                     <h2>Cloudflare Edge Orchestration</h2>
                     <div class="row mt16 o_settings_container" id="cloudflare_edge_container">

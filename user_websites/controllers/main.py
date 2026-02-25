@@ -609,5 +609,5 @@ class UserWebsitesController(http.Controller):
             thread.start()
             
         request.session.logout()
-            return request.redirect('/web/login?erased=1')
+        return request.redirect('/web/login?erased=1')
 
