@@ -6,7 +6,7 @@ COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/..
 ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
 # Allow passing a target module to test, with defaults.
-TARGET_MODULE="${1:-cloudflare,manual_library,compliance,user_websites}"
+TARGET_MODULE="${1:-zero_sudo,cloudflare,manual_library,compliance,user_websites,user_websites_seo}"
 DB_NAME="test_${TARGET_MODULE//,/_}"
 
 # If the user passed additional arguments (like --test-tags simulation), use those.

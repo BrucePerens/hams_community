@@ -2,3 +2,11 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_cloudflare_purge_queue_svc,cloudflare.purge.queue svc,model_cloudflare_purge_queue,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_purge_queue_admin,cloudflare.purge.queue admin,model_cloudflare_purge_queue,base.group_system,1,1,1,1
 access_ir_config_parameter_cf_svc,ir.config_parameter cf svc,base.model_ir_config_parameter,cloudflare.group_cloudflare_service,1,0,0,0
+access_cloudflare_waf_rule_svc,cloudflare.waf.rule svc,model_cloudflare_waf_rule,cloudflare.group_cloudflare_service,1,1,1,1
+access_cloudflare_waf_rule_admin,cloudflare.waf.rule admin,model_cloudflare_waf_rule,base.group_system,1,1,1,1
+access_cloudflare_config_backup_svc,cloudflare.config.backup svc,model_cloudflare_config_backup,cloudflare.group_cloudflare_service,1,1,1,1
+access_cloudflare_config_backup_admin,cloudflare.config.backup admin,model_cloudflare_config_backup,base.group_system,1,0,0,1
+access_cloudflare_config_manager_svc,cloudflare.config.manager svc,model_cloudflare_config_manager,cloudflare.group_cloudflare_service,1,0,0,0
+access_cloudflare_config_manager_admin,cloudflare.config.manager admin,model_cloudflare_config_manager,base.group_system,1,0,0,0
+access_cloudflare_ip_ban_svc,cloudflare.ip.ban svc,model_cloudflare_ip_ban,cloudflare.group_cloudflare_service,1,1,1,1
+access_cloudflare_ip_ban_admin,cloudflare.ip.ban admin,model_cloudflare_ip_ban,base.group_system,1,1,1,1

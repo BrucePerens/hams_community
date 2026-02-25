@@ -38,6 +38,7 @@ class ResUsers(models.Model):
         default=False
     )
 
+
     # --- Inverse Relationships (Bidirectional Integrity) ---
     user_websites_page_ids = fields.One2many(
         'website.page',
@@ -120,7 +121,7 @@ class ResUsers(models.Model):
                 user_domain.append(('id', '!=', record_id))
             
             try:
-                svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
                 env_user = self.env['res.users'].with_user(svc_uid)
                 env_group = self.env['user.websites.group'].with_user(svc_uid)
             except AccessError:
@@ -168,7 +169,7 @@ class ResUsers(models.Model):
         # --- Content Lifecycle Policy ---
         if 'active' in vals and not vals['active']:
             users_to_archive = self.ids
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             
             while True:
                 pages = self.env['website.page'].with_user(svc_uid).search([
@@ -202,7 +203,7 @@ class ResUsers(models.Model):
 
         # --- 301 Redirect Automation ---
         if 'website_slug' in vals:
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             redirect_env = self.env['website.rewrite'].with_user(svc_uid)
             
             user_ids = self.ids
@@ -244,7 +245,7 @@ class ResUsers(models.Model):
         self.ensure_one()
         limit = self.website_page_limit
         if not limit or limit <= 0:
-            limit = self.env['user_websites.security.utils']._get_system_param(
+            limit = self.env['zero_sudo.security.utils']._get_system_param(
                 'user_websites.global_website_page_limit', 100
             )
         return int(limit)
@@ -264,7 +265,7 @@ class ResUsers(models.Model):
         Returns a dictionary of all personal data and authored content for GDPR portability.
         """
         self.ensure_one()
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         pages = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
         blogs = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
         reports = self.env['content.violation.report'].with_user(svc_uid).search([('reported_by_user_id', '=', self.id)], limit=10000)
@@ -295,7 +296,7 @@ class ResUsers(models.Model):
         Executes the GDPR right to erasure by hard-deleting all authored content.
         """
         self.ensure_one()
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         # [%ANCHOR: gdpr_sudo_erasure]
         # Verified by [%ANCHOR: test_gdpr_erasure_pages]

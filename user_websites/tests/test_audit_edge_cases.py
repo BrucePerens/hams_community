@@ -53,7 +53,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         and resumes processing from the correct index.
         """
         # Ensure a clean state for the system parameter
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('ham.user_websites.last_digest_key', '')
         
         blog = self.env['blog.blog'].search([('name', '=', 'Community Blog')], limit=1)
@@ -77,7 +77,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         
         # Because the key was set to our test user, the batching logic should skip them.
         # If there are no users after them in the DB state, the cron should cleanly finish and clear the key.
-        final_key = self.env['user_websites.security.utils']._get_system_param('ham.user_websites.last_digest_key')
+        final_key = self.env['zero_sudo.security.utils']._get_system_param('ham.user_websites.last_digest_key')
         self.assertFalse(final_key, "Cron must safely clear the digest key after completing the remaining queue.")
 
     def test_03_service_account_tamper_resistance(self):
@@ -85,7 +85,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         Verify that if the Zero-Sudo Service Account is tampered with (e.g., archived), 
         the proxy ownership mixin fails closed securely.
         """
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         svc_user = self.env['res.users'].browse(svc_uid)
         
         # Simulate an administrator accidentally archiving the crucial service account

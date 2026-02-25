@@ -32,7 +32,7 @@ class ResUsersModeration(models.Model):
             return False
         # Case-insensitive search requires ilike, but cache key is exact.
         # We lowercase the slug in the controller to ensure cache hits.
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user = self.env['res.users'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
         return user.id if user else False
 
@@ -41,13 +41,13 @@ class ResUsersModeration(models.Model):
         if 'website_slug' in vals or 'active' in vals:
             for user in self:
                 if user.website_slug:
-                    self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
 
         res = super(ResUsersModeration, self).write(vals)
         
         # Emit NOTIFY for the new slug if it changed
         if 'website_slug' in vals and vals['website_slug']:
-            self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', vals['website_slug'])
+            self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', vals['website_slug'])
             
         return res
 
@@ -55,7 +55,7 @@ class ResUsersModeration(models.Model):
         # [%ANCHOR: slug_cache_invalidation_unlink]
         for user in self:
             if user.website_slug:
-                self.env['user_websites.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+                self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
 
         return super(ResUsersModeration, self).unlink()
 

@@ -23,6 +23,7 @@ This module enables:
         'website_blog',
         'mail',
         'portal',
+        'zero_sudo',
     ],
     'external_dependencies': {
         'python': ['redis'],

@@ -4,6 +4,7 @@
         <record id="user_user_websites_service_account" model="res.users">
             <field name="name">System Provisioner</field>
             <field name="login">sys_provisioner</field>
+            <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
             <field name="group_ids" eval="[(6, 0, [ref('user_websites.group_user_websites_service_account')])]"/>
         </record>
@@ -21,7 +22,7 @@
             <field name="model_id" ref="user_websites.model_content_violation_report"/>
             <field name="subject">Content Violation Report: {{ object.target_url }}</field>
             <field name="email_from">{{ (object.reported_by_user_id.email or object.reported_by_email) }}</field>
-            <field name="email_to">{{ object.env['user_websites.security.utils']._get_system_param('user_websites.company_abuse_email') or user.company_id.email or 'abuse@yourcompany.com' }}</field>
+            <field name="email_to">{{ object.env['zero_sudo.security.utils']._get_system_param('user_websites.company_abuse_email') or user.company_id.email or 'abuse@yourcompany.com' }}</field>
             <field name="body_html" type="html">
                 <div style="margin: 0px; padding: 0px;">
                     <p>A new content violation has been reported:</p>

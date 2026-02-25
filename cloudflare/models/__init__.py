@@ -6,3 +6,7 @@ from . import res_config_settings
 from . import waf
 from . import turnstile
 from . import edge_context
+from . import waf_rule
+from . import config_backup
+from . import config_manager
+from . import ip_ban

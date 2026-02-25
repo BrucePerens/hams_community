@@ -42,3 +42,8 @@ def post_init_hook(env):
     Injects docs into the knowledge base if the API is already installed.
     """
     install_knowledge_docs(env)
+
+    # Soft-Dependency: Retroactively lock down the Cloudflare service account if it was installed first
+    cf_svc = env.ref('cloudflare.user_cloudflare_service', raise_if_not_found=False)
+    if cf_svc and 'is_service_account' in cf_svc._fields:
+        cf_svc.write({'is_service_account': True})

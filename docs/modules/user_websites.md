@@ -96,7 +96,7 @@ page_vals = {
     'owner_user_id': user.id, # CRITICAL: Sets true business ownership
     'arch': f'''<t name="Home" t-name="user_websites.home_{slug}">...</t>''',
 }
-svc_uid = self.env.ref('user_websites.user_user_websites_service_account').id
+svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
 page = self.env['website.page'].with_user(svc_uid).create(page_vals)
 ```
 
@@ -156,7 +156,7 @@ class ResUsers(models.Model):
 
     def _get_gdpr_export_data(self):
         data = super()._get_gdpr_export_data()
-        svc_uid = self.env.ref('user_websites.user_user_websites_service_account').id
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         equipment = self.env['ham.equipment'].with_user(svc_uid).search([('owner_user_id', '=', self.id)])
         data['equipment'] = [{'name': e.name} for e in equipment]
         return data

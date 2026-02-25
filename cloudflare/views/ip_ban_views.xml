@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cloudflare_ip_ban_list" model="ir.ui.view">
+        <field name="name">cloudflare.ip.ban.list</field>
+        <field name="model">cloudflare.ip.ban</field>
+        <field name="arch" type="xml">
+            <list string="IP Bans" decoration-danger="state=='active'" decoration-success="state=='lifted'" decoration-warning="state=='failed'">
+                <field name="create_date"/>
+                <field name="ip_address"/>
+                <field name="mode"/>
+                <field name="notes"/>
+                <field name="state" widget="badge" 
+                       decoration-danger="state=='active'" 
+                       decoration-success="state=='lifted'" 
+                       decoration-warning="state=='failed'"/>
+                <button name="action_lift_ban" type="object" icon="fa-unlock" string="Lift Ban" invisible="state != 'active'" confirm="Remove this block from Cloudflare?"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_cloudflare_ip_ban_form" model="ir.ui.view">
+        <field name="name">cloudflare.ip.ban.form</field>
+        <field name="model">cloudflare.ip.ban</field>
+        <field name="arch" type="xml">
+            <form string="IP Ban Record">
+                <header>
+                    <button name="action_lift_ban" type="object" string="Lift Ban &amp; Unblock API" class="btn-primary" invisible="state != 'active'" confirm="Are you sure you want to restore access for this IP?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,lifted,failed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="ip_address" class="oe_edit_only"/>
+                        <h1><field name="ip_address" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="mode" readonly="1"/>
+                            <field name="cf_rule_id"/>
+                        </group>
+                        <group>
+                            <field name="create_date" readonly="1"/>
+                            <field name="notes" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_cf_ip_ban" model="ir.actions.act_window">
+        <field name="name">Honeypot IP Bans</field>
+        <field name="res_model">cloudflare.ip.ban</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No bots trapped yet!
+            </p>
+            <p>
+                When a scraper triggers a silent honeypot, the system logs its IP address here and instructs the edge to block it.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_cf_ip_bans"
+              name="Honeypot Triggers (Bans)"
+              parent="menu_cloudflare_root"
+              action="action_cf_ip_ban"
+              sequence="10"/>
+</odoo>

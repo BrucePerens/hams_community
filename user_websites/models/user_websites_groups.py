@@ -79,7 +79,7 @@ class UserWebsitesGroup(models.Model):
     def _get_group_id_by_slug(self, slug):
         if not slug:
             return False
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         group = self.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
         return group.id if group else False
 
@@ -112,7 +112,7 @@ class UserWebsitesGroup(models.Model):
                 group_domain.append(('id', '!=', record_id))
             
             try:
-                svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
                 env_group = self.env['user.websites.group'].with_user(svc_uid)
                 env_user = self.env['res.users'].with_user(svc_uid)
             except AccessError:
@@ -166,7 +166,7 @@ class UserWebsitesGroup(models.Model):
                 indices_needing_groups.append(i)
 
         if groups_to_create_vals:
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             new_odoo_groups = self.env['res.groups'].with_user(svc_uid).create(groups_to_create_vals)
             for i, new_group in zip(indices_needing_groups, new_odoo_groups):
                 vals_list[i]['odoo_group_id'] = new_group.id
@@ -179,7 +179,7 @@ class UserWebsitesGroup(models.Model):
         if 'website_slug' in vals:
             for group in self:
                 if group.website_slug:
-                    self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
 
             if vals.get('website_slug'):
                 if len(self) == 1:
@@ -200,9 +200,9 @@ class UserWebsitesGroup(models.Model):
             # Send targeted NOTIFY to prevent global cache wipe
             for group in self:
                 if group.website_slug:
-                    self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
                     
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             redirect_env = self.env['website.rewrite'].with_user(svc_uid)
             
             group_ids = self.ids
@@ -242,5 +242,5 @@ class UserWebsitesGroup(models.Model):
         # [%ANCHOR: group_slug_cache_invalidation_unlink]
         for group in self:
             if group.website_slug:
-                self.env['user_websites.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+                self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
         return super(UserWebsitesGroup, self).unlink()

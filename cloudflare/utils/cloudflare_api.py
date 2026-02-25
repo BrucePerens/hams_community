@@ -47,10 +47,10 @@ def purge_tags(tags):
         _logger.error(f"Cloudflare Tag purge API failed: {e}")
         return False
 
-def ban_ip(ip_address, mode='block', duration=3600):
+def ban_ip(ip_address, mode='block', notes="Banned via Odoo Cloudflare WAF API"):
     token, zone_id = get_cf_credentials()
     if not token or not zone_id:
-        return False
+        return False, "Missing credentials"
         
     endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/firewall/access_rules/rules"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -61,16 +61,33 @@ def ban_ip(ip_address, mode='block', duration=3600):
             "target": "ip",
             "value": ip_address
         },
-        "notes": "Banned via Odoo Cloudflare WAF API"
+        "notes": notes
     }
     
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
-        return True
+        rule_id = response.json().get('result', {}).get('id')
+        return True, rule_id
     except Exception as e:
         _logger.error(f"Cloudflare WAF IP Ban API failed: {e}")
-        return False
+        return False, str(e)
+
+def unban_ip(rule_id):
+    token, zone_id = get_cf_credentials()
+    if not token or not zone_id:
+        return False, "Missing credentials"
+        
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/firewall/access_rules/rules/{rule_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    try:
+        response = requests.delete(endpoint, headers=headers, timeout=10)
+        response.raise_for_status()
+        return True, "Success"
+    except Exception as e:
+        _logger.error(f"Cloudflare WAF IP Unban API failed: {e}")
+        return False, str(e)
 
 def verify_turnstile(token, remote_ip, secret):
     if not secret or not token:
@@ -88,24 +105,52 @@ def verify_turnstile(token, remote_ip, secret):
         _logger.error(f"Cloudflare Turnstile verification failed: {e}")
         return False
 
-def deploy_waf_rules():
+def get_zone_ruleset(phase):
     token, zone_id = get_cf_credentials()
     if not token or not zone_id:
-        return False, "Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID in environment."
-        
-    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/firewall/rules"
+        return None
+    
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/rulesets/phases/{phase}/entrypoint"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
-    payload = [{
-        "action": "challenge",
-        "filter": {"expression": "(http.request.uri.path contains \"/api/v1/\") and not cf.client.bot", "pause": False},
-        "description": "Odoo Native API Bot Protection (Automated)"
-    }]
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=15)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json().get('result')
+    except Exception as e:
+        _logger.error(f"Cloudflare Ruleset Fetch API failed: {e}")
+        return None
+
+def update_zone_ruleset(ruleset_id, payload):
+    token, zone_id = get_cf_credentials()
+    if not token or not zone_id:
+        return False, "Missing credentials."
+        
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/rulesets/{ruleset_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    try:
+        response = requests.put(endpoint, json=payload, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, "Ruleset updated successfully."
+    except Exception as e:
+        _logger.error(f"Cloudflare Ruleset Update API failed: {e}")
+        return False, str(e)
+
+def create_zone_ruleset(payload):
+    token, zone_id = get_cf_credentials()
+    if not token or not zone_id:
+        return False, "Missing credentials."
+        
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/rulesets"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
-        if response.status_code in [200, 400]:
-            return True, "WAF deployment request processed successfully."
-        return False, f"Cloudflare API Error: {response.text}"
+        response.raise_for_status()
+        return True, "Ruleset created successfully."
     except Exception as e:
+        _logger.error(f"Cloudflare Ruleset Create API failed: {e}")
         return False, str(e)

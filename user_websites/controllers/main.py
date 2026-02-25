@@ -57,7 +57,7 @@ def _async_gdpr_erasure(db_name, user_id):
             env.cr.rollback()
             _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
             try:
-                admin_uid = env['user_websites.security.utils']._get_service_uid('base.user_admin')
+                admin_uid = env['zero_sudo.security.utils']._get_service_uid('base.user_admin')
                 admin = env['res.users'].with_context(active_test=False).browse(admin_uid)
                 error_details = traceback.format_exc()
                 admin.partner_id.activity_schedule(
@@ -77,7 +77,7 @@ class UserWebsitesController(http.Controller):
     def community_directory(self, page=1, **kwargs):
         # [%ANCHOR: controller_community_directory]
         # Verified by [%ANCHOR: test_tour_community_directory]
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         domain = [
             ('privacy_show_in_directory', '=', True),
@@ -141,7 +141,7 @@ class UserWebsitesController(http.Controller):
 
         content_owner_id = False
         
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = request.env['website.page'].with_user(svc_uid).search([('url', '=', url)], limit=1)
         if page and page.owner_user_id:
             content_owner_id = page.owner_user_id.id
@@ -171,7 +171,7 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_websites_home]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
@@ -250,7 +250,7 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_site]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
@@ -302,7 +302,7 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_blog_index]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
@@ -398,7 +398,7 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_blog_post]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
@@ -473,7 +473,7 @@ class UserWebsitesController(http.Controller):
         user = request.env.user
         
         if user.is_suspended_from_websites and reason:
-            svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             existing = request.env['content.violation.appeal'].with_user(svc_uid).search([
                 ('user_id', '=', user.id), 
                 ('state', '=', 'new')
@@ -491,7 +491,7 @@ class UserWebsitesController(http.Controller):
     def subscribe_to_site(self, website_slug, **kwargs):
         # [%ANCHOR: controller_subscribe_to_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
@@ -513,7 +513,7 @@ class UserWebsitesController(http.Controller):
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
             
-        svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         record = request.env[model_name].with_user(svc_uid).browse(record_id)
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
@@ -596,7 +596,7 @@ class UserWebsitesController(http.Controller):
         if odoo.tools.config.get('test_enable'):
             user = request.env['res.users'].with_context(active_test=False).browse(user_id)
             user._execute_gdpr_erasure()
-            svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             user.with_user(svc_uid).write({
                 'name': f'Anonymized User {user_id}',
                 'login': f'deleted_{user_id}',
@@ -609,4 +609,5 @@ class UserWebsitesController(http.Controller):
             thread.start()
             
         request.session.logout()
-        return request.redirect('/web/login?erased=1')
+            return request.redirect('/web/login?erased=1')
+

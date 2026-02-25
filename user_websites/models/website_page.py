@@ -21,7 +21,7 @@ class WebsitePage(models.Model):
     def _get_page_id_by_url(self, url, website_id):
         if not url:
             return False
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = self.with_user(svc_uid).search([
             ('url', '=', url),
             ('website_published', '=', True),
@@ -40,7 +40,7 @@ class WebsitePage(models.Model):
         owner_ids = [vals.get('owner_user_id') for vals in vals_list if vals.get('owner_user_id')]
         if owner_ids:
             unique_owner_ids = list(set(owner_ids))
-            svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             users = self.env['res.users'].with_user(svc_uid).browse(unique_owner_ids)
             user_limits = {user.id: user._get_page_limit() for user in users}
             
@@ -64,7 +64,7 @@ class WebsitePage(models.Model):
                     raise ValidationError(_("You have reached your limit of %s website pages.") % user_limits[o_id])
                     
         # 3. Apply Service Account to safely bypass standard ir.ui.view creation restrictions
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         return super(WebsitePage, self.with_user(svc_uid)).create(vals_list)
 
     def check_access_rule(self, operation):
@@ -91,12 +91,12 @@ class WebsitePage(models.Model):
         # Identify URLs to invalidate before mutating
         pages_to_invalidate = [p.url for p in self if p.url]
         
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         res = super(WebsitePage, self.with_user(svc_uid)).write(vals)
         
         # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
         if 'url' in vals or 'website_published' in vals or 'is_published' in vals:
-            utils = self.env['user_websites.security.utils']
+            utils = self.env['zero_sudo.security.utils']
             for url in pages_to_invalidate:
                 utils._notify_cache_invalidation('website.page', url)
             if 'url' in vals and vals['url'] not in pages_to_invalidate:
@@ -109,10 +109,10 @@ class WebsitePage(models.Model):
         
         pages_to_invalidate = [p.url for p in self if p.url]
         
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         res = super(WebsitePage, self.with_user(svc_uid)).unlink()
         
-        utils = self.env['user_websites.security.utils']
+        utils = self.env['zero_sudo.security.utils']
         for url in pages_to_invalidate:
             utils._notify_cache_invalidation('website.page', url)
             

@@ -17,7 +17,8 @@ When elevated privileges are required, the system MUST NOT use `.sudo()`. Instea
 ### 2. Service Account Web Isolation
 To prevent leaked daemon credentials from being used interactively:
 * All Service Accounts MUST be flagged with `is_service_account=True`.
-* The core `web_login` controller intercepts logins and instantly destroys the session if a Service Account attempts to access the frontend UI.
+* The `web_login` controller intercepts logins and instantly destroys the session if a Service Account attempts to access the frontend UI.
+* **Open Source Compatibility:** The central `zero_sudo` module provides this field and logic natively to the open-source layer, ensuring both proprietary and community modules benefit from absolute daemon isolation without breaking external RPC integration.
 
 ### 3. Centralized Security Utility
 All allowed privilege escalations (such as resolving XML IDs or fetching configuration parameters) MUST route through `ham.security.utils`:

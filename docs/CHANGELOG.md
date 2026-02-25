@@ -58,7 +58,7 @@ and this project adheres to strict Semantic Versioning.
 
 ## [1.0.0] - 2026-02-22
 ### Added
-- **Semantic Anchor Architecture**: Implemented `[%ANCHOR: name]` traceability across the entire codebase to permanently link execution logic to Agile documentation.
+- **Semantic Anchor Architecture**: Implemented `[%ANCHOR: example_name]` traceability across the entire codebase to permanently link execution logic to Agile documentation.
 - **Architecture Decision Records (ADRs)**: Formalized foundational system decisions (Hybrid Daemon, Zero-Sudo, Zero-DB DX Cluster, Semantic Anchors) in `docs/adrs/`.
 - Comprehensive Operational Runbooks and User Journeys to guide deployments and workflows.
 ### Changed

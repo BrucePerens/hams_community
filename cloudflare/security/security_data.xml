@@ -7,7 +7,6 @@
         <record id="user_cloudflare_service" model="res.users">
             <field name="name">Cloudflare Queue Service</field>
             <field name="login">cloudflare_service_internal</field>
-            <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
             <field name="group_ids" eval="[(6, 0, [ref('cloudflare.group_cloudflare_service')])]"/>
         </record>

@@ -25,10 +25,10 @@ class BlogPost(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         self._check_proxy_ownership_create(vals_list)
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         posts = super(BlogPost, self.with_user(svc_uid)).create(vals_list)
         
-        utils = self.env['user_websites.security.utils']
+        utils = self.env['zero_sudo.security.utils']
         for url in posts._get_blog_urls():
             utils._notify_cache_invalidation('blog.post', url)
             
@@ -55,13 +55,13 @@ class BlogPost(models.Model):
         
         urls_to_invalidate = self._get_blog_urls()
         
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         res = super(BlogPost, self.with_user(svc_uid)).write(vals)
         
         if 'is_published' in vals or 'name' in vals or 'content' in vals:
             new_urls = self._get_blog_urls()
             all_urls = set(urls_to_invalidate + new_urls)
-            utils = self.env['user_websites.security.utils']
+            utils = self.env['zero_sudo.security.utils']
             for url in all_urls:
                 utils._notify_cache_invalidation('blog.post', url)
                 
@@ -72,10 +72,10 @@ class BlogPost(models.Model):
         
         urls_to_invalidate = self._get_blog_urls()
         
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         res = super(BlogPost, self.with_user(svc_uid)).unlink()
         
-        utils = self.env['user_websites.security.utils']
+        utils = self.env['zero_sudo.security.utils']
         for url in urls_to_invalidate:
             utils._notify_cache_invalidation('blog.post', url)
             
@@ -91,7 +91,7 @@ class BlogPost(models.Model):
         Implements stateless batching via ir.config_parameter and _trigger() to 
         prevent database transaction timeouts on large subscriber bases.
         """
-        svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         one_week_ago = fields.Datetime.now() - timedelta(days=7)
         
         # Use _read_group to find authors with recent posts without loading all posts into memory (OOM prevention)
@@ -112,7 +112,7 @@ class BlogPost(models.Model):
             return
 
         sorted_keys = sorted(list(digests_keys), key=lambda k: f"{k[0]}_{k[1].id}")
-        last_processed_str = self.env['user_websites.security.utils']._get_system_param('ham.user_websites.last_digest_key', '')
+        last_processed_str = self.env['zero_sudo.security.utils']._get_system_param('ham.user_websites.last_digest_key', '')
         
         start_idx = 0
         if last_processed_str:
@@ -131,7 +131,7 @@ class BlogPost(models.Model):
         if not template:
             return
 
-        base_url = self.env['user_websites.security.utils']._get_system_param('web.base.url')
+        base_url = self.env['zero_sudo.security.utils']._get_system_param('web.base.url')
         db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]
 
         # ADR-0022: Pre-fetch posts for the entire batch outside the loop to prevent N+1 queries

@@ -83,7 +83,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 * **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
 * **Documentation Boundaries (See ADR-0007):** Ensure strict separation of concerns between `deploy/` (tactical CLI steps) and `docs/runbooks/` (strategic maps). Runbooks MUST NOT contain step-by-step CLI commands.
-* **Semantic Anchors (See ADR-0004):** Code MUST be permanently mapped to documentation using explicit anchors (e.g., `# [%ANCHOR: unique_name]`). Numerical citation markers (e.g., ``) are strictly forbidden.
+* **Semantic Anchors (See ADR-0004):** Code MUST be permanently mapped to documentation using explicit anchors (e.g., `# [%ANCHOR: example_unique_name]`). Numerical citation markers (e.g., ``) are strictly forbidden.
 * **Behavior-Driven Development (BDD):** User Stories in `docs/stories/` MUST explicitly include "Given / When / Then" acceptance criteria. When writing unit tests, you MUST strictly translate these BDD criteria into Python assertions.
 * **Fast-Fail Testing (See ADR-0044):** Test runners and deployment scripts (`START.sh`) MUST front-load all static analysis and linters to instantly abort on errors before invoking heavy environment rebuilds.
 * **Threat Modeling (STRIDE):** Any new module introducing a security boundary (e.g., APIs, authentication, commerce) MUST have a corresponding threat profile documenting mitigations against Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege.

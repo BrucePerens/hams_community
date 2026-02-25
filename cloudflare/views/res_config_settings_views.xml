@@ -5,21 +5,21 @@
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <!-- [%ANCHOR: xpath_rendering_cf_settings] -->
-            <!-- Verified by [%ANCHOR: test_xpath_rendering_settings] -->
-            <xpath expr="//form" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_settings] -->
+            
+            
+            <xpath expr="//form" position="inside"> 
                 <div class="app_settings_block" data-string="Cloudflare" data-key="cloudflare">
                     <h2>Cloudflare Edge Orchestration</h2>
                     <div class="row mt16 o_settings_container" id="cloudflare_edge_container">
                         <div class="col-12 col-lg-6 o_setting_box" id="cloudflare_edge_waf">
                             <div class="o_setting_right_pane">
-                                <span class="o_form_label">Bot Management</span>
+                                <span class="o_form_label">WAF Management</span>
                                 <div class="text-muted">
-                                    The module automatically injects cache headers and manages the background URL purge queue. 
-                                    You can manually trigger the deployment of the Verified Bot WAF Ruleset to your Cloudflare zone here.
+                                    Push local WAF rules to Cloudflare or pull existing rules from the edge.
                                 </div>
-                                <div class="mt8">
-                                    <button name="action_deploy_cf_waf" type="object" string="Deploy Verified Bot WAF Rules" class="btn-primary" icon="fa-shield"/>
+                                <div class="mt8 d-flex gap-2">
+                                    <button name="action_deploy_cf_waf" type="object" string="Push to Edge" class="btn-primary" icon="fa-cloud-upload"/>
+                                    <button name="action_pull_cf_waf" type="object" string="Pull from Edge" class="btn-secondary" icon="fa-cloud-download"/>
                                 </div>
                             </div>
                         </div>

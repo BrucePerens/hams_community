@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import logging
-from .utils.cloudflare_api import deploy_waf_rules
 
 _logger = logging.getLogger(__name__)
 
 def post_init_hook(env):
     """
     Executes automatically upon module installation.
-    Provisions the WAF rules immediately to secure the edge.
+    Analyzes the Cloudflare perimeter and syncs or deploys the configuration natively.
     """
     _logger.info("Initializing Cloudflare Edge Orchestration...")
-    success, msg = deploy_waf_rules()
-    if success:
-        _logger.info(f"Cloudflare WAF Automation: {msg}")
-    else:
-        _logger.warning(f"Cloudflare WAF Automation Skipped or Failed: {msg}")
+    
+    # Execute Zero-Sudo invocation of the config manager
+    svc_uid = env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
+    env['cloudflare.config.manager'].with_user(svc_uid).initialize_cloudflare_state()

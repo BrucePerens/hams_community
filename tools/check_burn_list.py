@@ -25,7 +25,7 @@ ERROR_RULES = [
 
 WARNING_RULES = [
     (r'\.xml$', re.compile(r'<record.*?model=["\']ir\.cron["\']'), "[AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger() to prevent transaction timeouts."),
-    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <!-- audit-ignore-xpath: Tested by [\%ANCHOR: ...] --> to bypass.")
+    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <!-- audit-ignore-xpath: Tested by [%ANCHOR: ...] --> to bypass.")
 ]
 
 MULTILINE_WARNING_RULES = []
@@ -417,12 +417,10 @@ def scan_file(filepath):
         ast_errors, ast_warnings = check_ast_vulnerabilities(filepath, content, lines)
         for lineno, msg in ast_errors:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            errors_found.append(f"Line {lineno} (AST): {msg}
-    {stripped}")
+            errors_found.append(f"Line {lineno} (AST): {msg} {stripped}")
         for lineno, msg in ast_warnings:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            warnings_found.append(f"Line {lineno} (AST): {msg}
-    {stripped}")
+            warnings_found.append(f"Line {lineno} (AST): {msg} {stripped}")
 
     current_xml_model = None
     current_xml_view_type = None
@@ -464,15 +462,13 @@ def scan_file(filepath):
 
         if 'burn-ignore' in line:
             if not ('database.secret' in line or '.sudo().unlink()' in line):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.
-    {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.  {stripped}")
             continue
 
         if 'audit-ignore' in line:
             valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath']
             if not any(tag in line for tag in valid_audits):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used.
-    {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used. {stripped}")
 
         if filename.endswith('.xml'):
             model_match = re.search(r'<record.*?model=["\']([^">]+)["\']', line)
@@ -506,8 +502,7 @@ def scan_file(filepath):
                             break
                     if exempted:
                         continue
-                    errors_found.append(f"Line {line_num}: {error_msg}
-    {stripped}")
+                    errors_found.append(f"Line {line_num}: {error_msg} {stripped}")
                     
         for ext_pattern, regex, warning_msg in WARNING_RULES:
             if re.search(ext_pattern, filename):
@@ -529,8 +524,7 @@ def scan_file(filepath):
                             break
                     if exempted:
                         continue
-                    warnings_found.append(f"Line {line_num}: {warning_msg}
-    {stripped}")
+                    warnings_found.append(f"Line {line_num}: {warning_msg} {stripped}")
                     
     return errors_found, warnings_found
 
@@ -540,9 +534,7 @@ def main():
     args = parser.parse_args()
 
     target_dir = os.path.abspath(args.directory)
-    print(f"
-Scanning {target_dir} for Odoo 19+ Burn List violations...
-")
+    print(f"Scanning {target_dir} for Odoo 19+ Burn List violations...")
 
     total_errors = 0
     total_warnings = 0
@@ -565,9 +557,7 @@ Scanning {target_dir} for Odoo 19+ Burn List violations...
                 
                 if errors or warnings:
                     rel_path = os.path.relpath(filepath, target_dir)
-                    print(f"
-📄 {rel_path}")
-                    
+                    print(f" 📄 {rel_path}")
                     if warnings:
                         total_warnings += len(warnings)
                         for warn in warnings:
@@ -578,21 +568,17 @@ Scanning {target_dir} for Odoo 19+ Burn List violations...
                         for err in errors:
                             print(f"  ❌ ERROR: {err}")
 
-    print(f"
-Scan Complete: Checked {scanned_files} files.")
+    print(f"Scan Complete: Checked {scanned_files} files.")
     print(f"Total Errors: {total_errors} | Total Warnings (Audits): {total_warnings}")
     
     if total_errors > 0:
-        print("
-❌ Found Burn List errors. Please fix them before deploying.")
+        print("❌ Found Burn List errors. Please fix them before deploying.")
         sys.exit(1)
     else:
         if total_warnings > 0:
-            print("
-✅ Passed with warnings. Audits require manual verification, but the build will continue.")
+            print("✅ Passed with warnings. Audits require manual verification, but the build will continue.")
         else:
-            print("
-✅ No Burn List violations found! Your codebase is clean.")
+            print("✅ No Burn List violations found! Your codebase is clean.")
         sys.exit(0)
 
 if __name__ == '__main__':

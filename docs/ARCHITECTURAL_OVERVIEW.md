@@ -20,7 +20,7 @@ Tasks that would typically cause Odoo web workers to timeout or consume excessiv
 * **High-Throughput Streaming:** The Ultimate DX Cluster Firehose utilizes `asyncio` + `websockets` connected directly to PostgreSQL to support tens of thousands of concurrent connections.
 
 ### B. Security & Privilege Isolation *(See ADR-0002, ADR-0005, ADR-0006)*
-The system utilizes a strict **Zero-Sudo Architecture**. External daemons, APIs, and background cron jobs authenticate and execute via `with_user()` bound to dedicated, non-human Service Accounts. These accounts possess surgically limited Access Control Lists (ACLs), ensuring least-privilege execution across all boundaries. They are explicitly flagged to deny interactive web logins, and their passwords are mathematically generated and injected dynamically at runtime.
+The system utilizes a strict **Zero-Sudo Architecture** enforced natively by the `zero_sudo` module. External daemons, APIs, and background cron jobs authenticate and execute via `with_user()` bound to dedicated, non-human Service Accounts. These accounts possess surgically limited Access Control Lists (ACLs), ensuring least-privilege execution across all boundaries. The `zero_sudo` layer intercepts authentication attempts to explicitly deny interactive web and RPC logins for these accounts, while their passwords are mathematically generated and injected dynamically at runtime.
 
 ### C. Proxy Ownership
 To allow users to build personal websites without granting them backend "Website Designer" capabilities, an over-arching Admin system account "owns" the website records, while custom ACLs grant the specifically mapped user full CRUD rights over their designated web directory.
@@ -34,6 +34,7 @@ To allow users to build personal websites without granting them backend "Website
 ## 3. Module Hierarchy
 
 ### Foundation Layer
+* **`zero_sudo`:** The core security enforcement layer. Provides safe privilege escalation utilities and intercepts interactive web logins to isolate Service Accounts.
 * **`ham_base`:** The structural anchor. Centralizes shared UI elements to prevent cross-module dependency crashes.
 * **`user_websites`**: Manages dynamic routing and personal web page provisioning.
 
