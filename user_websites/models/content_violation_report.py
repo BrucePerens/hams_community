@@ -31,6 +31,8 @@ class ContentViolationReport(models.Model):
         self.write({'state': 'dismissed'})
 
     def action_take_action_and_strike(self):
+        # [%ANCHOR: action_take_action_and_strike]
+        # Verified by [%ANCHOR: test_moderation_suspension]
         """
         Marks the report as validated, sets state to 'action_taken', 
         and increments the owner's strike count. Enforces the 3-strike rule.

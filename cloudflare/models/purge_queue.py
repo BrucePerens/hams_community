@@ -30,8 +30,10 @@ class CloudflarePurgeQueue(models.Model):
 
     @api.model
     def enqueue_urls(self, urls):
-        # burn-ignore-sudo: Tested by [%ANCHOR: test_purge_queue_base_url_sudo]
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', 'https://localhost').rstrip('/')
+        # [%ANCHOR: enqueue_urls_base_url]
+        # Verified by [%ANCHOR: test_purge_queue_base_url_sudo]
+        svc_uid = self._get_cf_service_uid()
+        base_url = self.env['ir.config_parameter'].with_user(svc_uid).get_param('web.base.url', 'https://localhost').rstrip('/')
         create_vals = []
         
         for u in urls:

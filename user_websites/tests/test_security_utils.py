@@ -20,6 +20,8 @@ class TestSecurityUtils(TransactionCase):
             utils._get_system_param('database.secret')
 
     def test_02_bdd_ormcache_query_counting_service_uid(self):
+        # [%ANCHOR: test_get_service_uid]
+        # Tests [%ANCHOR: get_service_uid]
         """
         BDD: Given the _get_service_uid security utility (ADR-0013)
         When resolving an XML ID repeatedly
@@ -35,6 +37,8 @@ class TestSecurityUtils(TransactionCase):
             utils._get_service_uid('base.user_admin')
 
     def test_03_bdd_event_bus_payload_generation(self):
+        # [%ANCHOR: test_coherent_cache_signal]
+        # Tests [%ANCHOR: coherent_cache_signal]
         """
         BDD: Given ADR-0051 for Event Bus Payload Generation
         When _notify_cache_invalidation is triggered

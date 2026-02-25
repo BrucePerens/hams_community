@@ -38,6 +38,8 @@ class TestPageLimits(TransactionCase):
         self.env['ir.config_parameter'].set_param('user_websites.global_website_page_limit', '3')
 
     def test_01_user_specific_limit_enforcement(self):
+        # [%ANCHOR: test_page_limits]
+        # Tests [%ANCHOR: website_page_quota_check]
         """
         Verify that a user with a specific limit can create pages up to that limit, 
         and is blocked upon exceeding it.

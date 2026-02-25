@@ -31,6 +31,8 @@
     </template>
 
     <template id="layout_inherit_user_navbar" inherit_id="website.layout" name="User Navbar Global">
+        <!-- [%ANCHOR: xpath_rendering_navbar] -->
+        <!-- Verified by [%ANCHOR: test_xpath_rendering_navbar] -->
         <xpath expr="//head" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_navbar] -->
             <!-- Universal Context Provider for Frontend JS Widgets -->
             <t t-if="resolved_slug">
@@ -45,6 +47,8 @@
     </template>
 
     <template id="portal_my_home_appeal" inherit_id="portal.portal_my_home" name="Portal My Home Appeal">
+        <!-- [%ANCHOR: xpath_rendering_templates] -->
+        <!-- Verified by [%ANCHOR: test_xpath_rendering_templates] -->
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="before"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_templates] -->
             <div class="container mt-4">
                 <t t-if="request.env.user.is_suspended_from_websites">

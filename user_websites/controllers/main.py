@@ -76,6 +76,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/community', '/community/page/<int:page>'], type='http', auth="public", website=True)
     def community_directory(self, page=1, **kwargs):
         # [%ANCHOR: controller_community_directory]
+        # Verified by [%ANCHOR: test_tour_community_directory]
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         domain = [
@@ -110,6 +111,7 @@ class UserWebsitesController(http.Controller):
     @http.route('/website/report_violation', type='http', auth="public", methods=['POST'], website=True)
     def submit_violation_report(self, url='', description='', email='', website_honeypot='', **kwargs):
         # [%ANCHOR: controller_submit_violation_report]
+        # Verified by [%ANCHOR: test_tour_violation_report]
         url = url.strip()[:2000]
         description = description.strip()[:5000]
         
@@ -167,6 +169,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/<string:website_slug>', '/<string:website_slug>/home', '/<string:website_slug>/home/'], type='http', auth="public", website=True)
     def user_websites_home(self, website_slug, **kwargs):
         # [%ANCHOR: controller_user_websites_home]
+        # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -245,6 +248,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/<string:website_slug>/create_site'], type='http', auth="user", methods=['POST'], website=True)
     def create_site(self, website_slug, **kwargs):
         # [%ANCHOR: controller_create_site]
+        # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -296,6 +300,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/<string:website_slug>/blog', '/<string:website_slug>/blog/'], type='http', auth="public", website=True)
     def user_blog_index(self, website_slug, tag=None, search=None, date_begin=None, date_end=None, page=1, **kwargs):
         # [%ANCHOR: controller_user_blog_index]
+        # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -391,6 +396,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/<string:website_slug>/create_blog'], type='http', auth="user", methods=['POST'], website=True)
     def create_blog_post(self, website_slug, **kwargs):
         # [%ANCHOR: controller_create_blog_post]
+        # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
         svc_uid = request.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -462,6 +468,7 @@ class UserWebsitesController(http.Controller):
     @http.route('/website/submit_appeal', type='http', auth="user", methods=['POST'], website=True)
     def submit_appeal(self, reason='', **kwargs):
         # [%ANCHOR: controller_submit_appeal]
+        # Verified by [%ANCHOR: test_tour_moderation_appeal]
         reason = reason.strip()[:5000]
         user = request.env.user
         
@@ -502,6 +509,7 @@ class UserWebsitesController(http.Controller):
     @http.route('/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<string:token>', type='http', auth="public", website=True)
     def unsubscribe_digest(self, model_name, record_id, partner_id, token, **kwargs):
         # [%ANCHOR: controller_unsubscribe_digest]
+        # Verified by [%ANCHOR: test_unsubscribe_secret]
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
             
@@ -527,6 +535,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/my/privacy'], type='http', auth="user", website=True)
     def my_privacy_dashboard(self, **kwargs):
         # [%ANCHOR: controller_my_privacy_dashboard]
+        # Verified by [%ANCHOR: test_tour_gdpr_privacy]
         """Renders the frontend portal dashboard for data portability and right to erasure."""
         return request.render('user_websites.portal_my_privacy', {
             'default_title': "My Privacy Dashboard"
@@ -535,6 +544,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/my/privacy/export'], type='http', auth="user", website=True)
     def export_user_data(self, **kwargs):
         # [%ANCHOR: controller_export_user_data]
+        # Verified by [%ANCHOR: test_tour_gdpr_privacy]
         """
         Compiles user generated content into a machine-readable JSON format for data portability.
         Utilizes ADR-0022 Streaming Generators to prevent OOM crashes on massive exports.
@@ -578,6 +588,7 @@ class UserWebsitesController(http.Controller):
     @http.route(['/my/privacy/delete_content'], type='http', auth="user", methods=['POST'], website=True)
     def delete_user_content(self, **kwargs):
         # [%ANCHOR: controller_delete_user_content]
+        # Verified by [%ANCHOR: test_tour_gdpr_privacy]
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
         user_id = request.env.user.id
         db_name = request.env.cr.dbname

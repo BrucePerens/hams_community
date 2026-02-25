@@ -49,8 +49,11 @@ class TestSubscriptionsAndDigest(HttpCase):
         List-Unsubscribe headers, and that the unsubscribe route works.
         """
         # [%ANCHOR: test_weekly_digest_secret]
+        # Tests [%ANCHOR: send_weekly_digest]
         # [%ANCHOR: test_weekly_digest_mail_template]
+        # Tests [%ANCHOR: send_weekly_digest]
         # [%ANCHOR: test_unsubscribe_secret]
+        # Tests [%ANCHOR: controller_unsubscribe_digest]
         # Execute the cron job method directly
         self.env['blog.post'].send_weekly_digest()
         

@@ -40,6 +40,8 @@ class KnowledgeArticle(models.Model):
     # --- Constraints ---
     @api.constrains('parent_id')
     def _check_hierarchy(self):
+        # [%ANCHOR: manual_check_hierarchy]
+        # Verified by [%ANCHOR: test_manual_check_hierarchy]
         """Prevent circular references in the article tree."""
         if self._has_cycle():
             raise ValidationError(_("Error! You cannot create recursive articles."))
@@ -47,6 +49,8 @@ class KnowledgeArticle(models.Model):
     # --- Compute Methods ---
     @api.depends('name')
     def _compute_website_url(self):
+        # [%ANCHOR: manual_compute_website_url]
+        # Verified by [%ANCHOR: test_manual_url_slug_generation]
         """Override from website.published.mixin to provide a proper slug."""
         super(KnowledgeArticle, self)._compute_website_url()
         for article in self:

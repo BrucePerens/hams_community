@@ -2,6 +2,8 @@
 <odoo>
     <template id="layout_inherit_report_violation" inherit_id="website.layout" name="Report Violation Global">
         
+        <!-- [%ANCHOR: xpath_rendering_layout] -->
+        <!-- Verified by [%ANCHOR: test_xpath_rendering_layout] -->
         <xpath expr="//footer" position="after"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
             <t t-call="user_websites.report_violation_modal"/>
         </xpath>

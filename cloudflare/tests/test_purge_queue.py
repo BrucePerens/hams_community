@@ -15,6 +15,7 @@ class TestPurgeQueue(TransactionCase):
     @patch('time.sleep')
     def test_01_bdd_queue_batching_and_rate_limiting(self, mock_sleep, mock_creds, mock_post):
         # [%ANCHOR: test_queue_batching_and_rate_limiting]
+        # Tests [%ANCHOR: ir_cron_process_cf_purge_queue]
         """
         BDD: Given ADR-0022 and Cloudflare's 30-URL API Limit
         When process_queue executes against a massive pending payload
@@ -70,8 +71,9 @@ class TestPurgeQueue(TransactionCase):
 
     def test_03_base_url_sudo_fetch(self):
         # [%ANCHOR: test_purge_queue_base_url_sudo]
-        """Verify that enqueue_urls securely fetches the base_url using sudo without crashing."""
-        self.env['ir.config_parameter'].sudo().set_param('web.base.url', 'https://test-hams.com')
+        # Tests [%ANCHOR: enqueue_urls_base_url]
+        """Verify that enqueue_urls securely fetches the base_url without crashing."""
+        self.env['ir.config_parameter'].set_param('web.base.url', 'https://test-hams.com')
         self.env['cloudflare.purge.queue'].enqueue_urls(['/test-sudo-fetch'])
         record = self.env['cloudflare.purge.queue'].search([('target_item', '=', 'https://test-hams.com/test-sudo-fetch')], limit=1)
         self.assertTrue(record, "The base_url must be correctly prepended using the sudo-fetched parameter.")

@@ -21,6 +21,8 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
         })
 
     def test_01_gdpr_export_hook(self):
+        # [%ANCHOR: test_gdpr_export_hook]
+        # Tests [%ANCHOR: res_users_gdpr_export]
         """Test that the _get_gdpr_export_data method returns the correct extensible dictionary."""
         # Create a page for the user
         self.env['website.page'].create({
@@ -58,6 +60,9 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
         self.assertFalse(self.user.privacy_show_in_directory, "The user must be removed from the directory.")
 
     def test_03_mixin_ownership_validation(self):
+        # [%ANCHOR: test_mixin_ownership_validation]
+        # Tests [%ANCHOR: mixin_proxy_ownership_create]
+        # Tests [%ANCHOR: mixin_proxy_ownership_write]
         """Verify the user_websites.owned.mixin methods directly catch spoofing."""
         intruder = self.env['res.users'].create({
             'name': 'Intruder',

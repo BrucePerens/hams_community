@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_cloudflare_purge_queue_svc,cloudflare.purge.queue svc,model_cloudflare_purge_queue,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_purge_queue_admin,cloudflare.purge.queue admin,model_cloudflare_purge_queue,base.group_system,1,1,1,1
+access_ir_config_parameter_cf_svc,ir.config_parameter cf svc,base.model_ir_config_parameter,cloudflare.group_cloudflare_service,1,0,0,0

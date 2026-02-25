@@ -79,7 +79,9 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
 
         # Trigger Erasure
         # [%ANCHOR: test_gdpr_erasure_pages]
+        # Tests [%ANCHOR: gdpr_sudo_erasure]
         # [%ANCHOR: test_gdpr_erasure_posts]
+        # Tests [%ANCHOR: gdpr_sudo_erasure]
         response = self.url_open('/my/privacy/delete_content', data={
             'csrf_token': odoo.http.Request.csrf_token(self)
         }, method='POST')

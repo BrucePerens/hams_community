@@ -34,6 +34,8 @@ class WebsitePage(models.Model):
         # 1. Enforce Mixin Security
         self._check_proxy_ownership_create(vals_list)
 
+        # [%ANCHOR: website_page_quota_check]
+        # Verified by [%ANCHOR: test_page_limits]
         # 2. Quota Limit Check
         owner_ids = [vals.get('owner_user_id') for vals in vals_list if vals.get('owner_user_id')]
         if owner_ids:

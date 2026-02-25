@@ -54,6 +54,9 @@ This module enables:
             'user_websites/static/src/js/violation_report.js',
             'user_websites/static/src/js/toast_notifications.js',
         ],
+        'web.assets_tests': [
+            'user_websites/static/tests/tours/**/*',
+        ],
     },
     'demo': [],
     'installable': True,

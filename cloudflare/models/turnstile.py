@@ -9,11 +9,13 @@ class CloudflareTurnstile(models.AbstractModel):
 
     @api.model
     def verify_token(self, token, remote_ip=None):
+        # [%ANCHOR: verify_turnstile_secret]
+        # Verified by [%ANCHOR: test_turnstile_secret_fetch]
         """
         Verifies an invisible Turnstile challenge token submitted via an unauthenticated form.
         """
-        # burn-ignore-sudo: Tested by [%ANCHOR: test_turnstile_secret_fetch]
-        secret = self.env['ir.config_parameter'].sudo().get_param('cloudflare.turnstile_secret')
+        svc_uid = self.env['cloudflare.purge.queue']._get_cf_service_uid()
+        secret = self.env['ir.config_parameter'].with_user(svc_uid).get_param('cloudflare.turnstile_secret')
         
         if not secret:
             return False

@@ -24,6 +24,8 @@ publicWidget.registry.ViolationReportModal = publicWidget.Widget.extend({
      * Injects the URL and resets the form to clear any previous inputs.
      * @param {Event} ev
      */
+    // [%ANCHOR: violation_report_logic]
+    // Verified by [%ANCHOR: test_tour_violation_report]
     _onModalShow: function (ev) {
         // The button that triggered the modal is available via ev.relatedTarget in Bootstrap 5
         const button = ev.relatedTarget;

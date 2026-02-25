@@ -27,6 +27,7 @@ class UserWebsitesSecurityUtils(models.AbstractModel):
         Prefix '_' prevents XML-RPC Skeleton Key exposure.
         """
         # [%ANCHOR: get_service_uid]
+        # Verified by [%ANCHOR: test_get_service_uid]
         uid = self.env['ir.model.data'].sudo()._xmlid_to_res_id(xml_id)
         if not uid:
             raise AccessError(_("Security Alert: Service Account '%s' not found.") % xml_id)
@@ -42,6 +43,8 @@ class UserWebsitesSecurityUtils(models.AbstractModel):
         Emits a PostgreSQL NOTIFY to maintain phase coherence across distributed workers.
         """
         # [%ANCHOR: coherent_cache_signal]
+        # Verified by [%ANCHOR: test_coherent_cache_signal]
+        # Triggers [%ANCHOR: cache_manager_daemon_listener]
         self.env.cr.execute("SELECT pg_notify(%s, %s)", ('ham_cache_invalidation', f"{model_name}:{key_value}"))
 
     @api.model

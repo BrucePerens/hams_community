@@ -47,6 +47,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
     def test_02_cron_batching_resumption(self):
         # [%ANCHOR: test_cron_batching_resumption]
+        # Tests [%ANCHOR: ir_cron_send_weekly_digest]
         """
         Verify that the weekly digest cron successfully parses the last_digest_key 
         and resumes processing from the correct index.
@@ -153,6 +154,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
     def test_06_cron_redis_flush_batching(self):
         # [%ANCHOR: test_cron_redis_flush]
+        # Tests [%ANCHOR: ir_cron_flush_view_counters]
         """
         BDD: Given the _flush_redis_view_counters cron
         When it processes a batch of Redis view keys and the cursor is not 0

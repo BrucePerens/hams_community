@@ -19,6 +19,8 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
         this._checkUrlForNotifications();
     },
 
+    // [%ANCHOR: toast_notifications_logic]
+    // Verified by [%ANCHOR: test_tour_toast_notifications]
     _checkUrlForNotifications: function () {
         const urlParams = new URLSearchParams(window.location.search);
         let message = '';

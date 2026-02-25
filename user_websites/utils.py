@@ -6,6 +6,8 @@ import unicodedata
 import re
 
 def slugify(s, max_length=None):
+    # [%ANCHOR: utils_slugify]
+    # Verified by [%ANCHOR: test_utils_slugify]
     """
     Transform a string to a slug.
     

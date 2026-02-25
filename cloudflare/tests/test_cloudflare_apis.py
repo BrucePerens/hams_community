@@ -26,8 +26,9 @@ class TestCloudflareAPIs(TransactionCase):
     @patch('cloudflare.utils.cloudflare_api.requests.post')
     def test_02_turnstile_secret_fetch(self, mock_post):
         # [%ANCHOR: test_turnstile_secret_fetch]
-        """Verify Turnstile verification retrieves the secret securely via sudo and passes it to the API."""
-        self.env['ir.config_parameter'].sudo().set_param('cloudflare.turnstile_secret', 'my_super_secret_key')
+        # Tests [%ANCHOR: verify_turnstile_secret]
+        """Verify Turnstile verification retrieves the secret securely without inline sudo and passes it to the API."""
+        self.env['ir.config_parameter'].set_param('cloudflare.turnstile_secret', 'my_super_secret_key')
         
         mock_response = MagicMock()
         mock_response.json.return_value = {'success': True}

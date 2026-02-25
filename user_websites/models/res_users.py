@@ -258,6 +258,8 @@ class ResUsers(models.Model):
         return {}
 
     def _get_gdpr_export_data(self):
+        # [%ANCHOR: res_users_gdpr_export]
+        # Verified by [%ANCHOR: test_gdpr_export_hook]
         """
         Returns a dictionary of all personal data and authored content for GDPR portability.
         """
@@ -296,6 +298,8 @@ class ResUsers(models.Model):
         svc_uid = self.env['user_websites.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         # [%ANCHOR: gdpr_sudo_erasure]
+        # Verified by [%ANCHOR: test_gdpr_erasure_pages]
+        # Verified by [%ANCHOR: test_gdpr_erasure_posts]
         # ADR-0017: sudo() is required here to ensure cascaded data not owned by the service account is successfully purged.
         while True:
             pages = self.env['website.page'].search([('owner_user_id', '=', self.id)], limit=5000)

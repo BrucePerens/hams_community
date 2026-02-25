@@ -14,6 +14,8 @@ class TestManualORMLogic(TransactionCase):
         self.article_c = self.env['knowledge.article'].create({'name': 'Node C', 'parent_id': self.article_b.id})
 
     def test_01_prevent_circular_hierarchy(self):
+        # [%ANCHOR: test_manual_check_hierarchy]
+        # Tests [%ANCHOR: manual_check_hierarchy]
         """
         Verify the _check_hierarchy constraint prevents a parent from being nested 
         under its own child, avoiding infinite recursion loops in the ORM/UI.
@@ -23,6 +25,8 @@ class TestManualORMLogic(TransactionCase):
             self.article_a.write({'parent_id': self.article_c.id})
 
     def test_02_url_slug_generation(self):
+        # [%ANCHOR: test_manual_url_slug_generation]
+        # Tests [%ANCHOR: manual_compute_website_url]
         """
         Verify that the custom compute method generates safe, URL-friendly slugs 
         appended to the article ID to ensure uniqueness.

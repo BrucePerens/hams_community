@@ -28,6 +28,9 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
         'web.assets_frontend': [
             'manual_library/static/src/js/manual_toc.js',
         ],
+        'web.assets_tests': [
+            'manual_library/static/tests/tours/**/*',
+        ],
     },
     'installable': True,
     'application': True,

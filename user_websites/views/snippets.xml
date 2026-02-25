@@ -2,6 +2,8 @@
 <odoo>
     
     <template id="user_websites_snippet_category" inherit_id="website.snippets" name="User Websites Snippets">
+        <!-- [%ANCHOR: xpath_rendering_snippets] -->
+        <!-- Verified by [%ANCHOR: test_xpath_rendering_snippets] -->
         <xpath expr="/*" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_snippets] -->
             <div id="snippet_user_websites" class="o_panel accordion-item">
                 <div class="o_panel_header accordion-header"><i class="fa fa-address-card-o"/> Profile Widgets</div>

@@ -83,6 +83,9 @@ class BlogPost(models.Model):
 
     @api.model
     def send_weekly_digest(self):
+        # [%ANCHOR: send_weekly_digest]
+        # Verified by [%ANCHOR: test_weekly_digest_secret]
+        # Verified by [%ANCHOR: test_weekly_digest_mail_template]
         """
         Cron job method to send a weekly email digest. 
         Implements stateless batching via ir.config_parameter and _trigger() to 
@@ -129,7 +132,7 @@ class BlogPost(models.Model):
             return
 
         base_url = self.env['user_websites.security.utils']._get_system_param('web.base.url')
-        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [\ANCHOR: test_weekly_digest_secret]
+        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]
 
         # ADR-0022: Pre-fetch posts for the entire batch outside the loop to prevent N+1 queries
         partner_ids = [k[1].id for k in batch_keys if k[0] == 'res.partner']
@@ -185,7 +188,7 @@ class BlogPost(models.Model):
                     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
                 }
                 
-                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [\ANCHOR: test_weekly_digest_mail_template]
+                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
                     author_name=author_name,
                     post_links=post_links,
                     email_to=partner.email,

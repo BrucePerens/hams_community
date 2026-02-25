@@ -29,6 +29,8 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
 
     @api.model
     def _check_proxy_ownership_create(self, vals_list):
+        # [%ANCHOR: mixin_proxy_ownership_create]
+        # Verified by [%ANCHOR: test_mixin_ownership_validation]
         """Validates that the current user is legally allowed to assign the provided ownership."""
         if self.env.su or self.env.user.has_group('user_websites.group_user_websites_administrator') or self.env.user.has_group('user_websites.group_user_websites_service_account'):
             return
@@ -42,6 +44,8 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
                     raise AccessError(_("You cannot create a record for a group you do not belong to."))
 
     def _check_proxy_ownership_write(self, vals):
+        # [%ANCHOR: mixin_proxy_ownership_write]
+        # Verified by [%ANCHOR: test_mixin_ownership_validation]
         """Prevents malicious actors from spoofing or transferring ownership after creation."""
         if self.env.su or self.env.user.has_group('user_websites.group_user_websites_administrator') or self.env.user.has_group('user_websites.group_user_websites_service_account'):
             return
