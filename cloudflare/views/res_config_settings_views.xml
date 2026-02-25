@@ -9,7 +9,7 @@
                 <div class="app_settings_block" data-string="Cloudflare" data-key="cloudflare">
                     <h2>Cloudflare Edge Orchestration</h2>
                     <div class="row mt16 o_settings_container" id="cloudflare_edge_container">
-                        <div class="col-12 col-lg-6 o_setting_box" id="cloudflare_edge">
+                        <div class="col-12 col-lg-6 o_setting_box" id="cloudflare_edge_waf">
                             <div class="o_setting_right_pane">
                                 <span class="o_form_label">Bot Management</span>
                                 <div class="text-muted">
@@ -18,6 +18,17 @@
                                 </div>
                                 <div class="mt8">
                                     <button name="action_deploy_cf_waf" type="object" string="Deploy Verified Bot WAF Rules" class="btn-primary" icon="fa-shield"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 o_setting_box" id="cloudflare_edge_turnstile">
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">Turnstile Configuration</span>
+                                <div class="text-muted">
+                                    Provide the Secret Key to enable backend validation of invisible CAPTCHA tokens for public forms.
+                                </div>
+                                <div class="mt8">
+                                    <field name="cloudflare_turnstile_secret" class="w-100" password="True" placeholder="0x4A..."/>
                                 </div>
                             </div>
                         </div>

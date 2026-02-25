@@ -29,7 +29,7 @@ class TestPurgeQueue(TransactionCase):
         QueueModel = self.env['cloudflare.purge.queue']
         
         # Seed the queue with 310 records (exceeding the max_batches setting of 10 * 30 = 300)
-        vals = [{'url': f'https://hams.com/page-{i}'} for i in range(310)]
+        vals = [{'target_item': f'https://hams.com/page-{i}', 'purge_type': 'url'} for i in range(310)]
         QueueModel.create(vals)
         self.assertEqual(QueueModel.search_count([]), 310)
         
@@ -64,6 +64,14 @@ class TestPurgeQueue(TransactionCase):
             
             queue_items = self.env['cloudflare.purge.queue'].search([])
             self.assertTrue(
-                any(item.url.endswith('/dynamic-patch-test') for item in queue_items),
+                any(item.target_item.endswith('/dynamic-patch-test') for item in queue_items),
                 "The dynamically patched write hook MUST successfully enqueue the URL."
             )
+
+    def test_03_base_url_sudo_fetch(self):
+        # [%ANCHOR: test_purge_queue_base_url_sudo]
+        """Verify that enqueue_urls securely fetches the base_url using sudo without crashing."""
+        self.env['ir.config_parameter'].sudo().set_param('web.base.url', 'https://test-hams.com')
+        self.env['cloudflare.purge.queue'].enqueue_urls(['/test-sudo-fetch'])
+        record = self.env['cloudflare.purge.queue'].search([('target_item', '=', 'https://test-hams.com/test-sudo-fetch')], limit=1)
+        self.assertTrue(record, "The base_url must be correctly prepended using the sudo-fetched parameter.")
