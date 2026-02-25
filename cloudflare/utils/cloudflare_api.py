@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright © Bruce Perens K6BP. All Rights Reserved.
 import os
 import requests
 import logging
@@ -23,7 +22,7 @@ def purge_urls(urls):
         
     if not urls:
         return True
-        
+    
     endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -42,7 +41,7 @@ def purge_urls(urls):
 
 def deploy_waf_rules():
     """
-    Automates the deployment of the Verified Bot WAF ruleset (ADR-0041).
+    Automates the deployment of the Verified Bot WAF ruleset.
     Challenges unknown scrapers hitting the API endpoints while allowing Google/Bing.
     """
     token, zone_id = get_cf_credentials()
@@ -63,7 +62,7 @@ def deploy_waf_rules():
                 "expression": "(http.request.uri.path contains \"/api/v1/\") and not cf.client.bot",
                 "pause": False
             },
-            "description": "Hams.com Native API Bot Protection (Automated)"
+            "description": "Odoo Native API Bot Protection (Automated)"
         }
     ]
     

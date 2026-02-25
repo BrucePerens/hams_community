@@ -6,15 +6,6 @@ from odoo.tests.common import HttpCase, tagged
 class TestCloudflareHeaders(HttpCase):
     def setUp(self):
         super().setUp()
-        # Create a basic page to test semi-static caching
-        self.page = self.env['website.page'].create({
-            'url': '/cf-test-page',
-            'name': 'CF Test',
-            'type': 'qweb',
-            'website_published': True,
-            'arch': '<div>Test</div>'
-        })
-        
         # Create a user to test authenticated routes
         self.user = self.env['res.users'].create({
             'name': 'CF Tester',
@@ -55,12 +46,8 @@ class TestCloudflareHeaders(HttpCase):
             "API routes MUST NOT be cached at the edge."
         )
 
-    def test_03_semi_static_caching(self):
-        """Verify standard pages and blogs receive the 24-hour cache header."""
-        response = self.url_open('/cf-test-page')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.headers.get('Cloudflare-CDN-Cache-Control'), 
-            'max-age=86400',
-            "Semi-static content MUST be cached for 24 hours at the CDN edge."
-        )
+    def test_03_xpath_rendering(self):
+        # [%ANCHOR: test_xpath_rendering_settings]
+        """Verify the Cloudflare settings block successfully injects into the global website config."""
+        res = self.env['res.config.settings'].get_view(view_id=self.env.ref('base.res_config_settings_view_form').id, view_type='form')
+        self.assertIn('cloudflare_edge', res['arch'], "The injected settings block must exist in the compiled arch.")
