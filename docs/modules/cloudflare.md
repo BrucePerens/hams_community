@@ -1,53 +1,51 @@
 # ☁️ Cloudflare Edge Orchestration (`cloudflare`)
 
 **Context:** Technical documentation strictly for LLMs and Integrators developing proprietary (`hams_private`) modules.
-
-This generalized module acts as the control plane for the CDN edge. It automatically applies aggressive caching headers to public routes and manages an asynchronous queue for targeted cache invalidation.
-
----
-
-## 1. 📡 Edge Caching Rules (The Middleware)
-The module intercepts all outgoing HTTP responses via `ir.http._post_dispatch`. Private modules do **not** need to manually define caching headers. The middleware applies the following generalized ruleset:
-
-* **Static Assets:** Paths containing `/static/` receive `max-age=31536000` (1 Year).
-* **Private / API Routes:** Paths starting with `/my/`, `/web/`, or `/api/` receive `no-cache, no-store`.
-* **Authenticated Users:** If `request.env.user._is_public()` evaluates to `False`, the response receives `no-cache, no-store` to prevent caching personal dashboards or PII.
-* **Public Content:** All other responses (e.g., standard website pages, blogs, custom public CMS routes) receive `max-age=86400` (24 Hours).
+This generalized module acts as the control plane for the CDN edge.
+It automatically applies aggressive caching headers, manages WAF bans, handles Turnstile CAPTCHA verification, and provides context on edge requests.
 
 ---
 
-## 2. 🧹 Cache Invalidation (Purging)
-When an internal user edits a cached record (like a blog post or a proprietary `ham.private.article`), the old version will remain cached at the edge for 24 hours. You MUST invalidate the URL. 
+## 1. 🛡️ Advanced API Interfaces
 
-Because Cloudflare API limits are strict, **direct API calls are forbidden**. You must push the URLs into the `cloudflare.purge.queue`.
+Proprietary modules MUST utilize the following AbstractModel APIs to interact with the edge layer securely:
 
-### Integrating Proprietary Models (`hams_private`)
-To invalidate cache when your private module's data changes, override `write` and `unlink`. You **MUST** use the Service Account to securely interact with the queue, ensuring unprivileged users don't trigger AccessErrors.
+### A. WAF IP Banning API
+Instantly block or challenge malicious traffic at the Cloudflare Edge before it reaches Nginx.
+* **Signature:** `env['cloudflare.waf'].ban_ip(ip_address, mode='block', duration=3600)`
+* **Modes:** `'block'`, `'challenge'`, `'managed_challenge'`.
+* **Use Case:** To be used by silent honeypots (e.g., `ham_events` issue reporting) to drop scrapers.
 
+### B. Cache-Tag Purging API
+Purge relational models globally across all paginated views without calculating exact URLs.
+* **Signature:** `env['cloudflare.purge.queue'].enqueue_tags(tags_list)`
+* **Example:** `env['cloudflare.purge.queue'].enqueue_tags(['user_k6bp', 'classifieds_index'])`
+* **Use Case:** Called by `ham_logbook` or `ham_classifieds` when a user's global profile state changes.
+
+### C. Turnstile Verification API
+Validate modern, invisible CAPTCHA tokens for unauthenticated public forms.
+* **Signature:** `env['cloudflare.turnstile'].verify_token(token, remote_ip=None)`
+* **Returns:** `True` if the token is valid, `False` otherwise.
+* **Use Case:** Used by custom `POST` controllers to replace Google reCAPTCHA dependencies.
+
+### D. Edge Context Parsing API
+Retrieve geographic and threat data injected by the Cloudflare edge proxy.
+* **Signature:** `env['cloudflare.utils'].get_request_context()`
+* **Returns:** A dictionary containing: `{'ip': str, 'country': str, 'city': str, 'longitude': str, 'latitude': str, 'threat_score': str}`.
+* **Use Case:** Used by `ham_propagation` and `ham_satellite` to instantly default unauthenticated map viewers to their physical region.
+
+---
+
+## 2. 📡 Automated Edge Caching (The Middleware)
+The module intercepts all outgoing HTTP responses via `ir.http._post_dispatch` to apply caching rules based on the user's authentication state:
+* **Static Assets:** `max-age=31536000` (1 Year).
+* **Private / Authenticated:** `no-cache, no-store` (If `request.env.user._is_public()` is False).
+* **Public Content:** `max-age=86400` (24 Hours).
+
+## 3. 🧹 URL Cache Invalidation
+For standard URLs, push updates to the asynchronous queue using the generic Service Account:
 ```python
-class ProprietaryArticle(models.Model):
-    _name = 'ham.private.article'
-    _inherit = ['mail.thread']
-    
-    website_url = fields.Char(string="URL")
-
-    def write(self, vals):
-        # 1. Capture the URLs BEFORE the change if needed, or mapped current URLs
-        urls_to_purge = self.mapped('website_url')
-        
-        # 2. Execute standard write
-        res = super().write(vals)
-        
-        # 3. Enqueue URLs safely using the generic Cloudflare Service Account
-        if urls_to_purge and 'cloudflare.purge.queue' in self.env:
-            queue_env = self.env['cloudflare.purge.queue']
-            svc_uid = queue_env._get_cf_service_uid()
-            queue_env.with_user(svc_uid).enqueue_urls(urls_to_purge)
-            
-        return res
+queue_env = self.env['cloudflare.purge.queue']
+svc_uid = queue_env._get_cf_service_uid()
+queue_env.with_user(svc_uid).enqueue_urls(['/my-custom-url'])
 ```
-
----
-
-## 3. 🛡️ WAF (Web Application Firewall) Management
-The module utilizes the `deploy_waf_rules()` utility to push Bot Management rules to Cloudflare. This is executed automatically on installation, but can be manually triggered by system administrators via the Odoo General Settings interface. Private modules generating new API endpoints are automatically protected if they reside under `/api/v1/`.

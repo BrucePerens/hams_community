@@ -11,12 +11,10 @@ This document defines the strict operational parameters for the Large Language M
 ### 🗣️ Communication & Tone Mandates
 * **No Praise or Flattery:** You are STRICTLY FORBIDDEN from praising the user. Deliver information directly and professionally without conversational fluff.
 * **No Repetitive Compliance Announcements:** Do not emit statements confirming compliance with basic formatting or encoding rules that have already been established. Reserve compliance summaries exclusively for complex architectural, security, or Burn List evaluations.
-
 * **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a `data/documentation.html` file, and you MUST inject it via a `post_init_hook` in `hooks.py` as a soft dependency (checking `if 'knowledge.article' in env:`).
 * **System Master Documentation Mandate:** Any new user-facing features MUST be added to `docs/SYSTEM_USER_GUIDE.md`. Any new API endpoints MUST be added to `docs/SYSTEM_APIs.md`.
 
 * **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
-
 * [ ] **Documentation:** Are `README.md`, the module's `LLM_DOCUMENTATION.md`, its copy in `docs/modules/`, `data/documentation.html`, `docs/SYSTEM_USER_GUIDE.md`, and `docs/SYSTEM_APIs.md` updated?
 
 ### 🔄 Protocol Completeness & Multi-Step Execution (The "Finish the Job" Mandate)
@@ -112,11 +110,10 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 ### 📦 JSON Artifact Extraction Format (AEF 4.0)
 To completely bypass Unix/Linux terminal input buffer limits, you MUST use the AEF 4.0 JSON schema.
-
 **JSON Safety & Selective URL-Encoding (`url-encoded`):**
 To eliminate the "Backslash Plunge" (JSON parsing failures caused by unescaped quotes), default to Selective URL-Encoding for any file containing complex regex, Windows paths, or UI-crashing tags.
 * Specify `"encoding": "url-encoded"`.
-* Selectively percent-encode ONLY: `"` (`%22`), `\` (`%5C`), `<` (`%3C`), `>` (`%3E`), and `&` (`%26`). Do NOT globally encode spaces or newlines.
+* Selectively percent-encode ONLY: `"` (`"`), `\` (`\`), `<` (`<`), `>` (`>`), and `&` (`&`). Do NOT globally encode spaces or newlines.
 * If a file is standard plain text/markdown without hazards, you may specify `"encoding": "utf-8"` with standard JSON escaping.
 
 **Rules for Standard Output:**

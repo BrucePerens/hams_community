@@ -1,0 +1,21 @@
+Level 1: Core Hams.com Infrastructure
+These modules require ham_base and/or ham_testing to be installed first.
+5. ham_callbook (Depends on: ham_base) 
+6. ham_logbook (Depends on: ham_base) 
+7. ham_onboarding (Depends on: ham_base, ham_testing) 
+8. ham_club_management (Depends on: ham_base) 
+9. ham_init (Depends on: ham_base) 
+
+Level 2: Interconnected Applications
+These modules build upon the core infrastructure (Logbook, Callbook, and Onboarding).
+10. ham_events (Depends on: ham_logbook) 
+11. ham_satellite (Depends on: ham_base, ham_callbook) 
+12. ham_propagation (Depends on: ham_base, ham_callbook) 
+13. ham_dns (Depends on: ham_onboarding) 
+14. ham_classifieds (Depends on: ham_onboarding) 
+
+Level 3: Frontends, Themes & Complex Integrations
+These modules aggregate data from across the entire platform.
+15. ham_forum_extension (Depends on: ham_onboarding, ham_callbook, ham_testing, ham_base) 
+16. ham_shack (Depends on: ham_logbook, ham_callbook, ham_dx_cluster) 
+17. theme_hams (Depends on: ham_logbook, ham_callbook) 

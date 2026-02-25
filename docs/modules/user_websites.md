@@ -15,12 +15,13 @@
 The `user_websites` module enables decentralized content creation. It serves two distinct entity types via dynamic routing:
 
 1.  **Personal Websites:** Owned by a specific `res.users` record.
-    * **URL Base:** `/<website_slug>` (e.g., `/john-doe/home`, `/john-doe/blog`)
+* **URL Base:** `/<website_slug>` (e.g., `/john-doe/home`, `/john-doe/blog`)
 2.  **Group Websites:** Owned by a `user.websites.group` record.
-    * **URL Base:** `/<group_slug>` (e.g., `/chess-club/home`, `/chess-club/blog`)
+* **URL Base:** `/<group_slug>` (e.g., `/chess-club/home`, `/chess-club/blog`)
 
 **🚨 KEY DESIGN PATTERN: Proxy Ownership**
-Standard Odoo users cannot create `ir.ui.view`, `website.page`, or `blog.post` records due to core security constraints. This module securely circumvents this by explicitly assigning an `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated Service Account (`.with_user(svc_uid)`) *strictly* for the database write.
+Standard Odoo users cannot create `ir.ui.view`, `website.page`, or `blog.post` records due to core security constraints.
+This module securely circumvents this by explicitly assigning an `owner_user_id` or `user_websites_group_id` upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated Service Account (`.with_user(svc_uid)`) *strictly* for the database write.
 
 ---
 
@@ -62,7 +63,8 @@ Used for abuse reporting.
 Dependent modules should use these methods when interacting with `user_websites` logic.
 
 ### On `res.users`:
-* **`self.env['res.users']._get_user_id_by_slug(slug)`**: *(Returns: Integer or False)*. A high-performance, `@tools.ormcache` decorated method to resolve a URL slug to a User ID. **ALWAYS use this instead of `search()`** in frontend controllers to prevent database hits.
+* **`self.env['res.users']._get_user_id_by_slug(slug)`**: *(Returns: Integer or False)*. A high-performance, `@tools.ormcache` decorated method to resolve a URL slug to a User ID.
+**ALWAYS use this instead of `search()`** in frontend controllers to prevent database hits.
 * **`user.action_suspend_user_websites()`**: Forcefully unpublishes all user content and sets `is_suspended_from_websites = True`.
 * **`user.action_pardon_user_websites()`**: Resets strikes to 0 and lifts suspension.
 
@@ -104,8 +106,10 @@ page = self.env['website.page'].with_user(svc_uid).create(page_vals)
 
 If your module creates records that need to be accessible by User Websites roles, use these XML IDs:
 
-* **`user_websites.group_user_websites_user`**: The baseline "Personal Website Owner" group. Grants access to create/edit pages and posts where `owner_user_id = user.id`.
-* **`user_websites.group_user_websites_administrator`**: The "Administrator" group. Has full global access to all sites, moderation tools, and settings.
+* **`user_websites.group_user_websites_user`**: The baseline "Personal Website Owner" group.
+Grants access to create/edit pages and posts where `owner_user_id = user.id`.
+* **`user_websites.group_user_websites_administrator`**: The "Administrator" group.
+Has full global access to all sites, moderation tools, and settings.
 
 ---
 
@@ -113,8 +117,10 @@ If your module creates records that need to be accessible by User Websites roles
 
 If you are building custom frontend views in a dependent module, you may encounter these templates:
 
-* **Report Violation Modal**: Included globally on all website pages via XPath into `website.layout` (before the footer). To trigger it manually in a custom view, create a button with `data-bs-toggle="modal" data-bs-target="#reportViolationModal" data-url="/your/target/url"`.
-* **Standard Routes**: If you need to redirect users to their blog, the standard route is always `/<website_slug>/blog`. The homepage is `/<website_slug>/home`.
+* **Report Violation Modal**: Included globally on all website pages via XPath into `website.layout` (before the footer).
+To trigger it manually in a custom view, create a button with `data-bs-toggle="modal" data-bs-target="#reportViolationModal" data-url="/your/target/url"`.
+* **Standard Routes**: If you need to redirect users to their blog, the standard route is always `/<website_slug>/blog`.
+The homepage is `/<website_slug>/home`.
 
 ---
 
@@ -123,7 +129,8 @@ If you are building custom frontend views in a dependent module, you may encount
 To prevent code duplication and ensure strict security, this module exposes several facilities for dependent modules (e.g., `ham_logbook`, `ham_equipment`) to easily plug into the ecosystem.
 
 ### A. The Proxy Ownership Mixin (`user_websites.owned.mixin`)
-When creating a new model that belongs to a user or group site, **do not** rewrite the complex proxy ownership security logic. Inherit the mixin:
+When creating a new model that belongs to a user or group site, **do not** rewrite the complex proxy ownership security logic.
+Inherit the mixin:
 ```python
 class HamEquipment(models.Model):
     _name = 'ham.equipment'
@@ -161,7 +168,8 @@ class ResUsers(models.Model):
 ```
 
 ### C. Adding Links to the User Site Navbar
-To add a new route (like `/shack`) to the user's specific site navigation menu, simply XPath into `user_navbar_nav_links`. The `resolved_slug` context variable is guaranteed to be available.
+To add a new route (like `/shack`) to the user's specific site navigation menu, simply XPath into `user_navbar_nav_links`.
+The `resolved_slug` context variable is guaranteed to be available.
 ```xml
 <template id="user_navbar_inherit_shack" inherit_id="user_websites.user_navbar">
     <xpath expr="//ul[@id='user_navbar_nav_links']" position="inside">

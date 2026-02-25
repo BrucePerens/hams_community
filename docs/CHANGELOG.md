@@ -16,13 +16,15 @@ and this project adheres to strict Semantic Versioning.
 - **Zero-Sudo Enforcement**: Replaced illegal `.sudo()` escalations in the `ham_shack` module's award calculations with a dedicated, strictly scoped `award_service_internal` proxy account.
 - **OOM Prevention**: Refactored the ADIF Upload API to stream file payloads through the HMAC validator in 64KB chunks rather than reading massive files entirely into WSGI memory.
 ### Added
+- **Proposal 16 (Frictionless QRZ Verification)**: Upgraded the QRZ fallback verification flow with one-click clipboard copying, deep linking to the QRZ manager, and an AJAX auto-poller (`/api/v1/onboarding/qrz/status`) for seamless verification.
+- **Proposal 15 (LoTW Golden Path UI)**: Replaced the text-heavy LoTW certificate installation instructions with an OS-aware interactive carousel containing visual GIF walkthroughs.
+- **Proposal 14 (Hardware Setup Wizard)**: Added a local diagnostic UI (`/setup`) to the `hams_local_relay` daemon. It auto-discovers connected USB COM ports and saves configurations locally, allowing non-technical users to configure Hamlib without editing scripts.
 - **Generalized Cloudflare Edge Orchestrator**: Transitioned the `cloudflare` module to Open Source. Introduced Advanced Edge APIs (WAF IP Banning, Cache-Tag Purging, Turnstile Verification, and Edge Context Parsing) for consumption by proprietary modules. Generalized edge caching rules to dynamically adapt to public vs. authenticated states without requiring hardcoded dependencies on frontend apps.
 - **Proposal 09 (Coherent Caching Rollout)**: Expanded ADR-0047 memory caching to Group Websites and the Callbook Directory. Replaced synchronous PostgreSQL routing queries with O(1) `@tools.ormcache` lookups across all consumer endpoints, protected by distributed phase coherence.
 - **Proposal 08 (Architectural Alignment)**: Enforced Reverse Traceability (ADR-0045) by injecting explicit `CONSUMERS:` mappings into core `ham_base` utilities (`security_utils`, `geo_utils`, `redis_pool`). Centralized all geographic mathematics (Maidenhead conversions and Haversine distances) into `ham.geo.utils` to satisfy the Deduplication Mandate (ADR-0046).
 - **Fast-Fail Testing Architecture (ADR-0044)**: Formally mandated that all test deployment scripts (`START.sh`) must execute syntax, XML, and Burn List validation, aborting instantly on failure prior to executing database rebuilds.
 - **Proposal 07 (ADR Alignment)**: Drafted refactoring requirements to enforce Redis pooling, eliminate data loss in paused Net Rosters, remove WSGI-blocking SMTP calls, and design a unified Moderation Command Center to satisfy the Solo-Maintainer mandate.
 - **Solo-Maintainer Optimization (ADR-0043)**: Formalized the mandate for hyper-automation across testing, deployment, and administration. Requires self-healing systems and highly streamlined moderation queues to conserve the solo developer's cognitive load and time.
-- **Cloudflare Edge Orchestration (ADR-0042)**: Formalized Proposal 06 to create the `ham_cloudflare` module. This centralizes caching headers, proactive URL purging via a background queue, and absorbs the WAF Bot Management provisioning from the deprecated CLI script.
 - **Cloudflare Bot Management (ADR-0041)**: Added API integration to leverage Cloudflare's Rulesets API. It dynamically provisions WAF rules to allow cryptographically verified bots (like Googlebot) while challenging unknown headless scrapers targeting API endpoints.
 - **Dynamic Edge Tarpitting (ADR-0040)**: The `ham_events` module now pushes bot IP addresses into an ephemeral Redis cache when the silent honeypot is triggered. This sets the stage for Nginx to seamlessly apply 1-hour bandwidth tarpits to malicious scrapers.
 - **Architectural Codification (ADRs 0036-0039)**: Formalized the Public Guest User Idiom (No-Sudo Forms), Edge-Enforced API Rate Limiting, Silent Honeypot Anti-Spam, and Strict Burn-Ignore Confinement.
@@ -49,7 +51,6 @@ and this project adheres to strict Semantic Versioning.
 - **Scoped Config Parameters**: Extended `ir.config_parameter` to allow service accounts to securely update `ham.` namespaced keys without requiring global system admin privileges.
 - Behavior-Driven Development (BDD) Acceptance Criteria (Given/When/Then) applied to User Stories to drive unit testing.
 - Formal DevSecOps STRIDE Threat Modeling profiles established in `docs/security_models/`.
-
 ### Fixed
 - **AEF Extractor Permissions**: Fixed an issue in `tools/aef_extract.py` where atomic write operations stripped executable file permissions by ensuring `shutil.copymode` is applied.
 - **Map Privacy Leak**: Fixed `ham_callbook` map API to properly truncate the grid square string in JSON payloads for users who have not opted into exact precision tracking.
@@ -60,7 +61,6 @@ and this project adheres to strict Semantic Versioning.
 - **Semantic Anchor Architecture**: Implemented `[%ANCHOR: name]` traceability across the entire codebase to permanently link execution logic to Agile documentation.
 - **Architecture Decision Records (ADRs)**: Formalized foundational system decisions (Hybrid Daemon, Zero-Sudo, Zero-DB DX Cluster, Semantic Anchors) in `docs/adrs/`.
 - Comprehensive Operational Runbooks and User Journeys to guide deployments and workflows.
-
 ### Changed
 - `LLM_GENERAL_REQUIREMENTS.md`: Refactored to act as a strict, lean checklist of operational rules, stripping out historical bloat.
 - Security Paradigm: Enforced the **Zero-Sudo Architecture**, explicitly forbidding `.sudo()` in favor of the Service Account `with_user()` impersonation idiom.

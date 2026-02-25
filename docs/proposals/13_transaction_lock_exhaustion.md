@@ -8,7 +8,7 @@ Because PostgreSQL locks rows and tables during an active transaction, sleeping 
 ## 2. Integration Design
 
 ### A. Micro-Transaction Refactoring
-**Targets:** `user_websites/controllers/main.py`, `ham_cloudflare/models/purge_queue.py`, `ham_logbook/models/res_users.py`, `ham_testing/models/res_users.py`
+**Targets:** `user_websites/controllers/main.py`, `cloudflare/models/purge_queue.py`, `ham_logbook/models/res_users.py`, `ham_testing/models/res_users.py`
 * **The Fix:** The `env.cr.commit()` call MUST be moved *inside* the `while True` loop, immediately executing before the `time.sleep()` call.
 * **Mechanics:** By committing inside the loop, the background worker fully releases its PostgreSQL locks. It then sleeps (allowing other web workers to use the database pool), and initiates a fresh transaction on the next iteration of the loop.
 

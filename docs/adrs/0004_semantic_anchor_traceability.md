@@ -11,12 +11,9 @@ We will implement a Semantic Anchor Architecture. Developers and AI agents MUST 
 * Format: `# [%ANCHOR: unique_name]` (Python), `// [%ANCHOR: unique_name]` (JS), or `<!-- [%ANCHOR: unique_name] -->` (XML/HTML).
 * Documentation must reference these anchors using the explicit format: `*(Reference: path/to/file.py -> method_name -> [%ANCHOR: unique_name])*`.
 * LLM context protocols mandate that these anchors are actively scanned, preserved during refactoring, and mapped when creating new features.
-* **Module Manifests (`README.md`):** Every module's `README.md` (and its corresponding copy in `docs/modules/`) MUST explicitly list the semantic anchors implemented within that module and the specific files they live in.
 
 ## CI/CD Enforcement
 To prevent silent breakage, the `tools/verify_anchors.py` script MUST run during the automated test pipeline. If an anchor is referenced in `docs/` but cannot be found in the application source code, the build MUST fail.
-
-**Partial Workspace Resolution:** When working within an isolated or partial repository (Task Workspace), the semantic tag checker will explicitly parse `README.md` and `docs/modules/<module-name>.md` files to close the circle. This verifies that cross-repository anchors are structurally accounted for without requiring the full source code payload.
 
 ## Consequences
 * **Positive:** Creates an unbreakable, mathematically verifiable traceability matrix. Eliminates LLM "feature amnesia" by legally binding the AI to read the anchor's business logic before modifying code.

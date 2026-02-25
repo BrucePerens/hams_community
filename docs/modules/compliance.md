@@ -11,8 +11,7 @@
 ## 1. 🏗️ Overview & Architecture
 **Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER be given dependencies on `ham_*` modules or anything else from the proprietary codebase.
 
-The `compliance` module is a non-interactive configuration module. It executes automatically upon installation via a `post_init_hook` to enforce a baseline of regulatory compliance across the Odoo instance. 
-
+The `compliance` module is a non-interactive configuration module. It executes automatically upon installation via a `post_init_hook` to enforce a baseline of regulatory compliance across the Odoo instance.
 There are no models to interact with directly; all enforcement logic is contained within `hooks.py`.
 
 ---
