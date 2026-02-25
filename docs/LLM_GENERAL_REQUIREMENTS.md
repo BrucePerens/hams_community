@@ -9,7 +9,8 @@ This document defines the strict operational parameters for the Large Language M
 ## 1. CORE OPERATING PRINCIPLES (META-RULES)
 
 ### 🗣️ Communication & Tone Mandates
-* **No Praise or Flattery:** You are STRICTLY FORBIDDEN from praising the user. Deliver information directly and professionally without conversational fluff.
+* **Clear, Conversational Tone (ADR-0056):** You MUST write all documentation, READMEs, explanations, and code comments in a clear, conversational, and direct tone. Explain things plainly as if speaking to a capable coworker. You are STRICTLY FORBIDDEN from using "oblique" AI tones, passive voice, or dense academic jargon (e.g., avoid "It acts as the foundational infrastructure for..." and favor "It manages...").
+* **No Praise or Flattery:** You are STRICTLY FORBIDDEN from praising the user. Be helpful and direct, but avoid sycophantic fluff.
 * **No Repetitive Compliance Announcements:** Do not emit statements confirming compliance with basic formatting or encoding rules that have already been established. Reserve compliance summaries exclusively for complex architectural, security, or Burn List evaluations.
 * **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a `data/documentation.html` file, and you MUST inject it via a `post_init_hook` in `hooks.py` as a soft dependency (checking `if 'knowledge.article' in env:`).
 * **System Master Documentation Mandate:** Any new user-facing features MUST be added to `docs/SYSTEM_USER_GUIDE.md`. Any new API endpoints MUST be added to `docs/SYSTEM_APIs.md`.

@@ -2,32 +2,24 @@
 
 *Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
 
-This Odoo module acts as the central hub for automated regulatory compliance across the Hams Community platform. It ensures that the software meets global privacy standards, such as the GDPR, CCPA, and ePrivacy Directive, without requiring complex manual configuration.
+This module automatically handles the annoying parts of running a legal website. It makes sure your Odoo instance complies with GDPR, CCPA, and ePrivacy rules without you having to configure anything manually.
 
-## 🌟 Key Features
+## 🌟 What It Does
 
-* **Automated Cookie Consent Enforcement:** Upon installation, the module scans all active Odoo websites in the database and automatically enables the native "Cookie Consent Bar". This guarantees that optional tracking scripts are legally blocked until explicit user consent is given.
-* **Safe Legal Page Provisioning:** The module uses a post-installation hook to dynamically generate standard, AGPL-3 compatible boilerplate legal pages:
-    * `/privacy` (Privacy Policy)
-    * `/cookie-policy` (Cookie Policy)
-    * `/terms` (Terms of Service)
-* **Non-Destructive Architecture:** The provisioning system is designed to "do no harm". It strictly checks the routing map by URL before creation. If an administrator has already manually created a page at `/privacy`, the module will skip creation and leave the existing content untouched.
+* **Turns on the Cookie Banner:** As soon as you install this, it flips the switch to turn on Odoo's native Cookie Consent Bar across all your websites. This stops optional tracking scripts until the user clicks "Accept."
+* **Writes Your Legal Pages:** It automatically creates standard, editable pages for your Privacy Policy (`/privacy`), Cookie Policy (`/cookie-policy`), and Terms of Service (`/terms`).
+* **Doesn't Break Your Edits:** If you've already written a privacy policy at `/privacy`, the module detects it and leaves yours alone. If you edit the pages it creates, it won't overwrite your work when you update the module.
 
 ## ⚖️ Included Policy Coverage
-The generated boilerplate policies are tailored specifically for the architecture of the `user_websites` and `manual_library` modules. They explicitly disclose:
-* The Privacy-Friendly View Counter mechanisms.
-* The availability of the automated Data Portability (JSON export) and Right to Erasure tools located at `/my/privacy`.
-* The identity shielding features of the content abuse reporting system.
-* The Three-Strike moderation and suspension system.
+The boilerplate policies we generate are written specifically to cover the features in our other open-source modules. They explain:
+* How our privacy-friendly view counters work.
+* How users can download or permanently delete their data at the `/my/privacy` dashboard.
+* How our abuse reporting system hides the reporter's email to protect them.
+* How our 3-strike moderation and suspension system works.
 
 ## 🛠️ Installation
 
-1. Copy the `compliance` directory into your active Odoo `addons` path.
-2. Restart your Odoo server service.
-3. Log in to Odoo as an Administrator with Developer Mode enabled.
-4. Navigate to **Apps**, click **Update Apps List**, and remove the default "Apps" filter.
-5. Search for `Global Compliance` and click **Activate** / **Install**.
-
-## 📜 License
-
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+1. Drop the `compliance` folder into your Odoo `addons` directory.
+2. Restart your Odoo server.
+3. Turn on Developer Mode, go to **Apps**, and click **Update Apps List**.
+4. Search for `Global Compliance` and click **Install**.

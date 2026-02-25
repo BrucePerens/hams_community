@@ -2,10 +2,10 @@
 
 *Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
 
-This foundational Odoo module implements the platform's strict **Zero-Sudo Architecture** (ADR-0002) and **Service Account Web Isolation** (ADR-0005).
+This is the core security cop for our Odoo ecosystem. It enforces our strict **Zero-Sudo Architecture** (ADR-0002) to stop privilege escalation hacks, and it physically locks down background service accounts so they can't be used to log into the website (ADR-0005).
 
-## 🌟 Key Features
+## 🌟 What It Does
 
-* **Centralized Escalation:** Provides the `zero_sudo.security.utils` AbstractModel to safely fetch system parameters and XML IDs without exposing inline `.sudo()` calls.
-* **Parameter Whitelisting:** Enforces a strict `frozenset` whitelist against parameter extraction to prevent Server-Side Template Injection (SSTI).
-* **Web Isolation:** Extends `res.users` with the `is_service_account` flag and overrides the `web_login` controller to block interactive browser sessions, while preserving JSON/XML-RPC access for headless daemons.
+* **Safe Privilege Escalation:** Instead of letting developers use Odoo's dangerous `.sudo()` command, this module provides safe, cached functions (like `_get_service_uid`) to run background tasks securely.
+* **Blocks System Hacks:** It forces developers to hardcode a "whitelist" of safe configuration settings. If an attacker tries to trick the system into handing over a cryptographic secret (like a database password), this module blocks it.
+* **Locks Out Daemons:** It adds an `is_service_account` checkbox to users. If an account is running a background daemon and someone tries to log into the web browser with that account, this module instantly destroys the session and kicks them out.

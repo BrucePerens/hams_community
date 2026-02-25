@@ -28,14 +28,14 @@ redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode
 redis_client = redis.Redis(connection_pool=redis_pool)
 
 def _async_redis_incr(page_id):
-    """Fire-and-forget Redis increment to prevent WSGI thread blocking."""
+    """Quickly update the Redis view counter in the background so we don't hold up the web server."""
     try:
         redis_client.incr(f"views:page:{page_id}")
     except Exception:
         pass
 
 def _async_gdpr_erasure(db_name, user_id):
-    """Executes GDPR erasure in a background thread to prevent WSGI locking."""
+    """Deletes user data in the background so the web server doesn't freeze up during large GDPR requests."""
     registry = Registry(db_name)
     with registry.cursor() as cr:
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
@@ -272,7 +272,7 @@ class UserWebsitesController(http.Controller):
         else:
             raise werkzeug.exceptions.NotFound()
 
-        # Idempotency check: prevent duplicate page creation map bloat
+        # Make sure we don't accidentally create duplicate pages if the user clicks twice
         existing_page = request.env['website.page'].with_user(svc_uid).search_count([
             ('url', '=', f'/{resolved_slug}/home')
         ])
@@ -430,7 +430,7 @@ class UserWebsitesController(http.Controller):
                 'website_id': request.website.id
             })
 
-        # Idempotency check: prevent duplicate blog post spam
+        # Make sure we don't accidentally create duplicate posts if the user clicks twice
         domain = [('blog_id', '=', blog.id), ('is_published', '=', True)]
         if user:
             domain.append(('owner_user_id', '=', request.env.user.id))

@@ -262,7 +262,7 @@ class ResUsers(models.Model):
         # [%ANCHOR: res_users_gdpr_export]
         # Verified by [%ANCHOR: test_gdpr_export_hook]
         """
-        Returns a dictionary of all personal data and authored content for GDPR portability.
+        Packages all the user's data and content into a dictionary so they can download it.
         """
         self.ensure_one()
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
@@ -293,7 +293,7 @@ class ResUsers(models.Model):
 
     def _execute_gdpr_erasure(self):
         """
-        Executes the GDPR right to erasure by hard-deleting all authored content.
+        Permanently deletes all content created by the user to comply with GDPR.
         """
         self.ensure_one()
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')

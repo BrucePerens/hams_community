@@ -6,6 +6,7 @@ and this project adheres to strict Semantic Versioning.
 
 ## [Unreleased]
 ### Changed
+- **Conversational Tone Mandate (ADR-0056)**: Formally banned "oblique," academic, and dense corporate-speak from documentation, READMEs, and code comments. Rewrote root documentation to explain the system plainly and directly.
 - **AST Linter Hardening (Burn List)**: Upgraded `check_burn_list.py` to recursively track SQL taints (e.g., intermediate f-strings passed to `cr.execute`), block universal attribute aliases for `.sudo()`, and evaluate `@http.route` controller context to drastically reduce false positives while making obfuscation and evasion impossible.
 - **Linter Bypass Testing Mandate (ADR-0052)**: Formalized the rule that any use of a linter bypass tag (`burn-ignore` or `audit-ignore`) MUST be accompanied by an exhaustive automated unit test proving the safety and correctness of the bypassed operation.
 - **ADR-0022 Refinement**: Formalized 'Bounded Chunking' requirements to prevent Out-Of-Memory (OOM) crashes and silent false-negatives during massive historical data array processing.

@@ -1,29 +1,25 @@
 # Odoo Core Modules & LLM Development Standards
 
-This repository contains a suite of foundational Odoo 19+ modules designed for general-purpose use—specifically focusing on system compliance, documentation management, and user web integration. 
+Here you'll find our foundational Odoo 19 modules. We use these for general-purpose tasks like privacy compliance, managing documentation, and letting users build their own websites. 
 
-Additionally, this repository serves as the source of truth for the strict Large Language Model (LLM) operational mandates and Odoo technical standards used to develop these tools.
+This repository is also the source of truth for how we instruct LLMs (like AI coding assistants) to write software for us. It contains our strict operational rules and Odoo technical standards.
 
 ## 📦 Included Modules
 
-This repository distributes the following core modules:
+We've built these modules so you can drop them into any Odoo project without them breaking. They don't rely on our specific ham radio apps.
 
-* **`compliance`**: Implements native frameworks for GDPR/CCPA compliance, including data portability (JSON exports), right to erasure, and native cookie consent integration.
-* **`manual_library`**: A clean-room, open-source drop-in replacement for the proprietary Odoo Enterprise `knowledge` module for Odoo Community. It provides the native `knowledge.article` API, allowing other modules to seamlessly inject and manage hierarchical documentation.
-* **`user_websites`**: Infrastructure for managing user-specific web profiles and site integrations.
-* **`zero_sudo`**: Foundational security layer enforcing the platform's Zero-Sudo architecture and Service Account web isolation. Provides centralized privilege escalation utilities.
-
-*(Note: These modules are designed to be domain-agnostic and operate independently of any specific application verticals).*
+* **`compliance`**: Automatically handles GDPR and CCPA rules. It sets up the cookie consent banner, gives users a way to download their data, and lets them delete their accounts permanently.
+* **`manual_library`**: A free, open-source replacement for Odoo's Enterprise Knowledge app. It lets you write, organize, and publish documentation and guides directly from Odoo.
+* **`user_websites`**: Lets your users build their own personal or group websites and blogs right inside your Odoo instance.
+* **`zero_sudo`**: Secures the system. It forces background tasks and daemons to use highly restricted service accounts, and actively stops those accounts from logging into the web interface.
 
 ## 🤖 LLM-Assisted Development Standards
 
-Development in this repository is governed by strict operational and architectural mandates enforced during LLM-assisted coding sessions. These standards ensure security, accessibility (WCAG 2.1 AA), and adherence to modern Odoo 19+ native idioms.
+When we use AI to write code, we force it to follow strict rules. This keeps the code secure, accessible, and up to date with Odoo 19 standards.
 
-* **`docs/LLM_GENERAL_REQUIREMENTS.md`**: Global operational mandates, Agile/SRE formalizations, security patterns (Zero-Sudo), and the AEF 4.0 JSON transport protocol requirements.
-* **`docs/LLM_ODOO_REQUIREMENTS.md`**: Odoo-specific architectural rules, including a strict "Burn List" of deprecated legacy patterns, proper ORM/Caching standards, and secure RPC execution mandates.
+* **`docs/LLM_GENERAL_REQUIREMENTS.md`**: Our global rules for the AI. It covers how the AI should talk to us (no fluff, conversational tone), how it should handle security, and the JSON format it must use to send us code.
+* **`docs/LLM_ODOO_REQUIREMENTS.md`**: Our strict Odoo coding rules. This includes the "Burn List"—a list of old, bad Odoo habits and legacy syntax the AI is explicitly forbidden from using.
 
 ## ⚖️ License & Copyright
 
-Copyright © Bruce Perens K6BP. 
-
-This software is licensed under the **GNU Affero General Public License, version 3 (AGPL-3.0)**. See the `LICENSE` file for more details.
+Copyright © Bruce Perens K6BP. This software is licensed under the **GNU Affero General Public License, version 3 (AGPL-3.0)**. See the `LICENSE` file for more details.
