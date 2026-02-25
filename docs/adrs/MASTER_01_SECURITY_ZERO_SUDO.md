@@ -27,7 +27,7 @@ All allowed privilege escalations (such as resolving XML IDs or fetching configu
 ### 4. Strict Linter Bypass Confinement (ADR-0052)
 Generic `# burn-ignore` tags are strictly prohibited. The bypass comment MUST specify the exact rule or pattern being bypassed (e.g., `# burn-ignore-sudo`, `# audit-ignore-mail`, `# audit-ignore-search`).
 
-Furthermore, ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the automated unit test that validates it (e.g., `# burn-ignore-sudo: Tested by [%ANCHOR: unique_name]`).
+Furthermore, ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the automated unit test that validates it (e.g., `# burn-ignore-sudo: Tested by [%ANCHOR: example_unique_name]`).
 
 The `# burn-ignore-sudo` directive is strictly confined to two exact operations:
 1. Cryptographic Fetching: `.sudo().get_param('database.secret')`
@@ -36,6 +36,6 @@ The `# burn-ignore-sudo` directive is strictly confined to two exact operations:
 **Audit Bypass Tags:**
 To silence false-positive architectural warnings, developers and AI agents may use specific `audit-ignore` tags, provided they have manually verified the underlying logic AND provided the mandatory test anchor:
 * ``: Allowed on `ir.cron` XML records ONLY if the test proves the Python method utilizes `_trigger()` loop batching.
-* `# audit-ignore-mail: Tested by [%ANCHOR: unique_name]`: Allowed on `send_mail()` calls ONLY if the test proves the target template's `model_id` matches.
-* `# audit-ignore-search: Tested by [%ANCHOR: unique_name]`: Allowed on `.search()` calls ONLY if the test proves the search does not introduce an OOM vector or bypass a required uniqueness check.
+* `# audit-ignore-mail: Tested by [%ANCHOR: example_unique_name]`: Allowed on `send_mail()` calls ONLY if the test proves the target template's `model_id` matches.
+* `# audit-ignore-search: Tested by [%ANCHOR: example_unique_name]`: Allowed on `.search()` calls ONLY if the test proves the search does not introduce an OOM vector or bypass a required uniqueness check.
 Inventing or using unauthorized bypass tags, or omitting the test anchor, constitutes a critical security violation.

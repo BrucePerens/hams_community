@@ -8,8 +8,8 @@ To maintain sync between Agile documentation (Stories, Journeys) and execution l
 
 ## Decision
 We will implement a Semantic Anchor Architecture. Developers and AI agents MUST inject explicit string anchors directly into the source code at critical execution points.
-* Format: `# [%ANCHOR: unique_name]` (Python), `// [%ANCHOR: unique_name]` (JS), or `<!-- [%ANCHOR: unique_name] -->` (XML/HTML).
-* Documentation must reference these anchors using the explicit format: `*(Reference: path/to/file.py -> method_name -> [%ANCHOR: unique_name])*`.
+* Format: `# [%ANCHOR: example_unique_name]` (Python), `// [%ANCHOR: example_unique_name]` (JS), or `<!-- [%ANCHOR: example_unique_name] -->` (XML/HTML).
+* Documentation must reference these anchors using the explicit format: `*(Reference: path/to/file.py -> method_name -> [%ANCHOR: example_unique_name])*`.
 * LLM context protocols mandate that these anchors are actively scanned, preserved during refactoring, and mapped when creating new features.
 
 ## CI/CD Enforcement

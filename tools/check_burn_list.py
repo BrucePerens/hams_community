@@ -16,15 +16,16 @@ ERROR_RULES = [
     (r'\.xml$', re.compile(r'expr\s*=\s*["\'].*?id=["\']snippet_structure["\'].*?["\']'), "CRITICAL FRAGILE XPATH: 'snippet_structure' was removed in Odoo 19. Use `expr=\"/*\"` with `position=\"inside\"` instead."),
     (r'\.xml$', re.compile(r'name\s*=\s*["\']category_id["\']'), "Legacy security: Use 'privilege_id' instead of 'category_id' for res.groups."),
     (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']users["\']'), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use name='user_ids' instead of 'users' for res.groups mapping in Odoo 18+."),
-    (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']groups_id["\']'), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use name='group_ids' instead of 'group_ids' for res.users mapping in Odoo 18+."),
-    (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Legacy security mapping detected. You MUST use 'group_ids' instead of 'group_ids' when assigning groups to res.users in Odoo 18+."),
+    (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']groups_id["\']'), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'."),
+    (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'."),
+    (r'\.py$', re.compile(r'^\s*_sql_constraints\s*='), "CRITICAL DEPRECATION: Odoo 19+ no longer supports '_sql_constraints'. Use 'models.Constraint' class attributes instead."),
     (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
     (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends.")
 ]
 
 WARNING_RULES = [
     (r'\.xml$', re.compile(r'<record.*?model=["\']ir\.cron["\']'), "[AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger() to prevent transaction timeouts."),
-    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <!-- audit-ignore-xpath: Tested by [%ANCHOR: ...] --> to bypass.")
+    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <!-- audit-ignore-xpath: Tested by [\%ANCHOR: ...] --> to bypass.")
 ]
 
 MULTILINE_WARNING_RULES = []
@@ -116,6 +117,8 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 if isinstance(k, ast.Constant) and k.value in ('error', 'success', 'warning', 'message'):
                     if self.is_untranslated_string(v):
                         self.add_warning(node.lineno, f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'. Wrap in _().")
+                if isinstance(k, ast.Constant) and k.value == 'groups_id':
+                    self.add_error(node.lineno, "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'.")
             self.generic_visit(node)
 
         def visit_For(self, node):
@@ -221,6 +224,8 @@ def check_ast_vulnerabilities(filepath, content, lines):
         def visit_keyword(self, node):
             if node.arg == 'numbercall':
                 self.add_error(getattr(node, 'lineno', 1), "Remove 'numbercall'. Odoo 18+ crons run indefinitely if active='True'.")
+            elif node.arg == 'groups_id':
+                self.add_error(getattr(node, 'lineno', 1), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'.")
             elif node.arg == 'type' and isinstance(node.value, ast.Constant) and node.value.value == 'json':
                 self.add_error(getattr(node, 'lineno', 1), "Use type='jsonrpc' instead of type='json' for HTTP routes.")
             elif node.arg == 'index' and isinstance(node.value, ast.Constant) and node.value.value == 'trgm':
@@ -365,7 +370,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                                 is_uniqueness_context = True
                             elif self.current_decorators and ('constrains' in self.current_decorators or 'onchange' in self.current_decorators):
                                 is_uniqueness_context = True
-                                
+                            
                             if is_uniqueness_context:
                                 self.add_warning(node.lineno, f"[AUDIT] Data Integrity: Direct `{attr}()` on an env model without `.sudo()` may cause false negatives if used for uniqueness checks. Review manually.")
 
@@ -412,10 +417,12 @@ def scan_file(filepath):
         ast_errors, ast_warnings = check_ast_vulnerabilities(filepath, content, lines)
         for lineno, msg in ast_errors:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            errors_found.append(f"Line {lineno} (AST): {msg}\n    {stripped}")
+            errors_found.append(f"Line {lineno} (AST): {msg}
+    {stripped}")
         for lineno, msg in ast_warnings:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            warnings_found.append(f"Line {lineno} (AST): {msg}\n    {stripped}")
+            warnings_found.append(f"Line {lineno} (AST): {msg}
+    {stripped}")
 
     current_xml_model = None
     current_xml_view_type = None
@@ -457,13 +464,15 @@ def scan_file(filepath):
 
         if 'burn-ignore' in line:
             if not ('database.secret' in line or '.sudo().unlink()' in line):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.\n    {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.
+    {stripped}")
             continue
 
         if 'audit-ignore' in line:
             valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath']
             if not any(tag in line for tag in valid_audits):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used.\n    {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used.
+    {stripped}")
 
         if filename.endswith('.xml'):
             model_match = re.search(r'<record.*?model=["\']([^">]+)["\']', line)
@@ -497,7 +506,8 @@ def scan_file(filepath):
                             break
                     if exempted:
                         continue
-                    errors_found.append(f"Line {line_num}: {error_msg}\n    {stripped}")
+                    errors_found.append(f"Line {line_num}: {error_msg}
+    {stripped}")
                     
         for ext_pattern, regex, warning_msg in WARNING_RULES:
             if re.search(ext_pattern, filename):
@@ -519,7 +529,8 @@ def scan_file(filepath):
                             break
                     if exempted:
                         continue
-                    warnings_found.append(f"Line {line_num}: {warning_msg}\n    {stripped}")
+                    warnings_found.append(f"Line {line_num}: {warning_msg}
+    {stripped}")
                     
     return errors_found, warnings_found
 
@@ -529,7 +540,9 @@ def main():
     args = parser.parse_args()
 
     target_dir = os.path.abspath(args.directory)
-    print(f"\nScanning {target_dir} for Odoo 19+ Burn List violations...\n")
+    print(f"
+Scanning {target_dir} for Odoo 19+ Burn List violations...
+")
 
     total_errors = 0
     total_warnings = 0
@@ -552,7 +565,8 @@ def main():
                 
                 if errors or warnings:
                     rel_path = os.path.relpath(filepath, target_dir)
-                    print(f"\n📄 {rel_path}")
+                    print(f"
+📄 {rel_path}")
                     
                     if warnings:
                         total_warnings += len(warnings)
@@ -564,17 +578,21 @@ def main():
                         for err in errors:
                             print(f"  ❌ ERROR: {err}")
 
-    print(f"\nScan Complete: Checked {scanned_files} files.")
+    print(f"
+Scan Complete: Checked {scanned_files} files.")
     print(f"Total Errors: {total_errors} | Total Warnings (Audits): {total_warnings}")
     
     if total_errors > 0:
-        print("\n❌ Found Burn List errors. Please fix them before deploying.")
+        print("
+❌ Found Burn List errors. Please fix them before deploying.")
         sys.exit(1)
     else:
         if total_warnings > 0:
-            print("\n✅ Passed with warnings. Audits require manual verification, but the build will continue.")
+            print("
+✅ Passed with warnings. Audits require manual verification, but the build will continue.")
         else:
-            print("\n✅ No Burn List violations found! Your codebase is clean.")
+            print("
+✅ No Burn List violations found! Your codebase is clean.")
         sys.exit(0)
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@ Anywhere there is **ANY** linter bypass comment applied to the codebase, we MUST
 
 1. **Mandatory Specificity:** Generic `# burn-ignore` tags are strictly prohibited. The bypass comment MUST specify the exact rule or pattern being bypassed (e.g., `# burn-ignore-sudo`, `# audit-ignore-mail`, `# audit-ignore-search`).
 2. **Mandatory Coverage:** Every single instance of a specific bypass tag MUST be backed by a corresponding automated unit test.
-3. **Semantic Anchor Cross-Reference:** ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the test that validates it (e.g., `# burn-ignore-sudo: Tested by [%ANCHOR: unique_name]` or `# audit-ignore-mail: Tested by [%ANCHOR: unique_name]`).
+3. **Semantic Anchor Cross-Reference:** ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the test that validates it (e.g., `# burn-ignore-sudo: Tested by [%ANCHOR: example_unique_name]` or `# audit-ignore-mail: Tested by [%ANCHOR: example_unique_name]`).
 4. **Behavioral Proof:** The test MUST explicitly and mathematically prove that the bypassed architectural requirement is fulfilled. For example:
     * If `<!-- audit-ignore-cron -->` is used, the test must prove that the underlying Python method correctly chunks the dataset and utilizes `_trigger()` to loop.
     * If `# burn-ignore` is used for cryptographic parameter fetching, the test must prove that the secret is securely generated, validated, and resists tampering.

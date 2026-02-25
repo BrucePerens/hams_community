@@ -8,8 +8,8 @@ The Hybrid Monolith-Daemon Architecture (ADR-0001) relies heavily on decoupled c
 
 ## Decision
 We mandate bidirectional semantic anchoring for all interactions that cross the Odoo application and background daemon boundary.
-1. **The Producer (e.g., Odoo):** Near the execution logic that fires the event, developers MUST add a comment pointing to the consumer's anchor. Example: `# Triggers [%ANCHOR: daemon_consumer_name]`.
-2. **The Consumer (e.g., Daemon):** Near the handler that receives the event, developers MUST add a comment referencing the source code anchor that generated it. Example: `# Triggered by [%ANCHOR: odoo_producer_name]`.
+1. **The Producer (e.g., Odoo):** Near the execution logic that fires the event, developers MUST add a comment pointing to the consumer's anchor. Example: `# Triggers [%ANCHOR: example_daemon_consumer_name]`.
+2. **The Consumer (e.g., Daemon):** Near the handler that receives the event, developers MUST add a comment referencing the source code anchor that generated it. Example: `# Triggered by [%ANCHOR: example_odoo_producer_name]`.
 
 ## Consequences
 * **Positive:** Restores direct traceability across distributed asynchronous workflows. Developers and AI agents can instantly navigate from a database trigger to the daemon that processes it.

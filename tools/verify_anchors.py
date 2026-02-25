@@ -63,8 +63,8 @@ def main():
     
     missing_in_code = docs_anchors - code_anchors
     
-    # Exclude dummy placeholder anchors from documentation templates
-    missing_in_code -= {'unique_name', 'name'}
+    # Exclude placeholder anchors by enforcing an 'example_' prefix convention
+    missing_in_code = {a for a in missing_in_code if not a.startswith('example_')}
 
     if missing_in_code:
         print("\n[!] CI/CD FAILURE: The following Semantic Anchors are referenced in the documentation but are missing from the codebase or module READMEs:")

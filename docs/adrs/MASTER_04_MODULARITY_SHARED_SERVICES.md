@@ -21,5 +21,5 @@ Modules MUST utilize Soft Dependencies for non-critical integrations (e.g., Docu
 
 ### 4. Centralized Reverse Traceability
 Any utility or Service Account hosted in `ham_base` MUST include a `CONSUMERS:` block in its docstring.
-* This block explicitly lists every active usage across the platform using Semantic Anchors (`[%ANCHOR: name]`).
+* This block explicitly lists every active usage across the platform using Semantic Anchors (`[%ANCHOR: example_name]`).
 * Developers modifying core utilities MUST consult this block to understand downstream impacts and prevent regression.
