@@ -16,6 +16,7 @@ and this project adheres to strict Semantic Versioning.
 - **Zero-Sudo Enforcement**: Replaced illegal `.sudo()` escalations in the `ham_shack` module's award calculations with a dedicated, strictly scoped `award_service_internal` proxy account.
 - **OOM Prevention**: Refactored the ADIF Upload API to stream file payloads through the HMAC validator in 64KB chunks rather than reading massive files entirely into WSGI memory.
 ### Added
+- **Cloudflare UI Control Plane**: Provisioned the native Odoo frontend UI for the `cloudflare` module, allowing system administrators to review honeypot IP Bans, construct WAF rules, and push/pull firewall configurations directly to the edge without leaving the ERP. Fully mapped with JS UI Tours and BDD Stories.
 - **Proposal 16 (Frictionless QRZ Verification)**: Upgraded the QRZ fallback verification flow with one-click clipboard copying, deep linking to the QRZ manager, and an AJAX auto-poller (`/api/v1/onboarding/qrz/status`) for seamless verification.
 - **Proposal 15 (LoTW Golden Path UI)**: Replaced the text-heavy LoTW certificate installation instructions with an OS-aware interactive carousel containing visual GIF walkthroughs.
 - **Proposal 14 (Hardware Setup Wizard)**: Added a local diagnostic UI (`/setup`) to the `hams_local_relay` daemon. It auto-discovers connected USB COM ports and saves configurations locally, allowing non-technical users to configure Hamlib without editing scripts.

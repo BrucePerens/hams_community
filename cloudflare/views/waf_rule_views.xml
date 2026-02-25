@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    
+    
     <record id="view_cloudflare_waf_rule_list" model="ir.ui.view">
         <field name="name">cloudflare.waf.rule.list</field>
         <field name="model">cloudflare.waf.rule</field>

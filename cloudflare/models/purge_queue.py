@@ -22,18 +22,10 @@ class CloudflarePurgeQueue(models.Model):
     ], default='pending', index=True)
 
     @api.model
-    @tools.ormcache()
-    def _get_cf_service_uid(self):
-        self.env.cr.execute("SELECT res_id FROM ir_model_data WHERE module='cloudflare' AND name='user_cloudflare_service'")
-        res = self.env.cr.fetchone()
-        return res[0] if res else 1
-
-    @api.model
     def enqueue_urls(self, urls):
         # [%ANCHOR: enqueue_urls_base_url]
         # Verified by [%ANCHOR: test_purge_queue_base_url_sudo]
-        svc_uid = self._get_cf_service_uid()
-        base_url = self.env['ir.config_parameter'].with_user(svc_uid).get_param('web.base.url', 'https://localhost').rstrip('/')
+        base_url = self.env['zero_sudo.security.utils']._get_system_param('web.base.url', 'https://localhost').rstrip('/')
         create_vals = []
         
         for u in urls:
@@ -102,7 +94,7 @@ class CloudflarePurgeQueue(models.Model):
                 res = custom_write.origin(self, vals)
                 if urls and 'cloudflare.purge.queue' in self.env:
                     queue_env = self.env['cloudflare.purge.queue']
-                    svc_uid = queue_env._get_cf_service_uid()
+                    svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
                     queue_env.with_user(svc_uid).enqueue_urls(urls)
                 return res
             return custom_write
@@ -113,7 +105,7 @@ class CloudflarePurgeQueue(models.Model):
                 res = custom_unlink.origin(self)
                 if urls and 'cloudflare.purge.queue' in self.env:
                     queue_env = self.env['cloudflare.purge.queue']
-                    svc_uid = queue_env._get_cf_service_uid()
+                    svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
                     queue_env.with_user(svc_uid).enqueue_urls(urls)
                 return res
             return custom_unlink

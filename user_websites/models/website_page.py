@@ -10,6 +10,11 @@ _logger = logging.getLogger(__name__)
 
 from odoo import tools
 
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+redis_client = redis.Redis(connection_pool=redis_pool)
+
 class WebsitePage(models.Model):
     _name = 'website.page'
     _inherit = ['website.page', 'user_websites.owned.mixin']
@@ -124,12 +129,7 @@ class WebsitePage(models.Model):
         Cron job to flush Redis view counters to the PostgreSQL database.
         Uses _trigger() for batching if there are too many keys (ADR-0022).
         """
-        REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-        REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
-        
         try:
-            redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
-            redis_client = redis.Redis(connection_pool=redis_pool)
             cursor, keys = redis_client.scan(cursor=0, match="views:page:*", count=1000)
         except Exception as e:
             _logger.error(f"Failed to connect to Redis for view counter flush: {e}")

@@ -9,30 +9,33 @@
 ## 1. 🏗️ Architecture & Enterprise Compatibility
 **Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER be given dependencies on `ham_*` modules or anything else from the proprietary codebase.
 
-**CRITICAL:** This module is a clean-room, 100% drop-in API replacement for the official **Odoo Enterprise Knowledge** module. Because it uses the exact same ORM namespace (`knowledge.article`), any dependent module can inject documentation natively.
+**CRITICAL:** This module is a clean-room, 100% drop-in API replacement for the official **Odoo Enterprise Knowledge** module.
+* **Target Model:** `knowledge.article`
+* **Database Table:** `knowledge_article`
+* Because it uses the exact same ORM namespace and core field signatures as Enterprise, any dependent module (like `ham_kns`) MUST inject documentation targeting the `knowledge.article` model. If the platform is ever upgraded to Odoo Enterprise, the data will remain perfectly intact and natively compatible.
 
 ---
 
 ## 2. 🔌 API Surface & Data Model
+To ensure external modules can install documentation using `<record model="knowledge.article" id="...">`, the following API surface must be perfectly exposed.
 
-### Interoperability Fields:
+### Core Interoperability Fields:
 * `name` (`Char`): Article title (Required).
 * `body` (`Html`): The rich-text HTML content.
-* `parent_id` (`Many2one` to `knowledge.article`): Used to build the nested tree.
-* `child_ids` (`One2many` to `knowledge.article`): The inverse.
-* `sequence` (`Integer`): Ordering.
-* `is_published` (`Boolean`): Frontend visibility.
-* `icon` (`Char`): Emoji or string class.
-* `internal_permission` (`Selection`): `'read'`, `'write'`, `'none'`.
-
-### Custom Analytics Fields:
-* **`helpful_count`**, **`unhelpful_count`**: Incremented by the public `/manual/feedback` API endpoint.
+* `parent_id` (`Many2one` to `knowledge.article`): Used to build the nested tree. If `False`, the article is a "Root" article.
+* `sequence` (`Integer`): Order among siblings.
+* `is_published` (`Boolean`): Frontend visibility for the public.
+* `icon` (`Char`): An emoji or string class used in the UI (e.g., 📚).
+* `active` (`Boolean`): Standard archiving.
+* `internal_permission` (`Selection`): `'read'`, `'write'`, `'none'`. Granular control for standard internal users.
 
 ---
 
 ## 3. 📤 Data Injection Methods
 
 ### Method A: XML Data Loading (Recommended)
+Dependent modules can inject manuals seamlessly using standard Odoo XML data files.
+
 ```xml
 <odoo>
     <data noupdate="1">
@@ -42,7 +45,10 @@
             <field name="internal_permission">read</field>
             <field name="icon">⚙️</field>
             <field name="body" type="html">
-                <![CDATA[ <h1>Module Reference</h1><p>Docs...</p> ]]>
+                <![CDATA[
+                    <h1>Module Reference</h1>
+                    <p>Detailed documentation goes here...</p>
+                ]]>
             </field>
         </record>
     </data>
@@ -50,6 +56,7 @@
 ```
 
 ### Method B: Safe Python Injection (post_init_hook)
+For soft-dependencies, use the standard Python hook. Hooks run as `SUPERUSER_ID` natively, so no `.sudo()` is required.
 ```python
 def post_init_hook(env):
     if 'knowledge.article' in env:

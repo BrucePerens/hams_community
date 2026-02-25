@@ -24,6 +24,8 @@ class CloudflareIPBan(models.Model):
 
     @api.model
     def _execute_ban(self, ip_address, mode='block', notes="Honeypot Triggered"):
+        # [%ANCHOR: cf_execute_ban]
+        # Verified by [%ANCHOR: test_cf_execute_ban]
         from ..utils.cloudflare_api import ban_ip
         success, result = ban_ip(ip_address, mode=mode, notes=notes)
         
@@ -46,6 +48,8 @@ class CloudflareIPBan(models.Model):
             return False
 
     def action_lift_ban(self):
+        # [%ANCHOR: cf_action_lift_ban]
+        # Verified by [%ANCHOR: test_cf_action_lift_ban]
         from ..utils.cloudflare_api import unban_ip
         for rec in self:
             if rec.state == 'active' and rec.cf_rule_id:

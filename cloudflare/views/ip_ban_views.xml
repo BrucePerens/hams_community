@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    
+    
     <record id="view_cloudflare_ip_ban_list" model="ir.ui.view">
         <field name="name">cloudflare.ip.ban.list</field>
         <field name="model">cloudflare.ip.ban</field>

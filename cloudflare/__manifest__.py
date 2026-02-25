@@ -18,6 +18,11 @@
         "views/waf_rule_views.xml",
         "views/config_backup_views.xml",
     ],
+    "assets": {
+        "web.assets_tests": [
+            "cloudflare/static/tests/tours/**/*",
+        ],
+    },
     "post_init_hook": "post_init_hook",
     "installable": True,
     "application": False,

@@ -9,7 +9,7 @@ Additionally, this repository serves as the source of truth for the strict Large
 This repository distributes the following core modules:
 
 * **`compliance`**: Implements native frameworks for GDPR/CCPA compliance, including data portability (JSON exports), right to erasure, and native cookie consent integration.
-* **`manual_library`**: A dynamic documentation management system that injects end-user guides and system documentation into the platform (designed with Odoo's `knowledge.article` as a soft dependency).
+* **`manual_library`**: A clean-room, open-source drop-in replacement for the proprietary Odoo Enterprise `knowledge` module for Odoo Community. It provides the native `knowledge.article` API, allowing other modules to seamlessly inject and manage hierarchical documentation.
 * **`user_websites`**: Infrastructure for managing user-specific web profiles and site integrations.
 * **`zero_sudo`**: Foundational security layer enforcing the platform's Zero-Sudo architecture and Service Account web isolation. Provides centralized privilege escalation utilities.
 

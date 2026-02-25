@@ -64,12 +64,14 @@ class CloudflareConfigManager(models.AbstractModel):
 
     @api.model
     def action_pull_waf_rules(self):
+        # [%ANCHOR: cf_action_pull_waf_rules]
+        # Verified by [%ANCHOR: test_cf_action_pull_waf_rules]
         """Pulls current rules from Cloudflare and populates the Odoo UI."""
         existing_ruleset = get_zone_ruleset('http_request_firewall_custom')
         if not existing_ruleset:
             return False, "No custom firewall ruleset found in Cloudflare."
             
-        self.env['cloudflare.waf.rule'].search([]).unlink()
+        self.env['cloudflare.waf.rule'].search([], limit=1000).unlink()
         
         rules = existing_ruleset.get('rules', [])
         for i, r in enumerate(rules):
@@ -85,8 +87,10 @@ class CloudflareConfigManager(models.AbstractModel):
 
     @api.model
     def action_push_waf_rules(self):
+        # [%ANCHOR: cf_action_push_waf_rules]
+        # Verified by [%ANCHOR: test_cf_action_push_waf_rules]
         """Compiles Odoo WAF records into Cloudflare AST JSON and pushes them."""
-        odoo_rules = self.env['cloudflare.waf.rule'].search([])
+        odoo_rules = self.env['cloudflare.waf.rule'].search([], limit=1000)
         
         cf_rules_payload = []
         for r in odoo_rules:

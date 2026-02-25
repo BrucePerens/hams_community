@@ -46,6 +46,6 @@ The module intercepts all outgoing HTTP responses via `ir.http._post_dispatch` t
 For standard URLs, push updates to the asynchronous queue using the generic Service Account:
 ```python
 queue_env = self.env['cloudflare.purge.queue']
-svc_uid = queue_env._get_cf_service_uid()
+svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
 queue_env.with_user(svc_uid).enqueue_urls(['/my-custom-url'])
 ```
