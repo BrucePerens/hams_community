@@ -2,11 +2,11 @@
 
 **Context:** Technical documentation strictly for LLMs and Integrators developing proprietary (`hams_private`) modules.
 
-This generalized module acts as the control plane for the CDN edge. It automatically applies aggressive caching headers, manages WAF bans, handles Turnstile CAPTCHA verification, and provides context on edge requests.
+This generalized module acts as the control plane for the CDN edge. It automatically applies aggressive caching headers, manages WAF bans, handles Turnstile CAPTCHA verification, orchestrates Zero Trust Tunnels, and provides context on edge requests.
 
 ---
 
-## 1. 🛡️ Advanced API Interfaces
+**1. 🛡️ Advanced API Interfaces**
 
 Proprietary modules MUST utilize the following AbstractModel APIs to interact with the edge layer securely:
 
@@ -34,15 +34,18 @@ Retrieve geographic and threat data injected by the Cloudflare edge proxy.
 * **Returns:** A dictionary containing: `{'ip': str, 'country': str, 'city': str, 'longitude': str, 'latitude': str, 'threat_score': str}`.
 * **Use Case:** Used by `ham_propagation` and `ham_satellite` to instantly default unauthenticated map viewers to their physical region.
 
+### E. Zero Trust Tunnels (cloudflared)
+The module allows administrators to provision a new Cloudflare Tunnel directly from the settings UI. It requires the `cloudflare_account_id` (tunnels are account-level, not zone-level). When triggered, it generates a random secret, creates the tunnel on the edge, and returns the `cloudflared service install <TOKEN>` command via a pop-up wizard.
+
 ---
 
-## 2. 📡 Automated Edge Caching (The Middleware)
+**2. 📡 Automated Edge Caching (The Middleware)**
 The module intercepts all outgoing HTTP responses via `ir.http._post_dispatch` to apply caching rules based on the user's authentication state:
 * **Static Assets:** `max-age=31536000` (1 Year).
 * **Private / Authenticated:** `no-cache, no-store` (If `request.env.user._is_public()` is False).
 * **Public Content:** `max-age=86400` (24 Hours).
 
-## 3. 🧹 URL Cache Invalidation
+**3. 🧹 URL Cache Invalidation**
 For standard URLs, push updates to the asynchronous queue using the generic Service Account:
 ```python
 queue_env = self.env['cloudflare.purge.queue']

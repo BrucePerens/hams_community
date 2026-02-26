@@ -10,3 +10,4 @@ access_cloudflare_config_manager_svc,cloudflare.config.manager svc,model_cloudfl
 access_cloudflare_config_manager_admin,cloudflare.config.manager admin,model_cloudflare_config_manager,base.group_system,1,0,0,0
 access_cloudflare_ip_ban_svc,cloudflare.ip.ban svc,model_cloudflare_ip_ban,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_ip_ban_admin,cloudflare.ip.ban admin,model_cloudflare_ip_ban,base.group_system,1,1,1,1
+access_cloudflare_tunnel_wizard_admin,cloudflare.tunnel.wizard admin,model_cloudflare_tunnel_wizard,base.group_system,1,1,1,1

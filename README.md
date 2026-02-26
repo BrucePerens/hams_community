@@ -8,14 +8,16 @@ This repository is also the source of truth for how we instruct LLMs (like AI co
 
 We've built these modules so you can drop them into any Odoo project without them breaking. They don't rely on our specific ham radio apps.
 
+* **`cloudflare`**: The control plane for your Cloudflare edge. It manages Web Application Firewall (WAF) rules directly from the Odoo backend, automatically purges the CDN cache globally when local static files change, bans malicious IPs caught by silent honeypots, and handles Turnstile CAPTCHAs. It will set up your
+Cloudflare tunnel for *cloudflared*.
+
 * **`caching`**: A global Service Worker module that acts as a client-side
 CDN. It aggressively caches Odoo's JavaScript, CSS, and static assets on
 the user's device, and provides near-instant load times for returning
 visitors. It uses automatic invalidation whenever a module changes, so
-the cache is never stale.  Files smaller than a dynamically-determined limit
+the cache is never stale. Files smaller than a dynamically-determined limit
 are cached, the largest files are just served, as the total amount that can
-be cached on mobile devices, without automatic eviction of the cached data,
-is limited.
+be cached on mobile devices is limited.
 
 * **`compliance`**: Automatically handles GDPR and CCPA rules. It sets up the cookie consent banner, gives users a way to download their data, and lets them delete their accounts permanently, and installs site-policy pages that you can edit.
 

@@ -6,7 +6,6 @@
         <field name="inherit_id" ref="website.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             
-            
             <xpath expr="//form" position="inside"> 
                 <div class="app_settings_block" data-string="Cloudflare" data-key="cloudflare">
                     <h2>Cloudflare Edge Orchestration</h2>
@@ -16,13 +15,16 @@
                             <div class="o_setting_right_pane">
                                 <span class="o_form_label">API Credentials</span>
                                 <div class="text-muted">
-                                    Set the API Token and Zone ID specifically for this website. (Overrides fallback .env vars)
+                                    Set the API Token, Zone ID, and Account ID specifically for this website. (Overrides fallback .env vars)
                                 </div>
                                 <div class="mt8">
                                     <field name="cloudflare_api_token" password="True" placeholder="Bearer Token..."/>
                                 </div>
                                 <div class="mt8">
                                     <field name="cloudflare_zone_id" placeholder="32-character Zone ID..."/>
+                                </div>
+                                <div class="mt8">
+                                    <field name="cloudflare_account_id" placeholder="32-character Account ID..."/>
                                 </div>
                             </div>
                         </div>
@@ -36,6 +38,18 @@
                                 <div class="mt8 d-flex gap-2">
                                     <button name="action_deploy_cf_waf" type="object" string="Push to Edge" class="btn-primary" icon="fa-cloud-upload"/>
                                     <button name="action_pull_cf_waf" type="object" string="Pull from Edge" class="btn-secondary" icon="fa-cloud-download"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6 o_setting_box" id="cloudflare_edge_tunnel">
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">Zero Trust Tunnels (cloudflared)</span>
+                                <div class="text-muted">
+                                    Automatically provision a secure Cloudflare Tunnel to expose your local instance without opening firewall ports.
+                                </div>
+                                <div class="mt8">
+                                    <button name="action_generate_tunnel_command" type="object" string="Generate Setup Command" class="btn-primary" icon="fa-terminal"/>
                                 </div>
                             </div>
                         </div>

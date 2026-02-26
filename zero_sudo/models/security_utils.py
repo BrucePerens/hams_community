@@ -6,6 +6,7 @@ from odoo.exceptions import AccessError
 PARAM_WHITELIST = frozenset([
     'web.base.url',
     'ham_dns.base_domain',
+    'cloudflare.last_static_mtime',
     'ham_dns.default_a_record_ip',
     'ham.user_websites.last_digest_key',
     'user_websites.global_website_page_limit',

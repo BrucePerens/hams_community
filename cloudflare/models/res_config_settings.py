@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
+import time
 from odoo import models, fields, _
 from odoo.exceptions import UserError
 
@@ -8,6 +10,7 @@ class ResConfigSettings(models.TransientModel):
 
     cloudflare_api_token = fields.Char(related='website_id.cloudflare_api_token', readonly=False)
     cloudflare_zone_id = fields.Char(related='website_id.cloudflare_zone_id', readonly=False)
+    cloudflare_account_id = fields.Char(related='website_id.cloudflare_account_id', readonly=False)
     cloudflare_turnstile_secret = fields.Char(related='website_id.cloudflare_turnstile_secret', readonly=False)
 
     def action_deploy_cf_waf(self):
@@ -45,3 +48,40 @@ class ResConfigSettings(models.TransientModel):
             }
         else:
             raise UserError(_("Failed to pull WAF rules: %s") % msg)
+
+    def action_generate_tunnel_command(self):
+        # [%ANCHOR: cf_tunnel_setup]
+        self.ensure_one()
+        website = self.website_id if self.website_id else self.env['website'].get_current_website()
+        
+        token = website.cloudflare_api_token or os.environ.get('CLOUDFLARE_API_TOKEN')
+        account_id = website.cloudflare_account_id or os.environ.get('CLOUDFLARE_ACCOUNT_ID')
+
+        if not token or not account_id:
+            raise UserError(_("You must provide both the Cloudflare API Token and Account ID to create a tunnel."))
+
+        from ..utils.cloudflare_api import create_cfd_tunnel, get_cfd_tunnel_token
+        
+        tunnel_name = f"odoo-edge-tunnel-{int(time.time())}"
+        
+        success, result = create_cfd_tunnel(account_id, token, tunnel_name)
+        if not success:
+            raise UserError(_("Failed to create tunnel: %s") % result)
+            
+        tunnel_id = result
+        success_token, token_val = get_cfd_tunnel_token(account_id, token, tunnel_id)
+        if not success_token:
+            raise UserError(_("Failed to retrieve tunnel token: %s") % token_val)
+
+        command = f"cloudflared service install {token_val}"
+        
+        wizard = self.env['cloudflare.tunnel.wizard'].create({'command': command})
+        
+        return {
+            'name': _('Cloudflare Tunnel Command'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'cloudflare.tunnel.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }

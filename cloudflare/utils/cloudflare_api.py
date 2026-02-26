@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import requests
 import logging
+import base64
+import os
 
 _logger = logging.getLogger(__name__)
 
@@ -142,4 +144,41 @@ def create_zone_ruleset(payload, token, zone_id):
         return True, "Ruleset created successfully."
     except Exception as e:
         _logger.error(f"Cloudflare Ruleset Create API failed: {e}")
+        return False, str(e)
+
+def create_cfd_tunnel(account_id, token, tunnel_name):
+    if not token or not account_id:
+        return False, "Missing credentials"
+        
+    endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/cfd_tunnel"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    # Cloudflare requires a >= 32 byte base64 encoded secret for tunnel creation
+    secret = base64.b64encode(os.urandom(32)).decode('utf-8')
+    payload = {
+        "name": tunnel_name,
+        "tunnel_secret": secret
+    }
+    
+    try:
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, response.json().get('result', {}).get('id')
+    except Exception as e:
+        _logger.error(f"Cloudflare Tunnel Create API failed: {e}")
+        return False, str(e)
+
+def get_cfd_tunnel_token(account_id, token, tunnel_id):
+    if not token or not account_id:
+        return False, "Missing credentials"
+        
+    endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/cfd_tunnel/{tunnel_id}/token"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, response.json().get('result', '')
+    except Exception as e:
+        _logger.error(f"Cloudflare Tunnel Token API failed: {e}")
         return False, str(e)

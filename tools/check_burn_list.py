@@ -19,6 +19,7 @@ ERROR_RULES = [
     (r'\.xml$', re.compile(r'<field[^>]+name\s*=\s*["\']groups_id["\']'), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'."),
     (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'."),
     (r'\.py$', re.compile(r'^\s*_sql_constraints\s*='), "CRITICAL DEPRECATION: Odoo 19+ no longer supports '_sql_constraints'. Use 'models.Constraint' class attributes instead."),
+    (r'\.py$', re.compile(r'\bget_module_resource\b'), "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19. Use 'odoo.tools.file_open' instead."),
     (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
     (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends.")
 ]
@@ -206,6 +207,10 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 self.add_error(node.lineno, "CRITICAL RCE: The pickle module is vulnerable to arbitrary code execution. Use the json module instead.")
             elif node.module == 'random':
                 self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random' for security tokens or passwords. Use the 'secrets' module.")
+            elif getattr(node, 'module', '') == 'odoo.modules':
+                for alias in node.names:
+                    if alias.name == 'get_module_resource':
+                        self.add_error(node.lineno, "CRITICAL DEPRECATION: 'get_module_resource' is removed in Odoo 19. Use 'odoo.tools.file_open' instead.")
             self.generic_visit(node)
 
         def visit_Constant(self, node):
@@ -438,7 +443,7 @@ def scan_file(filepath):
                     if line.count(marker) % 2 != 0:
                         in_py_multiline = True
                         py_multiline_marker = marker
-                        continue
+                    continue
             else:
                 if py_multiline_marker in line:
                     in_py_multiline = False
@@ -498,8 +503,8 @@ def scan_file(filepath):
                                 if re.search(ex_pat, line):
                                     exempted = True
                                     break
-                        if exempted:
-                            break
+                            if exempted:
+                                break
                     if exempted:
                         continue
                     errors_found.append(f"Line {line_num}: {error_msg} {stripped}")
@@ -520,8 +525,8 @@ def scan_file(filepath):
                                 if re.search(ex_pat, line):
                                     exempted = True
                                     break
-                        if exempted:
-                            break
+                            if exempted:
+                                break
                     if exempted:
                         continue
                     warnings_found.append(f"Line {line_num}: {warning_msg} {stripped}")

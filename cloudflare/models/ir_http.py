@@ -23,6 +23,7 @@ class IrHttp(models.AbstractModel):
         # 1. Media & Assets (Max aggressive caching: 1 year)
         if any(path.startswith(prefix) for prefix in ('/web/static', '/web/assets', '/web/image', '/web/content')):
             response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=31536000'
+            response.headers['Cache-Tag'] = 'odoo-static-assets'
             return res
             
         # 2. Hardcoded Dynamic or API Routes (Zero caching)

@@ -11,3 +11,4 @@ from . import waf_rule
 from . import config_backup
 from . import config_manager
 from . import ip_ban
+from . import tunnel_wizard
