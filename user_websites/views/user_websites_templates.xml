@@ -128,18 +128,16 @@
         </t>
     </template>
 
-    <template id="template_default_home" name="User Website Home">
+    <template id="template_default_home" name="User Website Home Master Layout">
         <t t-call="website.layout">
-            <div class="container mt-5">
-                <div class="row">
-                    <div class="col-12 text-center">
-                        <h1 t-if="main_object.name" t-field="main_object.name"/>
-                        <h1 t-else="">Welcome</h1>
-                        <p class="lead">This is a new user website.</p>
-                    </div>
-                </div>
-                <div class="oe_structure"/>
-            </div>
+            <!-- Global User Website Header / Monetization Dropzone -->
+            <div id="user_websites_master_header"/>
+            
+            <!-- Yields to the individual user's page content -->
+            <t t-out="0"/>
+            
+            <!-- Global User Website Footer / Monetization Dropzone -->
+            <div id="user_websites_master_footer"/>
         </t>
     </template>
 

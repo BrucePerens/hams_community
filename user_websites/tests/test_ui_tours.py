@@ -15,6 +15,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             'url': f'/{self.user_test.website_slug}/home',
             'name': 'Tour Page',
             'type': 'qweb',
+            'arch': '<t name="Tour Page" t-name="tour"><t t-call="website.layout"><div>Tour Content</div></t></t>',
             'owner_user_id': self.user_test.id,
             'website_published': True
         })

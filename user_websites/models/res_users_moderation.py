@@ -62,7 +62,7 @@ class ResUsersModeration(models.Model):
 
     def action_suspend_user_websites(self):
         """Forcefully unpublishes all user content and flags them as suspended."""
-        svc_uid = self.env.ref('user_websites.user_user_websites_service_account').id
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         
         user_ids = self.ids
         

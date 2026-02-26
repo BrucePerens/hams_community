@@ -56,6 +56,7 @@ class TestControllers(odoo.tests.common.HttpCase):
             'url': f'/{self.user_public.website_slug}/home',
             'name': 'Home',
             'type': 'qweb',
+            'arch': '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
             'owner_user_id': self.user_public.id
         })
 
@@ -91,6 +92,7 @@ class TestControllers(odoo.tests.common.HttpCase):
             'url': f'/{self.user_public.website_slug}/home',
             'name': 'Home',
             'type': 'qweb',
+            'arch': '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
             'website_published': True,
             'owner_user_id': self.user_public.id
         })
@@ -115,6 +117,7 @@ class TestControllers(odoo.tests.common.HttpCase):
             'url': f'/{self.user_public.website_slug}/home',
             'name': 'Home',
             'type': 'qweb',
+            'arch': '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
             'website_published': True,
             'owner_user_id': self.user_public.id
         })

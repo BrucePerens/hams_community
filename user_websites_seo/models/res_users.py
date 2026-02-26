@@ -28,7 +28,7 @@ class ResUsersSEO(models.Model):
         render the "Optimize SEO" menu. Failing natively logs an INFO message.
         """
         if operation in ('write', 'unlink') and not self.env.su and self:
-            if not self.env.user.has_group('base.group_system'):
+            if not self.env.user.has_group('base.group_system') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
                 for record in self:
                     if record.id != self.env.user.id:
                         raise AccessError(_("Access Denied: You do not have permission to modify this profile."))

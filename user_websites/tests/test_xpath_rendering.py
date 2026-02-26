@@ -72,6 +72,12 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'website_slug': 'navuser',
             'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
         })
+        arch_string = f'''<t name="Home" t-name="user_websites.home_{user.website_slug}">
+            <t t-call="user_websites.template_default_home">
+                <div id="wrap" class="oe_structure oe_empty"/>
+            </t>
+        </t>'''
+        
         self.env['website.page'].create({
             'url': f'/{user.website_slug}/home',
             'name': 'Home',
@@ -79,7 +85,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'website_published': True,
             'is_published': True,
             'owner_user_id': user.id,
-            'view_id': self.env.ref('user_websites.template_default_home').id
+            'arch': arch_string
         })
         response = self.url_open(f'/{user.website_slug}/home')
         self.assertEqual(response.status_code, 200)

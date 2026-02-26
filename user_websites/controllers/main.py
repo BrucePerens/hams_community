@@ -212,7 +212,7 @@ class UserWebsitesController(http.Controller):
                 # Retrieve avatar for OpenGraph og:image if available
                 avatar_url = f"/web/image/res.users/{user.id}/avatar_128"
 
-                response = request.render(page.view_id.xml_id, {
+                response = request.render(page.view_id.id, {
                     'main_object': page.with_user(request.env.user),
                     'profile_user': user.with_user(request.env.user),
                     'is_owner': request.env.user.id == user.id,
@@ -245,7 +245,7 @@ class UserWebsitesController(http.Controller):
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                     
                 is_member = request.env.user in group.odoo_group_id.user_ids
-                response = request.render(page.view_id.xml_id, {
+                response = request.render(page.view_id.id, {
                     'main_object': page.with_user(request.env.user),
                     'profile_group': group.with_user(request.env.user),
                     'is_owner': is_member,
@@ -301,14 +301,17 @@ class UserWebsitesController(http.Controller):
         view_xml_id = 'user_websites.template_default_home'
         unique_key = f"user_websites.home_{resolved_slug}"
         
+        template_view = request.env.ref(view_xml_id)
+        
         request.env['website.page'].create({
             'url': f'/{resolved_slug}/home',
+            'name': f"{user.name if user else group.name} Home",
             'is_published': True,
             'website_published': True,
             'type': 'qweb',
             'website_id': request.website.id if hasattr(request, 'website') and request.website else request.env['website'].get_current_website().id,
             'key': unique_key, 
-            'view_id': request.env.ref(view_xml_id).id,
+            'arch': template_view.with_user(svc_uid).arch,
             'user_websites_group_id': group.id if group else False,
             'owner_user_id': target_uid, 
         })

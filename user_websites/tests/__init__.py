@@ -18,6 +18,7 @@ from . import test_sdk_extensibility
 from . import test_audit_edge_cases
 from . import test_xpath_rendering
 from . import test_robustness_and_boundaries
+from . import test_performance_regressions
 from . import test_simulation
 from . import test_ui_tours
 from . import test_documentation

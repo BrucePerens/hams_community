@@ -44,6 +44,18 @@ class TestQWebContext(odoo.tests.common.HttpCase):
             'is_published': True,
         })
 
+        user_arch = f'''<t name="User Home" t-name="user_websites.home_{self.user_render.website_slug}">
+            <t t-call="user_websites.template_default_home">
+                <div id="wrap" class="oe_structure oe_empty"/>
+            </t>
+        </t>'''
+
+        group_arch = f'''<t name="Group Home" t-name="user_websites.home_{self.group_render.website_slug}">
+            <t t-call="user_websites.template_default_home">
+                <div id="wrap" class="oe_structure oe_empty"/>
+            </t>
+        </t>'''
+
         # Create Pages
         self.env['website.page'].create({
             'url': f'/{self.user_render.website_slug}/home',
@@ -51,7 +63,7 @@ class TestQWebContext(odoo.tests.common.HttpCase):
             'type': 'qweb',
             'owner_user_id': self.user_render.id,
             'website_published': True,
-            'view_id': self.env.ref('user_websites.template_default_home').id,
+            'arch': user_arch,
         })
 
         self.env['website.page'].create({
@@ -60,7 +72,7 @@ class TestQWebContext(odoo.tests.common.HttpCase):
             'type': 'qweb',
             'user_websites_group_id': self.group_render.id,
             'website_published': True,
-            'view_id': self.env.ref('user_websites.template_default_home').id,
+            'arch': group_arch,
         })
 
     def test_01_blog_rendering_context(self):

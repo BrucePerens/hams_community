@@ -106,12 +106,19 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
     def test_06_group_report_button_visibility(self):
         self.test_group.write({'member_ids': [(4, self.user_a.id)]})
         
+        arch_string = f'''<t name="Home" t-name="user_websites.home_{self.test_group.website_slug}">
+            <t t-call="user_websites.template_default_home">
+                <div id="wrap" class="oe_structure oe_empty"/>
+            </t>
+        </t>'''
+
         page = self.env['website.page'].create({
             'url': f'/{self.test_group.website_slug}/home',
+            'name': 'Home',
             'is_published': True,
             'website_published': True,
             'type': 'qweb',
-            'view_id': self.env.ref('user_websites.template_default_home').id,
+            'arch': arch_string,
             'user_websites_group_id': self.test_group.id,
             'owner_user_id': self.user_a.id
         })
