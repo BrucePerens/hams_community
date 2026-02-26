@@ -1,10 +1,10 @@
-const CACHE_NAME = 'odoo-assets-cache-v3';
+const CACHE_NAME = '__CACHE_NAME__';
 
 // Matches /web/assets/ OR /any_module_name/static/
 const CACHE_URL_REGEX = /(\/web\/assets\/|\/[a-zA-Z0-9_-]+\/static\/)/;
 
-// 5 Megabytes limit for caching to prevent quota exhaustion
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; 
+// Dynamically calculated by the Python backend to prevent quota exhaustion
+const MAX_FILE_SIZE_BYTES = __MAX_FILE_SIZE_BYTES__; 
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();

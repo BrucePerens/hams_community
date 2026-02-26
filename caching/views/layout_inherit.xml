@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="layout_pwa_inherit" inherit_id="website.layout" name="Caching SW Registration">
-        <xpath expr="//head" position="inside">
+        
+        
+        <xpath expr="//head" position="inside"> 
             <script type="text/javascript" src="/caching/static/src/js/register.js"></script>
         </xpath>
     </template>

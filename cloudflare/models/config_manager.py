@@ -38,7 +38,7 @@ class CloudflareConfigManager(models.AbstractModel):
     @api.model
     def initialize_cloudflare_state(self):
         _logger.info("[*] Initializing Cloudflare Edge State across Websites...")
-        websites = self.env['website'].search([])
+        websites = self.env['website'].search([], limit=1000)
         for website in websites:
             token, zone_id = website._get_cloudflare_credentials()
             if not token or not zone_id:

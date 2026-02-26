@@ -23,3 +23,15 @@ class TestServiceWorker(HttpCase):
         cache_control = response.headers.get('Cache-Control', '')
         self.assertIn('no-cache', cache_control, "Cache-Control MUST contain 'no-cache'.")
         self.assertIn('max-age=0', cache_control, "Cache-Control MUST contain 'max-age=0'.")
+
+    def test_02_xpath_rendering_layout(self):
+        # [%ANCHOR: test_xpath_rendering_caching_layout]
+        # Tests [%ANCHOR: xpath_rendering_caching_layout]
+        """Verify the Service Worker script injects into the layout head."""
+        from lxml import etree
+        
+        view = self.env.ref('website.layout')
+        arch = view.with_context(lang=None)._get_combined_arch()
+        arch_str = etree.tostring(arch, encoding='unicode')
+        
+        self.assertIn('register.js', arch_str, "The SW registration script must be injected into the compiled layout.")

@@ -29,7 +29,7 @@ It dynamically injects this timestamp into the `/sw.js` payload. If you modify a
 
 Browsers give Service Workers a strict storage limit. If a Service Worker tries to cache massive files, it will max out the quota and the browser will panic and delete the entire cache—destroying the performance benefits of this module.
 
-**The 5MB Safety Valve:** To protect against this, our Service Worker checks the size of every file before saving it. If a file in your `static/` directory is larger than **5MB**, the Service Worker will pass it through to the user but will **refuse to cache it**.
+**The Dynamic Safety Valve:** To protect against this, our Service Worker runs a mathematical calculation on the server during boot. It sums up the sizes of all static files across all installed modules. If the total size exceeds the safe limits of the browser's cache quota (~35MB), it automatically calculates a dynamic max file size limit. It instructs the browser to cache as many small files as possible while intentionally rejecting the largest, heaviest files, keeping the total cache footprint safely underneath the browser's panic threshold.
 
 **The Golden Rule:** 
 

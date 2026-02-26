@@ -15,6 +15,8 @@ class TestWafManagement(TransactionCase):
 
     @patch('odoo.addons.cloudflare.utils.cloudflare_api.ban_ip')
     def test_01_cf_execute_ban(self, mock_ban_ip):
+        # [%ANCHOR: test_cf_execute_ban]
+        # Tests [%ANCHOR: cf_execute_ban]
         mock_ban_ip.return_value = (True, 'fake_rule_123')
         
         res = self.env['cloudflare.ip.ban'].with_user(self.svc_uid)._execute_ban('10.0.0.1', notes='Test Spam', website_id=self.website.id)
@@ -28,6 +30,8 @@ class TestWafManagement(TransactionCase):
 
     @patch('odoo.addons.cloudflare.utils.cloudflare_api.unban_ip')
     def test_02_cf_action_lift_ban(self, mock_unban_ip):
+        # [%ANCHOR: test_cf_action_lift_ban]
+        # Tests [%ANCHOR: cf_action_lift_ban]
         ban_record = self.env['cloudflare.ip.ban'].create({
             'ip_address': '192.168.1.50',
             'cf_rule_id': 'rule_999',

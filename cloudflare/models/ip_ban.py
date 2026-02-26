@@ -25,6 +25,8 @@ class CloudflareIPBan(models.Model):
 
     @api.model
     def _execute_ban(self, ip_address, mode='block', notes="Honeypot Triggered", website_id=None):
+        # [%ANCHOR: cf_execute_ban]
+        # Verified by [%ANCHOR: test_cf_execute_ban]
         if not website_id:
             from odoo.http import request
             if request and getattr(request, 'website', False):
@@ -59,6 +61,8 @@ class CloudflareIPBan(models.Model):
             return False
 
     def action_lift_ban(self):
+        # [%ANCHOR: cf_action_lift_ban]
+        # Verified by [%ANCHOR: test_cf_action_lift_ban]
         from ..utils.cloudflare_api import unban_ip
         for rec in self:
             if rec.state == 'active' and rec.cf_rule_id:

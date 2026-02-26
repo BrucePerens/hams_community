@@ -5,7 +5,9 @@
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="website.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form" position="inside">
+            
+            
+            <xpath expr="//form" position="inside"> 
                 <div class="app_settings_block" data-string="Cloudflare" data-key="cloudflare">
                     <h2>Cloudflare Edge Orchestration</h2>
                     <div class="row mt16 o_settings_container" id="cloudflare_edge_container">

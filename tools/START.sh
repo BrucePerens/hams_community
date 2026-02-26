@@ -6,7 +6,7 @@ COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/..
 ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
 # Allow passing a target module to test, with defaults.
-TARGET_MODULE="${1:-zero_sudo,cloudflare,manual_library,compliance,user_websites,user_websites_seo}"
+TARGET_MODULE="${1:-zero_sudo,caching,cloudflare,manual_library,compliance,user_websites,user_websites_seo}"
 DB_NAME="test_${TARGET_MODULE//,/_}"
 DB_NAME="${DB_NAME:0:63}" # Truncate to PostgreSQL's 63-byte identifier limit
 

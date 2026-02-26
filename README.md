@@ -12,9 +12,10 @@ We've built these modules so you can drop them into any Odoo project without the
 CDN. It aggressively caches Odoo's JavaScript, CSS, and static assets on
 the user's device, and provides near-instant load times for returning
 visitors. It uses automatic invalidation whenever a module changes, so
-the cache is never stale.  Files smaller than 5MB are cached, larger
-files are just served, as the browser generally has a 50MB per-site
-limit and will evict any cache larger than that.
+the cache is never stale.  Files smaller than a dynamically-determined limit
+are cached, the largest files are just served, as the total amount that can
+be cached on mobile devices, without automatic eviction of the cached data,
+is limited.
 
 * **`compliance`**: Automatically handles GDPR and CCPA rules. It sets up the cookie consent banner, gives users a way to download their data, and lets them delete their accounts permanently, and installs site-policy pages that you can edit.
 
@@ -22,7 +23,9 @@ limit and will evict any cache larger than that.
 
 * **`user_websites`**: Lets your users build their own personal or group websites and blogs right inside your Odoo instance.
 
-* **`zero_sudo`**: Secures the system. It forces background tasks and daemons to use highly restricted service accounts, and actively stops those accounts from logging into the web interface.
+* **`zero_sudo`**: Secures the system. It provides a system for background tasks
+and daemons to use highly restricted service accounts, and actively stops those
+accounts from logging into the web interface.
 
 ## 🤖 LLM-Assisted Development Standards
 
