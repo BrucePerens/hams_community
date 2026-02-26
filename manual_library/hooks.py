@@ -13,7 +13,7 @@ def install_knowledge_docs(env):
         
         if not existing:
             try:
-                with file_open('manual_library/data/documentation.html', 'r', encoding='utf-8') as f:
+                with file_open('manual_library/data/documentation.html', 'r') as f:
                     doc_body = f.read()
             except Exception as e:
                 doc_body = f"<p>Error loading documentation file: {e}</p>"

@@ -13,7 +13,7 @@ def install_knowledge_docs(env):
         
         if not existing:
             try:
-                with file_open('user_websites/data/documentation.html', 'r', encoding='utf-8') as f:
+                with file_open('user_websites/data/documentation.html', 'r') as f:
                     doc_body = f.read()
             except Exception as e:
                 doc_body = f"<p>Error loading documentation file: {e}</p>"
@@ -42,6 +42,10 @@ def post_init_hook(env):
     Injects docs into the knowledge base if the API is already installed.
     """
     install_knowledge_docs(env)
+
+    # Create partial indexes for highly-queried boolean states to optimize read performance
+    env.cr.execute("CREATE INDEX IF NOT EXISTS idx_website_page_published ON website_page (id) WHERE website_published = TRUE;")
+    env.cr.execute("CREATE INDEX IF NOT EXISTS idx_blog_post_published ON blog_post (id) WHERE is_published = TRUE;")
 
     # Soft-Dependency: Retroactively lock down the Cloudflare service account if it was installed first
     cf_svc = env.ref('cloudflare.user_cloudflare_service', raise_if_not_found=False)

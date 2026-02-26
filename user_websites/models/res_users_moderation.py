@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import os
 import odoo
 from odoo import models, fields, api, tools, _
 
@@ -76,7 +77,10 @@ class ResUsersModeration(models.Model):
             pages.with_user(svc_uid).write({'is_published': False, 'website_published': False})
             if not odoo.tools.config.get('test_enable'):
                 self.env.cr.commit()
-            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            if len(pages) < 5000:
+                break
+            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
             
         # 2. Unpublish Blog Posts iteratively
         while True:
@@ -89,7 +93,10 @@ class ResUsersModeration(models.Model):
             blogs.with_user(svc_uid).write({'is_published': False})
             if not odoo.tools.config.get('test_enable'):
                 self.env.cr.commit()
-            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            if len(blogs) < 5000:
+                break
+            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
 
         for user in self:
             user.is_suspended_from_websites = True

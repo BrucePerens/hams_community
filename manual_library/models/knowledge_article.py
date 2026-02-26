@@ -15,7 +15,7 @@ class KnowledgeArticle(models.Model):
 
     # --- API Interoperability Fields (Strict Matching) ---
     name = fields.Char(string="Title", required=True, translate=True, tracking=True, index='trigram')
-    body = fields.Html(string="Body", sanitize=True, index='trigram')
+    body = fields.Html(string="Body", sanitize=True)
     parent_id = fields.Many2one('knowledge.article', string="Parent Article", ondelete='restrict', index=True)
     child_ids = fields.One2many('knowledge.article', 'parent_id', string="Child Articles")
     sequence = fields.Integer(string="Sequence", default=10, help="Order of presentation.")

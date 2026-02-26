@@ -7,7 +7,7 @@ class ContentViolationReport(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
 
-    target_url = fields.Char(string="Reported URL", required=True, tracking=True)
+    target_url = fields.Char(string="Reported URL", required=True, tracking=True, index=True)
     description = fields.Text(string="Violation Description", required=True)
     
     state = fields.Selection([
@@ -15,7 +15,7 @@ class ContentViolationReport(models.Model):
         ('under_review', 'Under Review'),
         ('action_taken', 'Action Taken (Strike)'),
         ('dismissed', 'Dismissed')
-    ], string="Status", default='new', tracking=True)
+    ], string="Status", default='new', tracking=True, index=True)
 
     # Note: Target owner is resolved by the controller during submission
     content_owner_id = fields.Many2one('res.users', string="Content Owner", ondelete='set null', tracking=True)

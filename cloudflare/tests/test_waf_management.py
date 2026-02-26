@@ -11,7 +11,7 @@ class TestWafManagement(TransactionCase):
         super().setUp()
         self.svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
 
-    @patch('cloudflare.models.ip_ban.ban_ip')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.ban_ip')
     def test_01_cf_execute_ban(self, mock_ban_ip):
         # [%ANCHOR: test_cf_execute_ban]
         # Tests [%ANCHOR: cf_execute_ban]
@@ -38,7 +38,7 @@ class TestWafManagement(TransactionCase):
         fail_record = self.env['cloudflare.ip.ban'].search([('ip_address', '=', '10.0.0.2')], limit=1)
         self.assertEqual(fail_record.state, 'failed', "Failed API calls must be logged for administrator review.")
 
-    @patch('cloudflare.models.ip_ban.unban_ip')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.unban_ip')
     def test_02_cf_action_lift_ban(self, mock_unban_ip):
         # [%ANCHOR: test_cf_action_lift_ban]
         # Tests [%ANCHOR: cf_action_lift_ban]
@@ -63,7 +63,7 @@ class TestWafManagement(TransactionCase):
         ban_record.action_lift_ban()
         self.assertEqual(ban_record.state, 'lifted', "State must update to lifted upon successful API deletion.")
 
-    @patch('cloudflare.models.config_manager.get_zone_ruleset')
+    @patch('odoo.addons.cloudflare.models.config_manager.get_zone_ruleset')
     def test_03_cf_action_pull_waf_rules(self, mock_get_ruleset):
         # [%ANCHOR: test_cf_action_pull_waf_rules]
         # Tests [%ANCHOR: cf_action_pull_waf_rules]
@@ -88,9 +88,9 @@ class TestWafManagement(TransactionCase):
         self.assertEqual(rules[0].name, 'Cloudflare Rule 1')
         self.assertEqual(rules[0].expression, 'ip.src eq 1.1.1.1')
 
-    @patch('cloudflare.models.config_manager.create_zone_ruleset')
-    @patch('cloudflare.models.config_manager.update_zone_ruleset')
-    @patch('cloudflare.models.config_manager.get_zone_ruleset')
+    @patch('odoo.addons.cloudflare.models.config_manager.create_zone_ruleset')
+    @patch('odoo.addons.cloudflare.models.config_manager.update_zone_ruleset')
+    @patch('odoo.addons.cloudflare.models.config_manager.get_zone_ruleset')
     def test_04_cf_action_push_waf_rules(self, mock_get, mock_update, mock_create):
         # [%ANCHOR: test_cf_action_push_waf_rules]
         # Tests [%ANCHOR: cf_action_push_waf_rules]

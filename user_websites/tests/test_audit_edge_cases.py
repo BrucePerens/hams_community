@@ -172,10 +172,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         
         initial_views = page.view_count
         
-        with patch('user_websites.models.website_page.redis.Redis') as mock_redis:
-            mock_client = MagicMock()
-            mock_redis.return_value = mock_client
-            
+        with patch('odoo.addons.user_websites.models.website_page.redis_client') as mock_client:
             # Simulate scan returning a cursor of 5 (more data) and one key
             mock_client.scan.return_value = (5, [f"views:page:{page.id}"])
             

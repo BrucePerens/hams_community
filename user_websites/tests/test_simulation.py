@@ -43,40 +43,50 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
                 'is_published': True,
             })
 
-    def _execute_simulation_step(self, i, iterations):
+    def _execute_simulation_step(self, i, iterations, metrics):
         """Helper method to isolate ORM operations from the AST loop depth counter."""
         _logger.info(f"[*] === Starting Simulation Step {i + 1} / {iterations} ===")
         user = secrets.choice(self.users)
         
+        import time
+        def track(op_name, func, *args, **kwargs):
+            start = time.time()
+            res = func(*args, **kwargs)
+            duration = time.time() - start
+            if op_name not in metrics:
+                metrics[op_name] = []
+            metrics[op_name].append(duration)
+            return res
+
         # 1. Unauthenticated / Guest Actions
         self.authenticate(None, None)
-        self.url_open('/community')
-        self.url_open('/manual')
-        self.url_open('/privacy')
-        self.url_open('/terms')
+        track('Guest: Community Directory', self.url_open, '/community')
+        track('Guest: Manual Library', self.url_open, '/manual')
+        track('Guest: Privacy Policy', self.url_open, '/privacy')
+        track('Guest: Terms of Service', self.url_open, '/terms')
         
         # 2. Authenticated Content Creation & Interaction
-        self.authenticate(user.login, 'password')
+        track('Auth: Login', self.authenticate, user.login, 'password')
         
         # Lazily provision the personal site and blog (safe to repeat)
-        self.url_open(f'/{user.website_slug}/create_site', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
-        self.url_open(f'/{user.website_slug}/create_blog', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
+        track('User: Create Site', self.url_open, f'/{user.website_slug}/create_site', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
+        track('User: Create Blog', self.url_open, f'/{user.website_slug}/create_blog', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
         
         # Interact with the manual library
         if hasattr(self, 'article'):
-            self.url_open('/manual/feedback', data={
+            track('User: Manual Feedback', self.url_open, '/manual/feedback', data={
                 'csrf_token': odoo.http.Request.csrf_token(self),
                 'article_id': self.article.id,
                 'is_helpful': secrets.choice(['0', '1'])
             }, method='POST')
         
         # GDPR Portability check
-        self.url_open('/my/privacy/export', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
+        track('User: GDPR Export', self.url_open, '/my/privacy/export', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
         
         # 3. Community Moderation (Abuse Reporting)
         # Randomly report a violation against another user
         other_user = secrets.choice([u for u in self.users if u.id != user.id])
-        self.url_open('/website/report_violation', data={
+        track('User: Report Violation', self.url_open, '/website/report_violation', data={
             'csrf_token': odoo.http.Request.csrf_token(self),
             'url': f'/{other_user.website_slug}/home',
             'description': f'Simulated violation report in iteration {i}.',
@@ -84,37 +94,41 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         }, method='POST')
         
         # 4. Administrative Processing
-        self.authenticate('admin', 'admin')
+        track('Admin: Login', self.authenticate, 'admin', 'admin')
         
         # Admin processes the queue
-        reports = self.env['content.violation.report'].with_user(self.admin).search([('state', '=', 'new')], limit=10)
-        for report in reports:
-            action = secrets.choice(['dismiss', 'strike'])
-            if action == 'dismiss':
-                report.action_dismiss()
-            else:
-                report.action_take_action_and_strike()
+        def admin_process():
+            reports = self.env['content.violation.report'].with_user(self.admin).search([('state', '=', 'new')], limit=10)
+            for report in reports:
+                action = secrets.choice(['dismiss', 'strike'])
+                if action == 'dismiss':
+                    report.action_dismiss()
+                else:
+                    report.action_take_action_and_strike()
+        track('Admin: Process Reports', admin_process)
                 
         # 5. Appeal & Pardon Lifecycle
         if other_user.is_suspended_from_websites:
             # Suspended user submits an appeal
-            self.authenticate(other_user.login, 'password')
-            self.url_open('/website/submit_appeal', data={
+            track('User: Login (Suspended)', self.authenticate, other_user.login, 'password')
+            track('User: Submit Appeal', self.url_open, '/website/submit_appeal', data={
                 'csrf_token': odoo.http.Request.csrf_token(self),
                 'reason': 'I am a simulation. Please pardon my simulated behavior.',
             }, method='POST')
             
             # Admin reviews and pardons
-            self.authenticate('admin', 'admin')
-            appeal = self.env['content.violation.appeal'].with_user(self.admin).search([
-                ('user_id', '=', other_user.id), 
-                ('state', '=', 'new')
-            ], limit=1)
-            if appeal:
-                appeal.action_approve()
+            track('Admin: Login (Pardon)', self.authenticate, 'admin', 'admin')
+            def admin_pardon():
+                appeal = self.env['content.violation.appeal'].with_user(self.admin).search([
+                    ('user_id', '=', other_user.id), 
+                    ('state', '=', 'new')
+                ], limit=1)
+                if appeal:
+                    appeal.action_approve()
+            track('Admin: Approve Appeal', admin_pardon)
         
         # Finalize loop state and flush to DB before next iteration
-        self.env.flush_all()
+        track('System: Flush DB', self.env.flush_all)
         
         if i < iterations - 1:
             _logger.info(f"[*] === Step {i + 1} Complete. Proceeding to next step... ===")
@@ -126,6 +140,49 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         
         # Flush the setup state so DB reflects latest ORM creations
         self.env.flush_all() 
+        metrics = {}
         
         for i in range(iterations):
-            self._execute_simulation_step(i, iterations)
+            self._execute_simulation_step(i, iterations, metrics)
+            
+        # Performance Evaluation at the end
+        _logger.info("==========================================================")
+        _logger.info(" 🚀 SIMULATION PERFORMANCE METRICS")
+        _logger.info("==========================================================")
+
+        regression_detected = False
+        fallback_threshold = float(os.environ.get('SIMULATION_MAX_AVG_TIME', '0.5'))
+
+        # Override defaults for naturally heavier transactions
+        custom_thresholds = {
+            'User: GDPR Export': 1.0,
+            'Admin: Process Reports': 1.5,
+            'System: Flush DB': 1.5,
+        }
+
+        for op, times in metrics.items():
+            if not times:
+                continue
+            avg_time = sum(times) / len(times)
+            max_time = max(times)
+            min_time = min(times)
+            thresh = custom_thresholds.get(op, fallback_threshold)
+
+            msg = f"{op:<30} | Avg: {avg_time:.4f}s | Max: {max_time:.4f}s | Min: {min_time:.4f}s"
+
+            if avg_time > thresh:
+                _logger.warning(f"[REGRESSION] {msg} (Threshold: {thresh}s)")
+                regression_detected = True
+            else:
+                _logger.info(f"[OK]         {msg}")
+
+        if regression_detected:
+            _logger.warning("==========================================================")
+            _logger.warning(" ⚠️ SPEED REGRESSIONS DETECTED DURING SIMULATION")
+            _logger.warning(" Check the [REGRESSION] tags above to identify the slow operations.")
+            _logger.warning(" Note: This is a performance warning, not a hard test failure.")
+            _logger.warning("==========================================================")
+        else:
+            _logger.info("==========================================================")
+            _logger.info(" ✅ ALL OPERATIONS PERFORMED WITHIN ACCEPTABLE LIMITS")
+            _logger.info("==========================================================")

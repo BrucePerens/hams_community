@@ -6,8 +6,8 @@ from odoo.tests.common import TransactionCase, tagged
 @tagged('post_install', '-at_install')
 class TestCloudflareAPIs(TransactionCase):
 
-    @patch('cloudflare.utils.cloudflare_api.requests.post')
-    @patch('cloudflare.utils.cloudflare_api.get_cf_credentials')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.requests.post')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.get_cf_credentials')
     def test_01_waf_ban_ip(self, mock_creds, mock_post):
         """Verify the WAF API wrapper correctly structures the Cloudflare API payload."""
         mock_creds.return_value = ('fake_token', 'fake_zone')
@@ -23,7 +23,7 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertEqual(called_json['mode'], 'block')
         self.assertEqual(called_json['configuration']['value'], '192.168.1.100')
 
-    @patch('cloudflare.utils.cloudflare_api.requests.post')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.requests.post')
     def test_02_turnstile_secret_fetch(self, mock_post):
         # [%ANCHOR: test_turnstile_secret_fetch]
         # Tests [%ANCHOR: verify_turnstile_secret]

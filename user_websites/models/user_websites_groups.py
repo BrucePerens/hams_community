@@ -24,6 +24,7 @@ class UserWebsitesGroup(models.Model):
 
     website_slug = fields.Char(
         string="Website Slug",
+        index='trigram',
         help="The URL-friendly identifier for the group site. Alphanumeric and hyphens only."
     )
 

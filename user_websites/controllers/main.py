@@ -85,7 +85,26 @@ class UserWebsitesController(http.Controller):
         ]
         
         step = 24
-        total_users = request.env['res.users'].with_user(svc_uid).search_count(domain)
+        
+        # Optimize COUNT(*) via Redis with a 5-minute TTL to prevent DB exhaustion on high traffic
+        cache_key = "community_directory_total_users"
+        total_users = None
+        
+        if not odoo.tools.config.get('test_enable'):
+            try:
+                cached_total = redis_client.get(cache_key)
+                if cached_total is not None:
+                    total_users = int(cached_total)
+            except Exception:
+                pass
+                
+        if total_users is None:
+            total_users = request.env['res.users'].with_user(svc_uid).search_count(domain)
+            if not odoo.tools.config.get('test_enable'):
+                try:
+                    redis_client.setex(cache_key, 300, total_users)
+                except Exception:
+                    pass
         
         users = request.env['res.users'].with_user(svc_uid).search(
             domain, 

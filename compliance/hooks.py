@@ -15,7 +15,7 @@ def install_knowledge_docs(env):
         if not existing:
             # Read the HTML content securely using Odoo's file_open utility
             try:
-                with file_open('compliance/data/documentation.html', 'r', encoding='utf-8') as f:
+                with file_open('compliance/data/documentation.html', 'r') as f:
                     doc_body = f.read()
             except Exception as e:
                 # Failsafe if the file is missing or unreadable

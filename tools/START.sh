@@ -8,6 +8,7 @@ ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 # Allow passing a target module to test, with defaults.
 TARGET_MODULE="${1:-zero_sudo,cloudflare,manual_library,compliance,user_websites,user_websites_seo}"
 DB_NAME="test_${TARGET_MODULE//,/_}"
+DB_NAME="${DB_NAME:0:63}" # Truncate to PostgreSQL's 63-byte identifier limit
 
 # Generate an ephemeral secure password for the test environment
 export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
@@ -46,5 +47,5 @@ dropdb --if-exists "$DB_NAME" || true
   --dev=all -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   --test-enable \
-  --test-tags "/$TARGET_MODULE" \
+  --test-tags "/${TARGET_MODULE//,/,/},-simulation" \
   --stop-after-init

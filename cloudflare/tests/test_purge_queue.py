@@ -10,8 +10,8 @@ class TestPurgeQueue(TransactionCase):
         # Clear out any queued records created during setup
         self.env['cloudflare.purge.queue'].search([]).unlink()
 
-    @patch('cloudflare.utils.cloudflare_api.requests.post')
-    @patch('cloudflare.utils.cloudflare_api.get_cf_credentials')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.requests.post')
+    @patch('odoo.addons.cloudflare.utils.cloudflare_api.get_cf_credentials')
     @patch('time.sleep')
     def test_01_bdd_queue_batching_and_rate_limiting(self, mock_sleep, mock_creds, mock_post):
         # [%ANCHOR: test_queue_batching_and_rate_limiting]

@@ -15,7 +15,7 @@ class ContentViolationAppeal(models.Model):
         ('new', 'Pending Review'),
         ('approved', 'Approved (Pardoned)'),
         ('rejected', 'Rejected')
-    ], string="Status", default='new', tracking=True)
+    ], string="Status", default='new', tracking=True, index=True)
 
     def action_approve(self):
         """Approves the appeal and pardons the user."""

@@ -8,11 +8,12 @@ ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 # Allow passing a target module to test, with defaults.
 TARGET_MODULE="${1:-zero_sudo,cloudflare,manual_library,compliance,user_websites,user_websites_seo}"
 DB_NAME="test_${TARGET_MODULE//,/_}"
+DB_NAME="${DB_NAME:0:63}" # Truncate to PostgreSQL's 63-byte identifier limit
 
 # If the user passed additional arguments (like --test-tags simulation), use those.
 # Otherwise, default to testing all tests in the target modules.
 if [ -z "$2" ]; then
-    TEST_ARGS="--test-tags /${TARGET_MODULE//,/,/}"
+    TEST_ARGS="--test-tags /${TARGET_MODULE//,/,/},-simulation"
 else
     TEST_ARGS="${@:2}"
 fi

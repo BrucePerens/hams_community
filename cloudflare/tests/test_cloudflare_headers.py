@@ -15,14 +15,18 @@ class TestCloudflareHeaders(HttpCase):
         })
 
     def test_01_static_asset_caching(self):
-        """Verify static assets receive the 1-year aggressive cache header."""
-        # Fetching a standard core web static asset
-        response = self.url_open('/web/static/src/img/favicon.ico')
+        """Verify media and assets receive the 1-year aggressive cache header."""
+        # We test a dynamic media route (/web/image) rather than a raw file (/web/static).
+        # Raw static files bypass Odoo's ir.http middleware entirely and are served by 
+        # the StaticDispatcher, meaning the controller cannot append headers to them. 
+        # (Cloudflare caches static extensions natively at the edge regardless).
+        company_id = self.env.company.id
+        response = self.url_open(f'/web/image/res.company/{company_id}/logo')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.headers.get('Cloudflare-CDN-Cache-Control'), 
             'max-age=31536000',
-            "Static assets MUST be cached at the edge for 1 year."
+            "Static assets and media MUST be cached at the edge for 1 year."
         )
 
     def test_02_dynamic_route_no_store(self):

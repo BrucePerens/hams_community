@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import time
+import os
 import logging
 from odoo import models, fields, api, tools
 from ..utils.cloudflare_api import purge_urls, purge_tags
@@ -75,12 +76,19 @@ class CloudflarePurgeQueue(models.Model):
                     tag_records.unlink()
             
             if not success:
-                self.env.cr.commit()
+                if not tools.config.get('test_enable'):
+                    self.env.cr.commit()
                 break
                 
             batches_processed += 1
-            self.env.cr.commit()
-            time.sleep(0.5)
+            if not tools.config.get('test_enable'):
+                self.env.cr.commit()
+                
+            if len(records) < limit:
+                break
+                
+            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                time.sleep(0.5)
             
         if batches_processed >= max_batches:
             cron = self.env.ref('cloudflare.ir_cron_process_cf_purge_queue', raise_if_not_found=False)
@@ -88,30 +96,41 @@ class CloudflarePurgeQueue(models.Model):
                 cron._trigger()
 
     def _apply_cloudflare_patch(self, model_name, url_field):
-        def make_write_hook(url_field):
-            def custom_write(self, vals):
-                urls = [getattr(rec, url_field) for rec in self if hasattr(rec, url_field) and getattr(rec, url_field)]
-                res = custom_write.origin(self, vals)
-                if urls and 'cloudflare.purge.queue' in self.env:
-                    queue_env = self.env['cloudflare.purge.queue']
+        ModelClass = type(self.env[model_name])
+        
+        if getattr(ModelClass, '_cf_purge_patched', False):
+            return
+
+        origin_write = ModelClass.write
+        origin_unlink = ModelClass.unlink
+
+        def custom_write(self, vals):
+            urls = [getattr(rec, url_field) for rec in self if hasattr(rec, url_field) and getattr(rec, url_field)]
+            res = origin_write(self, vals)
+            if urls and 'cloudflare.purge.queue' in self.env:
+                queue_env = self.env['cloudflare.purge.queue']
+                try:
                     svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
                     queue_env.with_user(svc_uid).enqueue_urls(urls)
-                return res
-            return custom_write
+                except Exception:
+                    pass
+            return res
 
-        def make_unlink_hook(url_field):
-            def custom_unlink(self):
-                urls = [getattr(rec, url_field) for rec in self if hasattr(rec, url_field) and getattr(rec, url_field)]
-                res = custom_unlink.origin(self)
-                if urls and 'cloudflare.purge.queue' in self.env:
-                    queue_env = self.env['cloudflare.purge.queue']
+        def custom_unlink(self):
+            urls = [getattr(rec, url_field) for rec in self if hasattr(rec, url_field) and getattr(rec, url_field)]
+            res = origin_unlink(self)
+            if urls and 'cloudflare.purge.queue' in self.env:
+                queue_env = self.env['cloudflare.purge.queue']
+                try:
                     svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
                     queue_env.with_user(svc_uid).enqueue_urls(urls)
-                return res
-            return custom_unlink
+                except Exception:
+                    pass
+            return res
 
-        self.env[model_name]._patch_method('write', make_write_hook(url_field))
-        self.env[model_name]._patch_method('unlink', make_unlink_hook(url_field))
+        ModelClass.write = custom_write
+        ModelClass.unlink = custom_unlink
+        ModelClass._cf_purge_patched = True
 
     def _register_hook(self):
         super()._register_hook()

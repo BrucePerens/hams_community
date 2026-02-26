@@ -5,6 +5,7 @@ This file extends the built-in Odoo `res.users` model to add fields and logic
 specific to the user websites functionality.
 """
 import time
+import os
 import odoo
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
@@ -24,6 +25,7 @@ class ResUsers(models.Model):
     # --- Field Definitions ---
     website_slug = fields.Char(
         string="Website Slug",
+        index='trigram',
         help="The URL-friendly identifier for the user's site. Alphanumeric and hyphens only."
     )
 
@@ -181,7 +183,10 @@ class ResUsers(models.Model):
                 pages.write({'website_published': False})
                 if not odoo.tools.config.get('test_enable'):
                     self.env.cr.commit()
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+                if len(pages) < 5000:
+                    break
+                if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                    time.sleep(0.1) # ADR-0022 Batch Rate Limiting
                 
             while True:
                 posts = self.env['blog.post'].with_user(svc_uid).search([
@@ -193,7 +198,10 @@ class ResUsers(models.Model):
                 posts.write({'is_published': False})
                 if not odoo.tools.config.get('test_enable'):
                     self.env.cr.commit()
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+                if len(posts) < 5000:
+                    break
+                if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                    time.sleep(0.1) # ADR-0022 Batch Rate Limiting
 
         try:
             result = super(ResUsers, self).write(vals)
@@ -309,7 +317,10 @@ class ResUsers(models.Model):
             pages.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_pages]
             if not odoo.tools.config.get('test_enable'):
                 self.env.cr.commit()
-            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            if len(pages) < 5000:
+                break
+            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
             
         while True:
             posts = self.env['blog.post'].search([('owner_user_id', '=', self.id)], limit=5000)
@@ -318,7 +329,10 @@ class ResUsers(models.Model):
             posts.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_posts]
             if not odoo.tools.config.get('test_enable'):
                 self.env.cr.commit()
-            time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+            if len(posts) < 5000:
+                break
+            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
+                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
         
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})
 
