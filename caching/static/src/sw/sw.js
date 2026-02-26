@@ -1,6 +1,10 @@
-const CACHE_NAME = 'odoo-assets-cache-v1';
+const CACHE_NAME = 'odoo-assets-cache-v3';
 
-const CACHE_URL_REGEX = /\/(web\/assets|web\/static)\//;
+// Matches /web/assets/ OR /any_module_name/static/
+const CACHE_URL_REGEX = /(\/web\/assets\/|\/[a-zA-Z0-9_-]+\/static\/)/;
+
+// 5 Megabytes limit for caching to prevent quota exhaustion
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; 
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -38,6 +42,14 @@ self.addEventListener('fetch', (event) => {
                     if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
                         return networkResponse;
                     }
+
+                    // SIZE LIMIT SAFETY VALVE
+                    const contentLength = networkResponse.headers.get('Content-Length');
+                    if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) {
+                        console.warn(`[Caching SW] Skipping cache for large file: ${request.url} (${contentLength} bytes)`);
+                        return networkResponse;
+                    }
+
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(request, responseToCache);

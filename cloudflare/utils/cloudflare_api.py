@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
 import requests
 import logging
 
 _logger = logging.getLogger(__name__)
 
-def get_cf_credentials():
-    return os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ZONE_ID')
-
-def purge_urls(urls):
-    token, zone_id = get_cf_credentials()
+def purge_urls(urls, token, zone_id):
     if not token or not zone_id:
         return False
     if not urls:
@@ -28,8 +23,7 @@ def purge_urls(urls):
         _logger.error(f"Cloudflare URL purge API failed: {e}")
         return False
 
-def purge_tags(tags):
-    token, zone_id = get_cf_credentials()
+def purge_tags(tags, token, zone_id):
     if not token or not zone_id:
         return False
     if not tags:
@@ -47,8 +41,7 @@ def purge_tags(tags):
         _logger.error(f"Cloudflare Tag purge API failed: {e}")
         return False
 
-def ban_ip(ip_address, mode='block', notes="Banned via Odoo Cloudflare WAF API"):
-    token, zone_id = get_cf_credentials()
+def ban_ip(ip_address, mode, notes, token, zone_id):
     if not token or not zone_id:
         return False, "Missing credentials"
         
@@ -73,8 +66,7 @@ def ban_ip(ip_address, mode='block', notes="Banned via Odoo Cloudflare WAF API")
         _logger.error(f"Cloudflare WAF IP Ban API failed: {e}")
         return False, str(e)
 
-def unban_ip(rule_id):
-    token, zone_id = get_cf_credentials()
+def unban_ip(rule_id, token, zone_id):
     if not token or not zone_id:
         return False, "Missing credentials"
         
@@ -105,8 +97,7 @@ def verify_turnstile(token, remote_ip, secret):
         _logger.error(f"Cloudflare Turnstile verification failed: {e}")
         return False
 
-def get_zone_ruleset(phase):
-    token, zone_id = get_cf_credentials()
+def get_zone_ruleset(phase, token, zone_id):
     if not token or not zone_id:
         return None
     
@@ -123,8 +114,7 @@ def get_zone_ruleset(phase):
         _logger.error(f"Cloudflare Ruleset Fetch API failed: {e}")
         return None
 
-def update_zone_ruleset(ruleset_id, payload):
-    token, zone_id = get_cf_credentials()
+def update_zone_ruleset(ruleset_id, payload, token, zone_id):
     if not token or not zone_id:
         return False, "Missing credentials."
         
@@ -139,8 +129,7 @@ def update_zone_ruleset(ruleset_id, payload):
         _logger.error(f"Cloudflare Ruleset Update API failed: {e}")
         return False, str(e)
 
-def create_zone_ruleset(payload):
-    token, zone_id = get_cf_credentials()
+def create_zone_ruleset(payload, token, zone_id):
     if not token or not zone_id:
         return False, "Missing credentials."
         

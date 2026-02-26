@@ -8,10 +8,20 @@ This repository is also the source of truth for how we instruct LLMs (like AI co
 
 We've built these modules so you can drop them into any Odoo project without them breaking. They don't rely on our specific ham radio apps.
 
-* **`caching`**: A global Service Worker module that acts as a client-side CDN. It aggressively caches Odoo's JavaScript, CSS, and static assets on the user's device to provide near-instant load times for returning visitors.
-* **`compliance`**: Automatically handles GDPR and CCPA rules. It sets up the cookie consent banner, gives users a way to download their data, and lets them delete their accounts permanently.
+* **`caching`**: A global Service Worker module that acts as a client-side
+CDN. It aggressively caches Odoo's JavaScript, CSS, and static assets on
+the user's device, and provides near-instant load times for returning
+visitors. It uses automatic invalidation whenever a module changes, so
+the cache is never stale.  Files smaller than 5MB are cached, larger
+files are just served, as the browser generally has a 50MB per-site
+limit and will evict any cache larger than that.
+
+* **`compliance`**: Automatically handles GDPR and CCPA rules. It sets up the cookie consent banner, gives users a way to download their data, and lets them delete their accounts permanently, and installs site-policy pages that you can edit.
+
 * **`manual_library`**: A free, open-source replacement for Odoo's Enterprise Knowledge app. It lets you write, organize, and publish documentation and guides directly from Odoo.
+
 * **`user_websites`**: Lets your users build their own personal or group websites and blogs right inside your Odoo instance.
+
 * **`zero_sudo`**: Secures the system. It forces background tasks and daemons to use highly restricted service accounts, and actively stops those accounts from logging into the web interface.
 
 ## 🤖 LLM-Assisted Development Standards

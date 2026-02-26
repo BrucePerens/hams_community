@@ -8,13 +8,16 @@ class CloudflareTurnstile(models.AbstractModel):
     _description = 'Cloudflare Turnstile Interface'
 
     @api.model
-    def verify_token(self, token, remote_ip=None):
-        # [%ANCHOR: verify_turnstile_secret]
-        # Verified by [%ANCHOR: test_turnstile_secret_fetch]
-        """
-        Verifies an invisible Turnstile challenge token submitted via an unauthenticated form.
-        """
-        secret = self.env['zero_sudo.security.utils']._get_system_param('cloudflare.turnstile_secret')
+    def verify_token(self, token, remote_ip=None, website_id=None):
+        if not website_id:
+            from odoo.http import request
+            if getattr(request, 'website', False):
+                website_id = request.website.id
+            else:
+                website_id = self.env['website'].get_current_website().id
+                
+        website = self.env['website'].browse(website_id)
+        secret = website.cloudflare_turnstile_secret
         
         if not secret:
             return False

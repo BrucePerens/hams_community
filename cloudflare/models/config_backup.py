@@ -11,3 +11,4 @@ class CloudflareConfigBackup(models.Model):
     phase = fields.Char(string="Ruleset Phase", default="http_request_firewall_custom")
     raw_json = fields.Text(string="Raw JSON Payload", required=True)
     create_date = fields.Datetime(string="Backed Up On", readonly=True)
+    website_id = fields.Many2one('website', string="Website", default=lambda self: self.env['website'].get_current_website().id)

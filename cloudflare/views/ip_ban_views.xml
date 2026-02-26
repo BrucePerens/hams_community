@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
-    
     <record id="view_cloudflare_ip_ban_list" model="ir.ui.view">
         <field name="name">cloudflare.ip.ban.list</field>
         <field name="model">cloudflare.ip.ban</field>
@@ -10,16 +8,13 @@
                 <field name="create_date"/>
                 <field name="ip_address"/>
                 <field name="mode"/>
+                <field name="website_id" groups="website.group_multi_website" optional="show"/>
                 <field name="notes"/>
-                <field name="state" widget="badge" 
-                       decoration-danger="state=='active'" 
-                       decoration-success="state=='lifted'" 
-                       decoration-warning="state=='failed'"/>
+                <field name="state" widget="badge" decoration-danger="state=='active'" decoration-success="state=='lifted'" decoration-warning="state=='failed'"/>
                 <button name="action_lift_ban" type="object" icon="fa-unlock" string="Lift Ban" invisible="state != 'active'" confirm="Remove this block from Cloudflare?"/>
             </list>
         </field>
     </record>
-
     <record id="view_cloudflare_ip_ban_form" model="ir.ui.view">
         <field name="name">cloudflare.ip.ban.form</field>
         <field name="model">cloudflare.ip.ban</field>
@@ -40,6 +35,7 @@
                             <field name="cf_rule_id"/>
                         </group>
                         <group>
+                            <field name="website_id" groups="website.group_multi_website" readonly="1"/>
                             <field name="create_date" readonly="1"/>
                             <field name="notes" readonly="1"/>
                         </group>
@@ -48,24 +44,10 @@
             </form>
         </field>
     </record>
-
     <record id="action_cf_ip_ban" model="ir.actions.act_window">
         <field name="name">Honeypot IP Bans</field>
         <field name="res_model">cloudflare.ip.ban</field>
         <field name="view_mode">list,form</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No bots trapped yet!
-            </p>
-            <p>
-                When a scraper triggers a silent honeypot, the system logs its IP address here and instructs the edge to block it.
-            </p>
-        </field>
     </record>
-
-    <menuitem id="menu_cf_ip_bans"
-              name="Honeypot Triggers (Bans)"
-              parent="menu_cloudflare_root"
-              action="action_cf_ip_ban"
-              sequence="10"/>
+    <menuitem id="menu_cf_ip_bans" name="Honeypot Triggers (Bans)" parent="menu_cloudflare_root" action="action_cf_ip_ban" sequence="10"/>
 </odoo>

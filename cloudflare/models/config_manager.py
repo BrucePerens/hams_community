@@ -7,28 +7,27 @@ from ..utils.cloudflare_api import get_zone_ruleset, update_zone_ruleset, create
 
 _logger = logging.getLogger(__name__)
 
-# Profusely commented default rules designed specifically for Odoo + user_websites security.
 DEFAULT_WAF_RULES = [
     {
         'sequence': 10,
         'name': 'Block Legacy XML-RPC',
         'action': 'block',
         'expression': '(http.request.uri.path contains "/xmlrpc")',
-        'description': 'SECURITY: Blocks legacy XML-RPC access. Odoo 19 relies on JSON-RPC for the web UI. External daemons (like ham_dx_daemon) use XML-RPC. If you run external scripts from outside the local network, you MUST disable this rule or modify the expression to whitelist their IPs (e.g., and ip.src ne 1.2.3.4).'
+        'description': 'SECURITY: Blocks legacy XML-RPC access.'
     },
     {
         'sequence': 20,
         'name': 'Protect Database Manager',
         'action': 'block',
         'expression': '(http.request.uri.path eq "/web/database/manager") or (http.request.uri.path eq "/web/database/selector")',
-        'description': 'SECURITY: Prevents public access to the Odoo database manager interface. This stops automated exploits from attempting to brute-force the master password. To manage databases, access Odoo via a local secure tunnel or disable this rule temporarily.'
+        'description': 'SECURITY: Prevents public access to the Odoo database manager interface.'
     },
     {
         'sequence': 30,
         'name': 'API Scraper Protection',
         'action': 'managed_challenge',
         'expression': '(http.request.uri.path contains "/api/v1/") and not cf.client.bot',
-        'description': 'PERFORMANCE: Protects headless API routes from aggressive, unverified scrapers that can cause WSGI worker exhaustion. Verified bots (Google, Bing) are allowed through natively.'
+        'description': 'PERFORMANCE: Protects headless API routes from aggressive, unverified scrapers.'
     }
 ]
 
@@ -38,40 +37,41 @@ class CloudflareConfigManager(models.AbstractModel):
 
     @api.model
     def initialize_cloudflare_state(self):
-        """
-        Runs on module install. Checks current WAF rules. 
-        If custom rules exist, it backs them up and skips deployment to avoid overwriting sysadmin work.
-        If empty, it deploys the optimized Odoo configuration.
-        """
-        _logger.info("[*] Initializing Cloudflare Edge State...")
-        
-        existing_ruleset = get_zone_ruleset('http_request_firewall_custom')
-        
-        if existing_ruleset and existing_ruleset.get('rules'):
-            _logger.info("[+] Existing Cloudflare WAF rules detected. Creating backup and skipping default deployment.")
-            self.env['cloudflare.config.backup'].create({
-                'name': 'Pre-Odoo Initialization Backup',
-                'raw_json': json.dumps(existing_ruleset, indent=4)
-            })
-            self.action_pull_waf_rules()
-            return
+        _logger.info("[*] Initializing Cloudflare Edge State across Websites...")
+        websites = self.env['website'].search([])
+        for website in websites:
+            token, zone_id = website._get_cloudflare_credentials()
+            if not token or not zone_id:
+                continue
+                
+            existing_ruleset = get_zone_ruleset('http_request_firewall_custom', token, zone_id)
+            if existing_ruleset and existing_ruleset.get('rules'):
+                _logger.info(f"[+] Existing rules detected for {website.name}. Backing up and syncing.")
+                self.env['cloudflare.config.backup'].create({
+                    'name': f'Pre-Odoo Backup ({website.name})',
+                    'raw_json': json.dumps(existing_ruleset, indent=4),
+                    'website_id': website.id
+                })
+                self.action_pull_waf_rules(website_id=website.id)
+                continue
 
-        _logger.info("[*] Cloudflare WAF is empty. Deploying Odoo-optimized configuration.")
-        for rule_vals in DEFAULT_WAF_RULES:
-            self.env['cloudflare.waf.rule'].create(rule_vals)
-            
-        self.action_push_waf_rules()
+            for rule_vals in DEFAULT_WAF_RULES:
+                vals = dict(rule_vals)
+                vals['website_id'] = website.id
+                self.env['cloudflare.waf.rule'].create(vals)
+                
+            self.action_push_waf_rules(website_id=website.id)
 
     @api.model
-    def action_pull_waf_rules(self):
-        # [%ANCHOR: cf_action_pull_waf_rules]
-        # Verified by [%ANCHOR: test_cf_action_pull_waf_rules]
-        """Pulls current rules from Cloudflare and populates the Odoo UI."""
-        existing_ruleset = get_zone_ruleset('http_request_firewall_custom')
+    def action_pull_waf_rules(self, website_id=None):
+        website = self.env['website'].browse(website_id) if website_id else self.env['website'].get_current_website()
+        token, zone_id = website._get_cloudflare_credentials()
+        
+        existing_ruleset = get_zone_ruleset('http_request_firewall_custom', token, zone_id)
         if not existing_ruleset:
-            return False, "No custom firewall ruleset found in Cloudflare."
+            return False, f"No custom firewall ruleset found in Cloudflare for {website.name}."
             
-        self.env['cloudflare.waf.rule'].search([], limit=1000).unlink()
+        self.env['cloudflare.waf.rule'].search([('website_id', '=', website.id)], limit=1000).unlink()
         
         rules = existing_ruleset.get('rules', [])
         for i, r in enumerate(rules):
@@ -81,16 +81,19 @@ class CloudflareConfigManager(models.AbstractModel):
                 'action': r.get('action', 'block'),
                 'expression': r.get('expression', ''),
                 'description': r.get('description', ''),
-                'active': r.get('enabled', True)
+                'active': r.get('enabled', True),
+                'website_id': website.id
             })
-        return True, "Successfully pulled rules from Cloudflare."
+        return True, f"Successfully pulled rules from Cloudflare for {website.name}."
 
     @api.model
-    def action_push_waf_rules(self):
-        # [%ANCHOR: cf_action_push_waf_rules]
-        # Verified by [%ANCHOR: test_cf_action_push_waf_rules]
-        """Compiles Odoo WAF records into Cloudflare AST JSON and pushes them."""
-        odoo_rules = self.env['cloudflare.waf.rule'].search([], limit=1000)
+    def action_push_waf_rules(self, website_id=None):
+        website = self.env['website'].browse(website_id) if website_id else self.env['website'].get_current_website()
+        token, zone_id = website._get_cloudflare_credentials()
+        if not token or not zone_id:
+            return False, f"Missing API credentials for {website.name}."
+            
+        odoo_rules = self.env['cloudflare.waf.rule'].search([('website_id', '=', website.id)], limit=1000)
         
         cf_rules_payload = []
         for r in odoo_rules:
@@ -102,14 +105,14 @@ class CloudflareConfigManager(models.AbstractModel):
             })
 
         ruleset_payload = {
-            "name": "Odoo WAF Rules",
+            "name": f"Odoo WAF Rules - {website.name}",
             "kind": "zone",
             "phase": "http_request_firewall_custom",
             "rules": cf_rules_payload
         }
 
-        existing_ruleset = get_zone_ruleset('http_request_firewall_custom')
+        existing_ruleset = get_zone_ruleset('http_request_firewall_custom', token, zone_id)
         if existing_ruleset and 'id' in existing_ruleset:
-            return update_zone_ruleset(existing_ruleset['id'], ruleset_payload)
+            return update_zone_ruleset(existing_ruleset['id'], ruleset_payload, token, zone_id)
         else:
-            return create_zone_ruleset(ruleset_payload)
+            return create_zone_ruleset(ruleset_payload, token, zone_id)

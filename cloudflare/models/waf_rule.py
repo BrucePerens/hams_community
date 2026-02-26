@@ -7,7 +7,7 @@ class CloudflareWafRule(models.Model):
     _description = 'Cloudflare WAF Custom Rule'
     _order = 'sequence, id'
 
-    sequence = fields.Integer(string="Sequence", default=10, help="Execution order in Cloudflare.")
+    sequence = fields.Integer(string="Sequence", default=10)
     name = fields.Char(string="Rule Name", required=True)
     action = fields.Selection([
         ('block', 'Block'),
@@ -16,6 +16,7 @@ class CloudflareWafRule(models.Model):
         ('js_challenge', 'JS Challenge'),
         ('skip', 'Skip / Allow')
     ], string="Action", required=True, default='managed_challenge')
-    expression = fields.Text(string="Expression", required=True, help="Cloudflare Wirefilter Expression (e.g., http.request.uri.path contains \"/xmlrpc\")")
-    description = fields.Text(string="Comments / Documentation", help="Profuse comments sent to Cloudflare to explain this rule to sysadmins.")
+    expression = fields.Text(string="Expression", required=True)
+    description = fields.Text(string="Comments / Documentation")
     active = fields.Boolean(string="Active", default=True)
+    website_id = fields.Many2one('website', string="Website", required=True, default=lambda self: self.env['website'].get_current_website().id)
