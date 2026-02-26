@@ -10,9 +10,12 @@ class CloudflareWAF(models.AbstractModel):
     def ban_ip(self, ip_address, mode='block', duration=3600, notes="Honeypot Triggered", website_id=None):
         if not website_id:
             from odoo.http import request
-            if request and getattr(request, 'website', False):
-                website_id = request.website.id
-            else:
+            try:
+                if request and getattr(request, 'website', False):
+                    website_id = request.website.id
+                else:
+                    website_id = self.env['website'].get_current_website().id
+            except RuntimeError:
                 website_id = self.env['website'].get_current_website().id
                 
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')

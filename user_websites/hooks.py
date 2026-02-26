@@ -44,7 +44,7 @@ def post_init_hook(env):
     install_knowledge_docs(env)
 
     # Create partial indexes for highly-queried boolean states to optimize read performance
-    env.cr.execute("CREATE INDEX IF NOT EXISTS idx_website_page_published ON website_page (id) WHERE website_published = TRUE;")
+    env.cr.execute("CREATE INDEX IF NOT EXISTS idx_website_page_published ON website_page (id) WHERE is_published = TRUE;")
     env.cr.execute("CREATE INDEX IF NOT EXISTS idx_blog_post_published ON blog_post (id) WHERE is_published = TRUE;")
 
     # Soft-Dependency: Retroactively lock down the Cloudflare service account if it was installed first

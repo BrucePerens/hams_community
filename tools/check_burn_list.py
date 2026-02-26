@@ -20,6 +20,7 @@ ERROR_RULES = [
     (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'."),
     (r'\.py$', re.compile(r'^\s*_sql_constraints\s*='), "CRITICAL DEPRECATION: Odoo 19+ no longer supports '_sql_constraints'. Use 'models.Constraint' class attributes instead."),
     (r'\.py$', re.compile(r'\bget_module_resource\b'), "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19. Use 'odoo.tools.file_open' instead."),
+    (r'controllers/.*\.py$', re.compile(r'@(?:tools\.)?ormcache'), "CRITICAL ARCHITECTURE: Cannot use @ormcache on Controller methods. Controllers lack the 'pool' attribute. Use class-level dictionary caches instead."),
     (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
     (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends.")
 ]
@@ -231,6 +232,8 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 self.add_error(getattr(node, 'lineno', 1), "Remove 'numbercall'. Odoo 18+ crons run indefinitely if active='True'.")
             elif node.arg == 'groups_id':
                 self.add_error(getattr(node, 'lineno', 1), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'.")
+            elif node.arg in ('oldname', 'select'):
+                self.add_error(getattr(node, 'lineno', 1), f"CRITICAL DEPRECATION: '{node.arg}' is a legacy database field attribute. Remove 'oldname' entirely, and use 'index=' instead of 'select='.")
             elif node.arg == 'type' and isinstance(node.value, ast.Constant) and node.value.value == 'json':
                 self.add_error(getattr(node, 'lineno', 1), "Use type='jsonrpc' instead of type='json' for HTTP routes.")
             elif node.arg == 'index' and isinstance(node.value, ast.Constant) and node.value.value == 'trgm':

@@ -3,6 +3,7 @@
     <data noupdate="1">
         <record id="group_cloudflare_service" model="res.groups">
             <field name="name">Cloudflare Edge Service Account</field>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         </record>
         <record id="user_cloudflare_service" model="res.users">
             <field name="name">Cloudflare Queue Service</field>

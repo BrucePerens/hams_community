@@ -13,10 +13,13 @@ class CloudflareUtils(models.AbstractModel):
         Parses Cloudflare-specific geographic and threat headers injected at the edge.
         Returns a dictionary to be used by proprietary modules for default routing.
         """
-        if not request or not hasattr(request, 'httprequest'):
+        try:
+            if not request or not hasattr(request, 'httprequest'):
+                return {}
+            headers = request.httprequest.headers
+        except RuntimeError:
             return {}
             
-        headers = request.httprequest.headers
         return {
             'ip': headers.get('CF-Connecting-IP') or request.httprequest.remote_addr,
             'country': headers.get('CF-IPCountry'),

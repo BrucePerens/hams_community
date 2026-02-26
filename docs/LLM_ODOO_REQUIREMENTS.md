@@ -30,6 +30,7 @@ Before outputting *any* code or XML, you MUST consciously run a mental filter to
 * **Cron Jobs (`ir.cron`):** Did I include `numbercall`? (Must be removed; Odoo 18+ runs crons indefinitely if `active="True"`).
 * **Cron Batching:** Does my cron job process all records in one massive loop? (Must use record limits and `_trigger()` for queue batching).
 * **ORM Caching:** Did I call `.clear_caches()` on a method or model class? This is deprecated in Odoo 19+. The cache must be cleared globally using `self.env.registry.clear_cache()`.
+* **Controller Caching:** Did I use `@tools.ormcache` on an `http.Controller` method? (You MUST NOT do this; controllers lack the `pool` attribute required by ORM cache. Use a class-level dictionary cache instead).
 * **ORM Ambiguity:** Did I call `self.search()` or `self.create()`? (Must use the explicit `self.env['model.name'].search()` for clarity and safety).
 * **Environment Mutation:** Did I assign a value to `self.env.context`? (Must use the immutable `self.with_context(...)` pattern).
 * **Kanban Views:** Did I use `<t t-name="kanban-box">`? (Must be `<t t-name="card">`).
@@ -53,6 +54,7 @@ Before outputting *any* code or XML, you MUST consciously run a mental filter to
 * **XML ID Lookups:** Did I use `.sudo()._xmlid_to_res_id()` inline? (Must use `env['user_websites.security.utils']._get_service_uid()` to centralize and RAM-cache escalations).
 * **Public `env.ref` Trap:** Did I use `env.ref()` inside an `auth="public"` controller? (Public users might lack read ACLs for `ir.model.data`. Use `_get_service_uid()` instead).
 * **PostgreSQL Trigram Indexes:** Did I use `index='trgm'`? (Must use Odoo's internal ORM keyword `index='trigram'`).
+* **Database Field Attributes:** Did I use `oldname=` or `select=` inside field definitions? (Must be removed; `oldname` is deprecated and `select` must be replaced with `index=True`).
 
 ### 🚨 Critical Security Anti-Patterns (The "Never Do This" List)
 Security in Odoo and Python relies on avoiding well-documented pitfalls. You must actively audit your code against these vulnerabilities:
@@ -61,7 +63,7 @@ Security in Odoo and Python relies on avoiding well-documented pitfalls. You mus
 * **Cross-Site Scripting (XSS):** Never use the legacy `<t t-raw="..."/>` in QWeb. Use `<t t-out="..."/>`. If rendering raw HTML is strictly necessary, sanitize it in Python and wrap it in `markupsafe.Markup()`.
 * **Stored XSS in Chatter (`message_post`):** Never pass raw, unescaped user input into `message_post()` or `message_subscribe()` body attributes. Odoo renders these natively as HTML. Always use `html.escape()` on input variables.
 * **DOM-Based XSS in JavaScript:** Never inject unescaped JSON/REST API data directly into DOM elements (`.innerHTML`) or mapping libraries (like `Leaflet.bindPopup`) using template literals. Always pass the variables through a dedicated `escapeHTML` function.
-* **Remote Code Execution (RCE):** Never use Python's native `eval()` or `exec()`. Use `ast.literal_eval()` for simple data structures, or `odoo.tools.safe_eval.safe_eval` for Odoo domains/contexts. Do not use the `pickle` module or `yaml.load()` (without SafeLoader) as they are vulnerable to insecure deserialization. Use `json` instead.
+* **Remote Code Execution (RCE) & Shell Injection:** Never use Python's native `eval()` or `exec()`. Use `ast.literal_eval()` for simple data structures, or `odoo.tools.safe_eval.safe_eval` for Odoo domains/contexts. Do not use the `pickle` module or `yaml.load()` (without SafeLoader). Never use `subprocess` with `shell=True`; always pass arguments as a list with `shell=False`.
 * **CSRF Bypasses:** Never add `csrf=False` to a standard frontend form route to bypass errors. Forms must include the `<input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>` tag. `csrf=False` is strictly reserved for API webhooks secured via HMAC.
 * **Weak Cryptography:** Never use `md5` or `sha1` for hashing. Use `hashlib.sha256` or stronger. Never use the pseudo-random `random` module for generating security tokens; use `secrets.token_hex()` or `os.urandom()`.
 * **IDOR (Insecure Direct Object Reference) via Sudo:** Never pass an ID directly from a frontend request into a `sudo().browse(id)` call without first independently verifying that the current user owns that record.

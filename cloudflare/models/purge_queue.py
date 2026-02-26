@@ -29,9 +29,12 @@ class CloudflarePurgeQueue(models.Model):
         # Verified by [%ANCHOR: test_purge_queue_base_url_sudo]
         if not website_id:
             from odoo.http import request
-            if getattr(request, 'website', False):
-                website_id = request.website.id
-            else:
+            try:
+                if getattr(request, 'website', False):
+                    website_id = request.website.id
+                else:
+                    website_id = self.env['website'].get_current_website().id
+            except RuntimeError:
                 website_id = self.env['website'].get_current_website().id
 
         website = self.env['website'].browse(website_id)
@@ -55,9 +58,12 @@ class CloudflarePurgeQueue(models.Model):
     def enqueue_tags(self, tags, website_id=None):
         if not website_id:
             from odoo.http import request
-            if getattr(request, 'website', False):
-                website_id = request.website.id
-            else:
+            try:
+                if getattr(request, 'website', False):
+                    website_id = request.website.id
+                else:
+                    website_id = self.env['website'].get_current_website().id
+            except RuntimeError:
                 website_id = self.env['website'].get_current_website().id
                 
         create_vals = [{'target_item': t, 'purge_type': 'tag', 'website_id': website_id} for t in tags if t]

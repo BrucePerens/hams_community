@@ -5,13 +5,17 @@ from odoo.modules.module import get_module_path
 
 class ServiceWorkerController(http.Controller):
     
-    @tools.ormcache()
+    _static_info_cache = None
+
     def _get_global_static_info(self):
         """
         Scans the 'static/' directories of all installed modules.
         Returns a tuple: (latest_mtime, dynamic_max_file_size).
-        Cached in RAM so the disk walk only executes once per worker lifecycle.
+        Cached in RAM at the class level so the disk walk only executes once per worker lifecycle.
         """
+        if type(self)._static_info_cache:
+            return type(self)._static_info_cache
+
         max_mtime = 0.0
         file_sizes = []
         
@@ -45,11 +49,13 @@ class ServiceWorkerController(http.Controller):
         total_size = sum(file_sizes)
         
         if not file_sizes:
-            return str(int(max_mtime)), str(10 * 1024 * 1024) # Default 10MB
+            res = (str(int(max_mtime)), str(10 * 1024 * 1024)) # Default 10MB
+            type(self)._static_info_cache = res
+            return res
 
         if total_size <= SAFE_QUOTA:
             # Everything fits. Set max size to just above the largest file.
-            dynamic_max_size = file_sizes[0] + 1024
+            dynamic_max_size = file_sizes[0] + 1024 if file_sizes else 10 * 1024 * 1024
         else:
             # We need to drop the largest files until the remaining sum fits in the quota
             current_total = total_size
@@ -62,7 +68,9 @@ class ServiceWorkerController(http.Controller):
                     dynamic_max_size = size - 1
                     break
 
-        return str(int(max_mtime)), str(dynamic_max_size)
+        res = (str(int(max_mtime)), str(dynamic_max_size))
+        type(self)._static_info_cache = res
+        return res
 
     @http.route('/sw.js', type='http', auth='public', sitemap=False)
     def service_worker(self):

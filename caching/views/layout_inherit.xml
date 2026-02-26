@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="layout_pwa_inherit" inherit_id="website.layout" name="Caching SW Registration">
-        
-        
-        <xpath expr="//head" position="inside"> 
+        <!-- [%ANCHOR: xpath_rendering_caching_layout] -->
+        <!-- Verified by [%ANCHOR: test_xpath_rendering_caching_layout] -->
+        <xpath expr="//head" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_caching_layout] -->
             <script type="text/javascript" src="/caching/static/src/js/register.js"></script>
         </xpath>
     </template>

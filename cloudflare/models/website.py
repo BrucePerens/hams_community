@@ -6,10 +6,10 @@ from odoo import models, fields
 class WebsiteCloudflare(models.Model):
     _inherit = 'website'
 
-    cloudflare_api_token = fields.Char(string="CF API Token", groups="base.group_system")
-    cloudflare_zone_id = fields.Char(string="CF Zone ID", groups="base.group_system")
-    cloudflare_account_id = fields.Char(string="CF Account ID", groups="base.group_system")
-    cloudflare_turnstile_secret = fields.Char(string="Turnstile Secret", groups="base.group_system")
+    cloudflare_api_token = fields.Char(string="CF API Token", groups="base.group_system,cloudflare.group_cloudflare_service")
+    cloudflare_zone_id = fields.Char(string="CF Zone ID", groups="base.group_system,cloudflare.group_cloudflare_service")
+    cloudflare_account_id = fields.Char(string="CF Account ID", groups="base.group_system,cloudflare.group_cloudflare_service")
+    cloudflare_turnstile_secret = fields.Char(string="Turnstile Secret", groups="base.group_system,cloudflare.group_cloudflare_service")
 
     def _get_cloudflare_credentials(self):
         """

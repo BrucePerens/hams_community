@@ -29,9 +29,12 @@ class CloudflareIPBan(models.Model):
         # Verified by [%ANCHOR: test_cf_execute_ban]
         if not website_id:
             from odoo.http import request
-            if request and getattr(request, 'website', False):
-                website_id = request.website.id
-            else:
+            try:
+                if request and getattr(request, 'website', False):
+                    website_id = request.website.id
+                else:
+                    website_id = self.env['website'].get_current_website().id
+            except RuntimeError:
                 website_id = self.env['website'].get_current_website().id
                 
         website = self.env['website'].browse(website_id)
