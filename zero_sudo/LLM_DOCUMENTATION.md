@@ -36,3 +36,9 @@ If you need to fetch a configuration parameter securely:
 `value = self.env['zero_sudo.security.utils']._get_system_param('my.key')`
 
 **CRITICAL:** The key MUST be explicitly added to the `PARAM_WHITELIST` array in `zero_sudo/models/security_utils.py`. Cryptographic keys (like `database.secret`) are permanently banned from this whitelist to prevent Server-Side Template Injection (SSTI) exposure.
+
+---
+
+## 3. 🔗 Semantic Anchors
+* `get_service_uid` / `test_get_service_uid`: Service account resolution and cache.
+* `coherent_cache_signal` / `test_coherent_cache_signal`: Global Postgres NOTIFY bus trigger.

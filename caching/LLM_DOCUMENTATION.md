@@ -17,3 +17,8 @@ To ensure your module's assets are cached, you must strictly follow these rules:
 3.  **WebSocket Safety:** The Service Worker is hardcoded to ignore `ws://` and `wss://` protocols. You may safely open WebSockets (e.g., for the DX Cluster) without fear of proxy interception or caching failures.
 4.  **Dynamic Data:** Do not put dynamic, user-specific data into static JS files. Static files are aggressively cached. Pass dynamic data to your static JS via HTML `data-*` attributes or standard Odoo RPC calls.
 5.  **DYNAMIC LARGE FILE PROHIBITION (CRITICAL):** The Service Worker dynamically calculates a maximum file size threshold during boot based on the total sum of all static assets across the platform. If the total ecosystem size breaches 35MB, it automatically begins excluding the largest files from the cache to protect the browser's quota. Heavy media or user-generated data MUST be served via non-cached dynamic routes like `/web/image` or `/web/content` to avoid forcing the dynamic threshold to prematurely eject legitimate UI assets.
+
+---
+
+## 🔗 Semantic Anchors
+* `xpath_rendering_caching_layout` / `test_xpath_rendering_caching_layout`: Injecting and verifying the Service Worker registration script.

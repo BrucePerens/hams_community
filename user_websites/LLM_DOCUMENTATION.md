@@ -49,3 +49,16 @@ The `user_websites` module enables decentralized content creation. It employs th
 ## 4. 📧 Weekly Digests & Subscriptions
 * Features an automated `ir.cron` job (`send_weekly_digest`) that iterates through `blog.post` objects and dispatches emails to followers.
 * Utilizes HMAC-SHA256 tokens to generate secure, one-click `List-Unsubscribe` header links for GDPR/CAN-SPAM compliance.
+
+---
+
+## 5. 🔗 Semantic Anchors
+* **Controllers & Routes:** `controller_community_directory`, `controller_submit_violation_report`, `controller_user_websites_home`, `controller_create_site`, `controller_user_blog_index`, `controller_create_blog_post`, `controller_user_websites_documentation`, `controller_submit_appeal`, `controller_subscribe_to_site`, `controller_unsubscribe_digest`, `controller_my_privacy_dashboard`, `controller_export_user_data`, `controller_delete_user_content`.
+* **Security & Ownership:** `mixin_proxy_ownership_create`, `mixin_proxy_ownership_write`, `test_mixin_ownership_validation`.
+* **Moderation:** `action_take_action_and_strike`, `test_moderation_suspension`.
+* **Privacy & GDPR:** `res_users_gdpr_export`, `test_gdpr_export_hook`, `gdpr_sudo_erasure`, `test_gdpr_erasure_pages`, `test_gdpr_erasure_posts`.
+* **Cache Invalidation:** `slug_cache_invalidation`, `slug_cache_invalidation_unlink`, `group_slug_cache_invalidation`, `group_slug_cache_invalidation_unlink`.
+* **Crons:** `ir_cron_send_weekly_digest`, `test_cron_batching_resumption`, `send_weekly_digest`, `test_weekly_digest_secret`, `test_weekly_digest_mail_template`, `ir_cron_flush_view_counters`, `test_cron_redis_flush`.
+* **Views & XPath:** `xpath_rendering_settings`, `xpath_rendering_users`, `xpath_rendering_blog_post`, `xpath_rendering_snippets`, `xpath_rendering_templates`, `xpath_rendering_layout`, `xpath_rendering_navbar` (and corresponding tests).
+* **UI Logic:** `violation_report_logic`, `toast_notifications_logic`, `test_tour_violation_report`, `test_tour_toast_notifications`.
+* **Other:** `utils_slugify`, `website_page_quota_check`, `simulation_environment`, `test_site_creation_performance_scaling`, `test_acl_overhead_loop_elimination`, `test_tenant_view_isolation`.

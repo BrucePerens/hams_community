@@ -1,7 +1,0 @@
-Route rebuilds can be the source of ACL denials.
-Test all public access and make sure it never fails when it should not.
-action_suspend_user_websites sets public access during unpublication.
-submit_violation_report is missing a ban_id call.
-Look at ir.ui.view and consider creating a unique view rather than inheriting, to avoid scaling issues.
-website model acl issues are because the purge queue uses svc_uid to access website_id.
-get_current_website() within website_page.create causes an unrestricted search.

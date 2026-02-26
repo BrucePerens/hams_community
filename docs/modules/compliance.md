@@ -39,3 +39,8 @@ If you are writing a new dependent module (e.g., an E-Commerce extension) that c
 1. **NO CUSTOM BANNERS:** Do **NOT** implement your own cookie banner. Rely entirely on the core Odoo framework `cookies_bar` which this module ensures is enabled.
 2. **TRACKING SCRIPTS:** If you add tracking JS, you must integrate it with Odoo's native consent JS logic. It must not fire until explicit consent is granted.
 3. **DATA EXPORT:** If your new module stores PII, you **MUST** extend the JSON export logic located at `user_websites/controllers/main.py` (route: `/my/privacy/export`) to include your new data models. This ensures the platform's Data Portability guarantee remains intact.
+
+---
+
+## 4. 🔗 Semantic Anchors
+* No semantic anchors currently defined within the scope of this configuration-only module.

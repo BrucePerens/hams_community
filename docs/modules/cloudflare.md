@@ -41,14 +41,31 @@ The module allows administrators to provision a new Cloudflare Tunnel directly f
 
 **2. 📡 Automated Edge Caching (The Middleware)**
 The module intercepts all outgoing HTTP responses via `ir.http._post_dispatch` to apply caching rules based on the user's authentication state:
-* **Static Assets:** `max-age=31536000` (1 Year).
+* **Static Assets:** `max-age=31536000` (1 Year). Also seamlessly injects `Cache-Tag: odoo-static-assets`.
 * **Private / Authenticated:** `no-cache, no-store` (If `request.env.user._is_public()` is False).
 * **Public Content:** `max-age=86400` (24 Hours).
 
-**3. 🧹 URL Cache Invalidation**
+**3. 🧹 Cache Invalidation**
+
+**Automated Static Asset Purging:**
+The module automatically hooks into the Odoo boot sequence (`_register_hook`). It scans the `static/` folders of all installed modules. If a file modification is detected, it automatically enqueues the `odoo-static-assets` Cache-Tag to the Cloudflare API, perfectly synchronizing the CDN edge with the local filesystem without manual intervention.
+
+**Manual URL Purging:**
 For standard URLs, push updates to the asynchronous queue using the generic Service Account:
 ```python
 queue_env = self.env['cloudflare.purge.queue']
 svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
 queue_env.with_user(svc_uid).enqueue_urls(['/my-custom-url'])
 ```
+
+---
+
+## 4. 🔗 Semantic Anchors
+* `cf_execute_ban` / `test_cf_execute_ban`: WAF IP Ban execution.
+* `cf_action_lift_ban` / `test_cf_action_lift_ban`: Lifting WAF IP Bans.
+* `cf_tunnel_setup`: Generating Tunnel Commands.
+* `enqueue_urls_base_url` / `test_purge_queue_base_url_sudo`: URL queueing validation.
+* `ir_cron_process_cf_purge_queue` / `test_queue_batching_and_rate_limiting`: Queue batching limits.
+* `xpath_rendering_cf_settings` / `test_xpath_rendering_settings`: UI Configuration settings rendering.
+* `cf_ip_ban_ui` / `test_tour_cf_ip_ban`: IP Ban User Interface tour.
+* `cf_waf_rule_ui` / `test_tour_cf_waf_rule`: WAF Rule User Interface tour.
