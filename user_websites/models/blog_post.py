@@ -60,10 +60,10 @@ class BlogPost(models.Model):
         
         if 'is_published' in vals or 'name' in vals or 'content' in vals:
             new_urls = self._get_blog_urls()
-            all_urls = set(urls_to_invalidate + new_urls)
+            all_urls = list(set(urls_to_invalidate + new_urls))
             utils = self.env['zero_sudo.security.utils']
-            for url in all_urls:
-                utils._notify_cache_invalidation('blog.post', url)
+            if all_urls:
+                utils._notify_cache_invalidation('blog.post', all_urls)
                 
         return res
 
@@ -76,8 +76,8 @@ class BlogPost(models.Model):
         res = super(BlogPost, self.with_user(svc_uid)).unlink()
         
         utils = self.env['zero_sudo.security.utils']
-        for url in urls_to_invalidate:
-            utils._notify_cache_invalidation('blog.post', url)
+        if urls_to_invalidate:
+            utils._notify_cache_invalidation('blog.post', urls_to_invalidate)
             
         return res
 
@@ -179,9 +179,12 @@ class BlogPost(models.Model):
                 if not partner.email:
                     continue
                 
-                message = f"{owner_model}-{owner_record.id}-{partner.id}".encode('utf-8')
+                import time
+                timestamp = int(time.time())
+                message = f"{owner_model}-{owner_record.id}-{partner.id}-{timestamp}".encode('utf-8')
                 token = hmac.new(db_secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
-                unsub_url = f"{base_url}/website/unsubscribe/{owner_model}/{owner_record.id}/{partner.id}/{token}"
+                
+                unsub_url = f"{base_url}/website/unsubscribe/{owner_model}/{owner_record.id}/{partner.id}/{timestamp}/{token}"
                 
                 headers = {
                     'List-Unsubscribe': f"<{unsub_url}>",

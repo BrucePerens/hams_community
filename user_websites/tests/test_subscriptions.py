@@ -105,9 +105,11 @@ class TestSubscriptionsAndDigest(HttpCase):
         Ensure that malicious actors cannot spoof the unsubscription URL to 
         force-remove other users from mailing lists.
         """
+        import time
         # Attempt an unsubscribe with a forged token
         fake_token = "1234abcd5678"
-        url = f"/website/unsubscribe/res.partner/{self.creator.partner_id.id}/{self.follower.partner_id.id}/{fake_token}"
+        current_ts = int(time.time())
+        url = f"/website/unsubscribe/res.partner/{self.creator.partner_id.id}/{self.follower.partner_id.id}/{current_ts}/{fake_token}"
         
         self.authenticate(None, None)
         response = self.url_open(url)

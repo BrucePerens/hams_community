@@ -40,9 +40,9 @@ class ResUsersModeration(models.Model):
     def write(self, vals):
         # [%ANCHOR: slug_cache_invalidation]
         if 'website_slug' in vals or 'active' in vals:
-            for user in self:
-                if user.website_slug:
-                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+            slugs = [user.website_slug for user in self if user.website_slug]
+            if slugs:
+                self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', slugs)
 
         res = super(ResUsersModeration, self).write(vals)
         
@@ -54,9 +54,9 @@ class ResUsersModeration(models.Model):
 
     def unlink(self):
         # [%ANCHOR: slug_cache_invalidation_unlink]
-        for user in self:
-            if user.website_slug:
-                self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', user.website_slug)
+        slugs = [user.website_slug for user in self if user.website_slug]
+        if slugs:
+            self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', slugs)
 
         return super(ResUsersModeration, self).unlink()
 

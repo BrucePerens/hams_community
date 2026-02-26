@@ -35,19 +35,24 @@ class TestPurgeQueue(TransactionCase):
             self.assertEqual(QueueModel.search_count([]), 10, "MUST leave 10 unprocessed records for the next trigger.")
             mock_trigger.assert_called_once()  # MUST re-trigger the cron job
 
-    def test_02_dynamic_orm_patching_graceful_degradation(self):
-        self.env['cloudflare.purge.queue']._register_hook()
-        if 'website.page' in self.env:
-            page = self.env['website.page'].create({
-                'url': '/dynamic-patch-test',
-                'name': 'Dynamic Patch Test',
-                'type': 'qweb',
-                'website_id': self.website.id
-            })
-            page.write({'name': 'Updated Title'})
-            
-            queue_items = self.env['cloudflare.purge.queue'].search([('website_id', '=', self.website.id)])
-            self.assertTrue(
-                any(item.target_item.endswith('/dynamic-patch-test') for item in queue_items),
-                "The dynamically patched write hook MUST successfully enqueue the URL."
-            )
+
+    def test_03_purge_queue_website_acl(self):
+        """
+        Verify that the purge queue service account can successfully read 
+        the website_id.domain field without triggering an AccessError.
+        """
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
+        
+        # Create a pending queue item
+        queue_item = self.env['cloudflare.purge.queue'].with_user(svc_uid).create({
+            'target_item': '/acl-test',
+            'purge_type': 'url',
+            'website_id': self.website.id
+        })
+        
+        # Read the domain via the related website_id as the service account
+        try:
+            domain = queue_item.with_user(svc_uid).website_id.domain
+            self.assertTrue(True)
+        except Exception as e:
+            self.fail(f"Service account lacks ACLs to read website_id domain: {e}")

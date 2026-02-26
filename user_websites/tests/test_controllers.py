@@ -187,3 +187,38 @@ class TestControllers(odoo.tests.common.HttpCase):
             report, 
             "The honeypot mechanism failed; a report from the bot was written to the database."
         )
+
+    def test_08_public_access_no_acl_denials(self):
+        """
+        Verify that public route access does not trigger ACL denials, 
+        especially around route map rebuilds.
+        """
+        # Provision public content for the user before hitting the routes
+        self.env['website.page'].create({
+            'url': f'/{self.user_public.website_slug}/home',
+            'name': 'Public Home',
+            'type': 'qweb',
+            'arch': '<t name="Public Home" t-name="user_websites.public_home"><div>Public</div></t>',
+            'owner_user_id': self.user_public.id,
+            'website_published': True,
+            'is_published': True
+        })
+        blog = self.env['blog.blog'].search([('name', '=', 'Community Blog')], limit=1)
+        if not blog:
+            blog = self.env['blog.blog'].create({'name': 'Community Blog'})
+        self.env['blog.post'].create({
+            'name': 'Public Post',
+            'blog_id': blog.id,
+            'owner_user_id': self.user_public.id,
+            'is_published': True
+        })
+        
+        self.authenticate(None, None)
+        
+        # Access a known public route repeatedly to flush out intermittent ACL issues
+        for _ in range(3):
+            response = self.url_open(f'/{self.user_public.website_slug}/home')
+            self.assertEqual(response.status_code, 200, "Public access should never fail with an ACL error on published pages.")
+            
+            response_blog = self.url_open(f'/{self.user_public.website_slug}/blog')
+            self.assertEqual(response_blog.status_code, 200, "Public access should never fail with an ACL error on published blogs.")

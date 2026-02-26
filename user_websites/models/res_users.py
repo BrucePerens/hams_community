@@ -137,7 +137,13 @@ class ResUsers(models.Model):
             group_collision = env_group.search_count([('website_slug', '=', slug)])
             
             if not user_collision and not group_collision:
-                return slug
+                # TOCTOU FIX: If it looks clear, lock the transaction to prevent a concurrent writer 
+                # from snagging it before we finish returning and inserting.
+                lock_hash = hash(slug) % 2147483647
+                self.env.cr.execute("SELECT pg_try_advisory_xact_lock(%s)", (lock_hash,))
+                lock_acquired = self.env.cr.fetchone()[0]
+                if lock_acquired:
+                    return slug
                 
             slug = f"{base_slug}-{counter}"
             counter += 1
@@ -264,7 +270,53 @@ class ResUsers(models.Model):
         Used for streaming massive datasets (like QSOs) directly to the HTTP 
         response to prevent OOM crashes during JSON serialization.
         """
-        return {}
+        self.ensure_one()
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        
+        def generate_pages():
+            offset = 0
+            while True:
+                batch = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=1000, offset=offset)
+                if not batch: break
+                for p in batch:
+                    yield {'name': p.name, 'url': p.url, 'content': p.arch}
+                offset += 1000
+                
+        def generate_blogs():
+            offset = 0
+            while True:
+                batch = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=1000, offset=offset)
+                if not batch: break
+                for b in batch:
+                    yield {'name': b.name, 'content': b.content, 'published_date': str(b.post_date)}
+                offset += 1000
+                
+        def generate_reports():
+            offset = 0
+            while True:
+                batch = self.env['content.violation.report'].with_user(svc_uid).search([('reported_by_user_id', '=', self.id)], limit=1000, offset=offset)
+                if not batch: break
+                for r in batch:
+                    yield {'target_url': r.target_url, 'description': r.description, 'status': r.state, 'submitted_date': str(r.create_date)}
+                offset += 1000
+                
+        def generate_appeals():
+            offset = 0
+            while True:
+                batch = self.env['content.violation.appeal'].with_user(svc_uid).search([('user_id', '=', self.id)], limit=1000, offset=offset)
+                if not batch: break
+                for a in batch:
+                    yield {'reason': a.reason, 'status': a.state, 'submitted_date': str(a.create_date)}
+                offset += 1000
+
+        res = getattr(super(), '_get_gdpr_streamed_keys', lambda: {})()
+        res.update({
+            'pages': generate_pages,
+            'blog_posts': generate_blogs,
+            'submitted_reports': generate_reports,
+            'appeals': generate_appeals
+        })
+        return res
 
     def _get_gdpr_export_data(self):
         # [%ANCHOR: res_users_gdpr_export]
@@ -273,30 +325,13 @@ class ResUsers(models.Model):
         Packages all the user's data and content into a dictionary so they can download it.
         """
         self.ensure_one()
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        pages = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
-        blogs = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', '=', self.id)], limit=10000)
-        reports = self.env['content.violation.report'].with_user(svc_uid).search([('reported_by_user_id', '=', self.id)], limit=10000)
-        appeals = self.env['content.violation.appeal'].with_user(svc_uid).search([('user_id', '=', self.id)], limit=10000)
         
         return {
             'user': {
                 'name': self.name, 
                 'email': self.email, 
                 'website_slug': self.website_slug
-            },
-            'pages': [
-                {'name': p.name, 'url': p.url, 'content': p.arch} for p in pages
-            ],
-            'blog_posts': [
-                {'name': b.name, 'content': b.content, 'published_date': str(b.post_date)} for b in blogs
-            ],
-            'submitted_reports': [
-                {'target_url': r.target_url, 'description': r.description, 'status': r.state, 'submitted_date': str(r.create_date)} for r in reports
-            ],
-            'appeals': [
-                {'reason': a.reason, 'status': a.state, 'submitted_date': str(a.create_date)} for a in appeals
-            ]
+            }
         }
 
     def _execute_gdpr_erasure(self):

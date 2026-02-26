@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import HttpCase, tagged
 
 @tagged('post_install', '-at_install')
-class TestModeration(TransactionCase):
+class TestModeration(HttpCase):
 
     def setUp(self):
         super(TestModeration, self).setUp()
@@ -21,6 +21,7 @@ class TestModeration(TransactionCase):
             'url': f'/{self.bad_user.website_slug}/home',
             'name': 'Spam Home',
             'type': 'qweb',
+            'arch': '<t name="Spam Home" t-name="user_websites.spam_home"><div>Spam</div></t>',
             'owner_user_id': self.bad_user.id,
             'is_published': True,
             'website_published': True
@@ -80,3 +81,21 @@ class TestModeration(TransactionCase):
         # Note: We intentionally do NOT automatically republish content during a pardon. 
         # The user must do that manually to ensure they reviewed it.
         self.assertFalse(self.spam_page.is_published)
+
+    def test_03_suspension_public_access_leak(self):
+        """
+        Verify that action_suspend_user_websites strictly revokes public access 
+        and does not inadvertently set or leave public access grants during unpublication.
+        """
+        # Ensure page is public
+        self.authenticate(None, None)
+        res = self.url_open(f'/{self.bad_user.website_slug}/home')
+        self.assertEqual(res.status_code, 200)
+        
+        # Suspend user
+        self.bad_user.violation_strike_count = 3
+        self.bad_user.action_suspend_user_websites()
+        
+        # Attempt public access again
+        res_after = self.url_open(f'/{self.bad_user.website_slug}/home')
+        self.assertEqual(res_after.status_code, 404, "Suspended pages must return 404 for public guests to prevent access leaks.")

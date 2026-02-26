@@ -121,3 +121,23 @@ class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
             website_a.id, 
             "The generated page must be explicitly bound to the website where it was created."
         )
+
+    def test_05_website_page_creation_rpc_context(self):
+        """
+        Simulate website_page creation outside of a standard HTTP request (e.g. XML-RPC).
+        This verifies that get_current_website() doesn't execute an unrestricted search 
+        that violates ACLs or crashes when request.website is absent.
+        """
+        # Create a new environment without an HTTP request context
+        env_no_request = self.env(context={})
+        
+        try:
+            page = env_no_request['website.page'].with_user(self.user_empty).create({
+                'url': f'/{self.user_empty.website_slug}/rpc-test',
+                'name': 'RPC Page',
+                'type': 'qweb',
+                'owner_user_id': self.user_empty.id
+            })
+            self.assertTrue(page.id, "Page should be successfully created even without an active HTTP request.")
+        except Exception as e:
+            self.fail(f"website.page creation failed in RPC context: {e}")

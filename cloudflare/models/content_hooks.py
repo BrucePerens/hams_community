@@ -28,10 +28,7 @@ class BlogPost(models.Model):
     _inherit = 'blog.post'
     
     def write(self, vals):
-        urls = []
-        for post in self:
-            if hasattr(post, 'website_url') and post.website_url:
-                urls.append(post.website_url)
+        urls = [u for u in self.mapped('website_url') if u]
                 
         res = super().write(vals)
         
@@ -45,10 +42,7 @@ class ProductTemplate(models.Model):
     _inherit = 'product.template'
     
     def write(self, vals):
-        urls = []
-        for prod in self:
-            if hasattr(prod, 'website_url') and prod.website_url:
-                urls.append(prod.website_url)
+        urls = [u for u in self.mapped('website_url') if u]
                     
         res = super().write(vals)
         

@@ -36,7 +36,12 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _notify_cache_invalidation(self, model_name, key_value):
         # [%ANCHOR: coherent_cache_signal]
         # Verified by [%ANCHOR: test_coherent_cache_signal]
-        self.env.cr.execute("SELECT pg_notify(%s, %s)", ('ham_cache_invalidation', f"{model_name}:{key_value}"))
+        if isinstance(key_value, (list, set, tuple)):
+            payloads = [f"{model_name}:{kv}" for kv in set(key_value) if kv]
+            if payloads:
+                self.env.cr.execute("SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload", ('ham_cache_invalidation', payloads))
+        else:
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ('ham_cache_invalidation', f"{model_name}:{key_value}"))
 
     @api.model
     def _get_system_param(self, key, default=None):

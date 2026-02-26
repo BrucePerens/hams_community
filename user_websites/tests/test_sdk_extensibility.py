@@ -33,13 +33,18 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
         })
         
         data = self.user._get_gdpr_export_data()
+        streams = self.user._get_gdpr_streamed_keys()
         
         self.assertIn('user', data, "Export data must contain 'user' key.")
-        self.assertIn('pages', data, "Export data must contain 'pages' key.")
-        self.assertIn('blog_posts', data, "Export data must contain 'blog_posts' key.")
+        self.assertIn('pages', streams, "Export stream MUST isolate 'pages' key to prevent OOM.")
+        self.assertIn('blog_posts', streams, "Export stream MUST isolate 'blog_posts' key.")
         self.assertEqual(data['user']['name'], 'SDK Tester')
-        self.assertEqual(len(data['pages']), 1, "The created page must be included in the export.")
-        self.assertEqual(data['pages'][0]['name'], 'SDK Page')
+        
+        page_generator = streams['pages']()
+        generated_pages = list(page_generator)
+        
+        self.assertEqual(len(generated_pages), 1, "The created page must be yielded by the generator.")
+        self.assertEqual(generated_pages[0]['name'], 'SDK Page')
 
     def test_02_gdpr_erasure_hook(self):
         """Test that the _execute_gdpr_erasure method successfully unlinks content."""

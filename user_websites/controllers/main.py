@@ -203,9 +203,11 @@ class UserWebsitesController(http.Controller):
             page_id = request.env['website.page']._get_page_id_by_url(f'/{user.website_slug}/home', website_id)
             page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
             
-            if page and page.exists():
+            if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get('test_enable'):
-                    threading.Thread(target=_async_redis_incr, args=(page.id,), daemon=True).start()
+                    # RACE CONDITION FIX: Removed threading.Thread() to prevent OS thread exhaustion DoS.
+                    # Redis INCR is O(1) and executes in microseconds, making async offloading dangerous and unnecessary here.
+                    _async_redis_incr(page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
@@ -238,9 +240,9 @@ class UserWebsitesController(http.Controller):
             page_id = request.env['website.page']._get_page_id_by_url(f'/{group.website_slug}/home', website_id)
             page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
 
-            if page and page.exists():
+            if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get('test_enable'):
-                    threading.Thread(target=_async_redis_incr, args=(page.id,), daemon=True).start()
+                    _async_redis_incr(page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                     
@@ -279,6 +281,10 @@ class UserWebsitesController(http.Controller):
         
         target_uid = request.env.user.id
         resolved_slug = None
+        
+        # RACE CONDITION FIX: Enforce an exclusive transaction lock for this user to prevent
+        # click-spamming from generating duplicate pages bypassing the search_count.
+        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (target_uid,))
 
         if user:
             if user.id != request.env.user.id:
@@ -429,6 +435,9 @@ class UserWebsitesController(http.Controller):
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         resolved_slug = None
+        
+        # RACE CONDITION FIX: Enforce an exclusive transaction lock for this user to prevent duplicate blog creation.
+        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (request.env.user.id,))
 
         if user:
             if user.id != request.env.user.id:
@@ -495,6 +504,9 @@ class UserWebsitesController(http.Controller):
         user = request.env.user
         
         if user.is_suspended_from_websites and reason:
+            # RACE CONDITION FIX: Prevent spamming multiple appeals via concurrent POST requests
+            request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (user.id,))
+            
             svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             existing = request.env['content.violation.appeal'].with_user(svc_uid).search([
                 ('user_id', '=', user.id), 
@@ -528,12 +540,18 @@ class UserWebsitesController(http.Controller):
         referrer = request.httprequest.referrer or '/'
         return request.redirect(f"{referrer}?subscribed=1")
 
-    @http.route('/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<string:token>', type='http', auth="public", website=True)
-    def unsubscribe_digest(self, model_name, record_id, partner_id, token, **kwargs):
+    @http.route('/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<int:timestamp>/<string:token>', type='http', auth="public", website=True)
+    def unsubscribe_digest(self, model_name, record_id, partner_id, timestamp, token, **kwargs):
         # [%ANCHOR: controller_unsubscribe_digest]
         # Verified by [%ANCHOR: test_unsubscribe_secret]
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
+            
+        import time
+        current_time = int(time.time())
+        # ADR-0025: Enforce a strict 30-day TTL (2592000 seconds) on the stateless token
+        if current_time - timestamp > 2592000:
+            raise werkzeug.exceptions.Forbidden("This unsubscribe link has expired.")
             
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         record = request.env[model_name].with_user(svc_uid).browse(record_id)
@@ -541,7 +559,7 @@ class UserWebsitesController(http.Controller):
             raise werkzeug.exceptions.NotFound()
             
         db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_unsubscribe_secret]
-        message = f"{model_name}-{record_id}-{partner_id}".encode('utf-8')
+        message = f"{model_name}-{record_id}-{partner_id}-{timestamp}".encode('utf-8')
         expected_token = hmac.new(db_secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
         
         if not consteq(token, expected_token):

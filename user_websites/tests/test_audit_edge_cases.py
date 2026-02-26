@@ -229,40 +229,6 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             # The write method should have called _notify_cache_invalidation which executes pg_notify
             # We must verify the payload was specifically targeted to the URL, not the whole registry
             mock_execute.assert_any_call(
-                "SELECT pg_notify(%s, %s)", 
-                ('ham_cache_invalidation', f"website.page:{page.url}")
-            )
-
-    def test_07_bdd_ormcache_query_counting_page_urls(self):
-        """
-        BDD: Given ADR-0049 Cache Verification
-        When resolving page URLs repeatedly
-        Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger targeted DB NOTIFY.
-        """
-        website_id = self.env['website'].get_current_website().id
-        page = self.env['website.page'].create({
-            'url': f'/{self.test_user.website_slug}/cache-test',
-            'name': 'Cache Page',
-            'type': 'qweb',
-            'owner_user_id': self.test_user.id,
-            'website_published': True
-        })
-        
-        # 1. Prime the cache
-        self.env['website.page']._get_page_id_by_url(page.url, website_id)
-        
-        # 2. Verify 0 queries on hit
-        with self.assertQueryCount(0):
-            self.env['website.page']._get_page_id_by_url(page.url, website_id)
-            
-        # 3. Trigger Invalidation (Verify the targeted NOTIFY logic doesn't crash)
-        from unittest.mock import patch
-        with patch.object(self.env.cr, 'execute') as mock_execute:
-            page.write({'website_published': False})
-            
-            # The write method should have called _notify_cache_invalidation which executes pg_notify
-            # We must verify the payload was specifically targeted to the URL, not the whole registry
-            mock_execute.assert_any_call(
-                "SELECT pg_notify(%s, %s)", 
-                ('ham_cache_invalidation', f"website.page:{page.url}")
+                "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload", 
+                ('ham_cache_invalidation', [f"website.page:{page.url}"])
             )

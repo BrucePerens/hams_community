@@ -102,10 +102,11 @@ class WebsitePage(models.Model):
         # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
         if 'url' in vals or 'website_published' in vals or 'is_published' in vals:
             utils = self.env['zero_sudo.security.utils']
-            for url in pages_to_invalidate:
-                utils._notify_cache_invalidation('website.page', url)
-            if 'url' in vals and vals['url'] not in pages_to_invalidate:
-                utils._notify_cache_invalidation('website.page', vals['url'])
+            urls_to_notify = list(pages_to_invalidate)
+            if 'url' in vals and vals['url'] not in urls_to_notify:
+                urls_to_notify.append(vals['url'])
+            if urls_to_notify:
+                utils._notify_cache_invalidation('website.page', urls_to_notify)
                 
         return res
 
@@ -118,8 +119,8 @@ class WebsitePage(models.Model):
         res = super(WebsitePage, self.with_user(svc_uid)).unlink()
         
         utils = self.env['zero_sudo.security.utils']
-        for url in pages_to_invalidate:
-            utils._notify_cache_invalidation('website.page', url)
+        if pages_to_invalidate:
+            utils._notify_cache_invalidation('website.page', pages_to_invalidate)
             
         return res
 
@@ -141,13 +142,12 @@ class WebsitePage(models.Model):
         pipe = redis_client.pipeline()
         for key in keys:
             pipe.get(key)
-            pipe.delete(key)
         
         results = pipe.execute()
         
         updates = []
         for i, key in enumerate(keys):
-            val = results[i * 2]
+            val = results[i]
             if val:
                 try:
                     page_id = int(key.split(':')[-1])
@@ -163,7 +163,19 @@ class WebsitePage(models.Model):
                         "UPDATE website_page SET view_count = COALESCE(view_count, 0) + %s WHERE id = %s", 
                         (inc, pid)
                     )
+                # CRITICAL: Commit to PostgreSQL before destroying the ephemeral Redis state
+                from odoo import tools
+                if not tools.config.get('test_enable'):
+                    self.env.cr.commit()
+                
+                del_pipe = redis_client.pipeline()
+                for key in keys:
+                    del_pipe.delete(key)
+                del_pipe.execute()
             except Exception as e:
+                from odoo import tools
+                if not tools.config.get('test_enable'):
+                    self.env.cr.rollback()
                 _logger.error(f"Error updating PostgreSQL view counts: {e}")
         
         if cursor != 0:

@@ -178,9 +178,9 @@ class UserWebsitesGroup(models.Model):
         old_slugs = {}
         # [%ANCHOR: group_slug_cache_invalidation]
         if 'website_slug' in vals:
-            for group in self:
-                if group.website_slug:
-                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+            slugs = [group.website_slug for group in self if group.website_slug]
+            if slugs:
+                self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', slugs)
 
             if vals.get('website_slug'):
                 if len(self) == 1:
@@ -199,9 +199,9 @@ class UserWebsitesGroup(models.Model):
         # --- 301 Redirect Automation ---
         if 'website_slug' in vals:
             # Send targeted NOTIFY to prevent global cache wipe
-            for group in self:
-                if group.website_slug:
-                    self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+            slugs2 = [group.website_slug for group in self if group.website_slug]
+            if slugs2:
+                self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', slugs2)
                     
             svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             redirect_env = self.env['website.rewrite'].with_user(svc_uid)
@@ -241,7 +241,7 @@ class UserWebsitesGroup(models.Model):
 
     def unlink(self):
         # [%ANCHOR: group_slug_cache_invalidation_unlink]
-        for group in self:
-            if group.website_slug:
-                self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', group.website_slug)
+        slugs = [group.website_slug for group in self if group.website_slug]
+        if slugs:
+            self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', slugs)
         return super(UserWebsitesGroup, self).unlink()
