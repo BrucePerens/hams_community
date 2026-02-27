@@ -83,12 +83,12 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 | Audit Target | Bypass Tag | Required AST Assertion in Test |
 | :--- | :--- | :--- |
-| `ir.cron` XML | `` | The test MUST execute `_trigger()` to prove batching. |
+| `ir.cron` XML | `&lt;!-- audit-ignore-cron: Tested by [%ANCHOR: example_name] --&gt;` | The test MUST execute `_trigger()` to prove batching. |
 | `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. |
 | `.search()` | `# audit-ignore-search: Tested by [%ANCHOR: example_name]` | The test MUST utilize `with self.assertQueryCount()` or pass `limit=`. |
-| `<xpath>` | `` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. |
+| `<xpath>` | `&lt;!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] --&gt;` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. |
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
-| `ir.ui.view` | `` | (Alternative to JS Tours). Test MUST execute `get_view` or `url_open`. |
+| `ir.ui.view` | `&lt;!-- audit-ignore-view: Tested by [%ANCHOR: example_name] --&gt;` | (Alternative to JS Tours). Test MUST execute `get_view` or `url_open`. |
 | Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction and GDPR `unlink()` cascades. |
 
 ---

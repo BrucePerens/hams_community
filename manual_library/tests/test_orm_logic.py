@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 from odoo.exceptions import ValidationError
-from psycopg2.errors import ForeignKeyViolation
+from psycopg2.errors import ForeignKeyViolation  # noqa: F401
 from odoo.tools import mute_logger
 
 @tagged('post_install', '-at_install')

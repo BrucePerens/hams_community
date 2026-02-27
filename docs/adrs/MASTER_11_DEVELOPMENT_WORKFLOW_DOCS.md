@@ -9,7 +9,7 @@ Maintaining architectural cohesion across a large platform relies on strict docu
 ## Decisions & Mandates
 
 ### 1. Semantic Anchor Traceability (0004, 0055)
-* Source code and Agile documentation (Stories, Runbooks) MUST be mathematically linked using Semantic Anchors (`[%ANCHOR: feature_name]`).
+* Source code and Agile documentation (Stories, Runbooks) MUST be mathematically linked using Semantic Anchors (`[%ANCHOR: example_feature_name]`).
 * When an event crosses an architectural boundary (e.g., Odoo triggers a background daemon), bidirectional anchors MUST bridge the producer and consumer.
 * The CI/CD pipeline scans for orphaned or missing anchors and fails the build if the mapping breaks.
 

@@ -6,8 +6,7 @@ import json
 import argparse
 import base64
 import urllib.parse
-import subprocess
-import shutil
+import shutil  # noqa: F401
 
 def extract_json_payloads(input_text):
     # Sanitize common Web UI copy-paste artifacts

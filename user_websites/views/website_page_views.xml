@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_user_websites_page_tree" model="ir.ui.view">
+    <record id="view_user_websites_page_tree" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_backend_views_rendering] -->
         <field name="name">user.websites.page.list</field>
         <field name="model">website.page</field>
         <field name="priority">999</field>

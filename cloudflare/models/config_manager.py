@@ -3,7 +3,7 @@
 import os
 import json
 import logging
-from odoo import models, api, _
+from odoo import models, api, _  # noqa: F401
 from odoo.modules.module import get_module_path
 from ..utils.cloudflare_api import get_zone_ruleset, update_zone_ruleset, create_zone_ruleset
 

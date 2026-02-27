@@ -87,7 +87,20 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             'owner_user_id': user.id,
             'arch': arch_string
         })
+        
         response = self.url_open(f'/{user.website_slug}/home')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'name="user_websites_slug"', response.content, "The user navbar context meta tag must render.")
         self.assertIn(b'id="userNavbarNav"', response.content, "The dynamic user navigation bar must render on the page.")
+
+    def test_08_backend_views_rendering(self):
+        # [%ANCHOR: test_backend_views_rendering]
+        """Verify that standard backend views compile without error."""
+        self.env['content.violation.appeal'].get_view(view_id=self.env.ref('user_websites.view_content_violation_appeal_list').id, view_type='list')
+        self.env['content.violation.appeal'].get_view(view_id=self.env.ref('user_websites.view_content_violation_appeal_form').id, view_type='form')
+        self.env['content.violation.report'].get_view(view_id=self.env.ref('user_websites.view_content_violation_report_kanban').id, view_type='kanban')
+        self.env['content.violation.report'].get_view(view_id=self.env.ref('user_websites.view_content_violation_report_list').id, view_type='list')
+        self.env['content.violation.report'].get_view(view_id=self.env.ref('user_websites.view_content_violation_report_form').id, view_type='form')
+        self.env['user.websites.group'].get_view(view_id=self.env.ref('user_websites.view_user_websites_group_tree').id, view_type='list')
+        self.env['user.websites.group'].get_view(view_id=self.env.ref('user_websites.view_user_websites_group_form').id, view_type='form')
+        self.env['website.page'].get_view(view_id=self.env.ref('user_websites.view_user_websites_page_tree').id, view_type='list')

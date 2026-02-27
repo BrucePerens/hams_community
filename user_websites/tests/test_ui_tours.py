@@ -61,3 +61,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
 
     def test_07_community_directory_tour(self):
         self.start_tour("/community", "community_directory_tour")
+
+    def test_08_frontend_misc_tour(self):
+        self.authenticate(self.user_test.login, self.user_test.login)
+        self.start_tour("/user-websites/documentation", "frontend_misc_tour")

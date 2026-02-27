@@ -68,7 +68,7 @@ class TestManualFeatures(odoo.tests.common.HttpCase):
         self.assertEqual(self.searchable_article.unhelpful_count, 0)
         
         # Submit a 'Not Helpful' rating
-        response = self.url_open('/manual/feedback', data={
+        response = self.url_open('/manual/feedback', data={  # noqa: F841
             'csrf_token': odoo.http.Request.csrf_token(self),
             'article_id': self.searchable_article.id,
             'is_helpful': '0'

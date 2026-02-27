@@ -52,7 +52,7 @@ class TestPurgeQueue(TransactionCase):
         
         # Read the domain via the related website_id as the service account
         try:
-            domain = queue_item.with_user(svc_uid).website_id.domain
+            domain = queue_item.with_user(svc_uid).website_id.domain  # noqa: F841
             self.assertTrue(True)
         except Exception as e:
             self.fail(f"Service account lacks ACLs to read website_id domain: {e}")

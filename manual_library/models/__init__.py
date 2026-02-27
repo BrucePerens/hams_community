@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from . import knowledge_article
+from . import knowledge_article  # noqa: F401
