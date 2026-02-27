@@ -25,15 +25,64 @@ class WebsitePage(models.Model):
     @api.model
     def _sanitize_user_arch(self, arch_content):
         if not arch_content:
-            return arch_content
-        # Strip script tags entirely
-        arch_content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', arch_content, flags=re.IGNORECASE)
-        # Strip iframe and object tags
-        arch_content = re.sub(r'<(iframe|object|embed)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>', '', arch_content, flags=re.IGNORECASE)
-        # Strip dangerous QWeb directives and inline events
-        arch_content = re.sub(r'\b(t-eval|t-raw)\s*=', r'data-blocked-\1=', arch_content, flags=re.IGNORECASE)
-        arch_content = re.sub(r'\b(on[a-zA-Z]+)\s*=', r'data-blocked-\1=', arch_content, flags=re.IGNORECASE)
-        return arch_content
+            return arch_content, False
+        try:
+            from lxml import etree
+            parser = etree.XMLParser(recover=True)
+            root = etree.fromstring(f"<root>{arch_content}</root>", parser=parser)
+            
+            was_modified = False
+            
+            # Strip script, iframe, object, embed entirely
+            for tag in ['script', 'iframe', 'object', 'embed']:
+                for elem in root.xpath(f'//*[local-name()="{tag}"]'):
+                    elem.getparent().remove(elem)
+                    was_modified = True
+                    
+            # Strip all QWeb execution and inline JS directives
+            dangerous_prefixes = ('t-', 'on')
+            for elem in root.xpath('//*'):
+                for attr in list(elem.attrib.keys()):
+                    attr_lower = attr.lower()
+                    if attr_lower.startswith(dangerous_prefixes) and attr_lower not in ('t-name', 't-call'):
+                        val = elem.attrib[attr]
+                        del elem.attrib[attr]
+                        elem.attrib[f'data-blocked-{attr}'] = val
+                        was_modified = True
+                        
+            # Return inner HTML of root without the wrapper
+            sanitized_content = "".join([etree.tostring(child, encoding='unicode') for child in root])
+            return sanitized_content, was_modified
+        except Exception as e:
+            _logger.error(f"Failed to sanitize user arch: {e}")
+            return "<div>Sanitization Error</div>", True
+
+    @api.model
+    def _trigger_malicious_arch_violation(self, vals, records=None):
+        """Creates an automated violation report and issues a strike when malicious SSTI/XSS is stripped."""
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        
+        owner_id = vals.get('owner_user_id')
+        group_id = vals.get('user_websites_group_id')
+        
+        if not owner_id and not group_id and records:
+            owner_id = records[0].owner_user_id.id if records[0].owner_user_id else False
+            group_id = records[0].user_websites_group_id.id if records[0].user_websites_group_id else False
+            
+        url = vals.get('url')
+        if not url and records:
+            url = records[0].url
+            
+        report = self.env['content.violation.report'].with_user(svc_uid).create({
+            'target_url': url or '/unknown-page',
+            'description': '🚨 AUTOMATED SECURITY ALERT: The system detected and neutralized malicious code (SSTI/XSS) attempting to execute on this page. The attacker attempted to inject forbidden <script> tags, IFrames, or t-* QWeb evaluation directives. The payload was stripped, but the user account may be compromised or acting maliciously.',
+            'content_owner_id': owner_id,
+            'content_group_id': group_id,
+            'reported_by_user_id': self.env.user.id,
+        })
+        
+        # Immediately strike the offending account (fulfilling "at least the level of a content-rule violation")
+        report.with_user(svc_uid).action_take_action_and_strike()
 
     @api.model
     @tools.ormcache('url', 'website_id')
@@ -54,7 +103,10 @@ class WebsitePage(models.Model):
         if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
             for vals in vals_list:
                 if vals.get('arch'):
-                    vals['arch'] = self._sanitize_user_arch(vals['arch'])
+                    sanitized_arch, modified = self._sanitize_user_arch(vals['arch'])
+                    vals['arch'] = sanitized_arch
+                    if modified:
+                        self._trigger_malicious_arch_violation(vals)
 
         # 1. Enforce Mixin Security
         self._check_proxy_ownership_create(vals_list)
@@ -150,7 +202,10 @@ class WebsitePage(models.Model):
         self._check_proxy_ownership_write(vals)
         
         if 'arch' in vals and not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
-            vals['arch'] = self._sanitize_user_arch(vals['arch'])
+            sanitized_arch, modified = self._sanitize_user_arch(vals['arch'])
+            vals['arch'] = sanitized_arch
+            if modified:
+                self._trigger_malicious_arch_violation(vals, records=self)
         
         # Identify URLs to invalidate before mutating
         pages_to_invalidate = [p.url for p in self if p.url]
@@ -190,7 +245,8 @@ class WebsitePage(models.Model):
         Uses _trigger() for batching if there are too many keys (ADR-0022).
         """
         try:
-            cursor, keys = redis_client.scan(cursor=0, match="views:page:*", count=1000)
+            db_name = self.env.cr.dbname
+            cursor, keys = redis_client.scan(cursor=0, match=f"views:{db_name}:page:*", count=1000)
         except Exception as e:
             _logger.error(f"Failed to connect to Redis for view counter flush: {e}")
             return

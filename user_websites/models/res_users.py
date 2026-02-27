@@ -35,7 +35,7 @@ def _async_unpublish_content(db_name, user_ids):
                 pages.write({'website_published': False})
                 env.cr.commit()
                 if len(pages) < 5000: break
-                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1)
+                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread
 
             while True:
                 posts = env['blog.post'].with_user(svc_uid).search([
@@ -47,7 +47,7 @@ def _async_unpublish_content(db_name, user_ids):
                 posts.write({'is_published': False})
                 env.cr.commit()
                 if len(posts) < 5000: break
-                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1)
+                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread
         except Exception as e:
             env.cr.rollback()
             import logging
@@ -428,7 +428,7 @@ class ResUsers(models.Model):
             if len(pages) < 5000:
                 break
             if not os.environ.get('HAMS_DISABLE_SLEEPS'):
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread
             
         while True:
             posts = self.env['blog.post'].search([('owner_user_id', '=', self.id)], limit=5000)
@@ -440,7 +440,7 @@ class ResUsers(models.Model):
             if len(posts) < 5000:
                 break
             if not os.environ.get('HAMS_DISABLE_SLEEPS'):
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread
         
         self.with_user(svc_uid).write({'privacy_show_in_directory': False})
 

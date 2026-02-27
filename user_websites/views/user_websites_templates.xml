@@ -51,13 +51,13 @@
         <!-- Verified by [%ANCHOR: test_xpath_rendering_templates] -->
         <xpath expr="//div[hasclass('o_portal_my_home')]" position="before"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_templates] -->
             <div class="container mt-4">
-                <t t-if="request.env.user.is_suspended_from_websites">
+                <t t-if="user_id.is_suspended_from_websites">
                     <div class="alert alert-danger shadow-sm" role="alert">
                         <h4 class="alert-heading fw-bold"><i class="fa fa-ban me-2"/> Account Suspended</h4>
                         <p>We suspended your website and blog features because of community guideline violations. We also unpublished your content.</p>
                         <hr/>
                         
-                        <t t-set="existing_appeal" t-value="request.env.user.appeal_ids.filtered(lambda a: a.state == 'new')"/>
+                        <t t-set="existing_appeal" t-value="user_id.appeal_ids.filtered(lambda a: a.state == 'new')"/>
                         
                         <t t-if="existing_appeal">
                             <p class="mb-0 text-dark fw-bold"><i class="fa fa-clock-o me-1"/> We are currently reviewing your appeal.</p>
@@ -196,7 +196,7 @@
                                 <input type="text" class="form-control" name="website_honeypot" id="website_honeypot" tabindex="-1" autocomplete="off"/>
                             </div>
 
-                            <t t-if="request.env.user._is_public()">
+                            <t t-if="is_public_user">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">Your Email Address:</label>
                                     <input type="email" class="form-control" name="email" id="email" required="required" placeholder="name@example.com"/>

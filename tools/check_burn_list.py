@@ -7,6 +7,7 @@ import argparse
 
 ERROR_RULES = [
     (r'\.xml$', re.compile(r'\bt-raw\s*='), "CRITICAL XSS: 't-raw' is deprecated and dangerous. Use 't-out' and Python's markupsafe.Markup() for safe HTML."),
+    (r'\.xml$', re.compile(r'request\.env'), "CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution. Compute values in Python and pass them via the rendering context."),
     (r'\.js$', re.compile(r'\.bindPopup\(\s*`|\.innerHTML\s*=\s*`'), "JS DOM XSS: Template literal passed to bindPopup or innerHTML. Ensure all variables within the literal are sanitized using an escapeHTML function."),
     (r'\.xml$', re.compile(r'<tree\b'), "Legacy view tag: Use <list> instead of <tree>."),
     (r'\.xml$', re.compile(r't-name\s*=\s*["\']kanban-box["\']'), "Legacy view tag: Use <t t-name='card'> instead of kanban-box."),
@@ -347,6 +348,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 elif attr in ('choice', 'randint', 'random'):
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == 'random':
                         self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random' for security tokens or passwords. Use the 'secrets' module.")
+                elif attr == 'sleep':
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == 'time':
+                        line_content = self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""
+                        if 'audit-ignore-sleep' not in line_content:
+                            self.add_warning(node.lineno, "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker. Ensure this is inside a background thread/daemon for rate-limiting, NOT a synchronous web request. Use '# audit-ignore-sleep' to bypass if verified.")
                 
                 if attr == 'get' and self.in_http_controller:
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == self.current_kwarg_name:
@@ -482,7 +488,7 @@ def scan_file(filepath):
             continue
 
         if 'audit-ignore' in line:
-            valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath']
+            valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath', 'audit-ignore-sleep']
             if not any(tag in line for tag in valid_audits):
                 errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used. {stripped}")
 

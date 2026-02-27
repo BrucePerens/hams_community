@@ -27,10 +27,10 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 redis_client = redis.Redis(connection_pool=redis_pool)
 
-def _async_redis_incr(page_id):
+def _async_redis_incr(db_name, page_id):
     """Quickly update the Redis view counter in the background so we don't hold up the web server."""
     try:
-        redis_client.incr(f"views:page:{page_id}")
+        redis_client.incr(f"views:{db_name}:page:{page_id}")
     except Exception:
         pass
 
@@ -216,7 +216,7 @@ class UserWebsitesController(http.Controller):
                 if not odoo.tools.config.get('test_enable'):
                     # RACE CONDITION FIX: Removed threading.Thread() to prevent OS thread exhaustion DoS.
                     # Redis INCR is O(1) and executes in microseconds, making async offloading dangerous and unnecessary here.
-                    _async_redis_incr(page.id)
+                    _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
@@ -236,7 +236,7 @@ class UserWebsitesController(http.Controller):
                 if request.env.user._is_public():
                     response.headers['Cache-Control'] = 'public, max-age=60'
                     # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
-                    if 'ham.cloudflare.purge.queue' in request.env:
+                    if 'cloudflare.purge.queue' in request.env:
                         response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
                         response.headers['Cache-Tag'] = f"site-{user.website_slug}"
                 return response
@@ -251,7 +251,7 @@ class UserWebsitesController(http.Controller):
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get('test_enable'):
-                    _async_redis_incr(page.id)
+                    _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                     
@@ -267,7 +267,7 @@ class UserWebsitesController(http.Controller):
                 
                 if request.env.user._is_public():
                     response.headers['Cache-Control'] = 'public, max-age=60'
-                    if 'ham.cloudflare.purge.queue' in request.env:
+                    if 'cloudflare.purge.queue' in request.env:
                         response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
                         response.headers['Cache-Tag'] = f"site-{group.website_slug}"
                 return response
@@ -304,7 +304,7 @@ class UserWebsitesController(http.Controller):
 
         # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
         # preventing multiple group members from bypassing the search_count simultaneously.
-        lock_hash = hash(resolved_slug) % 2147483647
+        lock_hash = int(hashlib.sha256(resolved_slug.encode('utf-8')).hexdigest(), 16) % 2147483647
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         # Make sure we don't accidentally create duplicate pages if the user clicks twice
@@ -430,7 +430,7 @@ class UserWebsitesController(http.Controller):
         
         if request.env.user._is_public():
             response.headers['Cache-Control'] = 'public, max-age=60'
-            if 'ham.cloudflare.purge.queue' in request.env:
+            if 'cloudflare.purge.queue' in request.env:
                 response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
                 response.headers['Cache-Tag'] = f"site-{resolved_slug}"
         return response
@@ -464,7 +464,7 @@ class UserWebsitesController(http.Controller):
 
         # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
         # preventing multiple group members from duplicating the initial blog record.
-        lock_hash = hash("blog_" + resolved_slug) % 2147483647
+        lock_hash = int(hashlib.sha256(("blog_" + resolved_slug).encode('utf-8')).hexdigest(), 16) % 2147483647
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         blog = request.env['blog.blog'].with_user(svc_uid).search([

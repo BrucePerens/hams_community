@@ -18,7 +18,7 @@
                     <t t-if="'owner_user_id' in main_object._fields and main_object.owner_user_id">
                          <t t-if="main_object.owner_user_id.website_slug">
                             <t t-set="is_user_content" t-value="True"/>
-                            <t t-if="main_object.owner_user_id == request.env.user">
+                            <t t-if="main_object.owner_user_id.id == uid">
                                 <t t-set="is_owner" t-value="True"/>
                             </t>
                         </t>
@@ -26,7 +26,7 @@
                     
                     <t t-if="not is_user_content and 'user_websites_group_id' in main_object._fields and main_object.user_websites_group_id">
                         <t t-set="is_user_content" t-value="True"/>
-                        <t t-if="request.env.user in main_object.user_websites_group_id.odoo_group_id.user_ids">
+                        <t t-if="uid in main_object.user_websites_group_id.odoo_group_id.user_ids.ids">
                             <t t-set="is_owner" t-value="True"/>
                         </t>
                     </t>
@@ -37,13 +37,13 @@
             <t t-if="not is_user_content">
                 <t t-if="profile_user">
                     <t t-set="is_user_content" t-value="True"/>
-                    <t t-if="profile_user == request.env.user">
+                    <t t-if="profile_user.id == uid">
                         <t t-set="is_owner" t-value="True"/>
                     </t>
                 </t>
                 <t t-elif="profile_group">
                     <t t-set="is_user_content" t-value="True"/>
-                    <t t-if="request.env.user in profile_group.odoo_group_id.user_ids">
+                    <t t-if="uid in profile_group.odoo_group_id.user_ids.ids">
                         <t t-set="is_owner" t-value="True"/>
                     </t>
                 </t>
