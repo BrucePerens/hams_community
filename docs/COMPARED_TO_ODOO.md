@@ -33,21 +33,23 @@ Here is a technical comparison between this codebase and standard Odoo core code
 ## 4. Custom Linter Enforcement (The "Burn List")
 
 * **Odoo S.A. Core:** Uses standard Python linters like `flake8` and `eslint`.
-* **This Codebase:** Employs a custom, highly aggressive Abstract Syntax Tree (AST) linter (`check_burn_list.py`). This linter recursively tracks SQL string manipulation to catch SQL injection before runtime, blocks `time.sleep()` in synchronous web workers, flags missing limits on `.search()` queries, and strictly prohibits the execution of `request.env` inside QWeb architectures to prevent Server-Side Template Injection (SSTI). Flake8 is run, as well.
+* **This Codebase:** Employs a custom, highly aggressive Abstract Syntax Tree (AST) linter (`check_burn_list.py`). This linter recursively tracks SQL string manipulation to catch SQL injection before runtime, blocks `time.sleep()` in synchronous web workers, flags missing limits on `.search()` queries, and strictly prohibits the execution of `request.env` inside QWeb architectures to prevent Server-Side Template Injection (SSTI). `flake8` is run as well.
 
 ## 5. Exhaustive UI Testing Guardrails
 
 * **Odoo S.A. Core:** Views and XML inheritances (`<xpath>`) are tested by verifying if the module installs without crashing the registry.
-* **This Codebase:** Identifies a major architectural trap: an XPath might successfully patch a parent view but fail to render in the browser DOM (ADR-0053). It explicitly mandates that all `<xpath>` injections must be accompanied by automated Python tests that physically execute `get_view()` or HTTP `url_open()` to prove the payload is present in the final compiled QWeb output. A semantic anchor verifier
-will halt the build if tests are not present. However, it can't verify the
-inclusiveness of the tests.
+* **This Codebase:** Identifies a major architectural trap: an XPath might successfully patch a parent view but fail to render in the browser DOM (ADR-0053). It explicitly mandates that all `<xpath>` injections must be accompanied by automated Python tests that physically execute `get_view()` or HTTP `url_open()` to prove the payload is present in the final compiled QWeb output.
 
 ## Summary
 
-The code in this repository represents a "Hardened" Odoo, one
-built from the ground up in 10 days using AI assistance, a capability
-that has not been available to Odoo in the past. While standard Odoo
-code prioritizes flexibility for internal business apps, this codebase
-trades that flexibility for extreme defensive programming, enforcing
-strict DevSecOps boundaries via CI/CD, isolated memory contexts, and
-mathematical proofs.
+The code in this repository represents a "Hardened" Odoo. While standard Odoo code prioritizes flexibility for internal business apps, this codebase trades that flexibility for extreme defensive programming, enforcing strict DevSecOps boundaries via CI/CD, isolated memory contexts, and mathematical proofs.
+
+## Human Note
+
+It's important to note that this rigor cost us nothing: the AI
+has written and maintains the entire code-base and formal framework,
+in response to the human prompts given to it, completing all modules, 10
+additional proprietary modules specialized for ham radio,
+and this framework, all in less than 10 days work by one person. While human
+developers might disdain the rigor of our formal framework, it was absolutely
+necessary to discipline the AI into fitness for use in this development.
