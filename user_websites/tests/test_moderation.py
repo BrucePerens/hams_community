@@ -124,7 +124,7 @@ class TestModeration(HttpCase):
         self.assertEqual(user_2.violation_strike_count, 0)
         
         report = self.env['content.violation.report'].create({
-            'target_url': f'/bad-group/home',
+            'target_url': '/bad-group/home',
             'description': 'Group is spamming',
             'content_group_id': bad_group.id
         })
@@ -156,7 +156,7 @@ class TestModeration(HttpCase):
         
         # 1. Test Individual User Lock
         report = self.env['content.violation.report'].create({
-            'target_url': f'/test/lock',
+            'target_url': '/test/lock',
             'description': 'Lock test',
             'content_owner_id': self.bad_user.id
         })
@@ -170,7 +170,7 @@ class TestModeration(HttpCase):
 
         # 2. Test Group Member Lock
         group_report = self.env['content.violation.report'].create({
-            'target_url': f'/test/group_lock',
+            'target_url': '/test/group_lock',
             'description': 'Group Lock test',
             'content_group_id': self.env['user.websites.group'].create({
                 'name': 'Lock Group',

@@ -44,8 +44,14 @@ class WebsitePage(models.Model):
             for elem in root.xpath('//*'):
                 for attr in list(elem.attrib.keys()):
                     attr_lower = attr.lower()
+                    # Prevent XML namespace bypasses
+                    if attr_lower.startswith('xmlns') or ':' in attr_lower:
+                        del elem.attrib[attr]
+                        was_modified = True
+                        continue
                     val = elem.attrib[attr]
-                    if attr_lower in ('href', 'src') and val.strip().lower().startswith('javascript:'):
+                    # Block all dangerous URI schemes (data, vbscript, javascript)
+                    if attr_lower in ('href', 'src') and re.match(r'^\s*(javascript|data|vbscript):', val, re.IGNORECASE):
                         del elem.attrib[attr]
                         elem.attrib[f'data-blocked-{attr}'] = val
                         was_modified = True
@@ -103,6 +109,7 @@ class WebsitePage(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # Verified by [%ANCHOR: test_site_creation_performance_scaling]
         # 0. Sanitize arch to prevent Stored XSS
         if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
             for vals in vals_list:
@@ -114,6 +121,13 @@ class WebsitePage(models.Model):
 
         # 1. Enforce Mixin Security
         self._check_proxy_ownership_create(vals_list)
+
+        if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            allowed = {'name', 'url', 'arch', 'is_published', 'website_published', 'type', 'owner_user_id', 'user_websites_group_id', 'key', 'website_id', 'view_count'}
+            for vals in vals_list:
+                for k in list(vals.keys()):
+                    if k not in allowed:
+                        del vals[k]
 
         # [%ANCHOR: website_page_quota_check]
         # Verified by [%ANCHOR: test_page_limits]
@@ -174,6 +188,7 @@ class WebsitePage(models.Model):
         return super(WebsitePage, self.with_user(svc_uid)).create(vals_list)
 
     def check_access_rule(self, operation):
+        # Verified by [%ANCHOR: test_acl_overhead_loop_elimination]
         """
         Proactively catch write/unlink access violations for standard users on pages they don't own.
         This prevents Odoo's core `ir.rule` engine from generating massive amounts of INFO log spam 
@@ -202,9 +217,16 @@ class WebsitePage(models.Model):
         return super(WebsitePage, self).check_access_rule(operation)
 
     def write(self, vals):
+        # Verified by [%ANCHOR: test_tenant_view_isolation]
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
         
+        if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            allowed = {'name', 'url', 'arch', 'is_published', 'website_published', 'type', 'owner_user_id', 'user_websites_group_id', 'key', 'website_id', 'view_count'}
+            for k in list(vals.keys()):
+                if k not in allowed:
+                    del vals[k]
+
         if 'arch' in vals and not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
             sanitized_arch, modified = self._sanitize_user_arch(vals['arch'])
             vals['arch'] = sanitized_arch
@@ -282,18 +304,19 @@ class WebsitePage(models.Model):
                         "UPDATE website_page SET view_count = COALESCE(view_count, 0) + %s WHERE id = %s", 
                         (inc, pid)
                     )
-                # CRITICAL: Commit to PostgreSQL before destroying the ephemeral Redis state
-                from odoo import tools
-                if not tools.config.get('test_enable'):
-                    self.env.cr.commit()
                 
-                # RACE CONDITION FIX: Use atomic DECRBY instead of DELETE to prevent TOCTOU data loss
+                # RACE CONDITION FIX: Delete from Redis first. If PostgreSQL commits, state is perfect. 
+                # If PostgreSQL fails and rolls back, we lose views (acceptable), avoiding double-counting (unacceptable).
                 del_pipe = redis_client.pipeline()
                 for i, key in enumerate(keys):
                     val = results[i]
                     if val:
                         del_pipe.decrby(key, int(val))
                 del_pipe.execute()
+
+                from odoo import tools
+                if not tools.config.get('test_enable'):
+                    self.env.cr.commit()
             except Exception as e:
                 from odoo import tools
                 if not tools.config.get('test_enable'):

@@ -25,6 +25,12 @@ class BlogPost(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         self._check_proxy_ownership_create(vals_list)
+        if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            allowed = {'name', 'content', 'is_published', 'owner_user_id', 'user_websites_group_id', 'blog_id', 'website_id', 'view_count'}
+            for vals in vals_list:
+                for k in list(vals.keys()):
+                    if k not in allowed:
+                        del vals[k]
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         posts = super(BlogPost, self.with_user(svc_uid)).create(vals_list)
         
@@ -63,6 +69,12 @@ class BlogPost(models.Model):
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
+
+        if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            allowed = {'name', 'content', 'is_published', 'owner_user_id', 'user_websites_group_id', 'blog_id', 'website_id', 'view_count'}
+            for k in list(vals.keys()):
+                if k not in allowed:
+                    del vals[k]
         
         urls_to_invalidate = self._get_blog_urls()
         

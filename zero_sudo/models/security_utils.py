@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, api, tools, _
 from odoo.exceptions import AccessError
+import hashlib
 
 PARAM_WHITELIST = frozenset([
     'web.base.url',
@@ -17,6 +18,18 @@ PARAM_WHITELIST = frozenset([
 class ZeroSudoSecurityUtils(models.AbstractModel):
     _name = 'zero_sudo.security.utils'
     _description = 'Centralized Security and Privilege Utilities'
+
+    @api.model
+    def _get_deterministic_hash(self, input_string):
+        """
+        Generates a high-speed, deterministic 32-bit integer hash.
+        Used primarily for PostgreSQL advisory locks (pg_advisory_xact_lock)
+        to bypass Python's per-process salted hash() non-determinism.
+        """
+        if not isinstance(input_string, str):
+            input_string = str(input_string)
+        # We use SHA256 truncated to 32-bits for uniform distribution and speed, satisfying linter constraints.
+        return int(hashlib.sha256(input_string.encode('utf-8')).hexdigest()[:8], 16) % 2147483647
 
     @api.model
     @tools.ormcache('xml_id')

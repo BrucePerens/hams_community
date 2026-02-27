@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-from odoo import models, fields, api, _
+from odoo import models, fields, _
 
 class ContentViolationAppeal(models.Model):
     _name = 'content.violation.appeal'

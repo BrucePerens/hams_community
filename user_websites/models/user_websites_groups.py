@@ -177,6 +177,7 @@ class UserWebsitesGroup(models.Model):
     def write(self, vals):
         old_slugs = {}
         # [%ANCHOR: group_slug_cache_invalidation]
+        # Verified by [%ANCHOR: test_group_slug_cache_invalidation]
         if 'website_slug' in vals:
             slugs = [group.website_slug for group in self if group.website_slug]
             if slugs:
@@ -241,6 +242,7 @@ class UserWebsitesGroup(models.Model):
 
     def unlink(self):
         # [%ANCHOR: group_slug_cache_invalidation_unlink]
+        # Verified by [%ANCHOR: test_group_slug_cache_invalidation]
         slugs = [group.website_slug for group in self if group.website_slug]
         if slugs:
             self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', slugs)

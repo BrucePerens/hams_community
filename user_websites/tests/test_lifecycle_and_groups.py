@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import ValidationError
 
 @odoo.tests.common.tagged('post_install', '-at_install')
 class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
@@ -112,7 +112,7 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
             </t>
         </t>'''
 
-        page = self.env['website.page'].create({
+        self.env['website.page'].create({
             'url': f'/{self.test_group.website_slug}/home',
             'name': 'Home',
             'is_published': True,

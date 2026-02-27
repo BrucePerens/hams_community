@@ -22,6 +22,7 @@ class TestPerformanceORM(odoo.tests.common.TransactionCase):
 
     def test_01_site_creation_query_scaling(self):
         # [%ANCHOR: test_site_creation_performance_scaling]
+        # Tests [%ANCHOR: test_site_creation_performance_scaling]
         """
         BDD: Given the Master Wrapper Architecture (ADR-fix)
         When provisioning multiple user sites sequentially
@@ -88,6 +89,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
     def test_02_acl_overhead_loop_elimination(self):
         # [%ANCHOR: test_acl_overhead_loop_elimination]
+        # Tests [%ANCHOR: test_acl_overhead_loop_elimination]
         """
         BDD: Given multiple user websites exist on the platform,
         When a public guest browses the site,
@@ -144,6 +146,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
     def test_03_tenant_view_isolation(self):
         # [%ANCHOR: test_tenant_view_isolation]
+        # Tests [%ANCHOR: test_tenant_view_isolation]
         """
         BDD: Given two users have provisioned their personal sites using the detached architecture,
         When User A modifies the architecture of their site via the website builder,
@@ -175,7 +178,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             })
             
         page_a = self.env['website.page'].search([('owner_user_id', '=', user_a.id)], limit=1)
-        page_b = self.env['website.page'].search([('owner_user_id', '=', user_b.id)], limit=1)
+        self.env['website.page'].search([('owner_user_id', '=', user_b.id)], limit=1)
         
         # User A edits their page (simulating Odoo web editor saving to arch)
         custom_content = "<div>USER_A_EXCLUSIVE_SECRET_DATA</div>"

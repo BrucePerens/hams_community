@@ -54,7 +54,7 @@ echo "⚓ Running Semantic Anchor Traceability Check..."
 python3 "$DIR/tools/verify_anchors.py"
 if [ $? -ne 0 ];
 then
-    echo "🛑 Halting startup due to missing Semantic Anchors. Please restore them."
+    echo "🛑 Halting startup due to Semantic Anchor verification failures. Please review the output above."
 exit 1
 fi
 

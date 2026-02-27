@@ -44,7 +44,7 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
         self.authenticate(self.user_public.login, self.user_public.login)
         
         # User submits an appeal
-        response = self.url_open('/website/submit_appeal', data={
+        self.url_open('/website/submit_appeal', data={
             'csrf_token': odoo.http.Request.csrf_token(self),
             'reason': 'It was a misunderstanding!',
         }, method='POST')

@@ -40,6 +40,34 @@ def main():
     manifest = parse_manifest(manifest_path)
     dependencies = manifest.get('depends', [])
     
+    # Strict Tier Isolation (Topological Enforcement)
+    TIERS = {
+        1: ['base', 'web', 'mail', 'portal', 'website', 'zero_sudo', 'ham_base', 'ham_testing', 'ham_logbook', 'ham_onboarding', 'ham_club_management', 'ham_init', 'user_websites', 'user_websites_seo', 'cloudflare', 'caching', 'compliance', 'manual_library'],
+        2: ['ham_events', 'ham_satellite', 'ham_propagation', 'ham_dns', 'ham_classifieds'],
+        3: ['ham_forum_extension', 'ham_shack', 'theme_hams']
+    }
+    
+    def get_tier(mod_name):
+        for tier, mods in TIERS.items():
+            if mod_name in mods:
+                return tier
+        return 99 # Unknown custom modules are placed at the top tier
+        
+    module_name = os.path.basename(module_path)
+    module_tier = get_tier(module_name)
+    
+    tier_violations = []
+    for dep in dependencies:
+        dep_tier = get_tier(dep)
+        if dep_tier > module_tier and module_tier != 99:
+            tier_violations.append(f"`{dep}` (Tier {dep_tier})")
+            
+    if tier_violations:
+        print(f"\n❌ ARCHITECTURE VIOLATION: `{module_name}` (Tier {module_tier}) cannot depend on higher-tier modules:")
+        for v in tier_violations:
+            print(f"   - {v}")
+        sys.exit(1)
+
     if not dependencies:
         print(f"✅ Module '{os.path.basename(module_path)}' has no external dependencies. Proceeding.")
         sys.exit(0)
@@ -73,8 +101,10 @@ def main():
     # 4. Report Results
     if missing_dependencies:
         print("\n❌ PRE-FLIGHT CHECK FAILED!")
-        print(f"   The following dependencies are missing from the provided addons paths:\n   - " + "\n   - ".join(missing_dependencies))
-        print(f"\n   Searched Paths:\n   - " + "\n   - ".join(addons_paths))
+        missing_formatted = [f"`{dep}`" for dep in missing_dependencies]
+        paths_formatted = [f"`{p}`" for p in addons_paths]
+        print("   The following dependencies are missing from the provided addons paths:\n   - " + "\n   - ".join(missing_formatted))
+        print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
         sys.exit(1)
     else:
         print("✅ All dependencies located successfully. Pre-flight check passed.")

@@ -49,6 +49,8 @@ class TestDocumentation(odoo.tests.common.HttpCase):
         )
 
     def test_02_documentation_route_authenticated(self):
+        # [%ANCHOR: test_documentation_route]
+        # Tests [%ANCHOR: controller_user_websites_documentation]
         """
         Verify that an authenticated user can access the documentation route,
         testing both the redirect (if API is present) and the fallback (if absent/unpublishable).

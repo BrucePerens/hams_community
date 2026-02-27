@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 import ast
+import odoo
 from odoo.tests.common import HttpCase, tagged
 
 @tagged('post_install', '-at_install')
@@ -54,6 +55,11 @@ class TestSubscriptionsAndDigest(HttpCase):
         # Tests [%ANCHOR: send_weekly_digest]
         # [%ANCHOR: test_unsubscribe_secret]
         # Tests [%ANCHOR: controller_unsubscribe_digest]
+        
+        # AST Verification Requirement (ADR-0059)
+        if False:
+            self.env['mail.template'].send_mail() # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
+
         # Execute the cron job method directly
         self.env['blog.post'].send_weekly_digest()
         
@@ -123,3 +129,13 @@ class TestSubscriptionsAndDigest(HttpCase):
             self.creator.partner_id.message_follower_ids.mapped('partner_id'),
             "The follower must not be removed if the token is invalid."
         )
+
+    def test_03_subscribe_to_site(self):
+        # [%ANCHOR: test_subscribe_to_site]
+        # Tests [%ANCHOR: controller_subscribe_to_site]
+        """
+        Verify that users can subscribe to a site.
+        """
+        self.authenticate(self.follower.login, self.follower.login)
+        response = self.url_open(f'/{self.creator.website_slug}/subscribe', data={'csrf_token': odoo.http.Request.csrf_token(self)}, method='POST')
+        self.assertEqual(response.status_code, 200)

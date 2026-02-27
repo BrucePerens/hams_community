@@ -9,48 +9,64 @@ import urllib.parse
 import subprocess
 import shutil
 
-def extract_json_payload(input_text):
+def extract_json_payloads(input_text):
+    # Sanitize common Web UI copy-paste artifacts
+    input_text = input_text.replace('\xa0', ' ')  # Non-breaking spaces to regular spaces
+    input_text = input_text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+    
     pattern = re.compile(r'```(?:json)?\s*(\{.*?\})\s*```', re.DOTALL)
-    match = pattern.search(input_text)
-    if match:
-        return match.group(1)
+    matches = pattern.findall(input_text)
+    if matches:
+        return matches
+        
     start_idx = input_text.find('{')
     if start_idx != -1:
         end_idx = input_text.rfind('}')
         if end_idx != -1 and end_idx > start_idx:
-            return input_text[start_idx:end_idx+1]
+            return [input_text[start_idx:end_idx+1]]
         else:
-            return input_text[start_idx:]
-    return input_text.strip()
+            return [input_text[start_idx:]]
+    return [input_text.strip()]
 
 def parse_json_and_write_files(input_text, base_dir="."):
-    payload_text = extract_json_payload(input_text)
-    try:
-        payload = json.loads(payload_text, strict=False)
-    except json.JSONDecodeError as e:
-        print(f"⚠️ JSON decode failed ({e}). Attempting RegEx/AST recovery...")
-        # 1. Strip illegal trailing commas before closing braces/brackets
-        payload_text_clean = re.sub(r',\s*([\]}])', r'\1', payload_text)
+    payload_texts = extract_json_payloads(input_text)
+    all_files = []
+    version = "legacy"
+    
+    for payload_text in payload_texts:
         try:
-            payload = json.loads(payload_text_clean, strict=False)
-            print("✅ RegEx recovery successful.")
-        except json.JSONDecodeError:
-            print("⚠️ RegEx recovery failed. Falling back to AST literal_eval...")
-            import ast
+            payload = json.loads(payload_text, strict=False)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON decode failed ({e}). Attempting RegEx/AST recovery...")
+            # 1. Strip illegal trailing commas before closing braces/brackets
+            payload_text_clean = re.sub(r',\s*([\]}])', r'\1', payload_text)
             try:
-                # 2. Map JSON primitives to Python primitives for AST parsing
-                ast_text = re.sub(r'\btrue\b', 'True', payload_text_clean)
-                ast_text = re.sub(r'\bfalse\b', 'False', ast_text)
-                ast_text = re.sub(r'\bnull\b', 'None', ast_text)
-                payload = ast.literal_eval(ast_text)
-                print("✅ AST literal_eval recovery successful.")
-            except Exception as ast_e:
-                print(f"❌ AST recovery failed: {ast_e}")
-                print("🚨 The payload is too severely mangled to recover automatically.")
-                sys.exit(1)
+                payload = json.loads(payload_text_clean, strict=False)
+                print("✅ RegEx recovery successful.")
+            except json.JSONDecodeError:
+                print("⚠️ RegEx recovery failed. Falling back to AST literal_eval...")
+                import ast
+                try:
+                    # 2. Map JSON primitives to Python primitives for AST parsing
+                    ast_text = re.sub(r'\btrue\b', 'True', payload_text_clean)
+                    ast_text = re.sub(r'\bfalse\b', 'False', ast_text)
+                    ast_text = re.sub(r'\bnull\b', 'None', ast_text)
+                    payload = ast.literal_eval(ast_text)
+                    print("✅ AST literal_eval recovery successful.")
+                except Exception as ast_e:
+                    print(f"❌ AST recovery failed: {ast_e}")
+                    print("🚨 The payload is too severely mangled to recover. If using a Web UI, check if the LLM output was truncated!")
+                    continue
 
-    version = payload.get("aef_version", "legacy")
-    files = payload.get("files", [])
+        if isinstance(payload, dict):
+            version = payload.get("aef_version", version)
+            all_files.extend(payload.get("files", []))
+            
+    files = all_files
+    if not files:
+        print("❌ No valid files found in the payload.")
+        sys.exit(1)
+        
     print(f"🔍 Found {len(files)} files to process (AEF {version})...")
 
     abs_base_dir = os.path.abspath(base_dir)
@@ -97,8 +113,16 @@ def parse_json_and_write_files(input_text, base_dir="."):
                         replace_text = "".join(replace_raw) if isinstance(replace_raw, list) else replace_raw
 
                     # Anti-Corruption Guard: Check for LLM laziness placeholders in the replacement text
-                    lazy_patterns = [r'\/\/ \.\.\.', r'# \.\.\.', r'\.\.\. rest of', r'\[Code unchanged\]']
-                    if any(re.search(pat, replace_text, re.IGNORECASE) for pat in lazy_patterns):
+                    lazy_patterns = [
+                        r'\/\/ \.\.\.', r'# \.\.\.', r'<\!\-\- \.\.\. \-\->',
+                        r'\.\.\. rest of', r'\[\s*Code unchanged\s*\]',
+                        r'\(\s*rest of method\s*\)', r'\(\s*Code unchanged\s*\)'
+                    ]
+                    
+                    # Linter avoidance strategy: Meta-files that define these rules are exempt from the guard
+                    is_meta_file = filepath.endswith('AGENTS.md') or 'LLM_' in filepath or filepath.endswith('aef_create.py') or filepath.endswith('aef_extract.py')
+
+                    if not filepath.endswith(".md") and not is_meta_file and any(re.search(pat, replace_text, re.IGNORECASE) for pat in lazy_patterns):
                         print(f"❌ Error: LLM hallucinated a truncation placeholder in the replacement block for {filepath}. Aborting file patch to prevent deleting code.")
                         abort_file = True
                         break
@@ -150,7 +174,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
                                             best_ratio = ratio
                                             best_idx = i
                                             best_window = window_size
-                            
+                                            
                             if best_ratio >= 0.85:
                                 print(f"✅ Fuzzy match found with {best_ratio*100:.1f}% similarity.")
                                 search_text = "".join(file_lines[best_idx:best_idx+best_window])
@@ -167,7 +191,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
                         break
                     
                     valid_blocks.append((search_text, replace_text, search_regex))
-                
+                    
                 if abort_file:
                     continue
                     
@@ -225,21 +249,6 @@ def parse_json_and_write_files(input_text, base_dir="."):
                     shutil.copymode(full_path, tmp_path)
                 os.replace(tmp_path, full_path)
                 print(f"✅ Wrote: {filepath}")
-                
-            elif operation == "diff":
-                patch_path = full_path + ".patch"
-                
-                with open(patch_path, 'wb') as f:
-                    f.write(file_bytes)
-                    
-                try:
-                    subprocess.run(["patch", "-p1", "--ignore-whitespace", "--no-backup-if-mismatch", "-i", os.path.abspath(patch_path)], cwd=abs_base_dir, check=True)
-                    print(f"✅ Patched (diff): {filepath}")
-                except Exception as e:
-                    print(f"❌ Error applying diff to {filepath}: {e}. Discarding patch.")
-                finally:
-                    if os.path.exists(patch_path):
-                        os.remove(patch_path)
             else:
                 print(f"❌ Unknown operation '{operation}' for {filepath}")
 

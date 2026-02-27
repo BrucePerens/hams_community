@@ -9,6 +9,8 @@ Odoo S.A.
 Note that our entire process is in this repository and open for Odoo to
 use, should they wish to upgrade their process.
 
+===
+
 Based on the provided repository files, the quality and architectural rigidity of this codebase differ significantly from the standard Open Source Odoo core produced by Odoo S.A.
 
 While Odoo S.A. optimizes for rapid business logic development and standard internal ERP use cases, this custom codebase treats Odoo as a high-traffic, public-facing community platform. As a result, it enforces enterprise-grade security, extreme concurrency safeguards, and strict traceability matrices that go far beyond standard Odoo development practices.
@@ -43,6 +45,8 @@ Here is a technical comparison between this codebase and standard Odoo core code
 ## Summary
 
 The code in this repository represents a "Hardened" Odoo. While standard Odoo code prioritizes flexibility for internal business apps, this codebase trades that flexibility for extreme defensive programming, enforcing strict DevSecOps boundaries via CI/CD, isolated memory contexts, and mathematical proofs.
+
+===
 
 ## Human Note
 

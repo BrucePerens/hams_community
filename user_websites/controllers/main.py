@@ -4,9 +4,11 @@ import json
 import hashlib
 import hmac
 import os
-import time
-import threading
 import traceback
+from concurrent.futures import ThreadPoolExecutor
+
+# Bounded executor to prevent OS thread exhaustion DoS
+BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 import odoo
 import redis
 from odoo import http, _
@@ -37,7 +39,8 @@ def _async_redis_incr(db_name, page_id):
 def _async_gdpr_erasure(db_name, user_id):
     """Deletes user data in the background so the web server doesn't freeze up during large GDPR requests."""
     registry = Registry(db_name)
-    with registry.cursor() as cr:
+    cr = registry.cursor()
+    try:
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
             user = env['res.users'].with_context(active_test=False).browse(user_id)
@@ -69,6 +72,8 @@ def _async_gdpr_erasure(db_name, user_id):
                 env.cr.commit()
             except Exception as inner_e:
                 _logger.critical(f"Failed to notify admin of GDPR erasure failure: {inner_e}")
+    finally:
+        cr.close()
 
 class UserWebsitesController(http.Controller):
 
@@ -304,7 +309,7 @@ class UserWebsitesController(http.Controller):
 
         # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
         # preventing multiple group members from bypassing the search_count simultaneously.
-        lock_hash = hash(resolved_slug) % 2147483647
+        lock_hash = request.env['zero_sudo.security.utils']._get_deterministic_hash(resolved_slug)
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         # Make sure we don't accidentally create duplicate pages if the user clicks twice
@@ -464,7 +469,7 @@ class UserWebsitesController(http.Controller):
 
         # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
         # preventing multiple group members from duplicating the initial blog record.
-        lock_hash = hash("blog_" + resolved_slug) % 2147483647
+        lock_hash = request.env['zero_sudo.security.utils']._get_deterministic_hash("blog_" + resolved_slug)
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         blog = request.env['blog.blog'].with_user(svc_uid).search([
@@ -510,6 +515,7 @@ class UserWebsitesController(http.Controller):
     @http.route('/user-websites/documentation', type='http', auth="user", website=True)
     def user_websites_documentation(self, **kwargs):
         # [%ANCHOR: controller_user_websites_documentation]
+        # Verified by [%ANCHOR: test_documentation_route]
         if 'knowledge.article' in request.env:
             article = install_knowledge_docs(request.env)
             if article and hasattr(article, 'website_url') and article.website_url:
@@ -546,6 +552,7 @@ class UserWebsitesController(http.Controller):
     @http.route('/<string:website_slug>/subscribe', type='http', auth="user", methods=['POST'], website=True)
     def subscribe_to_site(self, website_slug, **kwargs):
         # [%ANCHOR: controller_subscribe_to_site]
+        # Verified by [%ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
@@ -678,8 +685,7 @@ class UserWebsitesController(http.Controller):
                 'active': False
             })
         else:
-            thread = threading.Thread(target=_async_gdpr_erasure, args=(db_name, user_id))
-            thread.start()
+            BACKGROUND_EXECUTOR.submit(_async_gdpr_erasure, db_name, user_id)
             
         request.session.logout()
         return request.redirect('/web/login?erased=1')

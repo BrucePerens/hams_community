@@ -19,6 +19,13 @@ Safely retrieves the database ID of a Service Account without requiring inline `
   self.env['target.model'].with_user(svc_uid).create(vals)
   ```
 
+#### `_get_deterministic_hash(input_string)`
+Generates a high-speed, cryptographically deterministic 32-bit integer hash.
+MUST be used instead of Python's native `hash()` when generating lock IDs for `pg_advisory_xact_lock`, as native hashes are salted uniquely per-process and will fail in horizontally scaled environments.
+* **Arguments:**
+  * `input_string` (str): The unique string to hash (e.g., a slug or URL).
+* **Returns:** `int` (A 32-bit integer safe for Postgres).
+
 #### `_get_system_param(key, default=None)`
 Safely retrieves a system configuration parameter (`ir.config_parameter`). The requested key MUST be hardcoded in the `PARAM_WHITELIST` within `zero_sudo/models/security_utils.py` to prevent Server-Side Template Injection (SSTI).
 * **Arguments:**

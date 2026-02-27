@@ -7,7 +7,7 @@ specific to the user websites functionality.
 import time
 import os
 import odoo
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
@@ -18,10 +18,13 @@ RESERVED_SLUGS = {
     'community', 'blog', 'website', 'contactus', 'aboutus', 'forum', 'shop', 'my', 'web'
 }
 
+BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
+
 def _async_unpublish_content(db_name, user_ids):
     """Unpublishes user content in the background to prevent transaction lock exhaustion."""
     registry = Registry(db_name)
-    with registry.cursor() as cr:
+    cr = registry.cursor()
+    try:
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
             svc_uid = env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
@@ -52,6 +55,8 @@ def _async_unpublish_content(db_name, user_ids):
             env.cr.rollback()
             import logging
             logging.getLogger(__name__).error(f"Background unpublish failed: {e}")
+    finally:
+        cr.close()
 
 class ResUsers(models.Model):
     """
@@ -181,7 +186,7 @@ class ResUsers(models.Model):
             if not user_collision and not group_collision:
                 # TOCTOU FIX: If it looks clear, lock the transaction to prevent a concurrent writer 
                 # from snagging it before we finish returning and inserting.
-                lock_hash = hash(slug) % 2147483647
+                lock_hash = self.env['zero_sudo.security.utils']._get_deterministic_hash(slug)
                 self.env.cr.execute("SELECT pg_try_advisory_xact_lock(%s)", (lock_hash,))
                 lock_acquired = self.env.cr.fetchone()[0]
                 if lock_acquired:
@@ -221,8 +226,7 @@ class ResUsers(models.Model):
             users_to_archive = self.ids
             if not odoo.tools.config.get('test_enable'):
                 db_name = self.env.cr.dbname
-                thread = threading.Thread(target=_async_unpublish_content, args=(db_name, users_to_archive))
-                thread.start()
+                BACKGROUND_EXECUTOR.submit(_async_unpublish_content, db_name, users_to_archive)
             else:
                 svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
                 while True:

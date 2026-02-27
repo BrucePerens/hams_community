@@ -69,9 +69,10 @@ class ContentViolationReport(models.Model):
                 
                 # RACE CONDITION FIX: Row-level lock to prevent 'Lost Update' on concurrent strikes
                 self.env.cr.execute("SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE", (owner.id,))
-                owner.invalidate_recordset(['violation_strike_count'])
                 
-                owner.violation_strike_count += 1
+                # Bypass ORM to ensure atomic increment against the raw DB state
+                self.env.cr.execute("UPDATE res_users SET violation_strike_count = violation_strike_count + 1 WHERE id = %s", (owner.id,))
+                owner.invalidate_recordset(['violation_strike_count'])
                 
                 # Enforce the 3-Strike Rule
                 if owner.violation_strike_count >= 3 and not owner.is_suspended_from_websites:
@@ -87,10 +88,11 @@ class ContentViolationReport(models.Model):
                 if group.member_ids:
                     # RACE CONDITION FIX: Lock all group members to prevent 'Lost Update' on concurrent strikes
                     self.env.cr.execute("SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE", (tuple(group.member_ids.ids),))
+                    
+                    self.env.cr.execute("UPDATE res_users SET violation_strike_count = violation_strike_count + 1 WHERE id IN %s", (tuple(group.member_ids.ids),))
                     group.member_ids.invalidate_recordset(['violation_strike_count'])
                     
                     for member in group.member_ids:
-                        member.violation_strike_count += 1
                         if member.violation_strike_count >= 3 and not member.is_suspended_from_websites:
                             member.action_suspend_user_websites()
                 report.message_post(

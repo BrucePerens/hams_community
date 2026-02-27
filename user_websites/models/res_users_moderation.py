@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-import time
-import os
 import odoo
-import threading
 from odoo import models, fields, api, tools, _
 from .res_users import _async_unpublish_content
 
@@ -41,6 +38,7 @@ class ResUsersModeration(models.Model):
 
     def write(self, vals):
         # [%ANCHOR: slug_cache_invalidation]
+        # Verified by [%ANCHOR: test_slug_cache_invalidation]
         if 'website_slug' in vals or 'active' in vals:
             slugs = [user.website_slug for user in self if user.website_slug]
             if slugs:
@@ -56,6 +54,7 @@ class ResUsersModeration(models.Model):
 
     def unlink(self):
         # [%ANCHOR: slug_cache_invalidation_unlink]
+        # Verified by [%ANCHOR: test_slug_cache_invalidation]
         slugs = [user.website_slug for user in self if user.website_slug]
         if slugs:
             self.env['zero_sudo.security.utils']._notify_cache_invalidation('res.users', slugs)
@@ -67,9 +66,10 @@ class ResUsersModeration(models.Model):
         user_ids = self.ids
         
         if not odoo.tools.config.get('test_enable'):
+            from concurrent.futures import ThreadPoolExecutor
             db_name = self.env.cr.dbname
-            thread = threading.Thread(target=_async_unpublish_content, args=(db_name, user_ids))
-            thread.start()
+            # Fire and forget safely without unbounded thread growth
+            ThreadPoolExecutor(max_workers=2).submit(_async_unpublish_content, db_name, user_ids)
         else:
             svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             while True:

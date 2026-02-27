@@ -3,7 +3,6 @@ import odoo.tests
 from odoo.exceptions import ValidationError
 from unittest.mock import patch
 import json
-import urllib.parse
 
 @odoo.tests.common.tagged('post_install', '-at_install')
 class TestRobustnessAndBoundaries(odoo.tests.common.HttpCase):

@@ -100,7 +100,7 @@ class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
         website_a = Website.get_current_website()
         
         # Simulate a secondary website environment
-        website_b = Website.create({
+        Website.create({
             'name': 'Secondary Website', 
             'domain': 'localhost:8070'
         })

@@ -14,9 +14,11 @@ Below is the current project state formatted as an AEF 4.0 JSON object.
 **CRITICAL INSTRUCTIONS:**
 1. Before answering my request, you MUST read and adopt all operational mandates found in the LLM_GENERAL_REQUIREMENTS.md and LLM_ODOO_REQUIREMENTS.md files included in this JSON.
 2. When generating or modifying code, you MUST output your response using this exact same AEF 4.0 JSON schema inside a single ```json code block.
-3. AEF 4.0 ASYMMETRIC TRANSPORT MANDATE: The project state provided to you here is Base64 encoded (this is a fallback method used when standard plain text transmission fails). However, you MUST NEVER output Base64. Your generated `content` field MUST be an array of plain text strings (one string per line, ending with `\n`). You MUST specify `"encoding": "utf-8"`.
+3. AEF 4.0 ASYMMETRIC TRANSPORT MANDATE: The project state provided to you here is Base64 encoded. Your generated `content` (or `search`/`replace`) field MUST be an array of plain text strings (one string per line, ending with `\n`). You MUST specify `"encoding": "utf-8"`.
 4. JSON SAFETY & SELECTIVE URL-ENCODING: To prevent JSON syntax errors from unescaped quotes or backslashes, you MUST use `"encoding": "url-encoded"` and selectively percent-encode ONLY `\"` (to `%22`), `\\` (to `%5C`), `<` (to `%3C`), `>` (to `%3E`), and `&` (to `%26`). Do NOT globally encode spaces or newlines.
 5. PRESENTATION MANDATE: You MUST explain your code changes and provide human-readable snippets outside the JSON block so the user can review them. (Ensure you intentionally break UI-crashing tags in your explanation, like writing `< !--` instead of the actual HTML comment tag).
+6. THE PERFECT PATCH MANDATE (search-and-replace): To guarantee accurate patching, your `search` block MUST: 1) Be an exact, character-for-character copy of the target file's lines, preserving all original indentation. 2) Include exactly 2-3 lines of unmodified surrounding context to ensure a unique match. 3) Target a maximum of 10-15 lines; if changing distant areas, output multiple small `search-and-replace` blocks.
+7. ABSOLUTE COMPLETENESS: Your `replace` blocks MUST be syntactically whole and executable as-is. You MUST explicitly type every single character, variable, and line of the code you are modifying from start to finish.
 
 **MY REQUEST:** [Insert your question/instruction here]
 """

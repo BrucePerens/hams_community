@@ -52,7 +52,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         Ensure submitting a violation report correctly maps the content_owner_id
         if the URL matches a private page.
         """
-        page = self.env['website.page'].create({
+        self.env['website.page'].create({
             'url': f'/{self.user_public.website_slug}/home',
             'name': 'Home',
             'type': 'qweb',
@@ -64,7 +64,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         
         # Submit the form data directly to the controller
         self.authenticate(None, None)
-        response = self.url_open('/website/report_violation', data={
+        self.url_open('/website/report_violation', data={
             'csrf_token': odoo.http.Request.csrf_token(self),
             'url': target_url,
             'description': 'Test Violation',

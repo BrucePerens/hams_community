@@ -28,11 +28,15 @@ ERROR_RULES = [
 
 WARNING_RULES = [
     (r'\.xml$', re.compile(r'<record.*?model=["\']ir\.cron["\']'), "[AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger() to prevent transaction timeouts."),
-    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <" + "!-- audit-ignore-xpath: Tested by [%ANCHOR: ...] --" + "> to bypass.")
+    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use an audit-ignore-xpath anchor bypass.")
 ]
 
 MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
+
+# ADR-0059: Deep AST Test Verification
+REQUIRE_TEST_VERIFICATION = []
+FOUND_TEST_CONTENTS = {}
 
 def check_ast_vulnerabilities(filepath, content, lines):
     errors = []
@@ -114,6 +118,18 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 if isinstance(node.func, ast.Name) and node.func.id == '_':
                     return False
             return False
+
+        def visit_With(self, node):
+            is_cursor = False
+            for item in node.items:
+                if isinstance(item.context_expr, ast.Call):
+                    if isinstance(item.context_expr.func, ast.Attribute) and item.context_expr.func.attr == 'cursor':
+                        is_cursor = True
+            if is_cursor:
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and child.func.attr in ('commit', 'rollback'):
+                        self.add_error(child.lineno, "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block. It breaks the psycopg2 state. Use `cr = registry.cursor()` with try/finally instead.")
+            self.generic_visit(node)
 
         def visit_Dict(self, node):
             keys_found = set()
@@ -279,7 +295,9 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
         def visit_Call(self, node):
             if isinstance(node.func, ast.Name):
-                if node.func.id == 'eval':
+                if node.func.id == 'hash':
+                    self.add_error(node.lineno, "CRITICAL NON-DETERMINISM: Python's native `hash()` is salted per-process and MUST NOT be used for database locks or distributed systems. Use `env['zero_sudo.security.utils']._get_deterministic_hash()` instead.")
+                elif node.func.id == 'eval':
                     self.add_error(node.lineno, "CRITICAL RCE: Never use native eval(). Use ast.literal_eval() for data structures or odoo.tools.safe_eval() for domains/contexts.")
                 elif node.func.id == 'exec':
                     self.add_error(node.lineno, "CRITICAL RCE: The use of exec() is strictly forbidden.")
@@ -352,7 +370,10 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == 'time':
                         line_content = self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""
                         if 'audit-ignore-sleep' not in line_content:
-                            self.add_warning(node.lineno, "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker. Ensure this is inside a background thread/daemon for rate-limiting, NOT a synchronous web request. Use '# audit-ignore-sleep' to bypass if verified.")
+                            self.add_warning(node.lineno, "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker. Ensure this is inside a background thread/daemon for rate-limiting, NOT a synchronous web request. Use an audit-ignore-sleep bypass if verified.")
+                elif attr == 'Thread':
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == 'threading':
+                        self.add_error(node.lineno, "CRITICAL DOS VECTOR: Do not spawn unbounded `threading.Thread` instances. Use a bounded `ThreadPoolExecutor` or message queue.")
                 
                 if attr == 'get' and self.in_http_controller:
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == self.current_kwarg_name:
@@ -371,7 +392,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             
             if attr in ('search', 'search_count'):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == 're':
-                    pass # Explicitly ignore re.search
+                    pass 
                 else:
                     if attr == 'search':
                         has_limit = any(kw.arg == 'limit' for kw in node.keywords)
@@ -435,20 +456,30 @@ def scan_file(filepath):
             if regex.search(content):
                 warnings_found.append(f"Global Match: {warning_msg}")
 
+    if filename.startswith('test_') and filename.endswith('.py'):
+        FOUND_TEST_CONTENTS[filepath] = content
+
     if filename.endswith('.py'):
         ast_errors, ast_warnings = check_ast_vulnerabilities(filepath, content, lines)
         for lineno, msg in ast_errors:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            errors_found.append(f"Line {lineno} (AST): {msg} {stripped}")
+            errors_found.append(f"Line {lineno} (AST): {msg}\n      Code: `{stripped}`")
         for lineno, msg in ast_warnings:
             stripped = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            warnings_found.append(f"Line {lineno} (AST): {msg} {stripped}")
+            warnings_found.append(f"Line {lineno} (AST): {msg}\n      Code: `{stripped}`")
 
     current_xml_model = None
     current_xml_view_type = None
     skip_next_line = False
     in_py_multiline = False
     py_multiline_marker = None
+    in_view_block = False
+    view_has_tour_anchor = False
+    view_start_line = 0
+
+    if filename.endswith('.js'):
+        if 'web_tour.tours' in content and 'trigger:' not in content:
+            errors_found.append("UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain at least one 'trigger:' step to validate DOM elements.")
 
     for line_num, line in enumerate(lines, 1):
         stripped = line.strip()
@@ -484,27 +515,64 @@ def scan_file(filepath):
 
         if 'burn-ignore' in line:
             if not ('database.secret' in line or '.sudo().unlink()' in line):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.  {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. '# burn-ignore' was used on an unauthorized line.\n      Code: `{stripped}`")
             continue
 
         if 'audit-ignore' in line:
-            valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath', 'audit-ignore-sleep']
+            valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath', 'audit-ignore-sleep', 'audit-ignore-view']
             if not any(tag in line for tag in valid_audits):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used. {stripped}")
+                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS. Invalid audit-ignore tag used.\n      Code: `{stripped}`")
+            else:
+                anchor_match = re.search(r'\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]', line)
+                if anchor_match:
+                    ignore_type = next((tag for tag in valid_audits if tag in line), None)
+                    REQUIRE_TEST_VERIFICATION.append({
+                        'anchor': anchor_match.group(1),
+                        'type': ignore_type,
+                        'file': filepath,
+                        'line': line_num
+                    })
+
+        if 'burn-ignore-sudo' in line:
+            anchor_match = re.search(r'\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]', line)
+            if anchor_match:
+                REQUIRE_TEST_VERIFICATION.append({
+                    'anchor': anchor_match.group(1),
+                    'type': 'burn-ignore-sudo',
+                    'file': filepath,
+                    'line': line_num
+                })
 
         if filename.endswith('.xml'):
             model_match = re.search(r'<record.*?model=["\']([^">]+)["\']', line)
             if model_match:
                 current_xml_model = model_match.group(1)
+                if current_xml_model == 'ir.ui.view':
+                    in_view_block = True
+                    view_has_tour_anchor = False
+                    view_start_line = line_num
             elif '<search' in line:
                 current_xml_view_type = 'search'
             elif '<form' in line:
                 current_xml_view_type = 'form'
             elif '<list' in line:
                 current_xml_view_type = 'list'
-            elif '</record>' in line:
-                current_xml_model = None
-                current_xml_view_type = None
+            elif re.search(r'<template\b', line):
+                in_view_block = True
+                view_has_tour_anchor = False
+                view_start_line = line_num
+                
+            if in_view_block:
+                if 'Verified by [%ANCHOR:' in line or 'Tested by [%ANCHOR:' in line or 'audit-ignore-view' in line:
+                    view_has_tour_anchor = True
+                    
+            if '</record>' in line or '</template>' in line:
+                if in_view_block and not view_has_tour_anchor:
+                    errors_found.append(f"Line {view_start_line}: UI TOUR MANDATE VIOLATION: Every template and ir.ui.view MUST be tested by a frontend UI Tour. Add an anchor or use audit-ignore-view to bypass.")
+                in_view_block = False
+                if '</record>' in line:
+                    current_xml_model = None
+                    current_xml_view_type = None
 
         for ext_pattern, regex, error_msg in ERROR_RULES:
             if re.search(ext_pattern, filename):
@@ -524,7 +592,7 @@ def scan_file(filepath):
                                 break
                     if exempted:
                         continue
-                    errors_found.append(f"Line {line_num}: {error_msg} {stripped}")
+                    errors_found.append(f"Line {line_num}: {error_msg}\n      Code: `{stripped}`")
                     
         for ext_pattern, regex, warning_msg in WARNING_RULES:
             if re.search(ext_pattern, filename):
@@ -546,7 +614,7 @@ def scan_file(filepath):
                                 break
                     if exempted:
                         continue
-                    warnings_found.append(f"Line {line_num}: {warning_msg} {stripped}")
+                    warnings_found.append(f"Line {line_num}: {warning_msg}\n      Code: `{stripped}`")
                     
     return errors_found, warnings_found
 
@@ -568,7 +636,7 @@ def main():
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('__pycache__', 'node_modules', 'tools', 'daemons', 'venv', 'env', 'hams_local_relay')]
         
         for file in files:
-            if file == this_script_name:
+            if file == this_script_name or file == 'LLM_LINTER_GUIDE.md':
                 continue
             
             if file.endswith('.py') or file.endswith('.xml') or file.endswith('.js'):
@@ -580,6 +648,7 @@ def main():
                 if errors or warnings:
                     rel_path = os.path.relpath(filepath, target_dir)
                     print(f" 📄 {rel_path}")
+                
                     if warnings:
                         total_warnings += len(warnings)
                         for warn in warnings:
@@ -590,7 +659,115 @@ def main():
                         for err in errors:
                             print(f"  ❌ ERROR: {err}")
 
-    print(f"Scan Complete: Checked {scanned_files} files.")
+    # Phase 2: Test Verification for Bypasses (ADR-0058/0059)
+    verification_errors = 0
+    print("\nExecuting Phase 2: Test Verification for Bypasses (ADR-0058/0059)...")
+    for req in REQUIRE_TEST_VERIFICATION:
+        anchor = req['anchor']
+        b_type = req['type']
+        
+        target_content = None
+        target_file = None
+        for t_file, t_content in FOUND_TEST_CONTENTS.items():
+            if f"[%ANCHOR: {anchor}]" in t_content:
+                target_content = t_content
+                target_file = t_file
+                break
+                
+        if not target_content:
+            print(f"  ❌ ERROR: Orphaned Bypass. {b_type} in {req['file']}:{req['line']} cites anchor '{anchor}', but this anchor was not found in any test file.")
+            verification_errors += 1
+            total_errors += 1
+            continue
+            
+        if target_file.endswith('.js'):
+            is_valid = False
+            missing_msg = ""
+            if b_type == 'audit-ignore-xpath':
+                if 'get_view' in target_content or 'url_open' in target_content or '_get_combined_arch' in target_content or 'trigger:' in target_content:
+                    is_valid = True
+                else:
+                    missing_msg = "Must contain 'trigger:' to verify UI rendering in JS."
+            else:
+                is_valid = True
+            
+            if not is_valid:
+                print(f"  ❌ ERROR: Invalid JS Test Implementation. {missing_msg}")
+                verification_errors += 1
+                total_errors += 1
+            continue
+
+        try:
+            tree = ast.parse(target_content, filename=target_file)
+        except SyntaxError as e:
+            print(f"  ❌ ERROR: Syntax error in test file {target_file}: {e}")
+            verification_errors += 1
+            total_errors += 1
+            continue
+
+        anchor_line = -1
+        for i, t_line in enumerate(target_content.splitlines(), 1):
+            if f"[%ANCHOR: {anchor}]" in t_line:
+                anchor_line = i
+                break
+                
+        target_func = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                if getattr(node, 'lineno', 0) <= anchor_line <= getattr(node, 'end_lineno', float('inf')):
+                    target_func = node
+                    break
+                    
+        if not target_func:
+            print(f"  ❌ ERROR: Test Anchor '{anchor}' is not inside an AST FunctionDef in {target_file}.")
+            verification_errors += 1
+            total_errors += 1
+            continue
+
+        found_query_count = False
+        found_view = False
+        found_trigger = False
+        found_mail = False
+        
+        for node in ast.walk(target_func):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                if node.func.attr in ('assertQueryCount', 'assertLess', 'assertLessEqual'): found_query_count = True
+                if node.func.attr in ('get_view', 'url_open', '_get_combined_arch'): found_view = True
+                if node.func.attr == '_trigger': found_trigger = True
+                if node.func.attr in ('send_mail', 'message_post'): found_mail = True
+            if isinstance(node, ast.With):
+                for item in node.items:
+                    if isinstance(item.context_expr, ast.Call) and isinstance(item.context_expr.func, ast.Attribute):
+                        if item.context_expr.func.attr == 'assertQueryCount':
+                            found_query_count = True
+
+        is_valid = False
+        missing_msg = ""
+        if b_type in ('audit-ignore-xpath', 'audit-ignore-view'):
+            if found_view: is_valid = True
+            else: missing_msg = "AST requires 'get_view', 'url_open', or '_get_combined_arch' call inside the test function."
+        elif b_type == 'audit-ignore-search':
+            has_limit = any(isinstance(k, ast.keyword) and k.arg == 'limit' for n in ast.walk(target_func) if isinstance(n, ast.Call) for k in n.keywords)
+            if found_query_count or has_limit: is_valid = True
+            else: missing_msg = "AST requires 'assertQueryCount' context manager or 'limit=' kwarg inside the test function."
+        elif b_type == 'audit-ignore-cron':
+            if found_trigger: is_valid = True
+            else: missing_msg = "AST requires '_trigger()' call inside the test function for batching."
+        elif b_type == 'audit-ignore-mail':
+            if found_mail: is_valid = True
+            else: missing_msg = "AST requires 'send_mail' or 'message_post' inside the test function."
+        else:
+            is_valid = True
+
+        if not is_valid:
+            print(f"  ❌ ERROR: Invalid Test Implementation (AST). {b_type} in {req['file']}:{req['line']} cites anchor '{anchor}'. The test fails mechanical AST verification: {missing_msg}")
+            verification_errors += 1
+            total_errors += 1
+
+    if verification_errors == 0 and len(REQUIRE_TEST_VERIFICATION) > 0:
+        print(f"✅ Verified {len(REQUIRE_TEST_VERIFICATION)} bypass anchors successfully.")
+
+    print(f"\nScan Complete: Checked {scanned_files} files.")
     print(f"Total Errors: {total_errors} | Total Warnings (Audits): {total_warnings}")
     
     if total_errors > 0:

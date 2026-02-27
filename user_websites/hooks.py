@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from odoo import api, SUPERUSER_ID
 from odoo.tools import file_open
 
 def install_knowledge_docs(env):
