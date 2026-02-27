@@ -21,4 +21,4 @@ To ensure your module's assets are cached, you must strictly follow these rules:
 ---
 
 ## 🔗 Semantic Anchors
-* `xpath_rendering_caching_layout` / `test_xpath_rendering_caching_layout`: Injecting and verifying the Service Worker registration script.
+* `[%ANCHOR: xpath_rendering_caching_layout]` / `[%ANCHOR: test_xpath_rendering_caching_layout]`: Injecting and verifying the Service Worker registration script.

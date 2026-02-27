@@ -61,11 +61,11 @@ queue_env.with_user(svc_uid).enqueue_urls(['/my-custom-url'])
 ---
 
 ## 4. 🔗 Semantic Anchors
-* `cf_execute_ban` / `test_cf_execute_ban`: WAF IP Ban execution.
-* `cf_action_lift_ban` / `test_cf_action_lift_ban`: Lifting WAF IP Bans.
-* `cf_tunnel_setup`: Generating Tunnel Commands.
-* `enqueue_urls_base_url` / `test_purge_queue_base_url_sudo`: URL queueing validation.
-* `ir_cron_process_cf_purge_queue` / `test_queue_batching_and_rate_limiting`: Queue batching limits.
-* `xpath_rendering_cf_settings` / `test_xpath_rendering_settings`: UI Configuration settings rendering.
-* `cf_ip_ban_ui` / `test_tour_cf_ip_ban`: IP Ban User Interface tour.
-* `cf_waf_rule_ui` / `test_tour_cf_waf_rule`: WAF Rule User Interface tour.
+* `[%ANCHOR: cf_execute_ban]` / `[%ANCHOR: test_cf_execute_ban]`: WAF IP Ban execution.
+* `[%ANCHOR: cf_action_lift_ban]` / `[%ANCHOR: test_cf_action_lift_ban]`: Lifting WAF IP Bans.
+* `[%ANCHOR: cf_tunnel_setup]`: Generating Tunnel Commands.
+* `[%ANCHOR: enqueue_urls_base_url]` / `[%ANCHOR: test_purge_queue_base_url_sudo]`: URL queueing validation.
+* `[%ANCHOR: ir_cron_process_cf_purge_queue]` / `[%ANCHOR: test_queue_batching_and_rate_limiting]`: Queue batching limits.
+* `[%ANCHOR: xpath_rendering_cf_settings]` / `[%ANCHOR: test_xpath_rendering_settings]`: UI Configuration settings rendering.
+* `[%ANCHOR: cf_ip_ban_ui]` / `[%ANCHOR: test_tour_cf_ip_ban]`: IP Ban User Interface tour.
+* `[%ANCHOR: cf_waf_rule_ui]` / `[%ANCHOR: test_tour_cf_waf_rule]`: WAF Rule User Interface tour.

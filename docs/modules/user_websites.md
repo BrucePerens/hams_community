@@ -53,12 +53,12 @@ The `user_websites` module enables decentralized content creation. It employs th
 ---
 
 ## 5. 🔗 Semantic Anchors
-* **Controllers & Routes:** `controller_community_directory`, `controller_submit_violation_report`, `controller_user_websites_home`, `controller_create_site`, `controller_user_blog_index`, `controller_create_blog_post`, `controller_user_websites_documentation`, `controller_submit_appeal`, `controller_subscribe_to_site`, `controller_unsubscribe_digest`, `controller_my_privacy_dashboard`, `controller_export_user_data`, `controller_delete_user_content`.
-* **Security & Ownership:** `mixin_proxy_ownership_create`, `mixin_proxy_ownership_write`, `test_mixin_ownership_validation`.
-* **Moderation:** `action_take_action_and_strike`, `test_moderation_suspension`.
-* **Privacy & GDPR:** `res_users_gdpr_export`, `test_gdpr_export_hook`, `gdpr_sudo_erasure`, `test_gdpr_erasure_pages`, `test_gdpr_erasure_posts`.
-* **Cache Invalidation:** `slug_cache_invalidation`, `slug_cache_invalidation_unlink`, `group_slug_cache_invalidation`, `group_slug_cache_invalidation_unlink`.
-* **Crons:** `ir_cron_send_weekly_digest`, `test_cron_batching_resumption`, `send_weekly_digest`, `test_weekly_digest_secret`, `test_weekly_digest_mail_template`, `ir_cron_flush_view_counters`, `test_cron_redis_flush`.
-* **Views & XPath:** `xpath_rendering_settings`, `xpath_rendering_users`, `xpath_rendering_blog_post`, `xpath_rendering_snippets`, `xpath_rendering_templates`, `xpath_rendering_layout`, `xpath_rendering_navbar` (and corresponding tests).
-* **UI Logic:** `violation_report_logic`, `toast_notifications_logic`, `test_tour_violation_report`, `test_tour_toast_notifications`.
-* **Other:** `utils_slugify`, `website_page_quota_check`, `simulation_environment`, `test_site_creation_performance_scaling`, `test_acl_overhead_loop_elimination`, `test_tenant_view_isolation`.
+* **Controllers & Routes:** `[%ANCHOR: controller_community_directory]`, `[%ANCHOR: controller_submit_violation_report]`, `[%ANCHOR: controller_user_websites_home]`, `[%ANCHOR: controller_create_site]`, `[%ANCHOR: controller_user_blog_index]`, `[%ANCHOR: controller_create_blog_post]`, `[%ANCHOR: controller_user_websites_documentation]`, `[%ANCHOR: controller_submit_appeal]`, `[%ANCHOR: controller_subscribe_to_site]`, `[%ANCHOR: controller_unsubscribe_digest]`, `[%ANCHOR: controller_my_privacy_dashboard]`, `[%ANCHOR: controller_export_user_data]`, `[%ANCHOR: controller_delete_user_content]`.
+* **Security & Ownership:** `[%ANCHOR: mixin_proxy_ownership_create]`, `[%ANCHOR: mixin_proxy_ownership_write]`, `[%ANCHOR: test_mixin_ownership_validation]`.
+* **Moderation:** `[%ANCHOR: action_take_action_and_strike]`, `[%ANCHOR: test_moderation_suspension]`.
+* **Privacy & GDPR:** `[%ANCHOR: res_users_gdpr_export]`, `[%ANCHOR: test_gdpr_export_hook]`, `[%ANCHOR: gdpr_sudo_erasure]`, `[%ANCHOR: test_gdpr_erasure_pages]`, `[%ANCHOR: test_gdpr_erasure_posts]`.
+* **Cache Invalidation:** `[%ANCHOR: slug_cache_invalidation]`, `[%ANCHOR: slug_cache_invalidation_unlink]`, `[%ANCHOR: group_slug_cache_invalidation]`, `[%ANCHOR: group_slug_cache_invalidation_unlink]`.
+* **Crons:** `[%ANCHOR: ir_cron_send_weekly_digest]`, `[%ANCHOR: test_cron_batching_resumption]`, `[%ANCHOR: send_weekly_digest]`, `[%ANCHOR: test_weekly_digest_secret]`, `[%ANCHOR: test_weekly_digest_mail_template]`, `[%ANCHOR: ir_cron_flush_view_counters]`, `[%ANCHOR: test_cron_redis_flush]`.
+* **Views & XPath:** `[%ANCHOR: xpath_rendering_settings]`, `[%ANCHOR: xpath_rendering_users]`, `[%ANCHOR: xpath_rendering_blog_post]`, `[%ANCHOR: xpath_rendering_snippets]`, `[%ANCHOR: xpath_rendering_templates]`, `[%ANCHOR: xpath_rendering_layout]`, `[%ANCHOR: xpath_rendering_navbar]` (and corresponding tests).
+* **UI Logic:** `[%ANCHOR: violation_report_logic]`, `[%ANCHOR: toast_notifications_logic]`, `[%ANCHOR: test_tour_violation_report]`, `[%ANCHOR: test_tour_toast_notifications]`.
+* **Other:** `[%ANCHOR: utils_slugify]`, `[%ANCHOR: website_page_quota_check]`, `[%ANCHOR: simulation_environment]`, `[%ANCHOR: test_site_creation_performance_scaling]`, `[%ANCHOR: test_acl_overhead_loop_elimination]`, `[%ANCHOR: test_tenant_view_isolation]`.

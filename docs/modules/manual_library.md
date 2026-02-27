@@ -71,8 +71,8 @@ def post_init_hook(env):
 ---
 
 ## 4. 🔗 Semantic Anchors
-* `manual_check_hierarchy` / `test_manual_check_hierarchy`: Recursive article protection.
-* `manual_compute_website_url` / `test_manual_url_slug_generation`: URL generation logic.
-* `controller_manual_search` / `test_tour_manual_search`: Search capabilities.
-* `controller_manual_feedback` / `test_tour_manual_feedback`: Article rating logic.
-* `manual_toc_logic` / `test_tour_manual_toc`: Auto-generating table of contents.
+* `[%ANCHOR: manual_check_hierarchy]` / `[%ANCHOR: test_manual_check_hierarchy]`: Recursive article protection.
+* `[%ANCHOR: manual_compute_website_url]` / `[%ANCHOR: test_manual_url_slug_generation]`: URL generation logic.
+* `[%ANCHOR: controller_manual_search]` / `[%ANCHOR: test_tour_manual_search]`: Search capabilities.
+* `[%ANCHOR: controller_manual_feedback]` / `[%ANCHOR: test_tour_manual_feedback]`: Article rating logic.
+* `[%ANCHOR: manual_toc_logic]` / `[%ANCHOR: test_tour_manual_toc]`: Auto-generating table of contents.

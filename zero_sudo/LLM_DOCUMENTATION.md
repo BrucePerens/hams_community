@@ -40,5 +40,5 @@ If you need to fetch a configuration parameter securely:
 ---
 
 ## 3. 🔗 Semantic Anchors
-* `get_service_uid` / `test_get_service_uid`: Service account resolution and cache.
-* `coherent_cache_signal` / `test_coherent_cache_signal`: Global Postgres NOTIFY bus trigger.
+* `[%ANCHOR: get_service_uid]` / `[%ANCHOR: test_get_service_uid]`: Service account resolution and cache.
+* `[%ANCHOR: coherent_cache_signal]` / `[%ANCHOR: test_coherent_cache_signal]`: Global Postgres NOTIFY bus trigger.
