@@ -58,3 +58,37 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
     },
 });
 
+publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
+    selector: '#wrapwrap',
+    
+    start: function () {
+        this._super.apply(this, arguments);
+        if (sessionStorage.getItem('admin_violation_toast_shown') !== 'true') {
+            this._checkPendingReports();
+        }
+    },
+
+    // [%ANCHOR: admin_toast_logic]
+    // Verified by [%ANCHOR: test_tour_admin_toast]
+    _checkPendingReports: function () {
+        var self = this;
+        fetch('/api/v1/user_websites/pending_reports')
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.count > 0) {
+                    self.call("notification", "add", "There are " + data.count + " pending violation reports requiring review.", {
+                        title: "Pending Moderation",
+                        type: "warning",
+                        sticky: true,
+                    });
+                    sessionStorage.setItem('admin_violation_toast_shown', 'true');
+                }
+            }).catch(error => {
+                // Silently ignore network errors to prevent UI disruption
+            });
+    }
+});
+

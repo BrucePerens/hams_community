@@ -222,3 +222,36 @@ class TestControllers(odoo.tests.common.HttpCase):
             
             response_blog = self.url_open(f'/{self.user_public.website_slug}/blog')
             self.assertEqual(response_blog.status_code, 200, "Public access should never fail with an ACL error on published blogs.")
+
+    def test_09_admin_violation_toast_rpc(self):
+        # [%ANCHOR: test_admin_violation_toast_rpc]
+        # Tests [%ANCHOR: api_pending_reports]
+        """
+        Verify the GET endpoint returns correct pending counts for admins and 0 for guests/users.
+        """
+        self.env['content.violation.report'].create({
+            'target_url': '/toast-test',
+            'description': 'Toast',
+        })
+        
+        # 1. Guest
+        self.authenticate(None, None)
+        res = self.url_open('/api/v1/user_websites/pending_reports')
+        self.assertEqual(res.status_code, 200)
+        import json
+        data = json.loads(res.content)
+        self.assertEqual(data['count'], 0, "Guests MUST receive 0 to prevent information disclosure.")
+        
+        # 2. Standard User
+        self.authenticate(self.user_private.login, self.user_private.login)
+        res2 = self.url_open('/api/v1/user_websites/pending_reports')
+        data2 = json.loads(res2.content)
+        self.assertEqual(data2['count'], 0, "Standard users MUST receive 0 to prevent information disclosure.")
+        
+        # 3. Admin
+        admin = self.env.ref('base.user_admin')
+        admin.write({'group_ids': [(4, self.env.ref('user_websites.group_user_websites_administrator').id)]})
+        self.authenticate('admin', 'admin')
+        res3 = self.url_open('/api/v1/user_websites/pending_reports')
+        data3 = json.loads(res3.content)
+        self.assertGreater(data3['count'], 0, "Admins MUST receive the true pending count.")

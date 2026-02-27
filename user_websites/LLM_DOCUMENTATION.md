@@ -28,7 +28,7 @@ The `user_websites` module enables decentralized content creation. It employs th
 * **`view_count`**: Privacy-friendly server-side view tracker.
 
 ### Moderation Models
-* **`content.violation.report`**: Stores abuse reports. Originator is masked from the target owner.
+* **`content.violation.report`**: Stores abuse reports. Originator is masked from the target owner. The system automatically generates a report and issues a strike if a user attempts to inject malicious SSTI/XSS payloads into their site architecture. Admin spam is prevented via a daily digest cron (`ir_cron_notify_pending_reports`) and a session-guarded UI toast.
 * **`content.violation.appeal`**: Used by suspended users to petition for account restoration.
 
 ---
@@ -38,6 +38,9 @@ The `user_websites` module enables decentralized content creation. It employs th
 ### Frontend Widget Extensibility (The Dropzone)
 * **Context Provider:** The module dynamically injects `<meta name="user_websites_slug" content="...">` into the layout `<head>`. Vanilla JS widgets MUST query this meta tag to discover the current page owner's slug statelessly, rather than parsing the URL.
 * **Snippet Dropzone:** The module provides a `user_websites_snippet_category` template with an empty `user_websites_snippets_body` div. Dependent modules MUST use `xpath` to inject their custom profile widgets (e.g., stats, recent logs) into this dropzone to maintain strict Open Source Isolation.
+
+### Endpoints & Webhooks
+* **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.
 
 ### Programmatic Setup & Hooks
 * **`res.users._get_user_id_by_slug(slug)`**: A high-performance `@tools.ormcache` method. ALWAYS use this instead of `search()` in frontend controllers.
@@ -56,12 +59,12 @@ The `user_websites` module enables decentralized content creation. It employs th
 ---
 
 ## 5. 🔗 Semantic Anchors
-* **Controllers & Routes:** `[%ANCHOR: controller_community_directory]`, `[%ANCHOR: controller_submit_violation_report]`, `[%ANCHOR: controller_user_websites_home]`, `[%ANCHOR: controller_create_site]`, `[%ANCHOR: controller_user_blog_index]`, `[%ANCHOR: controller_create_blog_post]`, `[%ANCHOR: controller_user_websites_documentation]`, `[%ANCHOR: controller_submit_appeal]`, `[%ANCHOR: controller_subscribe_to_site]`, `[%ANCHOR: controller_unsubscribe_digest]`, `[%ANCHOR: controller_my_privacy_dashboard]`, `[%ANCHOR: controller_export_user_data]`, `[%ANCHOR: controller_delete_user_content]`.
+* **Controllers & Routes:** `[%ANCHOR: controller_community_directory]`, `[%ANCHOR: controller_submit_violation_report]`, `[%ANCHOR: controller_user_websites_home]`, `[%ANCHOR: controller_create_site]`, `[%ANCHOR: controller_user_blog_index]`, `[%ANCHOR: controller_create_blog_post]`, `[%ANCHOR: controller_user_websites_documentation]`, `[%ANCHOR: controller_submit_appeal]`, `[%ANCHOR: controller_subscribe_to_site]`, `[%ANCHOR: controller_unsubscribe_digest]`, `[%ANCHOR: controller_my_privacy_dashboard]`, `[%ANCHOR: controller_export_user_data]`, `[%ANCHOR: controller_delete_user_content]`, `[%ANCHOR: api_pending_reports]`, `[%ANCHOR: test_admin_violation_toast_rpc]`.
 * **Security & Ownership:** `[%ANCHOR: mixin_proxy_ownership_create]`, `[%ANCHOR: mixin_proxy_ownership_write]`, `[%ANCHOR: test_mixin_ownership_validation]`.
 * **Moderation:** `[%ANCHOR: action_take_action_and_strike]`, `[%ANCHOR: test_moderation_suspension]`.
 * **Privacy & GDPR:** `[%ANCHOR: res_users_gdpr_export]`, `[%ANCHOR: test_gdpr_export_hook]`, `[%ANCHOR: gdpr_sudo_erasure]`, `[%ANCHOR: test_gdpr_erasure_pages]`, `[%ANCHOR: test_gdpr_erasure_posts]`.
 * **Cache Invalidation:** `[%ANCHOR: slug_cache_invalidation]`, `[%ANCHOR: slug_cache_invalidation_unlink]`, `[%ANCHOR: group_slug_cache_invalidation]`, `[%ANCHOR: group_slug_cache_invalidation_unlink]`.
-* **Crons:** `[%ANCHOR: ir_cron_send_weekly_digest]`, `[%ANCHOR: test_cron_batching_resumption]`, `[%ANCHOR: send_weekly_digest]`, `[%ANCHOR: test_weekly_digest_secret]`, `[%ANCHOR: test_weekly_digest_mail_template]`, `[%ANCHOR: ir_cron_flush_view_counters]`, `[%ANCHOR: test_cron_redis_flush]`.
+* **Crons:** `[%ANCHOR: ir_cron_send_weekly_digest]`, `[%ANCHOR: test_cron_batching_resumption]`, `[%ANCHOR: send_weekly_digest]`, `[%ANCHOR: test_weekly_digest_secret]`, `[%ANCHOR: test_weekly_digest_mail_template]`, `[%ANCHOR: ir_cron_flush_view_counters]`, `[%ANCHOR: test_cron_redis_flush]`, `[%ANCHOR: ir_cron_notify_pending_reports]`, `[%ANCHOR: cron_notify_pending_reports]`, `[%ANCHOR: test_cron_pending_reports]`.
 * **Views & XPath:** `[%ANCHOR: xpath_rendering_settings]`, `[%ANCHOR: xpath_rendering_users]`, `[%ANCHOR: xpath_rendering_blog_post]`, `[%ANCHOR: xpath_rendering_snippets]`, `[%ANCHOR: xpath_rendering_templates]`, `[%ANCHOR: xpath_rendering_layout]`, `[%ANCHOR: xpath_rendering_navbar]` (and corresponding tests).
-* **UI Logic:** `[%ANCHOR: violation_report_logic]`, `[%ANCHOR: toast_notifications_logic]`, `[%ANCHOR: test_tour_violation_report]`, `[%ANCHOR: test_tour_toast_notifications]`.
+* **UI Logic:** `[%ANCHOR: violation_report_logic]`, `[%ANCHOR: toast_notifications_logic]`, `[%ANCHOR: test_tour_violation_report]`, `[%ANCHOR: test_tour_toast_notifications]`, `[%ANCHOR: admin_toast_logic]`, `[%ANCHOR: test_tour_admin_toast]`.
 * **Other:** `[%ANCHOR: utils_slugify]`, `[%ANCHOR: website_page_quota_check]`, `[%ANCHOR: simulation_environment]`, `[%ANCHOR: test_site_creation_performance_scaling]`, `[%ANCHOR: test_acl_overhead_loop_elimination]`, `[%ANCHOR: test_tenant_view_isolation]`.

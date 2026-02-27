@@ -34,6 +34,33 @@
             </field>
         </record>
 
+        <record id="email_template_pending_violations_summary" model="mail.template">
+            <field name="name">User Websites: Pending Violations Summary</field>
+            <field name="model_id" ref="base.model_res_company"/>
+            <field name="subject">Action Required: {{ ctx.get('pending_count') }} Pending Violation Reports</field>
+            <field name="email_from">{{ object.email or 'noreply@yourcompany.com' }}</field>
+            <field name="email_to">{{ ctx.get('email_to') }}</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px; font-family: Arial, sans-serif;">
+                    <h2>Pending Content Violations</h2>
+                    <p>There are currently <strong><t t-out="ctx.get('pending_count')"/></strong> unhandled content violation reports that require administrator review.</p>
+                    <p>Please log in to the Odoo backend and navigate to <strong>User Websites &gt; Moderation</strong> to process them.</p>
+                </div>
+            </field>
+        </record>
+
+        <!-- [%ANCHOR: ir_cron_notify_pending_reports] -->
+        <!-- Verified by [%ANCHOR: test_cron_pending_reports] -->
+        <record id="ir_cron_notify_pending_reports" model="ir.cron"> <!-- audit-ignore-cron: Tested by [%ANCHOR: test_cron_pending_reports] -->
+            <field name="name">User Websites: Notify Admins of Pending Reports</field>
+            <field name="model_id" ref="user_websites.model_content_violation_report"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_notify_pending_reports()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+
         <record id="email_template_weekly_digest" model="mail.template">
             <field name="name">User Websites: Weekly Digest</field>
             <field name="model_id" ref="website_blog.model_blog_post"/>

@@ -232,3 +232,28 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload", 
                 ('ham_cache_invalidation', [f"website.page:{page.url}"])
             )
+
+    def test_08_cron_pending_reports(self):
+        # [%ANCHOR: test_cron_pending_reports]
+        # Tests [%ANCHOR: ir_cron_notify_pending_reports]
+        # Tests [%ANCHOR: cron_notify_pending_reports]
+        """
+        Prove that the cron correctly summarizes pending reports and emails the admin,
+        without crashing and using the correct template model.
+        """
+        self.env['content.violation.report'].create({
+            'target_url': '/test-pending',
+            'description': 'Test',
+        })
+        
+        self.env['content.violation.report']._cron_notify_pending_reports()
+        self.env.flush_all()
+        
+        abuse_email = self.env['zero_sudo.security.utils']._get_system_param('user_websites.company_abuse_email') or self.env.company.email or 'admin@example.com'
+        mail = self.env['mail.mail'].search([
+            ('email_to', 'ilike', abuse_email),
+            ('subject', 'ilike', 'Action Required')
+        ], limit=1)
+        
+        self.assertTrue(mail, "Cron MUST generate a summary email to the abuse email address.")
+        self.assertIn('unhandled content violation reports', mail.body_html)

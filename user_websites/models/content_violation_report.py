@@ -24,6 +24,28 @@ class ContentViolationReport(models.Model):
     reported_by_user_id = fields.Many2one('res.users', string="Reported By (Internal User)", ondelete='set null')
     reported_by_email = fields.Char(string="Reported By (Guest Email)")
 
+    @api.model
+    def _cron_notify_pending_reports(self):
+        # [%ANCHOR: cron_notify_pending_reports]
+        # Verified by [%ANCHOR: test_cron_pending_reports]
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        count = self.with_user(svc_uid).search_count([('state', '=', 'new')])
+        
+        if count > 0:
+            template = self.env.ref('user_websites.email_template_pending_violations_summary', raise_if_not_found=False)
+            if template:
+                abuse_email = self.env['zero_sudo.security.utils']._get_system_param('user_websites.company_abuse_email')
+                if not abuse_email:
+                    abuse_email = self.env.company.email or 'admin@example.com'
+                
+                template.with_user(svc_uid).with_context( # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]
+                    pending_count=count
+                ).send_mail(
+                    self.env.company.id, 
+                    force_send=False,
+                    email_values={'email_to': abuse_email}
+                )
+
     # --- Moderation Action Methods ---
     def action_mark_under_review(self):
         self.write({'state': 'under_review'})

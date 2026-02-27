@@ -6,6 +6,7 @@ and this project adheres to strict Semantic Versioning.
 
 ## [Unreleased]
 ### Changed
+- **Moderation Alerting**: Replaced per-report administrator spam with a daily email digest cron job and an asynchronous session-guarded Toast notification that alerts admins upon login.
 - **Conversational Tone Mandate (ADR-0056)**: Formally banned "oblique," academic, and dense corporate-speak from documentation, READMEs, and code comments. Rewrote root documentation to explain the system plainly and directly.
 - **AST Linter Hardening (Burn List)**: Upgraded `check_burn_list.py` to recursively track SQL taints (e.g., intermediate f-strings passed to `cr.execute`), block universal attribute aliases for `.sudo()`, and evaluate `@http.route` controller context to drastically reduce false positives while making obfuscation and evasion impossible.
 - **Linter Bypass Testing Mandate (ADR-0052)**: Formalized the rule that any use of a linter bypass tag (`burn-ignore` or `audit-ignore`) MUST be accompanied by an exhaustive automated unit test proving the safety and correctness of the bypassed operation.
@@ -13,6 +14,8 @@ and this project adheres to strict Semantic Versioning.
 - **ADIF Compliance**: Fixed a bug where the ADIF Download API calculated string length by characters instead of UTF-8 byte length, causing external loggers to reject payloads containing Unicode characters.
 - **Data Preservation**: Loosened the `ham.qso` idempotency SQL constraint to include `band` and `mode`, preventing data loss when older logging programs omit precise timestamps for same-day repeat contacts.
 ### Security
+- **SSTI & XSS Defense Automation**: Upgraded the Proxy Ownership QWeb sanitizer to use `lxml.etree` instead of regex. If malicious execution tags (`t-eval`, scripts) are detected, the system now automatically files a violation report and issues a formal moderation strike against the attacker.
+- **Cross-Tenant Redis Isolation**: Prefixed ephemeral Redis cache keys with the active PostgreSQL database name to prevent data leakage between staging and production environments.
 - **Hardware Relay CORS Hardening**: Locked down the Flask CORS origins in the generated `hams_local_relay.py` script to strictly allow `hams.com` domains, preventing local hardware hijacking by malicious third-party websites.
 - **Zero-Sudo Enforcement**: Replaced illegal `.sudo()` escalations in the `ham_shack` module's award calculations with a dedicated, strictly scoped `award_service_internal` proxy account.
 - **OOM Prevention**: Refactored the ADIF Upload API to stream file payloads through the HMAC validator in 64KB chunks rather than reading massive files entirely into WSGI memory.

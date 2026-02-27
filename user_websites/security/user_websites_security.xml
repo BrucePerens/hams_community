@@ -68,7 +68,7 @@
         <record id="content_violation_report_admin_rule" model="ir.rule">
             <field name="name">Content Violation Report Admin Rule</field>
             <field name="model_id" ref="model_content_violation_report"/>
-            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_administrator'))]"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_administrator')), (4, ref('user_websites.group_user_websites_service_account'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
