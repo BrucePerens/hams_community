@@ -146,3 +146,41 @@ class TestModeration(HttpCase):
             
         self.assertTrue(self.bad_user.is_suspended_from_websites, "Member 1 should be suspended after 3 strikes.")
         self.assertTrue(user_2.is_suspended_from_websites, "Member 2 should be suspended after 3 strikes.")
+
+    def test_05_concurrent_strike_locking(self):
+        """
+        Verify that action_take_action_and_strike issues a FOR NO KEY UPDATE lock
+        to prevent 'Lost Update' race conditions during concurrent moderation.
+        """
+        from unittest.mock import patch
+        
+        # 1. Test Individual User Lock
+        report = self.env['content.violation.report'].create({
+            'target_url': f'/test/lock',
+            'description': 'Lock test',
+            'content_owner_id': self.bad_user.id
+        })
+        
+        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+            report.action_take_action_and_strike()
+            
+            # Assert the lock query was injected
+            lock_query = "SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE"
+            mock_execute.assert_any_call(lock_query, (self.bad_user.id,))
+
+        # 2. Test Group Member Lock
+        group_report = self.env['content.violation.report'].create({
+            'target_url': f'/test/group_lock',
+            'description': 'Group Lock test',
+            'content_group_id': self.env['user.websites.group'].create({
+                'name': 'Lock Group',
+                'website_slug': 'lock-group',
+                'member_ids': [(4, self.bad_user.id)]
+            }).id
+        })
+        
+        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+            group_report.action_take_action_and_strike()
+            
+            lock_query_group = "SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE"
+            mock_execute.assert_any_call(lock_query_group, (tuple(group_report.content_group_id.member_ids.ids),))

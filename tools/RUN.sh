@@ -30,6 +30,18 @@ if [ -d "$DIR/$TARGET_MODULE" ]; then
     fi
 fi
 
+echo "🧹 Running Standard Python Linter (flake8)..."
+if command -v flake8 >/dev/null 2>&1; then
+    # We target critical logic errors (F) and syntax errors (E9), ignoring stylistic PEP8 to prevent blocking.
+    flake8 "$DIR" --exclude=venv,env,.venv,__pycache__,node_modules --select=E9,F
+    if [ $? -ne 0 ]; then
+        echo "🛑 Halting startup due to standard Python linter (flake8) errors."
+        exit 1
+    fi
+else
+    echo "⚠️  flake8 not found. Skipping standard Python linting."
+fi
+
 echo "🔥 Running Odoo 19+ Burn List & Syntax Check..."
 python3 "$DIR/tools/check_burn_list.py" "$DIR"
 if [ $? -ne 0 ];

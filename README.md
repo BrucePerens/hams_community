@@ -40,6 +40,12 @@ When we use AI to write code, we force it to follow strict rules. This keeps the
 * **`docs/LLM_GENERAL_REQUIREMENTS.md`**: Our global rules for the AI. It covers how the AI should talk to us (no fluff, conversational tone), how it should handle security, and the JSON format it must use to send us code.
 * **`docs/LLM_ODOO_REQUIREMENTS.md`**: Our strict Odoo coding rules. This includes the "Burn List"—a list of old, bad Odoo habits and legacy syntax the AI is explicitly forbidden from using.
 
+## Quality Analysis
+
+We asked Gemini 3.1 Pro Ultra to compare our code quality with that of the
+Odoo Community modules produced by Odoo S.A. The result is at
+[docs/COMPARED_TO_ODOO.md](docs/COMPARED_TO_ODOO.md).
+
 ## ⚖️ License & Copyright
 
 Copyright © Bruce Perens K6BP. This software is licensed under the **GNU Affero General Public License, version 3 (AGPL-3.0)**. See the `LICENSE` file for more details.

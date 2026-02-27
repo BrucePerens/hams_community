@@ -39,13 +39,17 @@ class WebsitePage(models.Model):
                     elem.getparent().remove(elem)
                     was_modified = True
                     
-            # Strip all QWeb execution and inline JS directives
+            # Strip all QWeb execution, inline JS directives, and javascript URIs
             dangerous_prefixes = ('t-', 'on')
             for elem in root.xpath('//*'):
                 for attr in list(elem.attrib.keys()):
                     attr_lower = attr.lower()
-                    if attr_lower.startswith(dangerous_prefixes) and attr_lower not in ('t-name', 't-call'):
-                        val = elem.attrib[attr]
+                    val = elem.attrib[attr]
+                    if attr_lower in ('href', 'src') and val.strip().lower().startswith('javascript:'):
+                        del elem.attrib[attr]
+                        elem.attrib[f'data-blocked-{attr}'] = val
+                        was_modified = True
+                    elif attr_lower.startswith(dangerous_prefixes) and attr_lower not in ('t-name', 't-call'):
                         del elem.attrib[attr]
                         elem.attrib[f'data-blocked-{attr}'] = val
                         was_modified = True
@@ -283,9 +287,12 @@ class WebsitePage(models.Model):
                 if not tools.config.get('test_enable'):
                     self.env.cr.commit()
                 
+                # RACE CONDITION FIX: Use atomic DECRBY instead of DELETE to prevent TOCTOU data loss
                 del_pipe = redis_client.pipeline()
-                for key in keys:
-                    del_pipe.delete(key)
+                for i, key in enumerate(keys):
+                    val = results[i]
+                    if val:
+                        del_pipe.decrby(key, int(val))
                 del_pipe.execute()
             except Exception as e:
                 from odoo import tools

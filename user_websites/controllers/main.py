@@ -27,10 +27,10 @@ REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
 redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 redis_client = redis.Redis(connection_pool=redis_pool)
 
-def _async_redis_incr(page_id):
+def _async_redis_incr(db_name, page_id):
     """Quickly update the Redis view counter in the background so we don't hold up the web server."""
     try:
-        redis_client.incr(f"views:page:{page_id}")
+        redis_client.incr(f"views:{db_name}:page:{page_id}")
     except Exception:
         pass
 
@@ -216,7 +216,7 @@ class UserWebsitesController(http.Controller):
                 if not odoo.tools.config.get('test_enable'):
                     # RACE CONDITION FIX: Removed threading.Thread() to prevent OS thread exhaustion DoS.
                     # Redis INCR is O(1) and executes in microseconds, making async offloading dangerous and unnecessary here.
-                    _async_redis_incr(page.id)
+                    _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                 
@@ -251,7 +251,7 @@ class UserWebsitesController(http.Controller):
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get('test_enable'):
-                    _async_redis_incr(page.id)
+                    _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
                     

@@ -66,6 +66,11 @@ class ContentViolationReport(models.Model):
             if report.content_owner_id:
                 # The caller (Admin) already has explicit write access to res.users
                 owner = report.content_owner_id
+                
+                # RACE CONDITION FIX: Row-level lock to prevent 'Lost Update' on concurrent strikes
+                self.env.cr.execute("SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE", (owner.id,))
+                owner.invalidate_recordset(['violation_strike_count'])
+                
                 owner.violation_strike_count += 1
                 
                 # Enforce the 3-Strike Rule
@@ -78,10 +83,16 @@ class ContentViolationReport(models.Model):
                 )
             elif report.content_group_id:
                 group = report.content_group_id
-                for member in group.member_ids:
-                    member.violation_strike_count += 1
-                    if member.violation_strike_count >= 3 and not member.is_suspended_from_websites:
-                        member.action_suspend_user_websites()
+                
+                if group.member_ids:
+                    # RACE CONDITION FIX: Lock all group members to prevent 'Lost Update' on concurrent strikes
+                    self.env.cr.execute("SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE", (tuple(group.member_ids.ids),))
+                    group.member_ids.invalidate_recordset(['violation_strike_count'])
+                    
+                    for member in group.member_ids:
+                        member.violation_strike_count += 1
+                        if member.violation_strike_count >= 3 and not member.is_suspended_from_websites:
+                            member.action_suspend_user_websites()
                 report.message_post(
                     body=_("You applied a strike to all members of the group."),
                     subtype_xmlid="mail.mt_note"

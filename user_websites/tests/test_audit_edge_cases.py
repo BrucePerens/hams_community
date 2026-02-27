@@ -194,7 +194,8 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 
                 # Verify pipeline operations
                 mock_pipeline.get.assert_called_with(f"views:page:{page.id}")
-                mock_pipeline.delete.assert_called_with(f"views:page:{page.id}")
+                # RACE CONDITION FIX: Assert DECRBY is used instead of DELETE to prevent TOCTOU data loss
+                mock_pipeline.decrby.assert_called_with(f"views:page:{page.id}", 42)
                 
                 # Verify looping via _trigger
                 mock_trigger.assert_called_once()
