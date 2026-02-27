@@ -159,19 +159,27 @@ class UserWebsitesController(http.Controller):
             email = 'Anonymous'
 
         content_owner_id = False
+        content_group_id = False
         
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = request.env['website.page'].with_user(svc_uid).search([('url', '=', url)], limit=1)
-        if page and page.owner_user_id:
-            content_owner_id = page.owner_user_id.id
+        if page:
+            if page.owner_user_id:
+                content_owner_id = page.owner_user_id.id
+            elif page.user_websites_group_id:
+                content_group_id = page.user_websites_group_id.id
             
-        if not content_owner_id:
+        if not content_owner_id and not content_group_id:
             parts = [p for p in url.split('/') if p]
             if parts:
                 potential_slug = parts[0].lower()
                 cached_uid = request.env['res.users']._get_user_id_by_slug(potential_slug)
                 if cached_uid:
                     content_owner_id = cached_uid
+                else:
+                    cached_gid = request.env['user.websites.group']._get_group_id_by_slug(potential_slug)
+                    if cached_gid:
+                        content_group_id = cached_gid
 
         request.env['content.violation.report'].create({
             'target_url': url,
@@ -179,6 +187,7 @@ class UserWebsitesController(http.Controller):
             'reported_by_user_id': user_id,
             'reported_by_email': email,
             'content_owner_id': content_owner_id,
+            'content_group_id': content_group_id,
         })
         
         separator = '&' if '?' in safe_redirect else '?'
@@ -281,10 +290,6 @@ class UserWebsitesController(http.Controller):
         
         target_uid = request.env.user.id
         resolved_slug = None
-        
-        # RACE CONDITION FIX: Enforce an exclusive transaction lock for this user to prevent
-        # click-spamming from generating duplicate pages bypassing the search_count.
-        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (target_uid,))
 
         if user:
             if user.id != request.env.user.id:
@@ -296,6 +301,11 @@ class UserWebsitesController(http.Controller):
             resolved_slug = group.website_slug
         else:
             raise werkzeug.exceptions.NotFound()
+
+        # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
+        # preventing multiple group members from bypassing the search_count simultaneously.
+        lock_hash = hash(resolved_slug) % 2147483647
+        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         # Make sure we don't accidentally create duplicate pages if the user clicks twice
         existing_page = request.env['website.page'].with_user(svc_uid).search_count([
@@ -309,7 +319,7 @@ class UserWebsitesController(http.Controller):
         
         template_view = request.env.ref(view_xml_id)
         
-        request.env['website.page'].create({
+        page_vals = {
             'url': f'/{resolved_slug}/home',
             'name': f"{user.name if user else group.name} Home",
             'is_published': True,
@@ -318,9 +328,14 @@ class UserWebsitesController(http.Controller):
             'website_id': request.website.id if hasattr(request, 'website') and request.website else request.env['website'].get_current_website().id,
             'key': unique_key, 
             'arch': template_view.with_user(svc_uid).arch,
-            'user_websites_group_id': group.id if group else False,
-            'owner_user_id': target_uid, 
-        })
+        }
+        
+        if user:
+            page_vals['owner_user_id'] = target_uid
+        elif group:
+            page_vals['user_websites_group_id'] = group.id
+
+        request.env['website.page'].create(page_vals)
         
         return request.redirect(f'/{resolved_slug}/home')
 
@@ -435,9 +450,6 @@ class UserWebsitesController(http.Controller):
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         resolved_slug = None
-        
-        # RACE CONDITION FIX: Enforce an exclusive transaction lock for this user to prevent duplicate blog creation.
-        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (request.env.user.id,))
 
         if user:
             if user.id != request.env.user.id:
@@ -449,6 +461,11 @@ class UserWebsitesController(http.Controller):
             resolved_slug = group.website_slug
         else:
             raise werkzeug.exceptions.NotFound()
+
+        # RACE CONDITION FIX: Enforce an exclusive transaction lock keyed to the target slug
+        # preventing multiple group members from duplicating the initial blog record.
+        lock_hash = hash("blog_" + resolved_slug) % 2147483647
+        request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         blog = request.env['blog.blog'].with_user(svc_uid).search([
             ('name', '=', 'Community Blog'),
@@ -472,15 +489,20 @@ class UserWebsitesController(http.Controller):
         if existing_post > 0:
             return request.redirect(f'/{resolved_slug}/blog')
 
-        request.env['blog.post'].create({
+        post_vals = {
             'name': "Welcome to my Blog" if user else f"Welcome to the {group.name} Blog",
             'blog_id': blog.id,
             'is_published': True,
             'website_id': request.website.id,
             'content': "<p>This is my first post!</p>",
-            'owner_user_id': request.env.user.id,
-            'user_websites_group_id': group.id if group else False
-        })
+        }
+        
+        if user:
+            post_vals['owner_user_id'] = request.env.user.id
+        elif group:
+            post_vals['user_websites_group_id'] = group.id
+
+        request.env['blog.post'].create(post_vals)
 
         return request.redirect(f'/{resolved_slug}/blog')
 

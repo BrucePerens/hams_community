@@ -27,7 +27,7 @@ ERROR_RULES = [
 
 WARNING_RULES = [
     (r'\.xml$', re.compile(r'<record.*?model=["\']ir\.cron["\']'), "[AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger() to prevent transaction timeouts."),
-    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <!-- audit-ignore-xpath: Tested by [%ANCHOR: ...] --> to bypass.")
+    (r'\.xml$', re.compile(r'<xpath\b'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly. Use <" + "!-- audit-ignore-xpath: Tested by [%ANCHOR: ...] --" + "> to bypass.")
 ]
 
 MULTILINE_WARNING_RULES = []
@@ -115,12 +115,19 @@ def check_ast_vulnerabilities(filepath, content, lines):
             return False
 
         def visit_Dict(self, node):
+            keys_found = set()
             for k, v in zip(node.keys, node.values):
-                if isinstance(k, ast.Constant) and k.value in ('error', 'success', 'warning', 'message'):
-                    if self.is_untranslated_string(v):
-                        self.add_warning(node.lineno, f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'. Wrap in _().")
-                if isinstance(k, ast.Constant) and k.value == 'groups_id':
-                    self.add_error(node.lineno, "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'.")
+                if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                    keys_found.add(k.value)
+                    if k.value in ('error', 'success', 'warning', 'message'):
+                        if self.is_untranslated_string(v):
+                            self.add_warning(node.lineno, f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'. Wrap in _().")
+                    if k.value == 'groups_id':
+                        self.add_error(node.lineno, "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'. Do not use 'groups_id'.")
+            
+            if 'owner_user_id' in keys_found and 'user_websites_group_id' in keys_found:
+                self.add_error(node.lineno, "MUTUAL EXCLUSIVITY TRAP: Cannot assign both 'owner_user_id' and 'user_websites_group_id' in the same dictionary. They are mutually exclusive.")
+                
             self.generic_visit(node)
 
         def visit_For(self, node):
@@ -300,6 +307,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         self.add_warning(node.lineno, f"[AUDIT] I18N: User-facing chatter '{kw.arg}' in {func_name} should be wrapped in _() for translation.")
 
             is_cr_execute = False
+            attr = ""
             if isinstance(node.func, ast.Attribute):
                 attr = node.func.attr
                 if attr == 'execute':
@@ -351,36 +359,36 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         if kw.arg is None and isinstance(kw.value, ast.Name) and kw.value.id in ('kwargs', 'kw', 'post'):
                             self.add_warning(node.lineno, "[AUDIT] RPC MASS ASSIGNMENT: Never pass raw request payloads directly to create/write. Verify fields are extracted securely.")
 
-                if self.loop_depth > 0:
-                    if attr in ('search', 'search_count', 'read_group'):
-                        self.add_error(node.lineno, f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.")
-                
-                if attr in ('search', 'search_count'):
-                    if isinstance(node.func.value, ast.Name) and node.func.value.id == 're':
-                        pass # Explicitly ignore re.search
-                    else:
-                        if attr == 'search':
-                            has_limit = any(kw.arg == 'limit' for kw in node.keywords)
-                            if not has_limit and not self.filename.startswith('test_'):
-                                self.add_warning(node.lineno, "[AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'. Ensure strict domain boundaries to prevent OOM (ADR-0022). Note: slicing search() without a limit still fetches all records into memory first.")
+            if self.loop_depth > 0:
+                if attr in ('search', 'search_count', 'read_group'):
+                    self.add_error(node.lineno, f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.")
+            
+            if attr in ('search', 'search_count'):
+                if isinstance(node.func.value, ast.Name) and node.func.value.id == 're':
+                    pass # Explicitly ignore re.search
+                else:
+                    if attr == 'search':
+                        has_limit = any(kw.arg == 'limit' for kw in node.keywords)
+                        if not has_limit and not self.filename.startswith('test_'):
+                            self.add_warning(node.lineno, "[AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'. Ensure strict domain boundaries to prevent OOM (ADR-0022). Note: slicing search() without a limit still fetches all records into memory first.")
+                    
+                    val = node.func.value
+                    is_env_subscript = False
+                    if isinstance(val, ast.Subscript):
+                        if isinstance(val.value, ast.Attribute) and val.value.attr == 'env':
+                            is_env_subscript = True
+                        elif isinstance(val.value, ast.Name) and val.value.id == 'env':
+                            is_env_subscript = True
+                    
+                    if is_env_subscript:
+                        is_uniqueness_context = False
+                        if self.current_method and (self.current_method in ('create', 'write') or self.current_method.startswith('_check_') or self.current_method.startswith('_validate_')):
+                            is_uniqueness_context = True
+                        elif self.current_decorators and ('constrains' in self.current_decorators or 'onchange' in self.current_decorators):
+                            is_uniqueness_context = True
                         
-                        val = node.func.value
-                        is_env_subscript = False
-                        if isinstance(val, ast.Subscript):
-                            if isinstance(val.value, ast.Attribute) and val.value.attr == 'env':
-                                is_env_subscript = True
-                            elif isinstance(val.value, ast.Name) and val.value.id == 'env':
-                                is_env_subscript = True
-                        
-                        if is_env_subscript:
-                            is_uniqueness_context = False
-                            if self.current_method and (self.current_method in ('create', 'write') or self.current_method.startswith('_check_') or self.current_method.startswith('_validate_')):
-                                is_uniqueness_context = True
-                            elif self.current_decorators and ('constrains' in self.current_decorators or 'onchange' in self.current_decorators):
-                                is_uniqueness_context = True
-                            
-                            if is_uniqueness_context:
-                                self.add_warning(node.lineno, f"[AUDIT] Data Integrity: Direct `{attr}()` on an env model without `.sudo()` may cause false negatives if used for uniqueness checks. Review manually.")
+                        if is_uniqueness_context:
+                            self.add_warning(node.lineno, f"[AUDIT] Data Integrity: Direct `{attr}()` on an env model without `.sudo()` may cause false negatives if used for uniqueness checks. Review manually.")
 
             if is_cr_execute and node.args:
                 arg = node.args[0]
@@ -457,7 +465,7 @@ def scan_file(filepath):
 
         if filename.endswith('.js') and stripped.startswith('//'):
             continue
-        if filename.endswith('.xml') and stripped.startswith('<!--'):
+        if filename.endswith('.xml') and stripped.startswith('<' + '!--'):
             continue
 
         if skip_next_line:

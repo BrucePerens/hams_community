@@ -3,6 +3,7 @@
 import os
 import redis
 import logging
+import re
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 
@@ -22,6 +23,19 @@ class WebsitePage(models.Model):
     view_count = fields.Integer(string="View Count", default=0, help="Privacy-friendly tracking of page views.")
 
     @api.model
+    def _sanitize_user_arch(self, arch_content):
+        if not arch_content:
+            return arch_content
+        # Strip script tags entirely
+        arch_content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', arch_content, flags=re.IGNORECASE)
+        # Strip iframe and object tags
+        arch_content = re.sub(r'<(iframe|object|embed)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>', '', arch_content, flags=re.IGNORECASE)
+        # Strip dangerous QWeb directives and inline events
+        arch_content = re.sub(r'\b(t-eval|t-raw)\s*=', r'data-blocked-\1=', arch_content, flags=re.IGNORECASE)
+        arch_content = re.sub(r'\b(on[a-zA-Z]+)\s*=', r'data-blocked-\1=', arch_content, flags=re.IGNORECASE)
+        return arch_content
+
+    @api.model
     @tools.ormcache('url', 'website_id')
     def _get_page_id_by_url(self, url, website_id):
         if not url:
@@ -36,6 +50,12 @@ class WebsitePage(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # 0. Sanitize arch to prevent Stored XSS
+        if not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            for vals in vals_list:
+                if vals.get('arch'):
+                    vals['arch'] = self._sanitize_user_arch(vals['arch'])
+
         # 1. Enforce Mixin Security
         self._check_proxy_ownership_create(vals_list)
 
@@ -67,6 +87,31 @@ class WebsitePage(models.Model):
             for o_id in unique_owner_ids:
                 if existing_counts[o_id] + batch_counts[o_id] > user_limits[o_id]:
                     raise ValidationError(_("You have reached your limit of %s website pages.") % user_limits[o_id])
+
+        group_ids = [vals.get('user_websites_group_id') for vals in vals_list if vals.get('user_websites_group_id')]
+        if group_ids:
+            unique_group_ids = list(set(group_ids))
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            global_limit = int(self.env['zero_sudo.security.utils']._get_system_param('user_websites.global_website_page_limit', 100))
+            
+            existing_group_counts = {g_id: 0 for g_id in unique_group_ids}
+            group_counts = self.env['website.page'].with_user(svc_uid)._read_group(
+                [('user_websites_group_id', 'in', unique_group_ids)],
+                ['user_websites_group_id'],
+                ['__count']
+            )
+            for group, count in group_counts:
+                existing_group_counts[group.id] = count
+            
+            batch_group_counts = {g_id: 0 for g_id in unique_group_ids}
+            for vals in vals_list:
+                g_id = vals.get('user_websites_group_id')
+                if g_id:
+                    batch_group_counts[g_id] += 1
+                    
+            for g_id in unique_group_ids:
+                if existing_group_counts[g_id] + batch_group_counts[g_id] > global_limit:
+                    raise ValidationError(_("This group has reached its limit of %s website pages.") % global_limit)
                     
         # 3. Apply Service Account to safely bypass standard ir.ui.view creation restrictions
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
@@ -81,9 +126,20 @@ class WebsitePage(models.Model):
         """
         if operation in ('write', 'unlink') and not self.env.su and self:
             if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
+                user_id = self.env.user.id
+                
+                # ADR-0022: Pre-fetch group memberships to prevent N+1 lazy-load queries in the loop
+                group_ids = self.mapped('user_websites_group_id').ids
+                member_map = {}
+                if group_ids:
+                    svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                    groups = self.env['user.websites.group'].with_user(svc_uid).browse(group_ids)
+                    for g in groups:
+                        member_map[g.id] = set(g.member_ids.ids)
+                        
                 for page in self:
-                    is_owner = page.owner_user_id.id == self.env.user.id
-                    is_group_member = page.user_websites_group_id and self.env.user.id in page.user_websites_group_id.odoo_group_id.user_ids.ids
+                    is_owner = page.owner_user_id.id == user_id
+                    is_group_member = page.user_websites_group_id and user_id in member_map.get(page.user_websites_group_id.id, set())
                     if not is_owner and not is_group_member:
                         from odoo.exceptions import AccessError
                         raise AccessError(_("Access Denied: You do not have permission to modify this page."))
@@ -92,6 +148,9 @@ class WebsitePage(models.Model):
     def write(self, vals):
         self.check_access('write')
         self._check_proxy_ownership_write(vals)
+        
+        if 'arch' in vals and not (self.env.su or self.env.user.has_group('base.group_system') or self.env.user.has_group('user_websites.group_user_websites_administrator')):
+            vals['arch'] = self._sanitize_user_arch(vals['arch'])
         
         # Identify URLs to invalidate before mutating
         pages_to_invalidate = [p.url for p in self if p.url]

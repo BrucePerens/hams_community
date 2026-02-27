@@ -28,8 +28,26 @@ def parse_json_and_write_files(input_text, base_dir="."):
     try:
         payload = json.loads(payload_text, strict=False)
     except json.JSONDecodeError as e:
-        print(f"❌ JSON decoding failed: {e}")
-        sys.exit(1)
+        print(f"⚠️ JSON decode failed ({e}). Attempting RegEx/AST recovery...")
+        # 1. Strip illegal trailing commas before closing braces/brackets
+        payload_text_clean = re.sub(r',\s*([\]}])', r'\1', payload_text)
+        try:
+            payload = json.loads(payload_text_clean, strict=False)
+            print("✅ RegEx recovery successful.")
+        except json.JSONDecodeError:
+            print("⚠️ RegEx recovery failed. Falling back to AST literal_eval...")
+            import ast
+            try:
+                # 2. Map JSON primitives to Python primitives for AST parsing
+                ast_text = re.sub(r'\btrue\b', 'True', payload_text_clean)
+                ast_text = re.sub(r'\bfalse\b', 'False', ast_text)
+                ast_text = re.sub(r'\bnull\b', 'None', ast_text)
+                payload = ast.literal_eval(ast_text)
+                print("✅ AST literal_eval recovery successful.")
+            except Exception as ast_e:
+                print(f"❌ AST recovery failed: {ast_e}")
+                print("🚨 The payload is too severely mangled to recover automatically.")
+                sys.exit(1)
 
     version = payload.get("aef_version", "legacy")
     files = payload.get("files", [])
@@ -77,6 +95,13 @@ def parse_json_and_write_files(input_text, base_dir="."):
                     else:
                         search_text = "".join(search_raw) if isinstance(search_raw, list) else search_raw
                         replace_text = "".join(replace_raw) if isinstance(replace_raw, list) else replace_raw
+
+                    # Anti-Corruption Guard: Check for LLM laziness placeholders in the replacement text
+                    lazy_patterns = [r'\/\/ \.\.\.', r'# \.\.\.', r'\.\.\. rest of', r'\[Code unchanged\]']
+                    if any(re.search(pat, replace_text, re.IGNORECASE) for pat in lazy_patterns):
+                        print(f"❌ Error: LLM hallucinated a truncation placeholder in the replacement block for {filepath}. Aborting file patch to prevent deleting code.")
+                        abort_file = True
+                        break
                         
                     match_count = file_text.count(search_text)
                     search_regex = None
@@ -102,6 +127,35 @@ def parse_json_and_write_files(input_text, base_dir="."):
                                     replace_text = replace_text[len(search_leading_ws):]
                                 if replace_text.endswith(search_trailing_ws) and len(search_trailing_ws) > 0:
                                     replace_text = replace_text[:-len(search_trailing_ws)]
+
+                    if match_count == 0:
+                        import difflib
+                        print(f"⚠️  Note: Search block {idx+1} regex fallback failed. Attempting fuzzy match...")
+                        search_lines = search_text.splitlines(keepends=True)
+                        file_lines = file_text.splitlines(keepends=True)
+                        best_ratio = 0
+                        best_idx = -1
+                        best_window = 0
+                        base_window = len(search_lines)
+                        
+                        if base_window > 0:
+                            # Try windows of sizes -1, 0, +1 relative to the search block length
+                            for w_offset in [-1, 0, 1]:
+                                window_size = base_window + w_offset
+                                if window_size > 0 and len(file_lines) >= window_size:
+                                    for i in range(len(file_lines) - window_size + 1):
+                                        window_text = "".join(file_lines[i:i+window_size])
+                                        ratio = difflib.SequenceMatcher(None, search_text, window_text).ratio()
+                                        if ratio > best_ratio:
+                                            best_ratio = ratio
+                                            best_idx = i
+                                            best_window = window_size
+                            
+                            if best_ratio >= 0.85:
+                                print(f"✅ Fuzzy match found with {best_ratio*100:.1f}% similarity.")
+                                search_text = "".join(file_lines[best_idx:best_idx+best_window])
+                                search_regex = None
+                                match_count = 1
 
                     if match_count == 0:
                         print(f"❌ Error: Search block {idx+1} not found in {filepath}. Aborting file patch to prevent corruption.")
@@ -130,7 +184,7 @@ def parse_json_and_write_files(input_text, base_dir="."):
                             file_text = file_text[:start] + final_replace + file_text[end:]
                     else:
                         file_text = file_text.replace(search_text, replace_text, 1)
-                        
+                    
                 # Phase 3: Atomic write
                 tmp_path = full_path + ".tmp"
                 with open(tmp_path, 'w', encoding='utf-8') as f:
@@ -174,24 +228,16 @@ def parse_json_and_write_files(input_text, base_dir="."):
                 
             elif operation == "diff":
                 patch_path = full_path + ".patch"
-                backup_path = full_path + ".bak"
                 
                 with open(patch_path, 'wb') as f:
                     f.write(file_bytes)
-                    
-                if os.path.exists(full_path):
-                    shutil.copy2(full_path, backup_path)
                     
                 try:
                     subprocess.run(["patch", "-p1", "--ignore-whitespace", "--no-backup-if-mismatch", "-i", os.path.abspath(patch_path)], cwd=abs_base_dir, check=True)
                     print(f"✅ Patched (diff): {filepath}")
                 except Exception as e:
-                    print(f"❌ Error applying diff to {filepath}: {e}. Rolling back to prevent corruption.")
-                    if os.path.exists(backup_path):
-                        shutil.copy2(backup_path, full_path)
+                    print(f"❌ Error applying diff to {filepath}: {e}. Discarding patch.")
                 finally:
-                    if os.path.exists(backup_path):
-                        os.remove(backup_path)
                     if os.path.exists(patch_path):
                         os.remove(patch_path)
             else:

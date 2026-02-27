@@ -32,6 +32,9 @@
                                     <span t-if="record.content_owner_id.raw_value" class="badge text-bg-warning">
                                         <i class="fa fa-user" title="Content Owner" aria-label="Content Owner" role="img"/> <field name="content_owner_id"/>
                                     </span>
+                                    <span t-if="record.content_group_id.raw_value" class="badge text-bg-info ms-1">
+                                        <i class="fa fa-users" title="Content Group" aria-label="Content Group" role="img"/> <field name="content_group_id"/>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -49,6 +52,7 @@
                 <field name="create_date"/>
                 <field name="target_url"/>
                 <field name="content_owner_id"/>
+                <field name="content_group_id"/>
                 <field name="state" widget="badge" 
                        decoration-danger="state=='new'" 
                        decoration-warning="state=='under_review'" 
@@ -82,6 +86,7 @@
                         </group>
                         <group string="Target Details">
                             <field name="content_owner_id" readonly="1"/>
+                            <field name="content_group_id" readonly="1"/>
                         </group>
                     </group>
                     <notebook>

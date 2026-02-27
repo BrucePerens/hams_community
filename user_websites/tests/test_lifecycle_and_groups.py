@@ -119,8 +119,7 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
             'website_published': True,
             'type': 'qweb',
             'arch': arch_string,
-            'user_websites_group_id': self.test_group.id,
-            'owner_user_id': self.user_a.id
+            'user_websites_group_id': self.test_group.id
         })
 
         report_button_text = b'Report Violation'

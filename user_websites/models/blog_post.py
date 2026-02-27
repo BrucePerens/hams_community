@@ -41,9 +41,20 @@ class BlogPost(models.Model):
         """
         if operation in ('write', 'unlink') and not self.env.su and self:
             if self.env.user.has_group('user_websites.group_user_websites_user') and not self.env.user.has_group('user_websites.group_user_websites_administrator'):
+                user_id = self.env.user.id
+                
+                # ADR-0022: Pre-fetch group memberships to prevent N+1 lazy-load queries in the loop
+                group_ids = self.mapped('user_websites_group_id').ids
+                member_map = {}
+                if group_ids:
+                    svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+                    groups = self.env['user.websites.group'].with_user(svc_uid).browse(group_ids)
+                    for g in groups:
+                        member_map[g.id] = set(g.member_ids.ids)
+                        
                 for post in self:
-                    is_owner = post.owner_user_id.id == self.env.user.id
-                    is_group_member = post.user_websites_group_id and self.env.user.id in post.user_websites_group_id.odoo_group_id.user_ids.ids
+                    is_owner = post.owner_user_id.id == user_id
+                    is_group_member = post.user_websites_group_id and user_id in member_map.get(post.user_websites_group_id.id, set())
                     if not is_owner and not is_group_member:
                         from odoo.exceptions import AccessError
                         raise AccessError(_("Access Denied: You do not have permission to modify this post."))

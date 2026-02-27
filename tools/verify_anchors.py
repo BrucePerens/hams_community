@@ -22,6 +22,9 @@ def find_anchors_in_code_and_manifests(root_dir, is_partial_workspace):
     pattern = re.compile(r'\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]')
     exclude_dirs = {'docs', '.git', 'venv', '__pycache__'}
     
+    if is_partial_workspace:
+        exclude_dirs.discard('docs')
+        
     for root, dirs, files in os.walk(root_dir):
         # Allow scanning docs/modules strictly in partial workspaces to ingest manifests
         if is_partial_workspace and root == os.path.join(root_dir, 'docs'):

@@ -2,7 +2,9 @@
 import time
 import os
 import odoo
+import threading
 from odoo import models, fields, api, tools, _
+from .res_users import _async_unpublish_content
 
 class ResUsersModeration(models.Model):
     """
@@ -62,41 +64,24 @@ class ResUsersModeration(models.Model):
 
     def action_suspend_user_websites(self):
         """Forcefully unpublishes all user content and flags them as suspended."""
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        
         user_ids = self.ids
         
-        # 1. Unpublish Pages iteratively
-        while True:
-            pages = self.env['website.page'].search([
-                ('owner_user_id', 'in', user_ids),
-                '|', ('is_published', '=', True), ('website_published', '=', True)
-            ], limit=5000)
-            if not pages:
-                break
-            pages.with_user(svc_uid).write({'is_published': False, 'website_published': False})
-            if not odoo.tools.config.get('test_enable'):
-                self.env.cr.commit()
-            if len(pages) < 5000:
-                break
-            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
-            
-        # 2. Unpublish Blog Posts iteratively
-        while True:
-            blogs = self.env['blog.post'].search([
-                ('owner_user_id', 'in', user_ids),
-                ('is_published', '=', True)
-            ], limit=5000)
-            if not blogs:
-                break
-            blogs.with_user(svc_uid).write({'is_published': False})
-            if not odoo.tools.config.get('test_enable'):
-                self.env.cr.commit()
-            if len(blogs) < 5000:
-                break
-            if not os.environ.get('HAMS_DISABLE_SLEEPS'):
-                time.sleep(0.1) # ADR-0022 Batch Rate Limiting
+        if not odoo.tools.config.get('test_enable'):
+            db_name = self.env.cr.dbname
+            thread = threading.Thread(target=_async_unpublish_content, args=(db_name, user_ids))
+            thread.start()
+        else:
+            svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+            while True:
+                pages = self.env['website.page'].with_user(svc_uid).search([('owner_user_id', 'in', user_ids), '|', ('is_published', '=', True), ('website_published', '=', True)], limit=5000)
+                if not pages:
+                    break
+                pages.write({'is_published': False, 'website_published': False})
+            while True:
+                posts = self.env['blog.post'].with_user(svc_uid).search([('owner_user_id', 'in', user_ids), ('is_published', '=', True)], limit=5000)
+                if not posts:
+                    break
+                posts.write({'is_published': False})
 
         for user in self:
             user.is_suspended_from_websites = True

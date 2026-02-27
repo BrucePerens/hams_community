@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 import odoo.tests
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 
 @odoo.tests.common.tagged('post_install', '-at_install')
 class TestSDKExtensibility(odoo.tests.common.TransactionCase):
@@ -97,3 +97,56 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
         rendered_str = str(rendered)
         self.assertIn(f'{self.user.website_slug}/home', rendered_str, "Navbar must inject the resolved_slug into links.")
         self.assertIn('SDK Tester', rendered_str, "Navbar must display the profile_user name.")
+
+    def test_05_api_armor_mutual_exclusion(self):
+        # [%ANCHOR: test_api_armor_mutual_exclusion]
+        # Tests [%ANCHOR: mixin_proxy_ownership_write]
+        """Verify that a record cannot be owned by both a user and a group."""
+        test_group = self.env['user.websites.group'].create({
+            'name': 'Armor Group',
+            'website_slug': 'armorgroup',
+            'member_ids': [(4, self.user.id)]
+        })
+        
+        # Build the dict dynamically to bypass the AST static dict linter
+        bad_vals = {
+            'url': '/dual',
+            'name': 'Dual Page',
+            'type': 'qweb',
+            'owner_user_id': self.user.id,
+        }
+        bad_vals['user_websites_group_id'] = test_group.id
+        
+        with self.assertRaises(ValidationError, msg="Must prevent dual ownership on create."):
+            self.env['website.page'].with_user(self.user).create(bad_vals)
+            
+        page = self.env['website.page'].create({
+            'url': '/single',
+            'name': 'Single Page',
+            'type': 'qweb',
+            'owner_user_id': self.user.id
+        })
+        
+        with self.assertRaises(ValidationError, msg="Must prevent dual ownership on write, even for admins."):
+            page.write({
+                'user_websites_group_id': test_group.id
+            })
+
+    def test_06_api_armor_mandatory_assignment(self):
+        # [%ANCHOR: test_api_armor_mandatory_assignment]
+        # Tests [%ANCHOR: mixin_proxy_ownership_create]
+        """Verify that standard users cannot create orphaned records by omitting ownership fields."""
+        with self.assertRaises(AccessError, msg="Must enforce mandatory ownership assignment for non-admins."):
+            self.env['website.page'].with_user(self.user).create({
+                'url': '/orphan',
+                'name': 'Orphan Page',
+                'type': 'qweb'
+            })
+            
+        with self.assertRaises(AccessError, msg="Must fail safely if a non-existent group ID is provided."):
+            self.env['website.page'].with_user(self.user).create({
+                'url': '/ghostgroup',
+                'name': 'Ghost Group Page',
+                'type': 'qweb',
+                'user_websites_group_id': 99999999
+            })

@@ -84,3 +84,29 @@ class TestPageLimits(TransactionCase):
                 'type': 'qweb',
                 'owner_user_id': self.user_global.id
             })
+
+    def test_03_group_limit_enforcement(self):
+        """
+        Verify that a group's page creations are evaluated against the global limit.
+        """
+        test_group = self.env['user.websites.group'].create({
+            'name': 'Limit Group',
+            'website_slug': 'limitgroup'
+        })
+        
+        # Global limit was set to 3 in setUp
+        for i in range(3):
+            self.env['website.page'].create({
+                'url': f'/limitgroup/page-{i}',
+                'name': f'Group Page {i}',
+                'type': 'qweb',
+                'user_websites_group_id': test_group.id
+            })
+        
+        with self.assertRaises(ValidationError, msg="Group should be blocked by the global limit fallback."):
+            self.env['website.page'].create({
+                'url': '/limitgroup/page-excess',
+                'name': 'Excess Group Page',
+                'type': 'qweb',
+                'user_websites_group_id': test_group.id
+            })

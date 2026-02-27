@@ -162,3 +162,34 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
             post.with_user(self.user_b).write({
                 'owner_user_id': self.user_a.id
             })
+
+    def test_07_qweb_arch_sanitization(self):
+        """
+        Verify that script tags, iframes, and dangerous QWeb directives are actively stripped
+        from the arch field during create and write for non-administrative users.
+        """
+        malicious_arch = '''<t name="Test">
+            <script>alert("XSS")</script>
+            <iframe src="http://evil.com"></iframe>
+            <div t-eval="request.env['res.users'].sudo().search([])" onmouseover="alert(1)"></div>
+        </t>'''
+        
+        page = self.env['website.page'].with_user(self.user_a).create({
+            'url': f'/{self.user_a.website_slug}/xss',
+            'name': 'XSS Test',
+            'type': 'qweb',
+            'owner_user_id': self.user_a.id,
+            'arch': malicious_arch
+        })
+        
+        # The sanitizer should have stripped script, iframe, and neutralized t-eval and onmouseover
+        self.assertNotIn('<script>', page.arch, "The script tag must be completely removed.")
+        self.assertNotIn('<iframe>', page.arch, "The iframe tag must be completely removed.")
+        self.assertIn('data-blocked-t-eval="request.env', page.arch, "The t-eval directive must be neutralized.")
+        self.assertIn('data-blocked-onmouseover="alert(1)"', page.arch, "The inline JS event must be neutralized.")
+
+        # Test write operation
+        page.with_user(self.user_a).write({
+            'arch': '<t name="Test2"><script>console.log("XSS2")</script></t>'
+        })
+        self.assertNotIn('<script>', page.arch, "The script tag must be removed during write().")

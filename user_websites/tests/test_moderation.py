@@ -99,3 +99,50 @@ class TestModeration(HttpCase):
         # Attempt public access again
         res_after = self.url_open(f'/{self.bad_user.website_slug}/home')
         self.assertEqual(res_after.status_code, 404, "Suspended pages must return 404 for public guests to prevent access leaks.")
+
+    def test_04_group_moderation_cascading_strikes(self):
+        """
+        Verify that applying a strike to a group violation report correctly iterates 
+        and applies strikes to all member_ids of that group.
+        """
+        user_2 = self.env['res.users'].create({
+            'name': 'Spammer 2',
+            'login': 'spammer2',
+            'email': 'spam2@example.com',
+            'website_slug': 'spammer2',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
+        })
+        
+        bad_group = self.env['user.websites.group'].create({
+            'name': 'Bad Group',
+            'website_slug': 'bad-group',
+            'member_ids': [(4, self.bad_user.id), (4, user_2.id)]
+        })
+        
+        # Start at 0
+        self.assertEqual(self.bad_user.violation_strike_count, 0)
+        self.assertEqual(user_2.violation_strike_count, 0)
+        
+        report = self.env['content.violation.report'].create({
+            'target_url': f'/bad-group/home',
+            'description': 'Group is spamming',
+            'content_group_id': bad_group.id
+        })
+        
+        # Strike the group
+        report.action_take_action_and_strike()
+        
+        self.assertEqual(self.bad_user.violation_strike_count, 1, "Strike should cascade to member 1.")
+        self.assertEqual(user_2.violation_strike_count, 1, "Strike should cascade to member 2.")
+        
+        # Apply 2 more strikes to trigger the automated 3-strike suspension rule
+        for i in range(2):
+            r = self.env['content.violation.report'].create({
+                'target_url': f'/bad-group/page{i}',
+                'description': 'More spam',
+                'content_group_id': bad_group.id
+            })
+            r.action_take_action_and_strike()
+            
+        self.assertTrue(self.bad_user.is_suspended_from_websites, "Member 1 should be suspended after 3 strikes.")
+        self.assertTrue(user_2.is_suspended_from_websites, "Member 2 should be suspended after 3 strikes.")

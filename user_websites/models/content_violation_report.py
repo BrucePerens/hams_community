@@ -19,6 +19,7 @@ class ContentViolationReport(models.Model):
 
     # Note: Target owner is resolved by the controller during submission
     content_owner_id = fields.Many2one('res.users', string="Content Owner", ondelete='set null', tracking=True)
+    content_group_id = fields.Many2one('user.websites.group', string="Content Group", ondelete='set null', tracking=True)
     
     reported_by_user_id = fields.Many2one('res.users', string="Reported By (Internal User)", ondelete='set null')
     reported_by_email = fields.Char(string="Reported By (Guest Email)")
@@ -51,5 +52,15 @@ class ContentViolationReport(models.Model):
                     
                 report.message_post(
                     body=_("You applied a strike to the owner. Current strike count: %s") % owner.violation_strike_count,
+                    subtype_xmlid="mail.mt_note"
+                )
+            elif report.content_group_id:
+                group = report.content_group_id
+                for member in group.member_ids:
+                    member.violation_strike_count += 1
+                    if member.violation_strike_count >= 3 and not member.is_suspended_from_websites:
+                        member.action_suspend_user_websites()
+                report.message_post(
+                    body=_("You applied a strike to all members of the group."),
                     subtype_xmlid="mail.mt_note"
                 )

@@ -41,7 +41,10 @@ The `user_websites` module enables decentralized content creation. It employs th
 
 ### Programmatic Setup & Hooks
 * **`res.users._get_user_id_by_slug(slug)`**: A high-performance `@tools.ormcache` method. ALWAYS use this instead of `search()` in frontend controllers.
-* **`user_websites.owned.mixin`**: Inherit this in your custom models (e.g., `ham.equipment`) to instantly inherit the Proxy Ownership security rules via `self._check_proxy_ownership_write(vals)`. *(Note: This mixin internally utilizes `zero_sudo.security.utils` for escalation).*
+* **`user_websites.owned.mixin`**: Inherit this in your custom models (e.g., `ham.equipment`) to instantly inherit the Proxy Ownership security rules via `self._check_proxy_ownership_write(vals)`.
+  * **Mandatory Assignment:** Standard users MUST supply either `owner_user_id` OR `user_websites_group_id` upon record creation.
+  * **Mutual Exclusivity:** A record CANNOT be owned by both a user and a group simultaneously. Attempting to assign both will raise a strict `ValidationError`.
+  * *(Note: This mixin internally utilizes `zero_sudo.security.utils` for escalation).*
 * **GDPR Hooks**: The module extends `_get_gdpr_export_data()` and `_execute_gdpr_erasure()` on `res.users`. Dependent modules storing PII MUST override these to append their data to the export payload and hard-delete it during erasure.
 
 ---
