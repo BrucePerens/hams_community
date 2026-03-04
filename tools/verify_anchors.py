@@ -70,23 +70,35 @@ def find_anchors_in_code_and_manifests(root_dir, is_partial_workspace):
 def _report_duplicates(duplicates):
     if duplicates:
         print("\n[!] CI/CD FAILURE: Duplicate Semantic Anchors detected:")
-        for dup in duplicates: print(f"    - {dup}")
+        for dup in duplicates:
+            print(f"    - {dup}")
         return True
     return False
 
 def _report_missing_cross_refs(cross_references, code_anchors, is_partial_workspace):
-    missing_cross_refs = {a for a in (cross_references - code_anchors) if not a.startswith('example_') and a not in ('unique_name', 'name')}
+    missing_cross_refs = set()
+    for anchor in (cross_references - code_anchors):
+        if not anchor.startswith('example_') and anchor not in ('unique_name', 'name'):
+            missing_cross_refs.add(anchor)
+            
     if missing_cross_refs and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: ADR-0055 Cross-Reference Violation. The following anchors are referenced via 'Triggers' or 'Triggered by' but do not exist in the codebase:")
-        for anchor in missing_cross_refs: print(f"    - `{anchor}`")
+        for anchor in missing_cross_refs:
+            print(f"    - `{anchor}`")
         return True
     return False
 
 def _report_missing_tests(tests_links, code_anchors, is_partial_workspace):
-    missing_tested = {link for links in tests_links.values() for link in links if link not in code_anchors and not link.startswith('example_') and link not in ('unique_name', 'name')}
+    missing_tested = set()
+    for links in tests_links.values():
+        for link in links:
+            if link not in code_anchors and not link.startswith('example_') and link not in ('unique_name', 'name'):
+                missing_tested.add(link)
+                
     if missing_tested and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: ADR-0054 Violation. The following anchors are referenced as 'Tests' but do not exist in the codebase:")
-        for anchor in missing_tested: print(f"    - `{anchor}`")
+        for anchor in missing_tested:
+            print(f"    - `{anchor}`")
         return True
     return False
 
@@ -98,11 +110,13 @@ def _report_bidirectional_orphans(code_anchors, tests_links_set, verified_by_lin
     has_errors = False
     if orphaned_source and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Source anchors missing corresponding '# Tests [%ANCHOR: ...]' link:")
-        for a in orphaned_source: print(f"    - `{a}`")
+        for anchor in orphaned_source:
+            print(f"    - `{anchor}`")
         has_errors = True
     if orphaned_tests and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Test anchors not cited by '# Verified by [%ANCHOR: ...]':")
-        for a in orphaned_tests: print(f"    - `{a}`")
+        for anchor in orphaned_tests:
+            print(f"    - `{anchor}`")
         has_errors = True
     return has_errors, source_anchors
 
@@ -112,11 +126,13 @@ def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, is_pa
     has_errors = False
     if undocumented and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: ADR-0055 Bidirectional Documentation Violation. Source anchors missing from formal docs (docs/):")
-        for a in undocumented: print(f"    - `{a}`")
+        for anchor in undocumented:
+            print(f"    - `{anchor}`")
         has_errors = True
     if missing_in_code and not is_partial_workspace:
         print("\n[!] CI/CD FAILURE: Documentation references anchors missing from the codebase:")
-        for anchor in missing_in_code: print(f"    - `{anchor}`")
+        for anchor in missing_in_code:
+            print(f"    - `{anchor}`")
         has_errors = True
     return has_errors
 
@@ -124,10 +140,8 @@ def main():
     print("[*] Scanning documentation and codebase for Semantic Anchors...")
     docs_anchors = find_anchors_in_docs('docs')
     
-    # Generic partial workspace detection without hardcoded module names
-    root_markers = ['tools', 'docs']
-    local_modules = [d for d in os.listdir('.') if os.path.isdir(d) and os.path.exists(os.path.join(d, '__manifest__.py'))]
-    is_partial_workspace = any(not os.path.exists(d) for d in root_markers) or len(local_modules) < 3
+    # If ham_base is missing, we are in the hams_community isolated repository
+    is_partial_workspace = not os.path.exists('ham_base')
 
     code_anchors, anchor_locations, tests_links, tests_links_set, verified_by_links, cross_references, duplicates = find_anchors_in_code_and_manifests('.', is_partial_workspace)
     

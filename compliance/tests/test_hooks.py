@@ -55,3 +55,9 @@ class TestComplianceHooks(TransactionCase):
                 website.cookies_bar, 
                 f"Cookie bar must be enabled on website: {website.name}"
             )
+
+    def test_03_views_rendering(self):
+        # [%ANCHOR: test_compliance_views]
+        self.env.ref('compliance.compliance_privacy_policy_template').with_context(lang=None)._get_combined_arch()
+        self.env.ref('compliance.compliance_cookie_policy_template').with_context(lang=None)._get_combined_arch()
+        self.env.ref('compliance.compliance_terms_of_service_template').with_context(lang=None)._get_combined_arch()

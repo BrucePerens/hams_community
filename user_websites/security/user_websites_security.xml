@@ -52,7 +52,7 @@
 
     </data>
 
-    <data>
+    <data noupdate="1">
         <record id="content_violation_report_user_rule" model="ir.rule">
             <field name="name">Content Violation Report User Rule</field>
             <field name="model_id" ref="model_content_violation_report"/>

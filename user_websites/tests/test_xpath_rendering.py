@@ -94,7 +94,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.assertIn(b'id="userNavbarNav"', response.content, "The dynamic user navigation bar must render on the page.")
 
     def test_08_backend_views_rendering(self):
-        # [%ANCHOR: test_backend_views_rendering]
+        # [%ANCHOR: test_user_websites_backend_views_rendering]
         """Verify that standard backend views compile without error."""
         self.env['content.violation.appeal'].get_view(view_id=self.env.ref('user_websites.view_content_violation_appeal_list').id, view_type='list')
         self.env['content.violation.appeal'].get_view(view_id=self.env.ref('user_websites.view_content_violation_appeal_form').id, view_type='form')

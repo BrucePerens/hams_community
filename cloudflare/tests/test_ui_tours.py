@@ -34,3 +34,10 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
         """Executes the JS tour simulating an administrator viewing WAF Edge configurations."""
         self.authenticate(self.admin.login, self.admin.login)
         self.start_tour("/web", "cf_waf_rule_tour", login=self.admin.login)
+
+    def test_03_backend_views_rendering(self):
+        # [%ANCHOR: test_cf_backend_views_rendering]
+        self.env['cloudflare.config.backup'].get_view(view_type='list')
+        self.env['cloudflare.ip.ban'].get_view(view_type='list')
+        self.env['cloudflare.tunnel.wizard'].get_view(view_type='form')
+        self.env['cloudflare.waf.rule'].get_view(view_type='list')

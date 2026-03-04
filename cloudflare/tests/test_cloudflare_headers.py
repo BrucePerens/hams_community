@@ -51,7 +51,7 @@ class TestCloudflareHeaders(HttpCase):
         )
 
     def test_03_xpath_rendering(self):
-        # [%ANCHOR: test_xpath_rendering_settings]
+        # [%ANCHOR: test_xpath_rendering_cf_settings]
         # Tests [%ANCHOR: xpath_rendering_cf_settings]
         """Verify the Cloudflare settings block successfully injects into the global website config."""
         res = self.env['res.config.settings'].get_view(view_id=self.env.ref('base.res_config_settings_view_form').id, view_type='form')

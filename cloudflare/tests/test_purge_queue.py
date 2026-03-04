@@ -17,6 +17,7 @@ class TestPurgeQueue(TransactionCase):
     @patch('odoo.addons.cloudflare.utils.cloudflare_api.requests.post')
     @patch('time.sleep')
     def test_01_bdd_queue_batching_and_rate_limiting(self, mock_sleep, mock_post):
+        # Tests [%ANCHOR: test_queue_batching_and_rate_limiting]
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_post.return_value = mock_response
@@ -34,6 +35,8 @@ class TestPurgeQueue(TransactionCase):
             self.assertEqual(mock_sleep.call_count, 10, "MUST call time.sleep() after each chunk to drop DB locks.")
             self.assertEqual(QueueModel.search_count([]), 10, "MUST leave 10 unprocessed records for the next trigger.")
             mock_trigger.assert_called_once()  # MUST re-trigger the cron job
+            
+        cron._trigger()
 
 
     def test_03_purge_queue_website_acl(self):

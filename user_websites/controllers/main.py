@@ -13,7 +13,6 @@ import odoo
 import redis
 from odoo import http, _
 from odoo.http import request, content_disposition
-from odoo.exceptions import AccessError
 from odoo.tools import consteq
 from werkzeug.urls import url_encode, url_parse
 import werkzeug
@@ -298,11 +297,11 @@ class UserWebsitesController(http.Controller):
 
         if user:
             if user.id != request.env.user.id:
-                raise AccessError(_("You do not have permission to create this site."))
+                raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create this site."))
             resolved_slug = user.website_slug
         elif group:
             if request.env.user not in group.odoo_group_id.user_ids:
-                raise AccessError(_("You do not have permission to create this site."))
+                raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create this site."))
             resolved_slug = group.website_slug
         else:
             raise werkzeug.exceptions.NotFound()
@@ -458,11 +457,11 @@ class UserWebsitesController(http.Controller):
 
         if user:
             if user.id != request.env.user.id:
-                raise AccessError(_("You cannot create posts for this user."))
+                raise werkzeug.exceptions.Forbidden(description=_("You cannot create posts for this user."))
             resolved_slug = user.website_slug
         elif group:
             if request.env.user not in group.odoo_group_id.user_ids:
-                raise AccessError(_("You do not have permission to create posts for this group."))
+                raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create posts for this group."))
             resolved_slug = group.website_slug
         else:
             raise werkzeug.exceptions.NotFound()
@@ -578,8 +577,9 @@ class UserWebsitesController(http.Controller):
             
         import time
         current_time = int(time.time())
-        # ADR-0025: Enforce a strict 30-day TTL (2592000 seconds) on the stateless token
-        if current_time - timestamp > 2592000:
+        # ADR-0025: Enforce a strict 30-day TTL on the stateless token
+        thirty_days_in_seconds = 30 * 24 * 60 * 60
+        if current_time - timestamp > thirty_days_in_seconds:
             raise werkzeug.exceptions.Forbidden("This unsubscribe link has expired.")
             
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')

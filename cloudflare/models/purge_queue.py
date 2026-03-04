@@ -123,7 +123,7 @@ class CloudflarePurgeQueue(models.Model):
                 break
                 
             if not os.environ.get('HAMS_DISABLE_SLEEPS'):
-                time.sleep(0.5)
+                time.sleep(0.5) # audit-ignore-sleep: Rate limiting
             
         if batches_processed >= max_batches:
             cron = self.env.ref('cloudflare.ir_cron_process_cf_purge_queue', raise_if_not_found=False)

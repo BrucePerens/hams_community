@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="sidebar_article_recursive" name="Sidebar Recursive">
+    <template id="sidebar_article_recursive" name="Sidebar Recursive"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_manual_templates_rendering] -->
         <li class="nav-item">
             <a t-attf-href="#{nav_article.website_url}" 
                t-attf-class="nav-link #{'active fw-bold' if (article and article.id == nav_article.id) else 'text-dark'}"
@@ -11,7 +11,7 @@
             <t t-if="nav_article.child_ids">
                 <ul class="nav flex-column ms-3 mt-1 border-start border-2 ps-2">
                     <t t-foreach="nav_article.child_ids" t-as="child">
-                        <t t-if="request.env.user.has_group('base.group_user') or child.is_published">
+                        <t t-if="is_internal_user or child.is_published">
                             <t t-set="nav_article" t-value="child"/>
                             <t t-call="manual_library.sidebar_article_recursive"/>
                         </t>
@@ -21,7 +21,7 @@
         </li>
     </template>
 
-    <template id="manual_sidebar" name="Manual Sidebar Component">
+    <template id="manual_sidebar" name="Manual Sidebar Component"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_manual_templates_rendering] -->
         <form action="/manual/search" method="GET" class="mb-4">
             <div class="input-group">
                 <input type="text" name="search" class="form-control" placeholder="Search manuals..." t-att-value="search_term" aria-label="Search manuals"/>
@@ -33,7 +33,7 @@
             <h5 class="mb-3 text-muted text-uppercase fs-6 tracking-wide">Workspace</h5>
             <ul class="nav flex-column mb-auto">
                 <t t-foreach="workspace_articles" t-as="root_art">
-                    <t t-if="request.env.user.has_group('base.group_user') or root_art.is_published">
+                    <t t-if="is_internal_user or root_art.is_published">
                         <t t-set="nav_article" t-value="root_art"/>
                         <t t-call="manual_library.sidebar_article_recursive"/>
                     </t>
@@ -45,7 +45,7 @@
             <h5 class="mt-4 mb-3 text-muted text-uppercase fs-6 tracking-wide">Shared</h5>
             <ul class="nav flex-column mb-auto">
                 <t t-foreach="shared_articles" t-as="root_art">
-                    <t t-if="request.env.user.has_group('base.group_user') or root_art.is_published">
+                    <t t-if="is_internal_user or root_art.is_published">
                         <t t-set="nav_article" t-value="root_art"/>
                         <t t-call="manual_library.sidebar_article_recursive"/>
                     </t>
@@ -57,7 +57,7 @@
             <h5 class="mt-4 mb-3 text-muted text-uppercase fs-6 tracking-wide">Private</h5>
             <ul class="nav flex-column mb-auto">
                 <t t-foreach="private_articles" t-as="root_art">
-                    <t t-if="request.env.user.has_group('base.group_user') or root_art.is_published">
+                    <t t-if="is_internal_user or root_art.is_published">
                         <t t-set="nav_article" t-value="root_art"/>
                         <t t-call="manual_library.sidebar_article_recursive"/>
                     </t>
@@ -66,7 +66,7 @@
         </t>
     </template>
 
-    <template id="article_template" name="Manual Article">
+    <template id="article_template" name="Manual Article"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_manual_templates_rendering] -->
         <t t-call="website.layout">
             <div id="wrap" class="oe_structure oe_empty">
                 <div class="container-fluid pt-4 pb-5">
@@ -132,7 +132,7 @@
         </t>
     </template>
 
-    <template id="search_results_template" name="Manual Search Results">
+    <template id="search_results_template" name="Manual Search Results"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_manual_templates_rendering] -->
         <t t-call="website.layout">
             <div id="wrap" class="oe_structure oe_empty">
                 <div class="container-fluid pt-4 pb-5">

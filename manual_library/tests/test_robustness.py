@@ -70,3 +70,8 @@ class TestManualRobustness(odoo.tests.common.HttpCase):
         
         # The archived parent MUST NOT appear anywhere in the sidebar or breadcrumbs
         self.assertNotIn(b'Archived Article', response.content, "Archived parent must remain hidden from the UI hierarchy.")
+
+    def test_04_backend_views_rendering(self):
+        # [%ANCHOR: test_manual_backend_views_rendering]
+        self.env['knowledge.article'].get_view(view_id=self.env.ref('manual_library.view_knowledge_article_tree').id, view_type='list')
+        self.env['knowledge.article'].get_view(view_id=self.env.ref('manual_library.view_knowledge_article_form').id, view_type='form')

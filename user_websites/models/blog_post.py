@@ -180,10 +180,30 @@ class BlogPost(models.Model):
                 key = ('user.websites.group', post.user_websites_group_id.id)
             else:
                 continue
-                
+            
             if key not in posts_by_owner:
                 posts_by_owner[key] = []
             posts_by_owner[key].append(post)
+
+                # ADR-0022: Pre-fetch followers outside the loop to prevent N+1 queries
+        f_domain = []
+        if partner_ids and group_ids:
+            f_domain = ['|', 
+                        '&', ('res_model', '=', 'res.partner'), ('res_id', 'in', partner_ids),
+                        '&', ('res_model', '=', 'user.websites.group'), ('res_id', 'in', group_ids)]
+        elif partner_ids:
+            f_domain = [('res_model', '=', 'res.partner'), ('res_id', 'in', partner_ids)]
+        elif group_ids:
+            f_domain = [('res_model', '=', 'user.websites.group'), ('res_id', 'in', group_ids)]
+            
+        all_followers = self.env['mail.followers'].with_user(svc_uid).search(f_domain, limit=5000) if f_domain else []
+        followers_by_record = {}
+        for fol in all_followers:
+            f_key = (fol.res_model, fol.res_id)
+            if f_key not in followers_by_record:
+                followers_by_record[f_key] = []
+            if fol.partner_id:
+                followers_by_record[f_key].append(fol.partner_id)
 
         for owner_model, owner_record in batch_keys:
             # Retrieve from map instead of database
@@ -191,7 +211,7 @@ class BlogPost(models.Model):
             if not posts:
                 continue
 
-            followers = owner_record.message_follower_ids.mapped('partner_id')
+            followers = followers_by_record.get((owner_model, owner_record.id), [])
             if not followers:
                 continue
             

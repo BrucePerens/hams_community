@@ -59,7 +59,7 @@ class PagerIncident(models.Model):
         ], limit=1000)
         if not incidents:
             return
-        mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('user_mail_service_internal')
+        mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
         pager_admin_group = self.env.ref('pager_duty.group_pager_admin')
         partners = pager_admin_group.user_ids.mapped('partner_id')
         for inc in incidents:
@@ -100,7 +100,7 @@ class PagerIncident(models.Model):
         incident = IncidentModel.create(vals)
         on_duty_user = self.env['calendar.event'].get_current_on_duty_admin()
         if on_duty_user:
-            mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('user_mail_service_internal')
+            mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
             incident.with_user(mail_svc).message_post(body=_('New Incident Created'), partner_ids=[on_duty_user.partner_id.id]) # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]
         return incident.id
 
@@ -117,7 +117,7 @@ class PagerIncident(models.Model):
         
         if open_incidents:
             open_incidents.write({'status': 'resolved'})
-            mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('user_mail_service_internal')
+            mail_svc = self.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
             for incident in open_incidents:
                 incident.with_user(mail_svc).message_post(body=_('Auto-resolved by NOC monitor recovery sequence.')) # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]
         return True

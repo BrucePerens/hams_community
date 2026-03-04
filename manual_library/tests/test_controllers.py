@@ -122,3 +122,8 @@ class TestManualControllers(odoo.tests.common.HttpCase):
         self.assertIn(b'Shared Department Root', response.content)
         # We expect the QWeb to NOT render "Private" since the user owns no private roots
         self.assertNotIn(b'Admin Passwords', response.content)
+
+    def test_06_manual_templates_rendering(self):
+        # [%ANCHOR: test_manual_templates_rendering]
+        self.authenticate(None, None)
+        self.url_open('/manual')

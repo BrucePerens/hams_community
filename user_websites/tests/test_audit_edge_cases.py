@@ -52,8 +52,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         and resumes processing from the correct index.
         """
         # AST Verification Requirement (ADR-0059)
-        if False:
-            self.env.ref('user_websites.ir_cron_send_weekly_digest')._trigger()
+        self.env.ref('user_websites.ir_cron_send_weekly_digest')._trigger()
         # Ensure a clean state for the system parameter
         svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('ham.user_websites.last_digest_key', '')

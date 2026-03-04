@@ -9,6 +9,7 @@ import shutil
 import ast
 import difflib
 import warnings
+import subprocess
 
 MAX_LINE_LENGTH = 3000
 
@@ -329,6 +330,41 @@ def _process_ast_replace(full_path, filepath, file_data, encoding):
     print(f"✅ Patched (ast-replace): {filepath} ({target_type} '{target_name}')")
     return True
 
+def _run_linters(full_path, filepath, abs_base_dir):
+    # 1. Flake8 (Python only)
+    if full_path.endswith('.py'):
+        try:
+            flake8_args = ['flake8', full_path, '--select=E9,F']
+            if os.path.basename(full_path) == '__init__.py':
+                flake8_args.append('--extend-ignore=F401')
+            
+            venv_flake8 = os.path.join(abs_base_dir, '.venv', 'bin', 'flake8')
+            cmd = venv_flake8 if os.path.exists(venv_flake8) else 'flake8'
+            flake8_args[0] = cmd
+            
+            res = subprocess.run(flake8_args, capture_output=True, text=True)
+            if res.returncode != 0 and res.stdout.strip():
+                print(f"  [Linter] ❌ flake8 flagged {filepath}:\n{res.stdout.strip()}")
+        except Exception:
+            pass
+
+    # 2. Burn List Linter (Python, XML, JS)
+    if full_path.endswith(('.py', '.xml', '.js')):
+        tools_dir = os.path.join(abs_base_dir, 'tools')
+        if tools_dir not in sys.path:
+            sys.path.insert(0, tools_dir)
+        try:
+            import check_burn_list
+            errors, warnings = check_burn_list.scan_file(full_path)
+            if errors or warnings:
+                print(f"  [Linter] 🚨 Burn List flagged {filepath}:")
+                for w in warnings:
+                    print(f"    ⚠️ WARNING: {w}")
+                for e in errors:
+                    print(f"    ❌ ERROR: {e}")
+        except Exception:
+            pass
+
 def _process_file(file_data, abs_base_dir):
     filepath = file_data.get("path", "").strip()
     operation = file_data.get("operation", "overwrite")
@@ -354,7 +390,8 @@ def _process_file(file_data, abs_base_dir):
 
     try:
         if operation == "ast-replace":
-            _process_ast_replace(full_path, filepath, file_data, encoding)
+            if _process_ast_replace(full_path, filepath, file_data, encoding):
+                _run_linters(full_path, filepath, abs_base_dir)
             return
 
         if operation == "search-and-replace":
@@ -367,7 +404,8 @@ def _process_file(file_data, abs_base_dir):
                     valid_length = False
             if not valid_length:
                 return
-            _process_search_and_replace(full_path, filepath, blocks, encoding)
+            if _process_search_and_replace(full_path, filepath, blocks, encoding):
+                _run_linters(full_path, filepath, abs_base_dir)
             return
 
         content_str = "".join(content_raw) if isinstance(content_raw, list) else content_raw
@@ -388,6 +426,7 @@ def _process_file(file_data, abs_base_dir):
                 shutil.copymode(full_path, tmp_path)
             os.replace(tmp_path, full_path)
             print(f"✅ Wrote: {filepath}")
+            _run_linters(full_path, filepath, abs_base_dir)
         elif operation == "delete":
             if os.path.exists(full_path):
                 os.remove(full_path)

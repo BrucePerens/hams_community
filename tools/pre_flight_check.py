@@ -81,9 +81,12 @@ def main():
     addons_paths = [p.strip() for p in args.addons_path.split(',') if p.strip()]
     
     missing_dependencies = []
+    CORE_MODULES = {'base', 'web', 'website', 'mail', 'portal', 'calendar', 'bus', 'website_blog', 'website_sale', 'contacts', 'board', 'auth_signup'}
 
     # 3. Verify each dependency
     for dep in dependencies:
+        if dep in CORE_MODULES:
+            continue
         found = False
         for path in addons_paths:
             dep_path = os.path.join(path, dep)

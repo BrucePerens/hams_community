@@ -24,3 +24,15 @@ access_ir_config_parameter_svc,ir.config_parameter svc,base.model_ir_config_para
 access_res_partner_svc,res.partner svc,base.model_res_partner,user_websites.group_user_websites_service_account,1,1,1,1
 access_content_violation_report_svc,content.violation.report svc,model_content_violation_report,user_websites.group_user_websites_service_account,1,1,1,1
 access_content_violation_appeal_svc,content.violation.appeal svc,model_content_violation_appeal,user_websites.group_user_websites_service_account,1,1,1,1
+access_res_company_svc,res.company svc,base.model_res_company,user_websites.group_user_websites_service_account,1,0,0,0
+access_mail_message_svc,mail.message svc,mail.model_mail_message,user_websites.group_user_websites_service_account,1,1,1,0
+access_mail_template_svc,mail.template svc,mail.model_mail_template,user_websites.group_user_websites_service_account,1,0,0,0
+access_discuss_channel_svc,discuss.channel svc,mail.model_discuss_channel,user_websites.group_user_websites_service_account,1,1,0,0
+access_mail_followers_svc,mail.followers svc,mail.model_mail_followers,user_websites.group_user_websites_service_account,1,1,1,1
+access_mail_alias_domain_svc,mail.alias.domain svc,mail.model_mail_alias_domain,user_websites.group_user_websites_service_account,1,0,0,0
+access_website_svc,website svc,website.model_website,user_websites.group_user_websites_service_account,1,0,0,0
+access_ir_actions_report_svc,ir.actions.report svc,base.model_ir_actions_report,user_websites.group_user_websites_service_account,1,0,0,0
+access_discuss_channel_member_svc,discuss.channel.member svc,mail.model_discuss_channel_member,user_websites.group_user_websites_service_account,1,1,1,1
+access_res_partner_bank_svc,res.partner.bank svc,base.model_res_partner_bank,user_websites.group_user_websites_service_account,1,0,0,0
+access_mail_message_subtype_svc,mail.message.subtype svc,mail.model_mail_message_subtype,user_websites.group_user_websites_service_account,1,0,0,0
+
