@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ham_db_table_stat_admin,ham.db.table admin,model_database_table_stat,base.group_system,1,1,1,1
+access_ham_db_query_stat_admin,ham.db.query admin,model_database_query_stat,base.group_system,1,1,1,1
+access_ham_db_activity_admin,ham.db.activity admin,model_database_activity,base.group_system,1,1,1,1
+access_ham_db_index_stat_admin,ham.db.index admin,model_database_index_stat,base.group_system,1,1,1,1
+access_pg_setting_admin,pg.setting admin,model_database_pg_setting,base.group_system,1,1,1,1
+access_pg_optimize_admin,pg.optimize admin,model_pg_optimize_wizard,base.group_system,1,1,1,1
+access_pg_ha_admin,pg.ha admin,model_pg_ha_wizard,base.group_system,1,1,1,1

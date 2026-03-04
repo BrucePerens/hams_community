@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_backup_config_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_backup_view] -->
+        <field name="name">backup.config.list</field>
+        <field name="model">backup.config</field>
+        <field name="arch" type="xml">
+            <list string="Backup Configurations">
+                <field name="name"/>
+                <field name="engine"/>
+                <field name="target_path"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_backup_config_form" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_backup_view] -->
+        <field name="name">backup.config.form</field>
+        <field name="model">backup.config</field>
+        <field name="arch" type="xml">
+            <form string="Backup Configuration">
+                <header>
+                    <button name="action_trigger_backup" type="object" string="Run Backup Now" class="btn-danger"/>
+                    <button name="action_apply_policies" type="object" string="Apply Policies" class="btn-warning" invisible="engine != 'kopia'"/>
+                    <button name="action_sync_snapshots" type="object" string="Sync Snapshots" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Kopia Main Repo"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="engine"/>
+                            <field name="target_path"/>
+                            <field name="minimum_size_mb"/>
+                            <field name="kopia_password" password="True" invisible="engine != 'kopia'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Storage Backend">
+                            <group>
+                                <field name="storage_type"/>
+                                <field name="endpoint_url" invisible="storage_type == 'local'"/>
+                                <field name="bucket_name" invisible="storage_type == 'local'"/>
+                                <field name="access_key" invisible="storage_type == 'local'"/>
+                                <field name="secret_key" password="True" invisible="storage_type == 'local'"/>
+                            </group>
+                        </page>
+                        <page string="Retention Policies">
+                            <group>
+                                <field name="keep_daily"/>
+                                <field name="keep_weekly"/>
+                                <field name="keep_monthly"/>
+                            </group>
+                        </page>
+                        <page string="Exclusions" invisible="engine != 'kopia'">
+                            <group>
+                                <field name="exclude_patterns" widget="text"/>
+                            </group>
+                        </page>
+                        <page string="Automated Drills">
+                            <group>
+                                <field name="restore_drill_script"/>
+                                <field name="last_drill_time"/>
+                            </group>
+                        </page>
+                        <page string="Snapshots">
+                            <field name="snapshot_ids" readonly="1">
+                                <list>
+                                    <field name="snapshot_id"/>
+                                    <field name="start_time"/>
+                                    <field name="size_bytes"/>
+                                    <field name="status"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+</odoo>

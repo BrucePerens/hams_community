@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_backup_board_client" model="ir.actions.client">
+        <field name="name">Backup Dashboard</field>
+        <field name="tag">backup_management.board</field>
+    </record>
+</odoo>

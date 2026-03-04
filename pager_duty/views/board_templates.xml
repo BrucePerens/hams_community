@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="board_template" name="Pager Duty Board"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_pager_board_url] -->
+        <html>
+            <head>
+                <title>NOC Board</title>
+                <t t-call-assets="web.assets_backend" t-js="true"/>
+            </head>
+            <body>
+                <div id="noc_board_root" t-att-data-duty="on_duty_name">
+                    <h1>On Duty: <t t-out="on_duty_name"/></h1>
+                    <div class="incident-list">
+                        <t t-foreach="incidents" t-as="inc">
+                            <div class="incident-card">
+                                <t t-out="inc['name']"/> - <t t-out="inc['severity']"/>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </body>
+        </html>
+    </template>
+</odoo>

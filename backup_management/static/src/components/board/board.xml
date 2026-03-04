@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="backup_management.BackupBoardTemplate" owl="1">
+        <div class="backup-board p-4" style="background: #121212; min-height: 100vh; color: #e0e0e0; overflow: hidden;">
+            <div t-att-style="state.transformStyle" style="will-change: transform;">
+                <div class="d-flex justify-content-between align-items-center mb-4 p-3 rounded shadow-sm" style="background: #1e1e1e;">
+                    <h1 class="m-0 text-light"><i class="fa fa-database me-2"/>Backup &amp; Disaster Recovery</h1>
+                    <button class="btn btn-outline-light" t-on-click="fetchData"><i class="fa fa-refresh me-1"/> Refresh</button>
+                </div>
+                
+                <div class="row">
+                    <t t-foreach="state.configs" t-as="conf" t-key="conf.id">
+                        <div class="col-md-6 mb-4">
+                            <div t-attf-class="card shadow-sm h-100 {{ conf.is_stale ? 'border-danger' : 'border-success' }}" style="background: #1e1e1e; border-width: 2px;">
+                                <div class="card-body">
+                                    <h3 class="card-title text-light d-flex justify-content-between align-items-center">
+                                        <span><t t-out="conf.name"/></span>
+                                        <span t-attf-class="badge rounded-pill {{ conf.is_stale ? 'bg-danger' : 'bg-success' }}">
+                                            <t t-out="conf.is_stale ? 'STALE / FAILED' : 'HEALTHY'"/>
+                                        </span>
+                                    </h3>
+                                    <h6 class="card-subtitle mb-3 text-secondary"><t t-out="conf.engine.toUpperCase()"/> - <t t-out="conf.target_path"/></h6>
+                                    <t t-if="conf.latest_snapshot">
+                                        <p class="mb-1"><strong>Last Snapshot:</strong> <t t-out="conf.latest_snapshot.start_time"/></p>
+                                        <p class="mb-1"><strong>ID:</strong> <t t-out="conf.latest_snapshot.snapshot_id"/></p>
+                                        <p class="mb-0"><strong>Size:</strong> <t t-out="(conf.latest_snapshot.size_bytes / 1048576).toFixed(2)"/> MB</p>
+                                    </t>
+                                    <t t-else="">
+                                        <p class="text-danger mb-0"><i class="fa fa-exclamation-triangle me-1"/> No snapshots recorded.</p>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-if="state.configs.length === 0">
+                        <div class="col-12">
+                            <div class="alert alert-warning shadow-sm" style="background: rgba(255, 193, 7, 0.2); border: 1px solid #ffc107; color: #ffc107;">
+                                <i class="fa fa-info-circle me-2"/> No backup configurations found.
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

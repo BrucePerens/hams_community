@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_db_table_stat_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_dba_view] -->
+        <field name="name">database.table.stat.list</field>
+        <field name="model">database.table.stat</field>
+        <field name="arch" type="xml">
+            <list string="Table Health" create="false" edit="false">
+                <header>
+                    <button name="action_vacuum_analyze" type="object" string="Vacuum Analyze Selected" class="btn-danger"/>
+                </header>
+                <field name="table_name"/>
+                <field name="total_size_mb" sum="Total Size"/>
+                <field name="live_tuples" sum="Total Rows"/>
+                <field name="dead_tuples"/>
+                <field name="dead_percent" widget="progressbar"/>
+                <field name="cache_hit_percent" widget="progressbar"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_db_query_stat_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_dba_view] -->
+        <field name="name">database.query.stat.list</field>
+        <field name="model">database.query.stat</field>
+        <field name="arch" type="xml">
+            <list string="Slow Queries" create="false" edit="false">
+                <field name="query"/>
+                <field name="calls" sum="Executions"/>
+                <field name="total_time" sum="Total Load"/>
+                <field name="mean_time"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_db_activity_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_dba_view] -->
+        <field name="name">database.activity.list</field>
+        <field name="model">database.activity</field>
+        <field name="arch" type="xml">
+            <list string="Active Sessions" create="false" edit="false" decoration-danger="duration > 60">
+                <header>
+                    <button name="action_terminate_backend" type="object" string="Kill Selected Queries" class="btn-danger" confirm="Are you sure you want to forcibly terminate these PostgreSQL backends?"/>
+                </header>
+                <field name="pid"/>
+                <field name="usename"/>
+                <field name="state"/>
+                <field name="query"/>
+                <field name="duration"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_db_index_stat_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_dba_view] -->
+        <field name="name">database.index.stat.list</field>
+        <field name="model">database.index.stat</field>
+        <field name="arch" type="xml">
+            <list string="Index Health" create="false" edit="false" decoration-warning="idx_scan == 0">
+                <field name="table_name"/>
+                <field name="index_name"/>
+                <field name="idx_scan" sum="Total Scans"/>
+                <field name="index_size_kb" sum="Total Index Size"/>
+            </list>
+        </field>
+    </record>
+</odoo>

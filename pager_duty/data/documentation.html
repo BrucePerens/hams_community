@@ -1,0 +1,50 @@
+<div class="ham-manual-container">
+    <h1>Ham Pager Duty &amp; Generalized Monitoring</h1>
+    <hr/>
+    <p class="text-muted small"><em>Patents Pending. Copyright &copy; Bruce Perens K6BP. All Rights Reserved.</em></p>
+    
+    <h2>1. Architecture Overview (CQRS)</h2>
+    <p>The Pager Duty module operates on a Command Query Responsibility Segregation (CQRS) model. Odoo acts as the control plane to manage configurations, while an isolated, standalone Python daemon (<code>generalized_monitor.py</code>) executes the actual polling and health checks outside of Odoo's web workers.</p>
+    
+    <h2>2. Configuration Wizard</h2>
+    <p>Administrators can configure all monitoring endpoints graphically. Navigate to <strong>Ham Admin &gt; System Health &gt; Monitoring Checks</strong>. Click <em>Edit YAML Config File</em> to synchronize the database records with the daemon's physical <code>pager_config.yaml</code> file.</p>
+    
+    <h2>3. Supported Check Types</h2>
+    <ul>
+        <li><strong>System Resource:</strong> Monitors Disk, Memory, CPU, IO Wait, and Hypervisor Steal percent limits.</li>
+        <li><strong>DNS Resolution:</strong> Performs un-cached, full-chain root server lookups (via <code>dig +trace</code>).</li>
+        <li><strong>HTTP / HTTP/3 (QUIC):</strong> Validates web server responsiveness across modern and legacy web protocols.</li>
+        <li><strong>TCP &amp; UDP Sockets:</strong> Asserts raw datagram and stream connectivity, supporting hexadecimal payload injection.</li>
+        <li><strong>Native Protocol Handshakes:</strong> Built-in support for executing strict protocol validations against Redis, RabbitMQ (AMQP), XML-RPC, and JSON-RPC.</li>
+        <li><strong>PostgreSQL DB:</strong> Validates database connection pools directly via <code>psycopg2</code>.</li>
+        <li><strong>SSL/TLS Certificate Expiry:</strong> Alerts administrators if the domain's certificate expires within a critical threshold.</li>
+        <li><strong>Anomaly Detection:</strong> Evaluates a custom SQL query. If the integer drops below the threshold, it fires an alert.</li>
+        <li><strong>Synthetic Journeys:</strong> Executes a custom shell script or headless browser test, alerting on non-zero exit codes.</li>
+        <li><strong>Pre-Flight &amp; Dry-Runs:</strong> Safely simulates critical infrastructure maintenance including <code>certbot --dry-run</code>, <code>pg_dump -s</code>, <code>nginx -t</code>, and outbound <code>SMTP</code> authentications.</li>
+        <li><strong>ICMP Ping:</strong> Basic network reachability testing for remote gateways and routers.</li>
+        <li><strong>Docker Container Health:</strong> Monitors the native execution state of background Docker containers.</li>
+        <li><strong>Systemd Services:</strong> Validates that critical host OS services remain active.</li>
+        <li><strong>Memcached Server:</strong> Raw TCP socket handshakes to ensure the cache is responding to statistic inquiries.</li>
+        <li><strong>SSH Handshake:</strong> Validates raw port accessibility and protocol compliance for remote access.</li>
+    </ul>
+    
+    <h2>4. Intelligent Calendar Routing</h2>
+    <p>The module natively ties into the Odoo Calendar. By checking the "Is Pager Duty Shift" box on an event, the system automatically knows exactly who is on-call at any given minute. It fully supports complex recurrence rules (like "the first Tuesday of the month") and manages shift-handoffs seamlessly without requiring manual configuration files.</p>
+
+    <h2>5. Fail-Safes &amp; Self-Healing</h2>
+    <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
+    <p>Furthermore, the daemon features a self-healing dependency scanner. For example, if it is instructed to test a Zero Trust tunnel but the <code>cloudflared</code> binary is missing from the system, it will automatically download the static binary from GitHub and continue execution without requiring manual intervention.</p>
+
+    <h2>6. Advanced SRE Capabilities</h2>
+    <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
+    
+    <h2>6. Advanced SRE Capabilities</h2>
+    <ul>
+        <li><strong>Cascading Failure Suppression:</strong> Link checks together via "Parent Check" dependencies. If the master database goes offline, downstream HTTP checks will be automatically silenced to prevent alarm fatigue.</li>
+        <li><strong>Maintenance Windows:</strong> Schedule explicit silences via Maintenance Start/End dates to mute alerts during planned infrastructure work.</li>
+        <li><strong>Push Monitoring (Heartbeat):</strong> Use the <code>/api/v1/pager/heartbeat/&lt;uuid&gt;</code> endpoint to actively listen for successful "pings" from external backup scripts. If a ping is missed, the daemon raises an incident.</li>
+        <li><strong>Multi-Tier Escalation:</strong> A background cron job constantly evaluates open incidents. If a critical incident remains unacknowledged for over 15 minutes, it automatically escalates the alert directly to the entire administrative group, bypassing the scheduled shift.</li>
+        <li><strong>Analytics:</strong> Incident records automatically track Mean Time To Acknowledge (MTTA) and Mean Time To Resolve (MTTR) metrics for operational review.</li>
+    </ul>
+</div>
+
