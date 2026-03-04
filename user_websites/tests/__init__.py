@@ -13,6 +13,7 @@ from . import test_orm_security  # noqa: F401
 from . import test_qweb_context  # noqa: F401
 from . import test_appeals_and_views  # noqa: F401
 from . import test_subscriptions  # noqa: F401
+from . import test_gdpr_base  # noqa: F401
 from . import test_privacy_gdpr  # noqa: F401
 from . import test_sdk_extensibility  # noqa: F401
 from . import test_audit_edge_cases  # noqa: F401
