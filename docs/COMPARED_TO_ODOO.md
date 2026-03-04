@@ -20,7 +20,7 @@ Here is a technical comparison between this codebase and standard Odoo core code
 ## 1. Security Architecture & Privilege Escalation
 
 * **Odoo S.A. Core:** Standard Odoo modules frequently use `.sudo()` inline to bypass access rights for system-level operations or unauthenticated guest requests. While convenient, this is an anti-pattern that can lead to Mass Assignment or Insecure Direct Object Reference (IDOR) vulnerabilities if input dictionaries are not strictly sanitized.
-* **This Codebase:** Operates under a strict "Zero-Sudo" Architecture (ADR-0002). The use of `.sudo()` is explicitly banned by an AST-aware linter. Instead, the codebase uses a "Service Account Pattern", where background tasks or guest forms temporally escalate privileges by impersonating an isolated proxy user (e.g., `self.env['target.model'].with_user(svc_uid).create(...)`). This guarantees operations are bound by explicit Record Rules rather than absolute database power.
+* **This Codebase:** Operates under a strict "Zero-Sudo" Architecture (ADR-0002). The use of `.sudo()` is explicitly banned by an AST-aware linter. Instead, the codebase uses a "Micro-Service Account Pattern" (ADR-0062), where background tasks or guest forms temporarily escalate privileges by impersonating an isolated, highly specialized proxy user (e.g., `mail_service_internal` or `gdpr_service_internal`). This guarantees operations are bound by explicit Record Rules with a minimized blast radius rather than absolute database power.
 
 ## 2. Traceability & Documentation Sync
 

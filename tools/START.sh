@@ -6,58 +6,59 @@ COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/..
 ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 
 # Allow passing a target module to test, with defaults.
-TARGET_MODULE="${1:-zero_sudo,user_websites}"
+if [ -z "$1" ]; then
+    if [ -f "$DIR/default_modules.txt" ]; then
+        TARGET_MODULE=$(cat "$DIR/default_modules.txt")
+    else
+        TARGET_MODULE=$(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}' | paste -sd "," -)
+    fi
+else
+    TARGET_MODULE="$1"
+fi
+
 DB_NAME="test_${TARGET_MODULE//,/_}"
 DB_NAME="${DB_NAME:0:63}" # Truncate to PostgreSQL's 63-byte identifier limit
 
 # Generate an ephemeral secure password for the test environment
 export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
 
-echo "🚀 Running Pre-Flight Check for ${TARGET_MODULE}..."
-if [ -d "$DIR/$TARGET_MODULE" ]; then
-    python3 "$DIR/tools/pre_flight_check.py" -m "$DIR/$TARGET_MODULE" --addons-path "$ADDONS_PATH"
-    if [ $? -ne 0 ]; then
-        echo "🛑 Halting startup due to pre-flight check failure."
-        exit 1
-    fi
+VENV_PYTHON="$DIR/.venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "[*] Common virtual environment not found. Building it now..."
+    bash "$DIR/tools/setup_venv.sh"
 fi
 
-echo "🧹 Running Standard Python Linter (flake8)..."
-if command -v flake8 >/dev/null 2>&1; then
-    # We target critical logic errors (F) and syntax errors (E9), ignoring stylistic PEP8 to prevent blocking.
-    flake8 "$DIR" --exclude=venv,env,.venv,__pycache__,node_modules --select=E9,F
-    if [ $? -ne 0 ]; then
-        echo "🛑 Halting startup due to standard Python linter (flake8) errors."
-        exit 1
-    fi
-else
-    echo "⚠️  flake8 not found. Skipping standard Python linting."
+bash "$DIR/tools/run_linters.sh" "$TARGET_MODULE"
+if [ $? -ne 0 ]; then
+    exit 1
 fi
 
-echo "🔥 Running Odoo 19+ Burn List & Syntax Check..."
-python3 "$DIR/tools/check_burn_list.py" "$DIR"
-if [ $? -ne 0 ];
-then
-    echo "🛑 Halting startup due to Syntax or Burn List violations. Please review the output above."
-exit 1
-fi
-
-echo "⚓ Running Semantic Anchor Traceability Check..."
-python3 "$DIR/tools/verify_anchors.py"
-if [ $? -ne 0 ];
-then
-    echo "🛑 Halting startup due to Semantic Anchor verification failures. Please review the output above."
-exit 1
-fi
-
-echo "🧪 Pre-flight, Syntax, and Anchor checks passed. Rebuilding database ($DB_NAME) and running tests for ${TARGET_MODULE}..."
-
+# (Silent success) Rebuilding database ($DB_NAME) and running tests for ${TARGET_MODULE}...
 # Use --if-exists to prevent halting if the database was previously deleted manually
 dropdb --if-exists "$DB_NAME" || true
+
+LOG_FILE="/tmp/odoo_test_run_$$.log"
 /usr/bin/odoo \
   --addons-path="$ADDONS_PATH" \
   --dev=all -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   --test-enable \
   --test-tags "/${TARGET_MODULE//,/,/},-simulation" \
-  --stop-after-init
+  --stop-after-init | tee "$LOG_FILE"
+
+ODOO_EXIT=${PIPESTATUS[0]}
+
+if grep -q " 0 failed, 0 error(s) of 0 tests" "$LOG_FILE"; then
+    echo "\n\ud83d\uded1 Halting: 0 tests were executed. This indicates a dependency loop or syntax error preventing the module from loading."
+    rm -f "$LOG_FILE"
+    exit 1
+fi
+
+if grep -q "ERROR .* Some modules are not loaded" "$LOG_FILE"; then
+    echo "\n\ud83d\uded1 Halting: Modules failed to load (Dependency Loop detected)."
+    rm -f "$LOG_FILE"
+    exit 1
+fi
+
+rm -f "$LOG_FILE"
+exit $ODOO_EXIT

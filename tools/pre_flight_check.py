@@ -41,13 +41,17 @@ def main():
     dependencies = manifest.get('depends', [])
     
     # Strict Tier Isolation (Topological Enforcement)
-    TIERS = {
-        1: ['base', 'web', 'mail', 'portal', 'website', 'zero_sudo', 'ham_base', 'ham_testing', 'ham_logbook', 'ham_onboarding', 'ham_club_management', 'ham_init', 'user_websites', 'user_websites_seo', 'cloudflare', 'caching', 'compliance', 'manual_library'],
-        2: ['ham_events', 'ham_satellite', 'ham_propagation', 'ham_dns', 'ham_classifieds'],
-        3: ['ham_forum_extension', 'ham_shack', 'theme_hams']
-    }
+    tier_config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tier_config.json')
+    TIERS = {}
+    if os.path.exists(tier_config_path):
+        import json
+        with open(tier_config_path, 'r', encoding='utf-8') as f:
+            loaded_tiers = json.load(f)
+            TIERS = {int(k): v for k, v in loaded_tiers.items()}
     
     def get_tier(mod_name):
+        if not TIERS:
+            return 99 # Skip enforcement if no config exists
         for tier, mods in TIERS.items():
             if mod_name in mods:
                 return tier
@@ -56,6 +60,7 @@ def main():
     module_name = os.path.basename(module_path)
     module_tier = get_tier(module_name)
     
+    has_errors = False
     tier_violations = []
     for dep in dependencies:
         dep_tier = get_tier(dep)
@@ -66,19 +71,14 @@ def main():
         print(f"\n❌ ARCHITECTURE VIOLATION: `{module_name}` (Tier {module_tier}) cannot depend on higher-tier modules:")
         for v in tier_violations:
             print(f"   - {v}")
-        sys.exit(1)
+        has_errors = True
 
     if not dependencies:
-        print(f"✅ Module '{os.path.basename(module_path)}' has no external dependencies. Proceeding.")
+        if has_errors: sys.exit(1)
         sys.exit(0)
-
-    print(f"🔍 Checking {len(dependencies)} dependencies for '{os.path.basename(module_path)}'...")
 
     # 2. Parse Addons Paths
     addons_paths = [p.strip() for p in args.addons_path.split(',') if p.strip()]
-    
-    # We always assume 'base' is available if Odoo is installed properly, 
-    # but we will still look for it if it's explicitly requested.
     
     missing_dependencies = []
 
@@ -87,28 +87,25 @@ def main():
         found = False
         for path in addons_paths:
             dep_path = os.path.join(path, dep)
-            # A valid Odoo module directory must contain a __manifest__.py (or __openerp__.py in very old versions)
             if os.path.isdir(dep_path) and os.path.exists(os.path.join(dep_path, '__manifest__.py')):
                 found = True
                 break
         
         if not found:
-            # Note: Core modules like 'base' or 'web' might reside in the core odoo/addons directory.
-            # If your addons path doesn't explicitly include the core path, this might flag false positives
-            # for standard modules. Ensure your --addons-path is comprehensive.
             missing_dependencies.append(dep)
 
     # 4. Report Results
     if missing_dependencies:
-        print("\n❌ PRE-FLIGHT CHECK FAILED!")
+        print(f"\n\u274c PRE-FLIGHT CHECK FAILED for '{os.path.basename(module_path)}'")
         missing_formatted = [f"`{dep}`" for dep in missing_dependencies]
         paths_formatted = [f"`{p}`" for p in addons_paths]
         print("   The following dependencies are missing from the provided addons paths:\n   - " + "\n   - ".join(missing_formatted))
         print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
+        has_errors = True
+
+    if has_errors:
         sys.exit(1)
-    else:
-        print("✅ All dependencies located successfully. Pre-flight check passed.")
-        sys.exit(0)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
