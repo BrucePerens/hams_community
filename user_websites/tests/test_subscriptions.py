@@ -104,7 +104,8 @@ class TestSubscriptionsAndDigest(HttpCase):
         
         template = self.env.ref('user_websites.email_template_weekly_digest', raise_if_not_found=False)
         if template:
-            template.send_mail(self.creator.partner_id.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
+            test_post = self.env['blog.post'].search([('owner_user_id', '=', self.creator.id)], limit=1)
+            template.send_mail(test_post.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
 
     def test_02_invalid_unsubscribe_token(self):
         """
