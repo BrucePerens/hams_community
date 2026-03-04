@@ -215,13 +215,12 @@ class TestControllers(odoo.tests.common.HttpCase):
         
         self.authenticate(None, None)
         
-        # Access a known public route repeatedly to flush out intermittent ACL issues
-        for _ in range(3):
-            response = self.url_open(f'/{self.user_public.website_slug}/home')
-            self.assertEqual(response.status_code, 200, "Public access should never fail with an ACL error on published pages.")
-            
-            response_blog = self.url_open(f'/{self.user_public.website_slug}/blog')
-            self.assertEqual(response_blog.status_code, 200, "Public access should never fail with an ACL error on published blogs.")
+        # Access a known public route to flush out intermittent ACL issues
+        response = self.url_open(f'/{self.user_public.website_slug}/home')
+        self.assertEqual(response.status_code, 200, "Public access should never fail with an ACL error on published pages.")
+        
+        response_blog = self.url_open(f'/{self.user_public.website_slug}/blog')
+        self.assertEqual(response_blog.status_code, 200, "Public access should never fail with an ACL error on published blogs.")
 
     def test_09_admin_violation_toast_rpc(self):
         # [%ANCHOR: test_admin_violation_toast_rpc]

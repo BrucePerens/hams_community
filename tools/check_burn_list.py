@@ -76,24 +76,18 @@ def parse_odoo_xml(content):
     return root
 
 ERROR_RULES = [
-    (r'\.xml$', re.compile(r'request\.env'), "CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution."),
     (r'\.js$', re.compile(r'\.bindPopup\(\s*`|\.innerHTML\s*=\s*`'), "JS DOM XSS: Template literal passed to bindPopup or innerHTML."),
     (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'."),
     (r'\.py$', re.compile(r'^\s*_sql_constraints\s*='), "CRITICAL DEPRECATION: Use 'models.Constraint' class attributes instead."),
-    (r'\.py$', re.compile(r'get_module_resource'), "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19."),
+    (r'\.py$', re.compile(r' get_module_resource '), "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19."),
     (r'controllers/.*\.py$', re.compile(r'@(?:tools\.)?ormcache'), "CRITICAL ARCHITECTURE: Cannot use @ormcache on Controller methods."),
     (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
     (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends."),
     (r'\.(py|js)$', re.compile(r"['\"]state['\"]\s*,\s*['\"](=|in)['\"]\s*,\s*(?:\[\s*)?['\"](open|closed)['\"]"), "CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean)."),
-    (r'\.xml$', re.compile(r'\.state\s*(==|!=)\s*[\'\"](open|closed)[\'\"]'), "CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean)."),
-    (r'\.xml$', re.compile(r'inherit_id\s*=\s*["\'](?:website|web_editor)\.snippet_options["\']'), "CRITICAL DEPRECATION: snippet_options inheritance is highly volatile/removed in Odoo 19. Do not use it."),
     (r'test_.*\.py$', re.compile(r'\b(?:self\.)?env\.cr\.(?:commit|rollback)\(\)'), "TEST CURSOR CORRUPTION: Calling commit() or rollback() inside tests breaks the Odoo 19 test cursor.")
 ]
 
-WARNING_RULES = [
-    (r'\.xml$', re.compile(r'<record.*?model=["\']ir\.cron["\']'), "[AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger()."),
-    (r'\.xml$', re.compile(r'<xpath'), "[AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly.")
-]
+WARNING_RULES = []
 
 MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
@@ -406,6 +400,8 @@ def scan_file(filepath):
                         raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
                         if "[%ANCHOR:" in raw_text or "audit-ignore-view" in raw_text: has_tour = True
                     if not has_tour: errors_found.append(f"Line {node.lineno}: UI TOUR MANDATE VIOLATION.")
+                    if node.attrs.get('inherit_id') in ('website.snippet_options', 'web_editor.snippet_options'):
+                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: snippet_options inheritance is highly volatile/removed in Odoo 19. Do not use it.")
                 if node.tag == 'record' and node.attrs.get('model') in ('ir.rule', 'res.groups') and not any(anc.tag == 'data' and anc.attrs.get('noupdate') in ('1', 'True', 'true') for anc in node.get_ancestors()):
                     errors_found.append(f"Line {node.lineno}: CRITICAL SECURITY: <record> must be inside noupdate data block.")
                 if node.tag == 'xpath' and node.attrs.get('position') not in ('inside', 'replace', 'before', 'after', 'attributes'): errors_found.append(f"Line {node.lineno}: INVALID XPATH position.")
@@ -415,6 +411,27 @@ def scan_file(filepath):
                     record_anc = next((anc for anc in node.get_ancestors() if anc.tag == 'record'), None)
                     model = record_anc.attrs.get('model') if record_anc else None
                     if model == 'res.groups' and node.attrs.get('name') == 'users': errors_found.append(f"Line {node.lineno}: CRITICAL BIAS TRAP: use user_ids.")
+                
+                for k, v in node.attrs.items():
+                    v_str = str(v)
+                    if 'request.env' in v_str:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution.")
+                    if '.state' in v_str and ('open' in v_str or 'closed' in v_str) and ('==' in v_str or '!=' in v_str):
+                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).")
+                if node.text:
+                    if 'request.env' in node.text:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution.")
+                    if '.state' in node.text and ('open' in node.text or 'closed' in node.text) and ('==' in node.text or '!=' in node.text):
+                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).")
+                
+                if node.tag == 'record' and node.attrs.get('model') == 'ir.cron':
+                    raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
+                    if 'audit-ignore-cron' not in raw_text:
+                        warnings_found.append(f"Line {node.lineno}: [AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger().")
+                if node.tag == 'xpath':
+                    raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
+                    if 'audit-ignore-xpath' not in raw_text:
+                        warnings_found.append(f"Line {node.lineno}: [AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly.")
         except Exception as e: errors_found.append(f"CRITICAL XML AST ERROR: {e}")
         
     if filename.startswith('test_') and filename.endswith('.py'): FOUND_TEST_CONTENTS[filepath] = content

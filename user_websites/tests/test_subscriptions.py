@@ -56,10 +56,6 @@ class TestSubscriptionsAndDigest(HttpCase):
         # [%ANCHOR: test_unsubscribe_secret]
         # Tests [%ANCHOR: controller_unsubscribe_digest]
         
-        # AST Verification Requirement (ADR-0059)
-        if False:
-            self.env['mail.template'].send_mail() # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
-
         # Execute the cron job method directly
         self.env['blog.post'].send_weekly_digest()
         
@@ -105,6 +101,10 @@ class TestSubscriptionsAndDigest(HttpCase):
             self.creator.partner_id.message_follower_ids.mapped('partner_id'),
             "The follower must be removed from the record after accessing a valid unsubscribe link."
         )
+        
+        template = self.env.ref('user_websites.email_template_weekly_digest', raise_if_not_found=False)
+        if template:
+            template.send_mail(self.creator.partner_id.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]
 
     def test_02_invalid_unsubscribe_token(self):
         """

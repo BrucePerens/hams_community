@@ -27,11 +27,17 @@ be cached on mobile devices is limited.
 
 * **`manual_library`**: A free, open-source replacement for Odoo's Enterprise Knowledge app. It lets you write, organize, and publish documentation and guides directly from Odoo.
 
-* **`user_websites`**: Lets your users build their own personal or group websites and blogs right inside your Odoo instance.
+* **"user_websites"**: Lets your users build their own personal or group websites and blogs right inside your Odoo instance.
 
-* **`zero_sudo`**: Secures the system. It provides a system for background tasks
+* **"zero_sudo"**: Secures the system. It provides a system for background tasks
 and daemons to use highly restricted service accounts, and actively stops those
 accounts from logging into the web interface.
+
+* **"backup_management"**: Unified Backup Management Facility (Kopia & pgBackRest). Orchestrates system state and database backups, with automated test restores.
+
+* **"database_management"**: DBA Toolkit for Autovacuum, Dead Tuples, and Slow Queries. Features graphical wizards to tune PostgreSQL.
+
+* **"pager_duty"**: Enterprise-grade Site Reliability Engineering (SRE) suite. Provides intelligent calendar routing and headless background monitoring daemons.
 
 ## 🤖 LLM-Assisted Development Standards
 

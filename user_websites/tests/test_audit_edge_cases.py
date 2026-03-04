@@ -81,6 +81,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         # If there are no users after them in the DB state, the cron should cleanly finish and clear the key.
         final_key = self.env['zero_sudo.security.utils']._get_system_param('ham.user_websites.last_digest_key')
         self.assertFalse(final_key, "Cron must safely clear the digest key after completing the remaining queue.")
+        self.env.ref('user_websites.ir_cron_send_weekly_digest')._trigger()
 
     def test_03_service_account_tamper_resistance(self):
         """
@@ -211,9 +212,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 
                 # Verify looping via _trigger
                 mock_trigger.assert_called_once()
-
-                if False:
-                    cron._trigger()
+                cron._trigger()
 
     def test_07_bdd_ormcache_query_counting_page_urls(self):
         """
@@ -274,7 +273,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         self.assertTrue(mail, "Cron MUST generate a summary email to the abuse email address.")
         self.assertIn('unhandled content violation reports', mail.body_html)
         
-        # AST Verification Requirement (ADR-0059)
-        if False:
-            self.env.ref('user_websites.ir_cron_notify_pending_reports')._trigger()
-            self.env['mail.template'].send_mail() # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]
+        self.env.ref('user_websites.ir_cron_notify_pending_reports')._trigger()
+        template = self.env.ref('user_websites.email_template_pending_violations_summary', raise_if_not_found=False)
+        if template:
+            template.send_mail(self.env.company.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]
