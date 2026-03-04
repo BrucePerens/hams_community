@@ -16,6 +16,8 @@ When elevated privileges are required, the system MUST NOT use `.sudo()`. Instea
 
 **Separation of Privilege (Micro-Service Accounts):** Disparate permissions MUST NOT be bundled into monolithic, omnipotent service accounts, and you MUST NOT fall back to `base.user_admin` for automated tasks. When a brief privilege-raise is necessary to cross a domain boundary (e.g., sending an email or exporting GDPR data across restricted tables), the system MUST temporarily assume a highly specialized micro-service account (like `mail_service_internal`, `gdpr_service_internal`, or `config_service_internal`) dedicated exclusively to that exact flow. This ensures the general execution continues at a lower privilege and strictly limits the blast radius of any individual proxy account.
 
+**The Framework ACL Tax (Micro-Service Caveat):** By deliberately removing the monolithic `base.group_user` from Service Accounts to secure them, you will expose hidden core framework dependencies. If your service account interacts with `res.users` or models inheriting `mail.thread` (chatter), the ORM will silently attempt to cascade reads to underlying tables. You MUST explicitly grant your Service Account microscopic read/write ACLs to `res.company`, `mail.message`, `discuss.channel.member`, and `mail.alias.domain` in your `ir.model.access.csv` to prevent `AccessError` transaction crashes.
+
 ### 2. Service Account Web Isolation
 To prevent leaked daemon credentials from being used interactively:
 * All Service Accounts MUST be flagged with `is_service_account=True`.

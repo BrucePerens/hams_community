@@ -119,7 +119,8 @@ Ensure proper heading hierarchy (`<h1>` to `<h6>`) within `website.page` layouts
 * **QWeb Logic:** Python built-ins (`getattr`, `setattr`, `hasattr`) are **FORBIDDEN** in QWeb.
 Use `t-if="'field' in record._fields"` only if absolutely necessary for polymorphic views.
 
-### ⚙️ Configuration Views
+### ⚙️ Menus and Configuration Views
+* **Autonomous Menu Roots:** If building a module intended for standalone open-source distribution, it MUST declare its own top-level menu root (e.g., `<menuitem id="menu_admin_root".../>`). Do not assume a parent module has already declared it. Odoo gracefully handles duplicate XML IDs for identical menu roots if the attributes match exactly.
 * **Inheritance:** Must inherit `base.res_config_settings_view_form`.
 * **Structure:** Target the form directly using `xpath expr="//form" position="inside"`.
 Do **not** try to locate internal divs like `div[hasclass('settings')]` as they are fragile.
@@ -157,8 +158,8 @@ This is achieved by passing `default_title`, `default_description`, and `default
 * **Public Route Anti-Spam:** All unauthenticated `POST` routes (e.g., public forms, abuse reports) MUST implement anti-spam measures.
 Use Odoo's native reCAPTCHA context or honeypot fields to prevent malicious bot automation.
 * **Standard Template Context:** When rendering built-in Odoo templates (e.g., `website_blog.blog_post_short`), you MUST verify the template's source code and ensure all expected QWeb context variables (e.g., `pager`, `main_object`, `blogs`) are injected into the rendering dictionary to prevent `KeyError` crashes.
-* **Explicit Parameter Binding:** When defining HTTP controller methods, you **MUST** explicitly declare expected form inputs and query parameters in the method signature (e.g., `def my_route(self, my_param=None, **kwargs):`) rather than relying solely on `kwargs.get()` or `request.params`.
-This guarantees reliable parameter binding when executing automated HTTP tests via `self.url_open()` and prevents silent validation bypasses.
+* **Explicit Parameter Binding:** When defining HTTP controller methods, you **MUST** explicitly declare expected form inputs and query parameters in the method signature (e.g., `def my_route(self, my_param=None, **kwargs):`) rather than relying solely on `kwargs.get()` or `request.params`. This guarantees reliable parameter binding when executing automated HTTP tests via `self.url_open()` and prevents silent validation bypasses.
+* **HTTP Exception Handling:** Controllers MUST raise `werkzeug.exceptions.Forbidden()` or `werkzeug.exceptions.NotFound()` for access denials or missing records. You MUST NOT raise raw ORM exceptions (like `AccessError` or `MissingError`) inside controllers, as Odoo's HTTP dispatcher will fail to render the correct 403/404 error pages and instead crash with a 500 Internal Server Error traceback.
 ---
 
 ## 6. ODOO VERIFICATION & AUDIT PROTOCOL

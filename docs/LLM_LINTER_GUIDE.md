@@ -97,9 +97,9 @@ The AST parser physically reads your test files to verify the assertions exist.
 | Audit Target | Bypass Tag | Required AST Assertion in Test |
 | :--- | :--- | :--- |
 | `ir.cron` XML | `&lt;!-- audit-ignore-cron: Tested by [%ANCHOR: example_name] --&gt;` | The test MUST execute `_trigger()` to prove batching. |
-| `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. |
+| `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. **CRITICAL TRAP:** The integer `res_id` passed to `send_mail(res_id)` MUST match an existing record of the exact model defined in the template's `model_id`, otherwise Odoo's rendering mixin will crash with a `MissingError`. |
 | `.search()` | `# audit-ignore-search: Tested by [%ANCHOR: example_name]` | The test MUST utilize `with self.assertQueryCount()` or pass `limit=`. |
-| `<xpath>` | `&lt;!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] --&gt;` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. |
+| `<xpath>` | `<!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. **Note:** `get_view()` only works on `ir.ui.view` records. For testing structural `<template>` records (QWeb), you MUST use `self.env.ref('...').with_context(lang=None)._get_combined_arch()`. |
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
 | `ir.ui.view` | `&lt;!-- audit-ignore-view: Tested by [%ANCHOR: example_name] --&gt;` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
 | I18N Strings | `# audit-ignore-i18n: Tested by [%ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
