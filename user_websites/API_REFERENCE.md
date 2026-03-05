@@ -20,10 +20,10 @@ An `AbstractModel` mixin that injects the Proxy Ownership Pattern into any model
 ### `res.users` (Extensions)
 The user model is heavily extended to support routing and GDPR functions.
 
-#### `_get_user_id_by_slug(slug)`
+#### `_get_user_id_by_slug(slug, override_svc_uid=None)`
 High-performance, RAM-cached lookup to resolve a website slug to a User ID.
 * **Returns:** `int` (User ID) or `False`.
-* **Usage:** Use this instead of `.search()` in frontend controllers.
+* **Usage:** Use this instead of `.search()` in frontend controllers. You can provide an `override_svc_uid` to bypass the default Service Account.
 
 #### `_get_gdpr_export_data()` (Extendable Hook)
 Returns a dictionary of all personal data owned by the user. Dependent modules storing PII MUST override this to append their data.

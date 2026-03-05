@@ -77,10 +77,10 @@ class UserWebsitesGroup(models.Model):
 
     @api.model
     @tools.ormcache('slug')
-    def _get_group_id_by_slug(self, slug):
+    def _get_group_id_by_slug(self, slug, override_svc_uid=None):
         if not slug:
             return False
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = override_svc_uid or self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         group = self.env['user.websites.group'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
         return group.id if group else False
 
@@ -93,25 +93,25 @@ class UserWebsitesGroup(models.Model):
         """
         if not base_string:
             return ''
-            
+
         base_slug = slugify(base_string)
         slug = base_slug
         counter = 1
         max_retries = 1000
-        
+
         while True:
             if counter > max_retries:
                 raise ValidationError(_("Unable to generate a unique website slug after %s attempts.") % max_retries)
-            
+
             if slug in RESERVED_SLUGS:
                 slug = f"{base_slug}-{counter}"
                 counter += 1
                 continue
-            
+
             group_domain = [('website_slug', '=', slug)]
             if record_id:
                 group_domain.append(('id', '!=', record_id))
-            
+
             try:
                 svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
                 env_group = self.env['user.websites.group'].with_user(svc_uid)
@@ -122,13 +122,13 @@ class UserWebsitesGroup(models.Model):
                     env_user = self.env['res.users']
                 else:
                     raise
-                    
+
             group_collision = env_group.search_count(group_domain)
             user_collision = env_user.search_count([('website_slug', '=', slug)])
-            
+
             if not user_collision and not group_collision:
                 return slug
-                
+
             slug = f"{base_slug}-{counter}"
             counter += 1
 
@@ -157,7 +157,7 @@ class UserWebsitesGroup(models.Model):
                 group_vals = {
                     'name': f"Website Group: {group_name}",
                 }
-                
+
                 if privilege:
                     group_vals['privilege_id'] = privilege.id
                 elif category:
@@ -188,7 +188,7 @@ class UserWebsitesGroup(models.Model):
                     vals['website_slug'] = self._generate_unique_slug(vals['website_slug'], record_id=self.id)
                 else:
                     vals['website_slug'] = slugify(vals['website_slug'])
-                    
+
             old_slugs = {group.id: group.website_slug for group in self if group.website_slug}
 
         try:
@@ -203,10 +203,10 @@ class UserWebsitesGroup(models.Model):
             slugs2 = [group.website_slug for group in self if group.website_slug]
             if slugs2:
                 self.env['zero_sudo.security.utils']._notify_cache_invalidation('user.websites.group', slugs2)
-                    
+
             svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             redirect_env = self.env['website.rewrite'].with_user(svc_uid)
-            
+
             group_ids = self.ids
             blog_post_counts = {}
             if group_ids:

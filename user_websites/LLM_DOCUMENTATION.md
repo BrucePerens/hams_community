@@ -43,7 +43,7 @@ The `user_websites` module enables decentralized content creation. It employs th
 * **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.
 
 ### Programmatic Setup & Hooks
-* **`res.users._get_user_id_by_slug(slug)`**: A high-performance `@tools.ormcache` method. ALWAYS use this instead of `search()` in frontend controllers.
+* **`res.users._get_user_id_by_slug(slug, override_svc_uid=None)`**: A high-performance `@tools.ormcache` method. ALWAYS use this instead of `search()` in frontend controllers. Callers can optionally pass their own `override_svc_uid` to execute the database search under their own service account's context instead of relying on the default System Provisioner, preventing cross-module access rule failures.
 * **`user_websites.owned.mixin`**: Inherit this in your custom models (e.g., `ham.equipment`) to instantly inherit the Proxy Ownership security rules via `self._check_proxy_ownership_write(vals)`.
   * **Mandatory Assignment:** Standard users MUST supply either `owner_user_id` OR `user_websites_group_id` upon record creation.
   * **Mutual Exclusivity:** A record CANNOT be owned by both a user and a group simultaneously. Attempting to assign both will raise a strict `ValidationError`.
