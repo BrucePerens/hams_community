@@ -9,7 +9,7 @@ def install_knowledge_docs(env):
     if 'knowledge.article' in env:
         article_model = env['knowledge.article']
         existing = article_model.search([('name', '=', 'User Websites Documentation')], limit=1)
-        
+
         if not existing:
             try:
                 with file_open('user_websites/data/documentation.html', 'r') as f:
@@ -30,17 +30,24 @@ def install_knowledge_docs(env):
                 vals['internal_permission'] = 'read'
             if 'icon' in article_model._fields:
                 vals['icon'] = '🌐'
-                
+
             return article_model.create(vals)
         return existing
     return None
 
 def post_init_hook(env):
     """
-    Hook executed upon module installation. 
+    Hook executed upon module installation.
     Injects docs into the knowledge base if the API is already installed.
     """
     install_knowledge_docs(env)
+
+    # Enroll all existing users into the module's baseline security group
+    # allowing them to interact with their Virtual Slug placeholders instantly.
+    user_group = env.ref('user_websites.group_user_websites_user', raise_if_not_found=False)
+    if user_group:
+        users = env['res.users'].with_context(active_test=False).search([('id', '>', 0)])
+        user_group.write({'user_ids': [(4, u.id) for u in users]})
 
     # Create partial indexes for highly-queried boolean states to optimize read performance
     env.cr.execute("CREATE INDEX IF NOT EXISTS idx_website_page_published ON website_page (id) WHERE is_published = TRUE;")

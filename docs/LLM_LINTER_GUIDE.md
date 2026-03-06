@@ -126,10 +126,13 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 
 ---
 
-## 8. 🤖 LLM Extraction Defenses
+## 8. 🤖 LLM Extraction Defenses & Parcel Features
 
-To protect the codebase from LLM-specific failure modes (like hallucination, laziness, and truncation), the infrastructure tool (`parcel_extract.py`) enforces the following automated defenses:
+To protect the codebase from LLM-specific failure modes (like hallucination, laziness, and truncation), the `parcel_extract.py` tool enforces the following automated defenses and operational behaviors:
 
-* **Anti-Corruption Guard (`parcel_extract.py`):** The extractor actively scans replacement blocks for LLM "laziness" placeholders (e.g., `// ...`, `# ... rest of method`, `[Code unchanged]`). If an LLM hallucinates a truncation placeholder instead of writing the full required code block, the extractor immediately aborts the file patch to prevent deleting existing valid code.
-* **Fuzzy Fallbacks (`parcel_extract.py`):** If search blocks fail to match due to LLM indentation drift or whitespace hallucinations, the extractor employs flexible whitespace fallbacks and sequence matchers to safely identify the target code and apply the patch.
-* **Strict URL-Encoding Mandate for XML Comments (`parcel_extract.py`):** Web UI Markdown renderers will silently delete HTML/XML comments (e.g., `<!-- audit-ignore-view -->`) before the extraction script ever sees them. To prevent this data loss, you MUST use the `Encoding: url-encoded` header in your Parcel block and percent-encode the angle brackets for any comments (e.g., `<!-- ... -->`).
+* **Anti-Corruption Guard (Laziness Traps):** The extractor actively scans payloads for laziness placeholders. If it detects `# ... rest of`, `// Code unchanged`, or HTML comments containing existing code placeholders, it instantly aborts the file write to prevent deleting valid code.
+* **Fuzzy Fallbacks & Whitespace Agnosticism:** The search-and-replace engine strips all whitespace and indentation when comparing the SEARCH block to the target file. This immunizes the patch against minor LLM formatting drift or tab-vs-space errors.
+* **Python AST Fallback:** If string matching completely fails for a `.py` file, the extractor seamlessly falls back to an Abstract Syntax Tree (AST) parser. It parses the SEARCH block, identifies the target `FunctionDef`, `AsyncFunctionDef`, or `ClassDef` by name, and surgically replaces that exact logical AST node boundary in the original file.
+* **Markdown Balance Checking:** For `.md` files, the extractor validates that all fenced and inline code blocks are perfectly balanced. Unclosed blocks will abort the write to prevent rendering corruption.
+* **Strict URL-Encoding Mandate for XML Comments:** Web UI Markdown renderers will silently delete HTML/XML comments before the extraction script ever sees them. To prevent this data loss, LLMs MUST use the `Encoding: url-encoded` header in their Parcel block and percent-encode the angle brackets for any comments.
+* **Automated Linting Hooks:** The extractor automatically pipes generated files through `flake8` (Python), `xml.etree` (XML), `json.load` (JSON), and the custom `check_burn_list.py` before committing the write, surfacing architectural failures immediately.

@@ -1,6 +1,6 @@
-# Hams.com Pager-Duty Deployment Guide
+# Pager-Duty Deployment Guide
 
-This document outlines the steps required to deploy the `ham_pager_duty` module and its accompanying standalone monitoring daemons in a strict DevSecOps environment.
+This document outlines the steps required to deploy the `pager_duty` module and its accompanying standalone monitoring daemons in a strict DevSecOps environment.
 
 ## 1. Prerequisites & Dependencies
 
@@ -31,8 +31,8 @@ sudo usermod -aG adm odoo
 ```
 
 ## 3. Odoo Module Deployment
-1. Copy the `ham_pager_duty` directory into your Odoo `addons` path.
-2. Update the Odoo app list and install the `Ham Pager Duty` module.
+1. Copy the `pager_duty` directory into your Odoo `addons` path.
+2. Update the Odoo app list and install the `Pager Duty` module.
 3. Assign the "Pager Duty Admin" group to the relevant administrative users.
 4. Configure the shifts in the Calendar module by checking the "Is Pager Duty Shift" box.
 
@@ -42,22 +42,22 @@ We use systemd to manage the standalone monitoring daemons, ensuring they restar
 
 1. Copy the unit files to systemd:
 ```bash
-sudo cp daemons/pager_duty/ham-pager-os-monitor.service /etc/systemd/system/
-sudo cp daemons/pager_duty/ham-pager-log-monitor.service /etc/systemd/system/
+sudo cp daemons/pager_duty/pager-os-monitor.service /etc/systemd/system/
+sudo cp daemons/pager_duty/pager-log-monitor.service /etc/systemd/system/
 ```
 2. Adjust the `User`, `Group`, `WorkingDirectory`, and `ExecStart` paths in the unit files to match your exact environment if they differ from standard `/opt/odoo` paths.
 3. Reload systemd and enable the services:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable ham-pager-os-monitor.service
-sudo systemctl enable ham-pager-log-monitor.service
-sudo systemctl start ham-pager-os-monitor.service
-sudo systemctl start ham-pager-log-monitor.service
+sudo systemctl enable pager-os-monitor.service
+sudo systemctl enable pager-log-monitor.service
+sudo systemctl start pager-os-monitor.service
+sudo systemctl start pager-log-monitor.service
 ```
 4. Verify they are running smoothly:
 ```bash
-sudo systemctl status ham-pager-*.service
-sudo journalctl -u ham-pager-os-monitor.service -f
+sudo systemctl status pager-*.service
+sudo journalctl -u pager-os-monitor.service -f
 ```
 
 ## 5. Cloudflare Configuration

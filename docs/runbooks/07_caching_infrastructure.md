@@ -11,6 +11,4 @@ Every HTTP request to the Odoo web workers passes through the `ir.http` middlewa
 
 ## 4. Explicit Invalidation Implementations
 To maintain distributed state, several modules explicitly trigger the Redis bus upon mutation:
-* **Callbook Directory:** `[%ANCHOR: callbook_cache_invalidation]` and `[%ANCHOR: callbook_cache_invalidation_unlink]`
-* **NCVEC Survey Questions:** `[%ANCHOR: survey_question_cache_invalidation]`, `[%ANCHOR: survey_question_cache_invalidation_create]`, and `[%ANCHOR: survey_question_cache_invalidation_unlink]`
-* **Satellite TLEs:** `[%ANCHOR: satellite_tle_cache_invalidation]`
+* **User Websites Routing:** `[%ANCHOR: slug_cache_invalidation]` and `[%ANCHOR: slug_cache_invalidation_unlink]`

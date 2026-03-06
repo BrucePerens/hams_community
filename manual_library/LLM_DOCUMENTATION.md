@@ -7,12 +7,12 @@
 ---
 
 ## 1. 🏗️ Architecture & Enterprise Compatibility
-**Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER be given dependencies on `ham_*` modules or anything else from the proprietary codebase.
+**Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER be given dependencies on proprietary modules or anything else from the proprietary codebase.
 
 **CRITICAL:** This module is a clean-room, 100% drop-in API replacement for the official **Odoo Enterprise Knowledge** module.
 * **Target Model:** `knowledge.article`
 * **Database Table:** `knowledge_article`
-* Because it uses the exact same ORM namespace and core field signatures as Enterprise, any dependent module (like `ham_kns`) MUST inject documentation targeting the `knowledge.article` model. If the platform is ever upgraded to Odoo Enterprise, the data will remain perfectly intact and natively compatible.
+* Because it uses the exact same ORM namespace and core field signatures as Enterprise, any dependent module (like `user_websites`) MUST inject documentation targeting the `knowledge.article` model. If the platform is ever upgraded to Odoo Enterprise, the data will remain perfectly intact and natively compatible.
 
 ---
 

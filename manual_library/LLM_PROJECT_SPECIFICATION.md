@@ -78,6 +78,6 @@ In accordance with the global "Three-Persona" rule defined in `LLM_GENERAL_REQUI
 ## 5. MODULE-SPECIFIC DEVELOPMENT GUIDELINES
 
 * **Dependency Restriction:** Do not include any standard Odoo Enterprise dependencies in `__manifest__.py`. Depend only on `base`, `web`, `mail`, and `website`.
-* **Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER depend on `ham_*` modules or anything else from the proprietary codebase.
+* **Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER depend on proprietary modules or anything else from the proprietary codebase.
 * **Global Mandates:** You must strictly follow the AEF output format, Completeness Guarantee, and WCAG accessibility standards as dictated by the global requirements documents.
 

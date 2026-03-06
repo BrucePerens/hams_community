@@ -15,7 +15,7 @@ try:
 except ImportError:
     Fernet = None
 
-class HamBackupConfig(models.Model):
+class BackupConfig(models.Model):
     _name = 'backup.config'
     _description = 'Backup Configuration'
     _inherit = ['mail.thread']
@@ -24,7 +24,7 @@ class HamBackupConfig(models.Model):
     engine = fields.Selection([('kopia', 'Kopia'), ('pgbackrest', 'pgBackRest')], required=True)
     target_path = fields.Char(string="Target / Stanza", required=True, help="Repository path for Kopia, or Stanza name for pgBackRest.")
     minimum_size_mb = fields.Integer(string="Minimum Size (MB)", default=0, help="Triggers a Pager Duty alert if a new snapshot is smaller than this.")
-    
+
     kopia_password_crypt = fields.Char(string="Encrypted Kopia Password")
     kopia_password = fields.Char(string="Kopia Password", compute="_compute_kopia_password", inverse="_inverse_kopia_password")
 
@@ -95,22 +95,22 @@ class HamBackupConfig(models.Model):
         cmd_path = shutil.which(engine)
         if cmd_path:
             return cmd_path
-            
+
         if engine == 'pgbackrest':
             raise UserError(_("pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."))
-            
+
         if engine == 'kopia':
             if platform.system() != 'Linux' or platform.machine() != 'x86_64':
                 raise UserError(_("Auto-install of Kopia is only supported on Linux x86_64. Please install manually."))
-                
+
             data_dir = odoo.tools.config.get('data_dir', '/var/lib/odoo')
             bin_dir = os.path.join(data_dir, 'hams_bin')
             os.makedirs(bin_dir, exist_ok=True)
             kopia_bin = os.path.join(bin_dir, 'kopia')
-            
+
             if os.path.exists(kopia_bin):
                 return kopia_bin
-                
+
             url = "https://github.com/kopia/kopia/releases/download/v0.18.2/kopia-0.18.2-linux-x64.tar.gz"
             try:
                 self.message_post(body=_("Kopia binary not found. Auto-downloading static binary from GitHub...")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]
@@ -128,7 +128,7 @@ class HamBackupConfig(models.Model):
                 return kopia_bin
             except Exception as e:
                 raise UserError(_("Failed to auto-install Kopia: %s") % str(e))
-                
+
         raise UserError(_("Unknown engine: %s") % engine)
 
     def action_trigger_backup(self):
@@ -241,12 +241,12 @@ class HamBackupConfig(models.Model):
             env_vars = os.environ.copy()
             if self.kopia_password:
                 env_vars['KOPIA_PASSWORD'] = self.kopia_password
-            
+
             res = subprocess.run([exe, 'snapshot', 'list', '--json'], capture_output=True, text=True, timeout=30, env=env_vars, shell=False)
             if res.returncode != 0:
                 self._report_backup_failure(f"Kopia sync failed: {res.stderr}")
                 return
-            
+
             data = json.loads(res.stdout)
             self._process_snapshot_data(data, 'kopia')
         except Exception as e:
@@ -259,7 +259,7 @@ class HamBackupConfig(models.Model):
             if res.returncode != 0:
                 self._report_backup_failure(f"pgBackRest sync failed: {res.stderr}")
                 return
-            
+
             data = json.loads(res.stdout)
             self._process_snapshot_data(data, 'pgbackrest')
         except Exception as e:
@@ -269,7 +269,7 @@ class HamBackupConfig(models.Model):
         Snapshot = self.env['backup.snapshot']
         existing_snaps = Snapshot.search([('config_id', '=', self.id)], limit=5000)
         existing_map = {s.snapshot_id: s for s in existing_snaps}
-        
+
         creates = []
         if engine == 'kopia':
             for snap in data:
@@ -296,7 +296,7 @@ class HamBackupConfig(models.Model):
                             'size_bytes': snap.get('info', {}).get('size', 0),
                             'status': 'completed'
                         })
-        
+
         if creates:
             Snapshot.create(creates)
             if self.minimum_size_mb > 0:
@@ -312,19 +312,19 @@ class HamBackupConfig(models.Model):
         now = fields.Datetime.now()
         for conf in configs:
             conf.action_sync_snapshots()
-            
+
             snaps = conf.snapshot_ids.sorted(lambda s: s.start_time, reverse=True)
             latest_snap = snaps[0] if snaps else None
             if latest_snap and latest_snap.start_time:
                 delta = (now - latest_snap.start_time).total_seconds()
                 if delta > (26 * 60 * 60):  # 26 hours (allows for 24h cron jitter without false positives)
                     conf._report_backup_failure(f"Stale Backup Alert: No new snapshots detected for {conf.name} in over 26 hours.")
-            
+
             if conf.restore_drill_script:
                 delta_drill = (now - conf.last_drill_time).total_seconds() if conf.last_drill_time else 9999999
                 if delta_drill > (7 * 24 * 60 * 60):  # 7 Days
                     conf._execute_restore_drill()
-                    
+
         self.env.ref('backup_management.cron_sync_backups')._trigger()
 
     def _execute_restore_drill(self):

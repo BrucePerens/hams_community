@@ -1,5 +1,5 @@
 {
-    'name': 'Ham Backup Management',
+    'name': 'Backup Management',
     'summary': 'Unified Backup Management Facility (Kopia & pgBackRest)',
     'author': 'Bruce Perens K6BP',
     'category': 'Ham Radio',
@@ -21,5 +21,5 @@
             'backup_management/static/src/components/board/board.xml',
         ]
     },
-    
+
 }

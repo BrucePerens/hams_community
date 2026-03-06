@@ -45,7 +45,7 @@ def _async_gdpr_erasure(db_name, user_id):
             user = env['res.users'].with_context(active_test=False).browse(user_id)
             if user.exists():
                 user._execute_gdpr_erasure()
-                
+
                 # Anonymize standard PII since Odoo relies heavily on create_uid
                 user.write({
                     'name': f'Anonymized User {user_id}',
@@ -82,18 +82,18 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_community_directory]
         # Verified by [%ANCHOR: test_tour_community_directory]
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        
+
         domain = [
             ('privacy_show_in_directory', '=', True),
             ('website_slug', '!=', False)
         ]
-        
+
         step = 24
-        
+
         # Optimize COUNT(*) via Redis with a 5-minute TTL to prevent DB exhaustion on high traffic
         cache_key = "community_directory_total_users"
         total_users = None
-        
+
         if not odoo.tools.config.get('test_enable'):
             try:
                 cached_total = redis_client.get(cache_key)
@@ -101,7 +101,7 @@ class UserWebsitesController(http.Controller):
                     total_users = int(cached_total)
             except Exception:
                 pass
-                
+
         if total_users is None:
             total_users = request.env['res.users'].with_user(svc_uid).search_count(domain)
             if not odoo.tools.config.get('test_enable'):
@@ -109,20 +109,20 @@ class UserWebsitesController(http.Controller):
                     redis_client.setex(cache_key, 300, total_users)
                 except Exception:
                     pass
-        
+
         users = request.env['res.users'].with_user(svc_uid).search(
-            domain, 
+            domain,
             limit=step,
             offset=(page - 1) * step
         )
-        
+
         pager = request.website.pager(
             url='/community',
             total=total_users,
             page=page,
             step=step,
         )
-        
+
         return request.render('user_websites.community_directory', {
             'users': users,
             'pager': pager,
@@ -137,7 +137,7 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_violation_report]
         url = url.strip()[:2000]
         description = description.strip()[:5000]
-        
+
         referrer = request.httprequest.referrer or '/'
         parsed_referrer = url_parse(referrer)
         safe_redirect = parsed_referrer.path if parsed_referrer.path.startswith('/') else '/'
@@ -155,7 +155,7 @@ class UserWebsitesController(http.Controller):
 
         is_public = request.env.user._is_public()
         user_id = False if is_public else request.env.user.id
-        
+
         email = email.strip()[:255]
         if not is_public and request.env.user.email:
             email = request.env.user.email
@@ -164,7 +164,7 @@ class UserWebsitesController(http.Controller):
 
         content_owner_id = False
         content_group_id = False
-        
+
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = request.env['website.page'].with_user(svc_uid).search([('url', '=', url)], limit=1)
         if page:
@@ -172,7 +172,7 @@ class UserWebsitesController(http.Controller):
                 content_owner_id = page.owner_user_id.id
             elif page.user_websites_group_id:
                 content_group_id = page.user_websites_group_id.id
-            
+
         if not content_owner_id and not content_group_id:
             parts = [p for p in url.split('/') if p]
             if parts:
@@ -193,7 +193,7 @@ class UserWebsitesController(http.Controller):
             'content_owner_id': content_owner_id,
             'content_group_id': content_group_id,
         })
-        
+
         separator = '&' if '?' in safe_redirect else '?'
         return request.redirect(f"{safe_redirect}{separator}report_submitted=1")
 
@@ -215,7 +215,7 @@ class UserWebsitesController(http.Controller):
             website_id = request.website.id if hasattr(request, 'website') and request.website else False
             page_id = request.env['website.page']._get_page_id_by_url(f'/{user.website_slug}/home', website_id, override_svc_uid=svc_uid)
             page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
-            
+
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get('test_enable'):
                     # RACE CONDITION FIX: Removed threading.Thread() to prevent OS thread exhaustion DoS.
@@ -223,7 +223,7 @@ class UserWebsitesController(http.Controller):
                     _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
-                
+
                 # Retrieve avatar for OpenGraph og:image if available
                 avatar_url = f"/web/image/res.users/{user.id}/avatar_128"
 
@@ -236,16 +236,22 @@ class UserWebsitesController(http.Controller):
                     'default_image': avatar_url,
                     'resolved_slug': user.website_slug
                 })
-                
+
                 if request.env.user._is_public():
                     response.headers['Cache-Control'] = 'public, max-age=60'
                     # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
-                    if 'ham.cloudflare.purge.queue' in request.env:
+                    if 'cloudflare.purge.queue' in request.env:
                         response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
-                        response.headers['Cache-Tag'] = f"site-{user.website_slug}"
+                        response.headers['Cache-Tag'] = f"site-{user.website_slug or slug_lower}"
                 return response
-                
-            raise werkzeug.exceptions.NotFound()
+
+            return request.render('user_websites.placeholder_page', {
+                'profile_user': user,
+                'profile_group': None,
+                'is_owner': request.env.user.id == user.id,
+                'page_type': 'home',
+                'resolved_slug': user.website_slug or slug_lower
+            })
 
         # Fallback to Groups
         if group:
@@ -258,7 +264,7 @@ class UserWebsitesController(http.Controller):
                     _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
                     page.with_user(svc_uid).write({'view_count': page.view_count + 1})
-                    
+
                 is_member = request.env.user in group.odoo_group_id.user_ids
                 response = request.render(page.view_id.id, {
                     'main_object': page.with_user(request.env.user),
@@ -268,13 +274,21 @@ class UserWebsitesController(http.Controller):
                     'default_description': f"Welcome to the official page of {group.name}.",
                     'resolved_slug': group.website_slug
                 })
-                
+
                 if request.env.user._is_public():
                     response.headers['Cache-Control'] = 'public, max-age=60'
-                    if 'ham.cloudflare.purge.queue' in request.env:
+                    if 'cloudflare.purge.queue' in request.env:
                         response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
                         response.headers['Cache-Tag'] = f"site-{group.website_slug}"
                 return response
+
+            return request.render('user_websites.placeholder_page', {
+                'profile_user': None,
+                'profile_group': group,
+                'is_owner': request.env.user in group.odoo_group_id.user_ids,
+                'page_type': 'home',
+                'resolved_slug': group.website_slug
+            })
 
         raise werkzeug.exceptions.NotFound()
 
@@ -291,14 +305,19 @@ class UserWebsitesController(http.Controller):
         if not user:
             group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
-        
+
         target_uid = request.env.user.id
         resolved_slug = None
 
         if user:
             if user.id != request.env.user.id:
                 raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create this site."))
-            resolved_slug = user.website_slug
+
+            # If they are using a Virtual Slug, lock it in permanently before creating the page
+            if not request.env.user.website_slug:
+                request.env.user.write({'website_slug': slug_lower})
+
+            resolved_slug = request.env.user.website_slug
         elif group:
             if request.env.user not in group.odoo_group_id.user_ids:
                 raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create this site."))
@@ -320,9 +339,9 @@ class UserWebsitesController(http.Controller):
 
         view_xml_id = 'user_websites.template_default_home'
         unique_key = f"user_websites.home_{resolved_slug}"
-        
+
         template_view = request.env.ref(view_xml_id)
-        
+
         page_vals = {
             'url': f'/{resolved_slug}/home',
             'name': f"{user.name if user else group.name} Home",
@@ -330,17 +349,17 @@ class UserWebsitesController(http.Controller):
             'website_published': True,
             'type': 'qweb',
             'website_id': request.website.id if hasattr(request, 'website') and request.website else request.env['website'].get_current_website().id,
-            'key': unique_key, 
+            'key': unique_key,
             'arch': template_view.with_user(svc_uid).arch,
         }
-        
+
         if user:
             page_vals['owner_user_id'] = target_uid
         elif group:
             page_vals['user_websites_group_id'] = group.id
 
         request.env['website.page'].create(page_vals)
-        
+
         return request.redirect(f'/{resolved_slug}/home')
 
     # --- 5. Blog Routing ---
@@ -356,7 +375,7 @@ class UserWebsitesController(http.Controller):
         if not user:
             group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
-        
+
         if not user and not group:
             raise werkzeug.exceptions.NotFound()
 
@@ -366,7 +385,7 @@ class UserWebsitesController(http.Controller):
             '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
         ]
 
-        resolved_slug = user.website_slug if user else group.website_slug
+        resolved_slug = (user.website_slug or slug_lower) if user else group.website_slug
 
         if user:
             domain.append(('owner_user_id', '=', user.id))
@@ -380,13 +399,22 @@ class UserWebsitesController(http.Controller):
         page_num = int(page)
         step = 10
         total_posts = request.env['blog.post'].with_user(svc_uid).search_count(domain)
-        
+
+        if total_posts == 0:
+            return request.render('user_websites.placeholder_page', {
+                'profile_user': user,
+                'profile_group': group,
+                'is_owner': (user and request.env.user.id == user.id) or (group and request.env.user in group.odoo_group_id.user_ids),
+                'page_type': 'blog',
+                'resolved_slug': resolved_slug
+            })
+
         posts = request.env['blog.post'].with_user(svc_uid).search(
-            domain, 
-            limit=step, 
+            domain,
+            limit=step,
             offset=(page_num - 1) * step
         )
-        
+
         blogs = request.env['blog.blog'].with_user(svc_uid).search([
             ('name', '=', 'Community Blog'),
             '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
@@ -403,7 +431,7 @@ class UserWebsitesController(http.Controller):
                 params['date_begin'] = date_begin
             if date_end is not None:
                 params['date_end'] = date_end
-            
+
             params = {k: v for k, v in params.items() if v}
             if params:
                 return f"{url}?{url_encode(params)}"
@@ -419,10 +447,10 @@ class UserWebsitesController(http.Controller):
         response = request.render('website_blog.blog_post_short', {
             'posts': posts.with_user(request.env.user),
             'blog': (posts[0].blog_id if posts else blogs[0]).with_user(request.env.user) if (posts or blogs) else False,
-            'blogs': blogs.with_user(request.env.user), 
-            'main_object': main_object, 
-            'profile_user': user.with_user(request.env.user) if user else None,     
-            'profile_group': group.with_user(request.env.user) if group else None,   
+            'blogs': blogs.with_user(request.env.user),
+            'main_object': main_object,
+            'profile_user': user.with_user(request.env.user) if user else None,
+            'profile_group': group.with_user(request.env.user) if group else None,
             'blog_url': blog_url,
             'tag': tag,
             'search': search,
@@ -431,10 +459,10 @@ class UserWebsitesController(http.Controller):
             'default_description': f"Read the latest updates and posts on {meta_title}.",
             'resolved_slug': resolved_slug
         })
-        
+
         if request.env.user._is_public():
             response.headers['Cache-Control'] = 'public, max-age=60'
-            if 'ham.cloudflare.purge.queue' in request.env:
+            if 'cloudflare.purge.queue' in request.env:
                 response.headers['Cloudflare-CDN-Cache-Control'] = 'max-age=604800'
                 response.headers['Cache-Tag'] = f"site-{resolved_slug}"
         return response
@@ -452,13 +480,18 @@ class UserWebsitesController(http.Controller):
         if not user:
             group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
-        
+
         resolved_slug = None
 
         if user:
             if user.id != request.env.user.id:
                 raise werkzeug.exceptions.Forbidden(description=_("You cannot create posts for this user."))
-            resolved_slug = user.website_slug
+
+            # If they are using a Virtual Slug, lock it in permanently before creating the post
+            if not request.env.user.website_slug:
+                request.env.user.write({'website_slug': slug_lower})
+
+            resolved_slug = request.env.user.website_slug
         elif group:
             if request.env.user not in group.odoo_group_id.user_ids:
                 raise werkzeug.exceptions.Forbidden(description=_("You do not have permission to create posts for this group."))
@@ -475,7 +508,7 @@ class UserWebsitesController(http.Controller):
             ('name', '=', 'Community Blog'),
             '|', ('website_id', '=', False), ('website_id', '=', request.website.id)
         ], limit=1)
-        
+
         if not blog:
             blog = request.env['blog.blog'].with_user(svc_uid).create({
                 'name': 'Community Blog',
@@ -488,7 +521,7 @@ class UserWebsitesController(http.Controller):
             domain.append(('owner_user_id', '=', request.env.user.id))
         elif group:
             domain.append(('user_websites_group_id', '=', group.id))
-            
+
         existing_post = request.env['blog.post'].with_user(svc_uid).search_count(domain)
         if existing_post > 0:
             return request.redirect(f'/{resolved_slug}/blog')
@@ -500,7 +533,7 @@ class UserWebsitesController(http.Controller):
             'website_id': request.website.id,
             'content': "<p>This is my first post!</p>",
         }
-        
+
         if user:
             post_vals['owner_user_id'] = request.env.user.id
         elif group:
@@ -519,7 +552,7 @@ class UserWebsitesController(http.Controller):
             article = install_knowledge_docs(request.env)
             if article and hasattr(article, 'website_url') and article.website_url:
                 return request.redirect(article.website_url)
-                
+
         return request.render('user_websites.documentation_page', {})
 
     # --- 8. Moderation Appeals ---
@@ -529,14 +562,14 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_moderation_appeal]
         reason = reason.strip()[:5000]
         user = request.env.user
-        
+
         if user.is_suspended_from_websites and reason:
             # RACE CONDITION FIX: Prevent spamming multiple appeals via concurrent POST requests
             request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (user.id,))
-            
+
             svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
             existing = request.env['content.violation.appeal'].with_user(svc_uid).search([
-                ('user_id', '=', user.id), 
+                ('user_id', '=', user.id),
                 ('state', '=', 'new')
             ], limit=1)
             if not existing:
@@ -544,7 +577,7 @@ class UserWebsitesController(http.Controller):
                     'user_id': user.id,
                     'reason': reason
                 })
-                
+
         return request.redirect('/my/home?appeal_submitted=1')
 
     # --- 9. Subscriptions & Unsubscribes ---
@@ -560,11 +593,11 @@ class UserWebsitesController(http.Controller):
         if not user:
             group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
-        
+
         target_record = user.partner_id if user else group
         if target_record:
             target_record.with_user(svc_uid).message_subscribe(partner_ids=[request.env.user.partner_id.id])
-        
+
         referrer = request.httprequest.referrer or '/'
         return request.redirect(f"{referrer}?subscribed=1")
 
@@ -574,28 +607,28 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_unsubscribe_secret]
         if model_name not in ['res.partner', 'user.websites.group']:
             raise werkzeug.exceptions.NotFound()
-            
+
         import time
         current_time = int(time.time())
         # ADR-0025: Enforce a strict 30-day TTL on the stateless token
         thirty_days_in_seconds = 30 * 24 * 60 * 60
         if current_time - timestamp > thirty_days_in_seconds:
             raise werkzeug.exceptions.Forbidden("This unsubscribe link has expired.")
-            
+
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         record = request.env[model_name].with_user(svc_uid).browse(record_id)
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
-            
+
         db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_unsubscribe_secret]
         message = f"{model_name}-{record_id}-{partner_id}-{timestamp}".encode('utf-8')
         expected_token = hmac.new(db_secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
-        
+
         if not consteq(token, expected_token):
             raise werkzeug.exceptions.Forbidden()
-            
+
         record.with_user(svc_uid).message_unsubscribe(partner_ids=[partner_id])
-        
+
         return request.render('user_websites.unsubscribe_success', {
             'record_name': record.name
         })
@@ -606,7 +639,7 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_admin_violation_toast_rpc]
         if not request.env.user.has_group('user_websites.group_user_websites_administrator'):
             return request.make_response(json.dumps({'count': 0}), headers=[('Content-Type', 'application/json')])
-        
+
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         count = request.env['content.violation.report'].with_user(svc_uid).search_count([('state', '=', 'new')])
         return request.make_response(json.dumps({'count': count}), headers=[('Content-Type', 'application/json')])
@@ -630,20 +663,20 @@ class UserWebsitesController(http.Controller):
         Utilizes ADR-0022 Streaming Generators to prevent OOM crashes on massive exports.
         """
         user = request.env.user
-        
+
         base_data = user._get_gdpr_export_data()
         streamed_keys = getattr(user, '_get_gdpr_streamed_keys', lambda: {})()
-        
+
         def generate_json_stream():
             yield '{\n'
             first_key = True
-            
+
             for key, val in base_data.items():
                 if not first_key:
                     yield ',\n'
                 yield f'  "{key}": {json.dumps(val)}'
                 first_key = False
-                
+
             for key, generator_func in streamed_keys.items():
                 if not first_key:
                     yield ',\n'
@@ -656,7 +689,7 @@ class UserWebsitesController(http.Controller):
                     first_item = False
                 yield '\n  ]'
                 first_key = False
-                
+
             yield '\n}'
 
         headers = [
@@ -672,7 +705,7 @@ class UserWebsitesController(http.Controller):
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
         user_id = request.env.user.id
         db_name = request.env.cr.dbname
-        
+
         if odoo.tools.config.get('test_enable'):
             user = request.env['res.users'].with_context(active_test=False).browse(user_id)
             user._execute_gdpr_erasure()
@@ -686,7 +719,7 @@ class UserWebsitesController(http.Controller):
             })
         else:
             BACKGROUND_EXECUTOR.submit(_async_gdpr_erasure, db_name, user_id)
-            
+
         request.session.logout()
         return request.redirect('/web/login?erased=1')
 

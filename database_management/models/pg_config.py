@@ -2,7 +2,7 @@ from odoo import models, fields, tools, _
 from odoo.exceptions import UserError
 from psycopg2 import sql
 
-class HamDatabasePgSetting(models.Model):
+class DatabasePgSetting(models.Model):
     _name = 'database.pg.setting'
     _description = 'PostgreSQL Configuration Parameter'
     _auto = False
@@ -33,7 +33,7 @@ class HamDatabasePgSetting(models.Model):
             )
         """)
 
-class HamPgOptimizeWizard(models.TransientModel):
+class PgOptimizeWizard(models.TransientModel):
     _name = 'pg.optimize.wizard'
     _description = 'PostgreSQL Optimization Wizard'
 
@@ -77,7 +77,7 @@ class HamPgOptimizeWizard(models.TransientModel):
             self.env.cr.execute(query)
 
         self.env.cr.execute("SELECT pg_reload_conf()")
-        
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -89,14 +89,14 @@ class HamPgOptimizeWizard(models.TransientModel):
             }
         }
 
-class HamPgHaWizard(models.TransientModel):
+class PgHaWizard(models.TransientModel):
     _name = 'pg.ha.wizard'
     _description = 'High Availability Failover Wizard'
 
     primary_ip = fields.Char(string="Primary Node IP", required=True, default="10.0.0.1")
     secondary_ip = fields.Char(string="Secondary Node IP", required=True, default="10.0.0.2")
     replication_pass = fields.Char(string="Replication Password", required=True, default="SecureRepPass123!")
-    
+
     state = fields.Selection([('input', 'Input'), ('generated', 'Generated')], default='input')
     patroni_primary = fields.Text(string="Primary Patroni YAML", readonly=True)
     patroni_secondary = fields.Text(string="Secondary Patroni YAML", readonly=True)
@@ -107,7 +107,7 @@ class HamPgHaWizard(models.TransientModel):
         from odoo.exceptions import UserError
         path = shutil.which(cmd_name)
         if path: return path
-        
+
         if cmd_name == 'etcd':
             if platform.system() != 'Linux' or platform.machine() != 'x86_64':
                 raise UserError(_("Auto-install of etcd is only supported on Linux x86_64."))
@@ -116,7 +116,7 @@ class HamPgHaWizard(models.TransientModel):
             os.makedirs(bin_dir, exist_ok=True)
             etcd_bin = os.path.join(bin_dir, 'etcd')
             if os.path.exists(etcd_bin): return etcd_bin
-            
+
             url = "https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz"
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.tar.gz') as tmp:
@@ -132,7 +132,7 @@ class HamPgHaWizard(models.TransientModel):
                 return etcd_bin
             except Exception as e:
                 raise UserError(_("Failed to auto-install etcd: %s") % str(e))
-        
+
         pkg_map = {
             'patroni': 'patroni',
             'pgbouncer': 'pgbouncer'

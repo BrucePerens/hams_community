@@ -13,7 +13,7 @@
     <p>Because restoration is highly destructive, it must be performed by a DBA via the CLI. Navigate to any Snapshot record to view and copy the exact generated restoration command for that specific point in time.</p>
 
     <h2>4. Pager Duty Synergy &amp; Stale Backups</h2>
-    <p>This module features native synergy with the <strong>Ham Pager Duty</strong> SRE suite. If an underlying backup engine fails to execute, or if the system detects that a configuration hasn't produced a new successful snapshot in over 26 hours, it will automatically open a <em>Critical</em> incident, ensuring the on-call administrator is immediately paged.</p>
+    <p>This module features native synergy with the <strong>Pager Duty</strong> SRE suite. If an underlying backup engine fails to execute, or if the system detects that a configuration hasn't produced a new successful snapshot in over 26 hours, it will automatically open a <em>Critical</em> incident, ensuring the on-call administrator is immediately paged.</p>
 
     <h2>5. Snapshot Size Anomaly Detection</h2>
     <p>Administrators can configure a <strong>Minimum Expected Size (MB)</strong> on each backup configuration. When a new snapshot is ingested, the system compares its physical byte size against this threshold. If the snapshot is anomalously small (indicating a missing mount or failed filesystem read), the system immediately fires an SRE alert to prevent a false sense of security.</p>

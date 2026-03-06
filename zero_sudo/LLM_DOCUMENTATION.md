@@ -6,14 +6,14 @@ This module acts as the foundational security layer for the entire ecosystem. It
 
 ---
 
-## 🚨 MIGRATION INSTRUCTIONS FOR PROPRIETARY MODULES (`ham_*`)
+## 🚨 MIGRATION INSTRUCTIONS FOR DEPENDENT MODULES
 
-If you are an AI or developer working on the proprietary layer (e.g., `ham_base`, `ham_logbook`, `ham_dx_cluster`), you **MUST** perform the following migrations to integrate with this core:
+If you are an AI or developer working on downstream modules, you **MUST** perform the following migrations to integrate with this core:
 
 1. **Change Dependencies:** Add `'zero_sudo'` to the `depends` array in your `__manifest__.py`.
-2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules (e.g., inside `ham_base`). The `zero_sudo` module now centrally natively intercepts interactive web logins and blocks access for accounts where `is_service_account=True`. Redundant interceptors will cause routing conflicts. *(Note: This lock only applies to the HTML web interface; XML-RPC and JSON-RPC interfaces remain open for your external background daemons).*
+2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules. The `zero_sudo` module now centrally natively intercepts interactive web logins and blocks access for accounts where `is_service_account=True`. Redundant interceptors will cause routing conflicts. *(Note: This lock only applies to the HTML web interface; XML-RPC and JSON-RPC interfaces remain open for your external background daemons).*
 3. **Update Security Utility Calls:** Globally find-and-replace your utility calls to use the new centralized namespace:
-   * **Change:** `self.env['ham.security.utils']._get_service_uid(...)`
+   * **Change:** `self.env['custom.security.utils']._get_service_uid(...)`
    * **To:** `self.env['zero_sudo.security.utils']._get_service_uid(...)`
 4. **Service Account XML Provisioning:** You may safely continue to use `<field name="is_service_account" eval="True"/>` in your XML data files without crashing, as the structural field is natively defined by this module.
 

@@ -13,21 +13,19 @@ class TestPagerIncident(TransactionCase):
     def test_01_rate_limiting_blocks_spam(self):
         # Tests [%ANCHOR: report_incident_rate_limit]
         vals = {'source': 'test_daemon', 'severity': 'high', 'description': 'Test breach'}
-        
+
         if self.integration_mode:
             try:
                 import redis
-                from odoo.addons.ham_base.redis_pool import redis_pool
-                if redis and redis_pool:
-                    r = redis.Redis(connection_pool=redis_pool)
-                    r.delete('pager_rate_limit:test_daemon')
+                r = redis.Redis(host=os.getenv('REDIS_HOST', '127.0.0.1'), port=int(os.getenv('REDIS_PORT', '6379')), db=0)
+                r.delete('pager_rate_limit:test_daemon')
             except Exception:
                 pass
-                
+
             # First request passes the cache check
             res1 = self.incident_model.report_incident(vals)
             self.assertTrue(res1, 'First request should pass in integration mode.')
-            
+
             # Second request is blocked by the TTL key in the real Redis instance
             res2 = self.incident_model.report_incident(vals)
             self.assertFalse(res2, 'Second request should be blocked by real Redis.')
@@ -37,9 +35,9 @@ class TestPagerIncident(TransactionCase):
                 mock_client = MagicMock()
                 mock_redis.Redis.return_value = mock_client
                 mock_client.get.return_value = b'1'
-                
+
                 result = self.incident_model.report_incident(vals)
-                
+
                 self.assertFalse(result, 'Incident engine failed to block rate-limited request.')
                 mock_client.get.assert_called_with('pager_rate_limit:test_daemon')
 
@@ -47,23 +45,21 @@ class TestPagerIncident(TransactionCase):
         # Tests [%ANCHOR: auto_resolve_incidents]
         # [%ANCHOR: test_pager_notification]
         vals = {'source': 'test_daemon_2', 'severity': 'critical', 'description': 'Zero sudo test'}
-        
+
         if self.integration_mode:
             try:
                 import redis
-                from odoo.addons.ham_base.redis_pool import redis_pool
-                if redis and redis_pool:
-                    r = redis.Redis(connection_pool=redis_pool)
-                    r.delete('pager_rate_limit:test_daemon_2')
+                r = redis.Redis(host=os.getenv('REDIS_HOST', '127.0.0.1'), port=int(os.getenv('REDIS_PORT', '6379')), db=0)
+                r.delete('pager_rate_limit:test_daemon_2')
             except Exception:
                 pass
-                
+
             incident_id = self.incident_model.report_incident(vals)
             self.assertTrue(incident_id, 'Incident failed to create in integration mode.')
-            
+
             incident = self.incident_model.browse(incident_id)
             self.assertEqual(incident.create_uid.id, self.service_user.id, 'Incident not under Zero-Sudo UID.')
-            
+
             incident.message_post(body=_('Test message'))
             self.incident_model.auto_resolve_incidents('test_daemon_2')
             self.assertEqual(incident.status, 'resolved')
@@ -73,10 +69,10 @@ class TestPagerIncident(TransactionCase):
                 mock_client = MagicMock()
                 mock_redis.Redis.return_value = mock_client
                 mock_client.get.return_value = None
-                
+
                 incident_id = self.incident_model.report_incident(vals)
                 self.assertTrue(incident_id, 'Incident failed to create.')
-                
+
                 incident = self.incident_model.browse(incident_id)
                 self.assertEqual(incident.create_uid.id, self.service_user.id, 'Incident not under Zero-Sudo UID.')
 
@@ -92,7 +88,7 @@ class TestPagerIncident(TransactionCase):
             with patch.object(type(self.env['bus.bus']), '_sendone') as mock_sendone:
                 incident = self.incident_model.create({'source': 'manual', 'severity': 'low', 'description': 'Bus test'})
                 self.assertTrue(incident.id)
-                
+
                 self.assertTrue(mock_sendone.called, 'Bus notification was not dispatched on incident creation.')
                 args, kwargs = mock_sendone.call_args
                 str_args = [a for a in args if isinstance(a, str)]
@@ -119,12 +115,12 @@ class TestPagerIncident(TransactionCase):
         import datetime
         from odoo import fields
         self.env.cr.execute("UPDATE pager_incident SET create_date = %s WHERE id = %s", (fields.Datetime.now() - datetime.timedelta(minutes=20), incident.id))
-        
+
         with patch.object(type(self.incident_model), 'message_post') as mock_msg:
             self.env.ref('pager_duty.cron_escalate_incidents')._trigger()
             self.incident_model.action_escalate_unacknowledged()
             mock_msg.assert_called()
-            
+
         # Assert that the status flag was successfully changed to break the infinite loop
         incident.invalidate_recordset(['is_escalated'])
         self.assertTrue(incident.is_escalated)

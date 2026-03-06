@@ -11,7 +11,7 @@ This document defines the functional specifications and business logic for the `
 **Module Name:** `user_websites`
 **Summary:** Allows users to create personal or group websites and blogs within an Odoo instance.
 **Core Philosophy:** Privacy, Ownership, and Community.
-**Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER depend on `ham_*` modules or anything else from the proprietary codebase.
+**Open Source Isolation Mandate:** This module is Open Source and available to the Odoo Community. It MUST NEVER depend on proprietary modules or anything else from the proprietary codebase.
 
 ---
 

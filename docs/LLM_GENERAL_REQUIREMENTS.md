@@ -26,12 +26,12 @@ This document defines the strict operational parameters for the Large Language M
 * **Explicit Pre-Disclosure:** If a task requires successive steps across multiple prompts, you MUST explicitly warn the user in plain text detailing the successive steps before opening the Parcel block.
 
 ### Automated Refactoring & The Substring Trap
-* **Word Boundaries Required:** If you write a Python or Bash script to perform repository-wide string replacements (e.g., updating a variable name or security group), you MUST NEVER use blunt `.replace("old", "new")`. You MUST use regular expressions with word boundaries (`\b`) to prevent corrupting larger strings that contain the target as a substring (e.g., replacing `base.group_user` inside `group_user_manager_service`).
+* **Word Boundaries Required:** If you write a Python or Bash script to perform repository-wide string replacements (e.g., updating a variable name or security group), you MUST NEVER use blunt string replacement. You MUST use regular expressions with word boundaries to prevent corrupting larger strings that contain the target as a substring.
 
 ### The Exactness Guarantee (Patch Protocol)
 * **Absolute Completeness:** When executing full file overwrites, you MUST provide complete, unabridged file contents.
 * **Search and Replace:** For targeted modifications, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is.
-* **The Black Formatter Trap:** When searching for Python code to replace, remember that the `Black` formatter actively collapses or expands lists, dictionaries, and decorators (like `@api.depends`) based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature (`def ...`) or use an `overwrite` operation.
+* **The Black Formatter Trap:** When searching for Python code to replace, remember that the formatter actively collapses or expands lists, dictionaries, and decorators based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature or use an overwrite operation.
 * **No Placeholders:** You MUST explicitly type every single character, variable, and line of the code you are modifying. Truncation placeholders are strictly forbidden and will trigger an Anti-Corruption Guard abort during extraction.
 * **Certainty Policy:** You MUST ask for clarification if you lack context or do not know a path or signature with 100% certainty. Provide code only when you possess full situational awareness.
 
@@ -63,8 +63,8 @@ You MUST internally perform a strict compliance check before opening the final P
 ## 3. UNIVERSAL TECHNICAL STANDARDS
 
 ### Python Code Quality, Black Formatter & Clean Code
-* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style (which supersedes generic PEP-8 and automatically handles slice spacing conflicts like E203). Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters.
-* **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line (e.g., no semicolons). You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This is critically important to prevent the Black formatter from wrapping long lines and detaching inline linter comments (`# burn-ignore`, `# audit-ignore`).
+* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters.
+* **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line. You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This is critically important to prevent the Black formatter from wrapping long lines and detaching inline linter comments.
 * **Strict String Formatting (The 40-Character Rule):** To prevent line-length violations, strings longer than 40 characters MUST NOT be written inline as arguments. You MUST extract them into descriptive variables or module-level constants using multi-line blocks.
 * **Extract Complex Logic (Regex):** Complex, dense, or long regular expressions MUST NOT be written inline. They MUST be assigned to meaningfully named variables.
 * **Early Returns (Guard Clauses):** Avoid deep nesting. Validate preconditions at the top of a function and return or raise early.
@@ -101,7 +101,7 @@ You MUST internally perform a strict compliance check before opening the final P
 To permanently prevent context loss and feature amnesia, the following Agile and DevSecOps artifacts MUST be maintained synchronously with all code generation:
 
 * **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
-* **Documentation Boundaries:** Ensure strict separation of concerns between deploy/ (tactical CLI steps) and docs/runbooks/ (strategic maps).
+* **Documentation Boundaries:** Ensure strict separation of concerns between tactical deploy steps and strategic runbooks.
 * **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality.
 * **Behavior-Driven Development (BDD):** User Stories MUST explicitly include Given/When/Then acceptance criteria.
 * **Fast-Fail Testing:** Test runners MUST front-load all static analysis and linters to instantly abort on errors.
@@ -128,24 +128,33 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 ## 6. OUTPUT FORMATTING & TRANSPORT PROTOCOLS
 
-### Parcel Delivery Format
-When delivering multiple files, raw code, or markdown to the user, you MUST use the Parcel format. This format guarantees that web UI renderers will not intercept, mangle, or widgetize the content, preserving all raw tags and formatting exactly as generated.
-
-### CRITICAL LLM PITFALL: Backtick Collision
-Because you must wrap your final output in a text code block to protect it from the UI renderer, you must be careful not to accidentally close that block prematurely. Ensure you use an appropriate number of backticks to wrap your parcels to avoid collisions with any internal markdown examples.
+### MIME-like Parcel Delivery Format
+When generating or modifying code, you MUST output your response using the MIME-like Parcel schema.
 
 ### Core Directives for Parcel Generation
+1. **The Wrapper (Four Backticks):** The entire Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You MUST use at least four backticks for the starting and ending boundaries to guarantee that the contents are not altered by the UI markdown renderer.
+2. **The Boundary:** Generate a highly unique boundary string for the session. It must start with "@@BOUNDARY_" and end with "@@". This exact string acts as the separator between files within the single block.
+3. **The Header:** Every file must begin with the boundary string on its own line, followed immediately on the next line by "Path: destination_filepath".
+4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.
+5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
+6. **Mode (Optional):** To change or set file permissions (e.g., for bash scripts), include "Mode: 0755" in the headers.
+7. **Encoding:** Use "Encoding: url-encoded" for files containing XML or HTML comments. You must percent-encode the payload to prevent UI renderers from stripping the tags before extraction.
+8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.
+9. **The Content:** Output the file payload exactly as it should be written to disk.
+10. **The Terminator:** End the entire archive by appending "--" to your final boundary string.
 
-1. **The Wrapper (Single Block Mandate)**: You MUST enclose the entire Parcel archive (containing ALL files for the session) inside ONE SINGLE text code block. Do NOT split multiple files into separate markdown code blocks.
-2. **The Boundary**: Generate a highly unique boundary string for the session. It must start with @@BOUNDARY_ and end with @@. This exact string acts as the separator between files within the single block.
-3. **The Header**: Every file must begin with the boundary string on its own line, followed immediately on the next line by Path: destination_filepath.
-4. **Operations (Optional)**: Defaults to overwrite. Other valid operations include search-and-replace, delete, rename, chmod, and copy.
-5. **Mode (Optional)**: To change or set file permissions (e.g., for bash scripts), include Mode: 0755 in the headers.
-6. **The Separation**: You must leave exactly ONE blank line between the header declarations and the start of the file content.
-7. **The Content**: Output the file payload exactly as it should be written to disk.
-8. **The Terminator**: End the entire archive by appending -- to your final boundary string.
-9. **Line Length Limits (CRITICAL)**: Your output lines MUST strictly match the natural line breaks and lengths of the underlying file payload.
-10. **URL-Encoding XML Comments (CRITICAL)**: Web UI Markdown renderers will silently eat HTML/XML comments, completely stripping them before the extraction script runs. When generating XML files that include comments, you MUST include Encoding: url-encoded in the Parcel header and output the comment tags via percent encoding.
+### Search-and-Replace Syntax (CRITICAL)
+When "Operation: search-and-replace" is used, the payload MUST consist of one or more replacement blocks using this exact structural marker format:
+<<<< SEARCH
+[exact code to find]
+====
+[code to replace it with]
+>>>> REPLACE
 
-### UI Crash Prevention:
+* **Fuzzy Matching & AST Fallback:** The extraction engine ignores whitespace/indentation drift during matching. For Python files, if exact matching fails, it parses the AST to find a matching class or function and replaces that node. It is highly recommended your SEARCH block encompasses a complete function or class signature.
+
+### Anti-Laziness Guardrails
+The extraction script will instantly ABORT the entire parcel if it detects laziness placeholders in your generated payload (e.g., comments implying code is unchanged or skipped). You MUST output the full replacement block or the unabridged file.
+
+### UI Crash Prevention
 * **Conversational UI Crash Prevention:** You MUST NEVER output raw HTML/XML tags (especially HTML comments) in your plain text or Markdown explanations outside the Parcel block. Always use HTML entities to ensure they render safely.

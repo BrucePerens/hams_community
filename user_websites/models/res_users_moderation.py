@@ -34,6 +34,11 @@ class ResUsersModeration(models.Model):
         # We lowercase the slug in the controller to ensure cache hits.
         svc_uid = override_svc_uid or self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         user = self.env['res.users'].with_user(svc_uid).search([('website_slug', '=ilike', slug)], limit=1)
+
+        # Virtual Slug Fallback: If no explicit slug exists, check if the URL matches their unique login (e.g. Callsign)
+        if not user:
+            user = self.env['res.users'].with_user(svc_uid).search([('login', '=ilike', slug)], limit=1)
+
         return user.id if user else False
 
     def write(self, vals):

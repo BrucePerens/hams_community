@@ -1,6 +1,6 @@
 # ☁️ Cloudflare Edge Orchestration (`cloudflare`)
 
-**Context:** Technical documentation strictly for LLMs and Integrators developing proprietary (`hams_private`) modules.
+**Context:** Technical documentation strictly for LLMs and Integrators developing dependent modules.
 
 This generalized module acts as the control plane for the CDN edge. It automatically applies aggressive caching headers, manages WAF bans, handles Turnstile CAPTCHA verification, orchestrates Zero Trust Tunnels, and provides context on edge requests.
 
@@ -14,13 +14,13 @@ Proprietary modules MUST utilize the following AbstractModel APIs to interact wi
 Instantly block or challenge malicious traffic at the Cloudflare Edge before it reaches Nginx.
 * **Signature:** `env['cloudflare.waf'].ban_ip(ip_address, mode='block', duration=3600)`
 * **Modes:** `'block'`, `'challenge'`, `'managed_challenge'`.
-* **Use Case:** To be used by silent honeypots (e.g., `ham_events` issue reporting) to drop scrapers.
+* **Use Case:** To be used by silent honeypots (e.g., public issue reporting) to drop scrapers.
 
 ### B. Cache-Tag Purging API
 Purge relational models globally across all paginated views without calculating exact URLs.
 * **Signature:** `env['cloudflare.purge.queue'].enqueue_tags(tags_list)`
-* **Example:** `env['cloudflare.purge.queue'].enqueue_tags(['user_k6bp', 'classifieds_index'])`
-* **Use Case:** Called by `ham_logbook` or `ham_classifieds` when a user's global profile state changes.
+* **Example:** `env['cloudflare.purge.queue'].enqueue_tags(['user_k6bp', 'blog_index'])`
+* **Use Case:** Called by `user_websites` when a user's global profile state changes.
 
 ### C. Turnstile Verification API
 Validate modern, invisible CAPTCHA tokens for unauthenticated public forms.
@@ -32,7 +32,7 @@ Validate modern, invisible CAPTCHA tokens for unauthenticated public forms.
 Retrieve geographic and threat data injected by the Cloudflare edge proxy.
 * **Signature:** `env['cloudflare.utils'].get_request_context()`
 * **Returns:** A dictionary containing: `{'ip': str, 'country': str, 'city': str, 'longitude': str, 'latitude': str, 'threat_score': str}`.
-* **Use Case:** Used by `ham_propagation` and `ham_satellite` to instantly default unauthenticated map viewers to their physical region.
+* **Use Case:** Used by downstream modules to instantly default unauthenticated map viewers to their physical region.
 
 ### E. Zero Trust Tunnels (cloudflared)
 The module allows administrators to provision a new Cloudflare Tunnel directly from the settings UI. It requires the `cloudflare_account_id` (tunnels are account-level, not zone-level). When triggered, it generates a random secret, creates the tunnel on the edge, and returns the `cloudflared service install <TOKEN>` command via a pop-up wizard.

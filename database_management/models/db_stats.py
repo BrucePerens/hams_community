@@ -1,6 +1,6 @@
 from odoo import models, fields, api, tools, _
 
-class HamDatabaseTableStat(models.Model):
+class DatabaseTableStat(models.Model):
     _name = 'database.table.stat'
     _description = 'Database Table Statistics (Bloat & Vacuum)'
     _auto = False
@@ -35,7 +35,7 @@ class HamDatabaseTableStat(models.Model):
         from odoo.exceptions import UserError
         path = shutil.which(cmd_name)
         if path: return path
-        
+
         pkg_map = {
             'vacuumdb': 'postgresql-client'
         }
@@ -47,11 +47,11 @@ class HamDatabaseTableStat(models.Model):
         import subprocess
         import os
         from odoo.exceptions import UserError
-        
+
         exe = self._get_executable('vacuumdb')
         db_name = self.env.cr.dbname
         env_vars = os.environ.copy()
-        
+
         for rec in self:
             try:
                 # The subprocess bypasses the active ORM transaction block allowing physical vacuuming
@@ -80,7 +80,7 @@ class HamDatabaseTableStat(models.Model):
             except Exception:
                 pass
 
-class HamDatabaseQueryStat(models.Model):
+class DatabaseQueryStat(models.Model):
     _name = 'database.query.stat'
     _description = 'Slow Query Tracking'
     _auto = False
@@ -113,7 +113,7 @@ class HamDatabaseQueryStat(models.Model):
                 )
             """)
 
-class HamDatabaseActivity(models.Model):
+class DatabaseActivity(models.Model):
     _name = 'database.activity'
     _description = 'Active Database Sessions'
     _auto = False
@@ -148,7 +148,7 @@ class HamDatabaseActivity(models.Model):
             self.env.cr.execute("SELECT pg_terminate_backend(%s)", (rec.pid,))
         return True
 
-class HamDatabaseIndexStat(models.Model):
+class DatabaseIndexStat(models.Model):
     # [%ANCHOR: db_index_stats]
     _name = 'database.index.stat'
     _description = 'Database Index Health'

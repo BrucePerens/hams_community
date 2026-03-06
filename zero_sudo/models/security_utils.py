@@ -6,10 +6,8 @@ import hashlib
 
 PARAM_WHITELIST = frozenset([
     'web.base.url',
-    'ham_dns.base_domain',
     'cloudflare.last_static_mtime',
-    'ham_dns.default_a_record_ip',
-    'ham.user_websites.last_digest_key',
+    'user_websites.last_digest_key',
     'user_websites.global_website_page_limit',
     'user_websites.company_abuse_email',
     'cloudflare.turnstile_secret',
@@ -52,9 +50,9 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         if isinstance(key_value, (list, set, tuple)):
             payloads = [f"{model_name}:{kv}" for kv in set(key_value) if kv]
             if payloads:
-                self.env.cr.execute("SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload", ('ham_cache_invalidation', payloads))
+                self.env.cr.execute("SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload", ('cache_invalidation', payloads))
         else:
-            self.env.cr.execute("SELECT pg_notify(%s, %s)", ('ham_cache_invalidation', f"{model_name}:{key_value}"))
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ('cache_invalidation', f"{model_name}:{key_value}"))
 
     @api.model
     def _get_system_param(self, key, default=None):

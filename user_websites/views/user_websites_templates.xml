@@ -258,4 +258,38 @@
             </div>
         </t>
     </template>
+
+    <template id="placeholder_page" name="Website Placeholder"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_tour_create_site] -->
+        <t t-call="website.layout">
+            <div class="container mt-5 mb-5 text-center">
+                <t t-set="entity_name" t-value="profile_user.name if profile_user else profile_group.name"/>
+                <t t-set="entity_slug" t-value="resolved_slug"/>
+
+                <div class="card shadow-sm border-0 mx-auto" style="max-width: 600px;">
+                    <div class="card-body p-5">
+                        <i class="fa fa-globe text-muted mb-3" style="font-size: 4rem;" aria-hidden="true"/>
+                        <t t-if="is_owner">
+                            <h2 class="fw-bold">Welcome, <t t-out="entity_name"/>!</h2>
+                            <p class="text-muted mt-3 mb-4">
+                                Your <t t-out="page_type"/> has not been initialized yet. Click the button below to generate your initial layout and start editing.
+                            </p>
+                            <form t-attf-action="/#{entity_slug}/create_#{'site' if page_type == 'home' else 'blog'}" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i t-attf-class="fa #{'fa-paint-brush' if page_type == 'home' else 'fa-pencil'} me-2" aria-hidden="true"/> 
+                                    Create Your <span style="text-transform: capitalize;"><t t-out="page_type"/></span>
+                                </button>
+                            </form>
+                        </t>
+                        <t t-else="">
+                            <h2 class="fw-bold text-muted"><t t-out="entity_name"/></h2>
+                            <p class="text-muted mt-3">
+                                This user has not yet created their <t t-out="page_type"/>. Please check back later!
+                            </p>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
 </odoo>

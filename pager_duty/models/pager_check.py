@@ -1,7 +1,7 @@
 import uuid
 from odoo import models, fields, api, _, tools
 
-class HamPagerCheck(models.Model):
+class PagerCheck(models.Model):
     _name = 'pager.check'
     _description = 'Graphical Pager Duty Check'
     _order = 'name asc'
@@ -39,13 +39,13 @@ class HamPagerCheck(models.Model):
         ('ssh', 'SSH Handshake'),
         ('systemd', 'Systemd Service Status')
     ], string="Monitor Type", required=True)
-    
+
     target = fields.Char(string="Target (Host/URL/File)", help="Prefix with ENV: to inject environment variables.")
     port = fields.Integer(string="Port")
     payload_send = fields.Char(string="Send Payload (String)")
     payload_send_hex = fields.Char(string="Send Payload (Hex)")
     payload_expect = fields.Char(string="Expect Output")
-    
+
     dbname = fields.Char(string="DB Name")
     dbuser = fields.Char(string="Username (DB/SMTP)")
     dbpass = fields.Char(string="Password (DB/SMTP)")
@@ -53,7 +53,7 @@ class HamPagerCheck(models.Model):
     script = fields.Char(string="Shell Script Command")
     rpc_method = fields.Char(string="RPC Method", help="e.g. execute_kw")
     rpc_params = fields.Text(string="RPC Params (JSON Array/Dict)", help="e.g. ['db', 2, 'pass', 'res.partner', 'search', [[]]]")
-    
+
     regex = fields.Char(string="Regex Pattern")
     critical_threshold = fields.Integer(string="Critical Threshold %")
     interval = fields.Integer(string="Polling Interval (sec)", default=60)

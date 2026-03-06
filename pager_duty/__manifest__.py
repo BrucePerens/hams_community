@@ -1,5 +1,5 @@
 {
-    'name': 'Ham Pager Duty',
+    'name': 'Pager Duty',
     'summary': 'Pager duty scheduling and incident management.',
     'author': 'Bruce Perens K6BP',
     'website': 'https://perens.com/',
@@ -22,5 +22,5 @@
             'pager_duty/static/src/components/board/board.xml',
         ]
     },
-    
+
 }

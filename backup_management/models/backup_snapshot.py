@@ -1,6 +1,6 @@
 from odoo import models, fields
 
-class HamBackupSnapshot(models.Model):
+class BackupSnapshot(models.Model):
     _name = 'backup.snapshot'
     _description = 'Backup Snapshot'
     _order = 'start_time desc'
@@ -10,7 +10,7 @@ class HamBackupSnapshot(models.Model):
     start_time = fields.Datetime(string="Start Time")
     size_bytes = fields.Integer(string="Size (Bytes)")
     status = fields.Char(string="Status")
-    
+
     restore_command = fields.Char(string="Restore Command", compute="_compute_restore_command")
 
     def _compute_restore_command(self):

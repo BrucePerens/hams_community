@@ -21,7 +21,7 @@ class TestPgConfig(TransactionCase):
             self.assertEqual(res.get('type'), 'ir.actions.client')
             mock_execute.assert_called()
 
-    @patch('odoo.addons.database_management.models.pg_config.HamPgHaWizard._get_executable', return_value='/bin/mock')
+    @patch('odoo.addons.database_management.models.pg_config.PgHaWizard._get_executable', return_value='/bin/mock')
     def test_02_ha_wizard(self, mock_exe):
         # Tests [%ANCHOR: pg_ha_wizard]
         wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({
@@ -30,7 +30,7 @@ class TestPgConfig(TransactionCase):
             'replication_pass': 'testpass'
         })
         wizard.action_generate()
-        
+
         self.assertEqual(wizard.state, 'generated')
         self.assertIn('192.168.1.10', wizard.patroni_primary)
         self.assertIn('192.168.1.11', wizard.patroni_secondary)
@@ -46,13 +46,13 @@ class TestPgConfig(TransactionCase):
     def test_02b_ha_wizard_missing_binaries(self, mock_which):
         from odoo.exceptions import UserError
         wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({'primary_ip': '10.0.0.1'})
-        
+
         # Test missing patroni throws error
         def mock_which_side_effect(cmd):
             if cmd == 'etcd': return '/bin/etcd'
             return None
         mock_which.side_effect = mock_which_side_effect
-        
+
         with self.assertRaises(UserError):
             wizard.action_generate()
 
@@ -70,10 +70,10 @@ class TestPgConfig(TransactionCase):
         mock_member.name = 'etcd-v3.5.12-linux-amd64/etcd'
         mock_tar_instance.getmembers.return_value = [mock_member]
         mock_tar.return_value.__enter__.return_value = mock_tar_instance
-        
+
         wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({'primary_ip': '10.0.0.1'})
         exe_path = wizard._get_executable('etcd')
-        
+
         mock_url.assert_called_once()
         mock_tar_instance.extract.assert_called_once()
         mock_chmod.assert_called_once()

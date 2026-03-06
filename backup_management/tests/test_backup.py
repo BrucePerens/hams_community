@@ -56,12 +56,12 @@ class TestBackupManagement(TransactionCase):
             self.config_pg.action_sync_snapshots()
             mock_msg.assert_called()
 
-    @patch('odoo.addons.backup_management.models.backup_config.HamBackupConfig.action_sync_snapshots')
+    @patch('odoo.addons.backup_management.models.backup_config.BackupConfig.action_sync_snapshots')
     def test_04_cron_trigger(self, mock_sync):
         # [%ANCHOR: test_backup_cron]
         # Tests [%ANCHOR: cron_sync_all_backups]
         self.env.ref('backup_management.cron_sync_backups')._trigger()
-        
+
         # Inject a stale snapshot so that it triggers _report_backup_failure -> message_post
         self.env['backup.snapshot'].create({
             'config_id': self.config_kopia.id,
@@ -70,7 +70,7 @@ class TestBackupManagement(TransactionCase):
             'size_bytes': 1000,
             'status': 'completed'
         })
-        
+
         with patch.object(type(self.env['backup.config']), 'message_post') as mock_msg:
             self.env['backup.config'].cron_sync_all_backups()
             mock_msg.assert_called()

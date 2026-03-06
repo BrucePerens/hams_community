@@ -1,6 +1,6 @@
-# 🛎️ Hams.com Pager Duty: Enterprise-Grade SRE for Odoo
+# 🛎️ Pager Duty: Enterprise-Grade SRE for Odoo
 
-The Hams.com platform handles massive, real-time data velocities. Standard ERP monitoring simply isn't enough. We built a completely generalized, standalone Site Reliability Engineering (SRE) suite that mirrors the capabilities of Datadog and Zabbix, right inside your Odoo backend.
+This platform handles massive, real-time data velocities. Standard ERP monitoring simply isn't enough. We built a completely generalized, standalone Site Reliability Engineering (SRE) suite that mirrors the capabilities of Datadog and Zabbix, right inside your Odoo backend.
 
 ## 🚀 Key Capabilities
 

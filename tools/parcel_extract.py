@@ -158,9 +158,12 @@ def mask_markdown_and_check_balance(payload):
 
 def check_ai_foibles(payload, filepath=""):
     """Strips rogue markdown wrappers and rejects laziness placeholders."""
-    # LLMs occasionally wrap their payload in standard markdown blocks
-    payload = re.sub(r"^\s*```[a-zA-Z]*\n", "", payload)
-    payload = re.sub(r"\n\s*```\s*$", "\n", payload)
+    # LLMs occasionally wrap their payload in standard markdown blocks.
+    # Safely remove them ONLY if the entire payload is wrapped in backticks.
+    if payload.lstrip().startswith("```"):
+        lines = payload.strip("\r\n").split("\n")
+        if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip().startswith("```"):
+            payload = "\n".join(lines[1:-1]) + "\n"
 
     text_to_check = payload
     if filepath.endswith(".md"):
