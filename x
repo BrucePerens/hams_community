@@ -1,7 +1,0 @@
-AGENTS.md
-README.md
-docs/LLM_GENERAL_REQUIREMENTS.md
-docs/LLM_LINTER_GUIDE.md
-docs/LLM_ODOO_REQUIREMENTS.md
-docs/adrs/MASTER_14_LLM_CONTEXT_MANAGEMENT.md
-tools/parcel_extract.py

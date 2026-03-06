@@ -1,73 +1,105 @@
-# Odoo Core Modules & SRE Platform
+# Odoo Core Modules & Enterprise SRE Platform
 
-Welcome to the foundational Odoo 19 ecosystem. This repository contains a suite of enterprise-grade, open-source modules designed to transform Odoo into a highly secure, heavily optimized, and decentralized community platform.
+Welcome to the foundational Odoo 19 ecosystem. This repository contains a suite of enterprise-grade, open-source modules designed to transform Odoo into a highly secure, heavily optimized, and decentralized community platform. 
 
-This repository is also the source of truth for our strict LLM-assisted development standards, ensuring all code remains secure, accessible, and architecturally sound.
+While these modules offer features typically locked behind expensive enterprise SaaS subscriptions, this entire suite is **100% open-source and free**. They are engineered to be perfectly isolated, dropping seamlessly into any Odoo project without relying on proprietary external codebases.
 
-## 🚀 The Module Ecosystem
+---
 
-We have engineered these modules to be perfectly isolated and drop-in ready for any Odoo project. They do not rely on proprietary external codebases.
+## 🚀 The Ecosystem Portfolio
 
-### 🌐 Decentralized Community & Content
-* **User Websites (`user_websites`)**: Empower your community with decentralized, multi-tenant web hosting.
-  * **Personal & Group Sites**: Users get their own URLs (e.g., `/username/home`) with drag-and-drop page building.
-  * **Shared Blogging**: A unified backend blog container dynamically filtered to give each user their own perceived personal blog.
-  * **Automated Moderation**: Built-in 3-strike violation reporting, automatic suspensions, and an integrated appeals process.
-  * **Community Directory**: An opt-in public directory for users to showcase their profiles.
-* **User Websites SEO (`user_websites_seo`)**: Put your users on the front page of Google.
-  * **Native SEO Fusion**: Injects Odoo's native SEO mixin directly into user profiles.
-  * **Zero-Sudo Execution**: Allows standard users to interactively optimize their meta titles, descriptions, and OpenGraph images without requiring administrative privileges.
-* **Manual Library (`manual_library`)**: A clean-room, open-source replacement for Odoo's Enterprise Knowledge app.
-  * **Enterprise API Interoperability**: 100% drop-in compatibility with `knowledge.article`.
-  * **Dynamic Architecture**: Infinite hierarchical folder nesting, auto-generated Tables of Contents, and rich-text editing.
-  * **Granular Access**: Contextual access rights ranging from private admin notes to shared workspace drafts and public guides.
+### 🌐 Decentralized Community & Content Management
 
-### 🛡️ Enterprise Security & Compliance
-* **Zero-Sudo Security Core (`zero_sudo`)**: Bulletproof your architecture with strict least-privilege enforcement.
-  * **The Micro-Service Account Pattern**: Completely eliminates dangerous `.sudo()` calls by securely proxying background tasks.
-  * **Daemon Lockout**: Mathematically prevents service accounts from executing interactive web logins.
-  * **SSTI Protection**: Strictly whitelists system parameter extraction to protect cryptographic keys from template injections.
-* **Global Compliance (`compliance`)**: Automate the legal headaches of running a modern platform.
-  * **Zero-Touch Enforcement**: Automatically activates Odoo's native ePrivacy cookie consent bar globally.
-  * **Legal Boilerplates**: Auto-provisions non-destructive, AGPL-3 compatible templates for Privacy Policies, Terms of Service, and Cookie Policies.
-  * **GDPR Workflows**: Native portals for instant data portability (JSON export) and permanent Right to Erasure cascade deletions.
+#### **1. User Websites (`user_websites`)**
+*Turn your Odoo instance into a decentralized web-hosting powerhouse.*
+Give your community the keys to build their own corner of the internet safely and securely.
+* **Personal & Group Sites:** Users receive their own dedicated URLs (e.g., `/username/home`) with full access to Odoo's drag-and-drop page builder.
+* **Shared Blogging Engine:** A unified backend blog container dynamically filters content, giving each user their own perceived personal blog without bloating your database.
+* **Automated Moderation & Trust:** Built-in "Report Violation" buttons, automated 3-strike suspensions, and a complete user appeals process.
+* **Community Directory:** A beautiful, opt-in public directory for users to showcase their profiles and content.
 
-### ⚡ Edge Orchestration & Performance
-* **Cloudflare Edge Orchestration (`cloudflare`)**: Command your CDN and WAF directly from the Odoo backend.
-  * **Automated Cache Purging**: Scans static files on boot and automatically invalidates stale assets globally via Cache-Tags.
-  * **WAF Management**: Build, deploy, and backup Cloudflare Firewall rules from the UI.
-  * **Silent Honeypots**: Traps malicious bots in hidden form fields and instantly bans their IPs at the network edge.
-  * **Zero Trust**: Provision and deploy `cloudflared` edge tunnels with one click.
-* **Aggressive Edge Caching (`caching`)**: Turn your user's browser into a lightning-fast CDN.
-  * **Global Service Worker**: Intercepts requests for JS, CSS, and static assets, loading them locally with 0ms latency.
-  * **Dynamic Quota Safety**: Mathematically calculates payload sizes during boot to prevent browser quota exhaustion.
-  * **Zero-Config Integration**: Automatically caches assets for all installed custom modules.
+#### **2. User Websites SEO (`user_websites_seo`)**
+*Put your users on the front page of Google.*
+* **Native SEO Fusion:** Seamlessly injects Odoo's native SEO mixin directly into user profiles.
+* **Zero-Sudo Execution:** Safely allows standard users to interactively optimize their meta titles, descriptions, and OpenGraph images without requiring administrative privileges.
 
-### 📟 Site Reliability Engineering (SRE) & DBA
-* **Pager Duty & Generalized Monitoring (`pager_duty`)**: Datadog-level reliability engineering natively integrated with your ERP.
-  * **Airgapped Execution**: Standalone async Python daemons that alert you via SMTP/Webhooks even if Odoo crashes.
-  * **Intelligent Routing**: Natively integrates with Odoo Calendar shifts to instantly ping whoever is on call.
-  * **Deep Protocol Checks**: Monitors HTTP/3, DNS, PostgreSQL, Nginx syntax, Certbot dry-runs, and custom SQL anomaly detection.
-* **Database Management & APM (`database_management`)**: An enterprise DBA toolkit built right into Odoo.
-  * **Real-Time Telemetry**: Tracks autovacuum bloat, cache hit ratios, and slow queries directly from `pg_stat_statements`.
-  * **Active Remediation**: GUI-driven `VACUUM ANALYZE` commands and live session kill-switches.
-  * **Optimization Wizards**: Dynamically calculates and applies hardware-aware PostgreSQL tuning configurations.
-  * **HA Orchestrator**: Generates exact deployment topologies for Patroni and PgBouncer.
-* **Unified Backup Management (`backup_management`)**: A single pane of glass for disaster recovery.
-  * **Hybrid Architecture**: Orchestrates both Kopia (file state) and pgBackRest (PostgreSQL WAL).
-  * **Automated Drills**: Executes and validates automated restore drills to mathematically prove backup integrity.
-  * **Anomaly Detection**: Triggers Pager Duty alerts if snapshots miss minimum expected file sizes.
-* **Real Transaction Testing (`test_real_transaction`)**: Stop fighting the ORM test cache.
-  * **True Commits**: Bypasses standard savepoints to allow actual database commits during test execution.
-  * **Leak Detection**: Features a strict SQL leak detector to guarantee pristine test environments.
+#### **3. Manual Library (`manual_library`)**
+*A clean-room, open-source replacement for Odoo's Enterprise Knowledge app.*
+* **Enterprise API Interoperability:** 100% drop-in compatibility with the `knowledge.article` API. Other modules can install their manuals here instantly.
+* **Dynamic Architecture:** Features infinite hierarchical folder nesting, auto-generated sticky Tables of Contents, and standard rich-text editing.
+* **Granular Access Control:** Contextual access rights ranging from highly private admin notes to shared workspace drafts and public guides.
+
+---
+
+### 🛡️ Enterprise Security & Privacy Compliance
+
+#### **4. Zero-Sudo Security Core (`zero_sudo`)**
+*Military-grade least-privilege architecture.*
+* **The Micro-Service Account Pattern:** Completely eliminates Odoo's dangerous `.sudo()` calls by securely proxying background tasks through highly restricted, domain-specific accounts.
+* **Daemon Lockout:** Mathematically prevents service accounts from executing interactive web logins, securing your system even if a daemon's credentials are leaked.
+* **SSTI Protection:** Strictly whitelists system parameter extraction to protect cryptographic keys from Server-Side Template Injections.
+
+#### **5. Global Compliance Engine (`compliance`)**
+*Automate the legal headaches of running a modern platform.*
+* **Zero-Touch Enforcement:** Automatically activates and enforces Odoo's native ePrivacy cookie consent bar globally upon installation.
+* **Legal Boilerplates:** Auto-provisions non-destructive, AGPL-3 compatible templates for Privacy Policies, Terms of Service, and Cookie Policies.
+* **GDPR Workflows:** Provides native portals for instant Data Portability (machine-readable JSON exports) and permanent Right to Erasure cascade deletions.
+
+---
+
+### ⚡ Edge Orchestration & Extreme Performance
+
+#### **6. Cloudflare Edge Orchestration (`cloudflare`)**
+*Command your CDN and Web Application Firewall directly from the Odoo backend.*
+* **Automated Cache Purging:** Scans static files on boot and automatically invalidates stale assets globally via Cloudflare Cache-Tags.
+* **Silent Honeypots & Tarpits:** Traps malicious bots in hidden form fields and instantly drops their IPs at the network edge before they ever reach your server.
+* **Turnstile Integration:** Validates modern, invisible CAPTCHA tokens for unauthenticated public forms.
+* **Zero Trust Tunnels:** Provision and deploy secure `cloudflared` edge tunnels directly from the Odoo settings menu.
+
+#### **7. Aggressive Edge Caching (`caching`)**
+*Turn your user's browser into a lightning-fast CDN.*
+* **Global Service Worker:** Intercepts requests for JS, CSS, and static assets, loading them locally from the user's hard drive with true 0ms latency.
+* **Dynamic Quota Safety:** Mathematically calculates payload sizes during boot to maximize cache hits without causing browser quota panics.
+* **Zero-Config Integration:** Automatically caches assets for all installed custom modules without writing a single line of integration code.
+
+---
+
+### 📟 Site Reliability Engineering (SRE) & DBA Tooling
+
+#### **8. Pager Duty & Generalized Monitoring (`pager_duty`)**
+*Datadog-level reliability engineering natively integrated with your ERP.*
+* **Airgapped Execution:** Standalone asynchronous Python daemons monitor your system from the outside. If Odoo crashes, the daemon survives to alert you via SMTP or Slack/Discord Webhooks.
+* **Intelligent Calendar Routing:** Natively integrates with Odoo Calendar shifts to instantly ping whoever is currently on call.
+* **Deep Protocol Checks:** Monitors HTTP/3 (QUIC), un-cached DNS root traversals, PostgreSQL sockets, Nginx syntax, and Certbot dry-runs.
+* **Anomaly Detection:** Write custom SQL queries to establish baselines, and let the system page you if the data stops making sense.
+
+#### **9. Database Management & APM (`database_management`)**
+*Take absolute control of your PostgreSQL engine.*
+* **Real-Time Telemetry:** Tracks autovacuum bloat, cache hit ratios, and slow queries directly from deep `pg_stat` views.
+* **Active Remediation:** GUI-driven `VACUUM ANALYZE` commands and live session kill-switches to instantly resolve transaction locks.
+* **Optimization Wizards:** Dynamically calculates and applies hardware-aware PostgreSQL tuning configurations (RAM, CPU cores, SSD specs) directly to `postgresql.auto.conf`.
+* **HA Orchestrator:** Generates exact deployment topologies and YAML files for Patroni and PgBouncer high-availability clusters.
+
+#### **10. Unified Backup Management (`backup_management`)**
+*A single pane of glass for multi-engine disaster recovery.*
+* **Hybrid Architecture:** Orchestrates both Kopia (for file and system state) and pgBackRest (for PostgreSQL WAL archiving).
+* **Automated Drills:** Executes and validates automated restore shell scripts to mathematically prove backup integrity before disaster strikes.
+* **Anomaly Detection:** Triggers Pager Duty alerts if snapshots miss minimum expected file sizes or if the system goes 26 hours without a successful sync.
+
+#### **11. Real Transaction Testing Facility (`test_real_transaction`)**
+*Stop fighting the ORM test cache.*
+* **True Commits:** Bypasses standard Odoo `TransactionCase` savepoints to allow actual database commits during test execution—vital for testing Redis pub/sub and complex inverse relations.
+* **Leak Detection:** Features a strict SQL leak detector that snapshots the schema before and after tests to guarantee pristine environments.
+
+---
 
 ## 🤖 LLM-Assisted Development Standards
 
-When we use AI to write code, we force it to follow strict rules. This keeps the code secure, accessible, and up to date with Odoo 19 standards.
+This repository acts as the source of truth for how we instruct Large Language Models (like AI coding assistants) to write software for us. When we use AI to write code, we force it to follow strict rules, ensuring the code remains secure, accessible, and up to date.
 
-* **`docs/LLM_GENERAL_REQUIREMENTS.md`**: Our global rules for the AI. It covers how the AI should talk to us (no fluff, conversational tone), how it should handle security, and the four-backtick `plaintext` Parcel format it must use to send us code.
-* **`docs/LLM_ODOO_REQUIREMENTS.md`**: Our strict Odoo coding rules. This includes the "Burn List"—a list of old, bad Odoo habits and legacy syntax the AI is explicitly forbidden from using.
-* **`docs/LLM_LINTER_GUIDE.md`**: The exhaustive reference sheet for the platform's DevSecOps pipeline and AST linter traps.
+* **`docs/LLM_GENERAL_REQUIREMENTS.md`**: Our global rules for the AI. It covers tone, security paradigms, and the mandatory MIME-like Parcel format for code generation.
+* **`docs/LLM_ODOO_REQUIREMENTS.md`**: Our strict Odoo coding rules.
+* **`docs/LLM_LINTER_GUIDE.md`**: The exhaustive "Burn List"—a reference sheet of banned syntax, legacy Odoo habits, and DevSecOps AST linter traps.
 
 ## ⚖️ License & Copyright
 
