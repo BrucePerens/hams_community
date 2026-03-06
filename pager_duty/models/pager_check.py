@@ -1,5 +1,5 @@
 import uuid
-from odoo import models, fields, api, _
+from odoo import models, fields, api, _, tools
 
 class HamPagerCheck(models.Model):
     _name = 'pager.check'
@@ -69,9 +69,25 @@ class HamPagerCheck(models.Model):
     last_heartbeat = fields.Datetime(string="Last Heartbeat", readonly=True)
 
     @api.model
+    @tools.ormcache('hb_uuid')
+    def _get_check_id_by_uuid(self, hb_uuid, override_svc_uid=None):
+        if not hb_uuid:
+            return False
+        svc_uid = override_svc_uid or self.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
+        check = self.env['pager.check'].with_user(svc_uid).search([('heartbeat_uuid', '=', hb_uuid)], limit=1)
+        return check.id if check else False
+
+    def unlink(self):
+        self.env.registry.clear_cache()
+        return super().unlink()
+
+    @api.model
     def check_heartbeat_rpc(self, hb_uuid, interval_sec):
-        check = self.env['pager.check'].search([('heartbeat_uuid', '=', hb_uuid)], limit=1)
-        if not check or not check.last_heartbeat:
+        check_id = self._get_check_id_by_uuid(hb_uuid)
+        if not check_id:
+            return False
+        check = self.env['pager.check'].browse(check_id)
+        if not check.last_heartbeat:
             return False
         delta = (fields.Datetime.now() - check.last_heartbeat).total_seconds()
         return delta <= interval_sec

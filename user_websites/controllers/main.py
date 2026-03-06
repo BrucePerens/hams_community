@@ -177,11 +177,11 @@ class UserWebsitesController(http.Controller):
             parts = [p for p in url.split('/') if p]
             if parts:
                 potential_slug = parts[0].lower()
-                cached_uid = request.env['res.users']._get_user_id_by_slug(potential_slug)
+                cached_uid = request.env['res.users']._get_user_id_by_slug(potential_slug, override_svc_uid=svc_uid)
                 if cached_uid:
                     content_owner_id = cached_uid
                 else:
-                    cached_gid = request.env['user.websites.group']._get_group_id_by_slug(potential_slug)
+                    cached_gid = request.env['user.websites.group']._get_group_id_by_slug(potential_slug, override_svc_uid=svc_uid)
                     if cached_gid:
                         content_group_id = cached_gid
 
@@ -204,16 +204,16 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
+        user_id = request.env['res.users']._get_user_id_by_slug(slug_lower, override_svc_uid=svc_uid)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
         if not user:
-            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
 
         if user:
             website_id = request.website.id if hasattr(request, 'website') and request.website else False
-            page_id = request.env['website.page']._get_page_id_by_url(f'/{user.website_slug}/home', website_id)
+            page_id = request.env['website.page']._get_page_id_by_url(f'/{user.website_slug}/home', website_id, override_svc_uid=svc_uid)
             page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
             
             if page and page.exists() and page.website_published:
@@ -250,7 +250,7 @@ class UserWebsitesController(http.Controller):
         # Fallback to Groups
         if group:
             website_id = request.website.id if hasattr(request, 'website') and request.website else False
-            page_id = request.env['website.page']._get_page_id_by_url(f'/{group.website_slug}/home', website_id)
+            page_id = request.env['website.page']._get_page_id_by_url(f'/{group.website_slug}/home', website_id, override_svc_uid=svc_uid)
             page = request.env['website.page'].with_user(svc_uid).browse(page_id) if page_id else None
 
             if page and page.exists() and page.website_published:
@@ -285,11 +285,11 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
+        user_id = request.env['res.users']._get_user_id_by_slug(slug_lower, override_svc_uid=svc_uid)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
         if not user:
-            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_uid = request.env.user.id
@@ -350,11 +350,11 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
+        user_id = request.env['res.users']._get_user_id_by_slug(slug_lower, override_svc_uid=svc_uid)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
         if not user:
-            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         if not user and not group:
@@ -446,11 +446,11 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
+        user_id = request.env['res.users']._get_user_id_by_slug(slug_lower, override_svc_uid=svc_uid)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
         if not user:
-            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         resolved_slug = None
@@ -554,11 +554,11 @@ class UserWebsitesController(http.Controller):
         # Verified by [%ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        user_id = request.env['res.users'].with_user(svc_uid)._get_user_id_by_slug(slug_lower)
+        user_id = request.env['res.users']._get_user_id_by_slug(slug_lower, override_svc_uid=svc_uid)
         user = request.env['res.users'].with_user(svc_uid).browse(user_id) if user_id else None
         group = None
         if not user:
-            group_id = request.env['user.websites.group'].with_user(svc_uid)._get_group_id_by_slug(slug_lower)
+            group_id = request.env['user.websites.group']._get_group_id_by_slug(slug_lower, override_svc_uid=svc_uid)
             group = request.env['user.websites.group'].with_user(svc_uid).browse(group_id) if group_id else None
         
         target_record = user.partner_id if user else group

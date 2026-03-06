@@ -11,8 +11,9 @@ class PagerPingAPI(http.Controller):
     def heartbeat(self, hb_uuid, **kw):
         from odoo import fields
         svc_uid = request.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
-        check = request.env['pager.check'].with_user(svc_uid).search([('heartbeat_uuid', '=', hb_uuid)], limit=1)
-        if check:
+        check_id = request.env['pager.check']._get_check_id_by_uuid(hb_uuid, override_svc_uid=svc_uid)
+        if check_id:
+            check = request.env['pager.check'].with_user(svc_uid).browse(check_id)
             check.last_heartbeat = fields.Datetime.now()
             return http.Response(json.dumps({"status": "ok"}), content_type='application/json')
         return http.Response(json.dumps({"err": "not found"}), status=404, content_type='application/json')

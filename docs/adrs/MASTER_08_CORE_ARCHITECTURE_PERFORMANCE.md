@@ -1,7 +1,7 @@
 # MASTER 08: Core Architecture & Performance
 
 ## Status
-Accepted (Consolidates ADRs 0001, 0022, 0023, 0024, 0027, 0031, 0047, 0048, 0057)
+Accepted (Consolidates ADRs 0001, 0022, 0023, 0024, 0027, 0031, 0047, 0048, 0057, 0066)
 
 ## Context & Philosophy
 The platform handles massive real-time data ingestion, external polling, and WebSocket concurrency. Standard Odoo WSGI workers are optimized for low-concurrency ERP transactions. To prevent CPU/RAM exhaustion, all heavy lifting MUST be distributed asynchronously and managed with strict O(1) memory profiling.
@@ -15,7 +15,9 @@ The platform handles massive real-time data ingestion, external polling, and Web
 ### 2. Scalability & Coherent Distributed Caching (0047, 0048)
 * The Odoo web tier MUST remain entirely stateless to allow horizontal scaling behind a load balancer. Session data must reside in Redis.
 * High-frequency lookups (like resolving slugs) MUST use `@tools.ormcache`.
-* To keep distributed ORM caches in sync across multiple nodes, the ORM MUST emit a PostgreSQL `NOTIFY` upon data mutation. An external daemon listens to this and broadcasts a cache invalidation via Redis to all workers.
+* **Secure Cached Resolver Pattern (0066):** All cached lookup methods MUST accept an `override_svc_uid=None` parameter so external caller modules can execute the underlying database cache-miss queries securely under their own Micro-Service Account context.
+* To keep distributed ORM caches in sync across multiple nodes, the ORM MUST emit a PostgreSQL `NOTIFY` upon data mutation. An external daemon listens to this and broadcasts a cache invalidation via Redis to all 
+workers.
 
 ### 3. Asynchronous WSGI Offloading & Connection Pooling (0023, 0024)
 * Long-running HTTP requests MUST spawn a bounded `ThreadPoolExecutor` background task, maintaining their own independent PostgreSQL cursor (`odoo.registry(db_name).cursor()`). Unbounded `threading.Thread` usage is a strict DoS vector and is forbidden.

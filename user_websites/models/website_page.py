@@ -96,10 +96,10 @@ class WebsitePage(models.Model):
 
     @api.model
     @tools.ormcache('url', 'website_id')
-    def _get_page_id_by_url(self, url, website_id):
+    def _get_page_id_by_url(self, url, website_id, override_svc_uid=None):
         if not url:
             return False
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
+        svc_uid = override_svc_uid or self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
         page = self.with_user(svc_uid).search([
             ('url', '=', url),
             ('website_published', '=', True),
