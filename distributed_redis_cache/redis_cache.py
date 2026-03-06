@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright © Bruce Perens K6BP. AGPL-3.0.
+import json
+import logging
+import hashlib
+from functools import wraps
+from odoo import models
+from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
+
+_logger = logging.getLogger(__name__)
+
+# Local fallback cache to maintain HA if Redis is unreachable
+_local_cache = {}
+
+
+def _get_hash(*args, **kwargs):
+    def _serialize(obj):
+        if isinstance(obj, models.Model):
+            sorted_ids = sorted(obj.ids) if obj.ids else []
+            return f"{obj._name}({sorted_ids})"
+        return str(obj)
+
+    serialized_args = [_serialize(a) for a in args]
+    serialized_kwargs = {k: _serialize(v) for k, v in sorted(kwargs.items())}
+
+    arg_str = repr(serialized_args) + repr(serialized_kwargs)
+    return hashlib.sha256(arg_str.encode("utf-8")).hexdigest()
+
+
+def distributed_cache():
+    """
+    Fine-grained, distributed Redis-backed cache decorator.
+    Replaces @tools.ormcache to support precise cross-worker invalidation.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            dbname = self.env.cr.dbname
+            model_name = self._name
+            arg_hash = _get_hash(*args, **kwargs)
+            cache_key = f"{dbname}:distributed_cache:{model_name}:{func.__name__}:{arg_hash}"
+
+            import odoo
+            use_redis = bool(redis and redis_pool)
+
+            # Completely sever Redis connection during automated testing
+            # to prevent cross-test ghost cache poisoning after Postgres rollbacks.
+            if odoo.tools.config.get("test_enable"):
+                use_redis = False
+
+            if use_redis:
+                try:
+                    r = redis.Redis(connection_pool=redis_pool)
+                    cached = r.get(cache_key)
+                    if cached:
+                        return json.loads(cached)
+                except Exception as e:
+                    _logger.debug("Redis cache read failed: %s", e)
+                    use_redis = False
+
+            if not use_redis:
+                if cache_key in _local_cache:
+                    return _local_cache[cache_key]
+
+            result = func(self, *args, **kwargs)
+
+            if use_redis:
+                try:
+                    r = redis.Redis(connection_pool=redis_pool)
+                    r.setex(cache_key, 86400, json.dumps(result))  # 24h TTL
+                except Exception as e:
+                    _logger.debug("Redis cache write failed: %s", e)
+            else:
+                _local_cache[cache_key] = result
+
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def invalidate_model_cache(env, model_name):
+    """
+    Invalidates all fine-grained cache entries for a specific model
+    without triggering a global ORM stampede.
+    """
+    dbname = env.cr.dbname
+    prefix = f"{dbname}:distributed_cache:{model_name}:*"
+
+    use_redis = bool(redis and redis_pool)
+    if use_redis:
+        try:
+            r = redis.Redis(connection_pool=redis_pool)
+            keys = r.keys(prefix)
+            if keys:
+                r.delete(*keys)
+        except Exception as e:
+            _logger.debug("Redis cache invalidation failed: %s", e)
+            use_redis = False
+
+    if not use_redis:
+        keys_to_delete = [
+            k
+            for k in _local_cache.keys()
+            if k.startswith(f"{dbname}:distributed_cache:{model_name}:")
+        ]
+        for k in keys_to_delete:
+            del _local_cache[k]

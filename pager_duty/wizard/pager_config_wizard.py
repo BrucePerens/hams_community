@@ -84,6 +84,14 @@ class PagerConfigWizard(models.TransientModel):
                 d["regex"] = c.regex
             if c.critical_threshold:
                 d["critical"] = c.critical_threshold
+            if c.warning_threshold:
+                d["warning"] = c.warning_threshold
+            if c.snmp_community:
+                d["snmp_community"] = c.snmp_community
+            if c.snmp_oid:
+                d["snmp_oid"] = c.snmp_oid
+            if c.partition:
+                d["partition"] = c.partition
             if c.grace_period:
                 d["grace"] = c.grace_period
             if c.parent_check_id:
@@ -140,6 +148,10 @@ class PagerConfigWizard(models.TransientModel):
                     "rpc_params": c.get("rpc_params", ""),
                     "regex": c.get("regex", ""),
                     "critical_threshold": c.get("critical", 0),
+                    "warning_threshold": c.get("warning", 0),
+                    "snmp_community": c.get("snmp_community", ""),
+                    "snmp_oid": c.get("snmp_oid", ""),
+                    "partition": c.get("partition", "/"),
                     "interval": c.get("interval", 60),
                     "grace_period": c.get("grace", 0),
                     "auto_remediate_script": c.get("remediate", ""),

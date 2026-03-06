@@ -45,10 +45,14 @@ class UserWebsitesSEOController(UserWebsitesController):
             user = response.qcontext.get("profile_user")
             group = response.qcontext.get("profile_group")
 
-            # Replace the empty recordset with the SEO-aware model
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+
+            # Elevate the recordset to prevent AccessErrors when Odoo extracts SEO metadata
             if user:
-                response.qcontext["main_object"] = user
+                response.qcontext["main_object"] = user.with_user(svc_uid)
             elif group:
-                response.qcontext["main_object"] = group
+                response.qcontext["main_object"] = group.with_user(svc_uid)
 
         return response

@@ -9,7 +9,8 @@ from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
-from odoo import tools
+import json
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
@@ -81,7 +82,7 @@ class WebsitePage(models.Model):
                         continue
                     val = elem.attrib[attr]
                     # Block all dangerous URI schemes (data, vbscript, javascript)
-                    if attr_lower in ("href", "src") and re.match(
+                    if attr_lower in ("href", "src", "content", "formaction", "action") and re.match(
                         r"^\s*(javascript|data|vbscript):", val, re.IGNORECASE
                     ):
                         del elem.attrib[attr]
@@ -145,7 +146,7 @@ class WebsitePage(models.Model):
         report.with_user(svc_uid).action_take_action_and_strike()
 
     @api.model
-    @tools.ormcache("url", "website_id")
+    @distributed_cache()
     def _get_page_id_by_url(self, url, website_id, override_svc_uid=None):
         if not url:
             return False
@@ -408,6 +409,9 @@ class WebsitePage(models.Model):
                 urls_to_notify.append(vals["url"])
             if urls_to_notify:
                 utils._notify_cache_invalidation("website.page", urls_to_notify)
+                invalidate_model_cache(self.env, self._name)
+                payload = json.dumps({"model": self._name})
+                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
         self._invalidate_cloudflare_cache()
         return res
@@ -426,6 +430,9 @@ class WebsitePage(models.Model):
         utils = self.env["zero_sudo.security.utils"]
         if pages_to_invalidate:
             utils._notify_cache_invalidation("website.page", pages_to_invalidate)
+            invalidate_model_cache(self.env, self._name)
+            payload = json.dumps({"model": self._name})
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
         return res
 
@@ -481,14 +488,14 @@ class WebsitePage(models.Model):
                         del_pipe.decrby(key, int(val))
                 del_pipe.execute()
 
-                from odoo import tools
+                import odoo
 
-                if not tools.config.get("test_enable"):
+                if not odoo.tools.config.get("test_enable"):
                     self.env.cr.commit()
             except Exception as e:
-                from odoo import tools
+                import odoo
 
-                if not tools.config.get("test_enable"):
+                if not odoo.tools.config.get("test_enable"):
                     self.env.cr.rollback()
                 _logger.error(f"Error updating PostgreSQL view counts: {e}")
 

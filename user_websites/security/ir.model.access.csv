@@ -35,3 +35,8 @@ access_res_company_svc,res.company svc,base.model_res_company,user_websites.grou
 access_discuss_channel_svc,discuss.channel svc,mail.model_discuss_channel,user_websites.group_user_websites_service_account,1,1,0,0
 access_ir_actions_report_svc,ir.actions.report svc,base.model_ir_actions_report,user_websites.group_user_websites_service_account,1,0,0,0
 access_res_partner_bank_svc,res.partner.bank svc,base.model_res_partner_bank,user_websites.group_user_websites_service_account,1,0,0,0
+access_public_directory_view_public,public directory view public,model_user_websites_public_directory_view,base.group_public,1,0,0,0
+access_public_directory_view_portal,public directory view portal,model_user_websites_public_directory_view,base.group_portal,1,0,0,0
+access_content_routing_view_public,content routing view public,model_user_websites_content_routing_view,base.group_public,1,0,0,0
+access_content_routing_view_portal,content routing view portal,model_user_websites_content_routing_view,base.group_portal,1,0,0,0
+access_weekly_digest_view_svc,weekly digest view svc,model_user_websites_weekly_digest_view,user_websites.group_user_websites_service_account,1,0,0,0

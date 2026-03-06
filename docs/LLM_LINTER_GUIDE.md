@@ -68,7 +68,7 @@ The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL inj
 
 ## 4. 🎨 XML, QWeb, and UI Elements
 
-* **XSS Prevention:** `<!-- t-raw="..." -->` is banned. Use `<!-- t-out="..." -->`.
+* **XSS Prevention:** `` is banned. Use ``.
 * **SSTI Prevention:** Using `request.env` anywhere inside an XML QWeb template is a critical Server-Side Template Injection vector and is banned. Compute values in Python controllers and pass them to the rendering context.
 * **Legacy View Tags:** `<tree>` is banned (use `<list>`). `t-name="kanban-box"` is banned (use `t-name="card"`).
 * **Deprecated Directives:** `t-esc` is banned. Use `t-out`.
@@ -101,14 +101,14 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 | Audit Target | Bypass Tag | Required AST Assertion in Test |
 | :--- | :--- | :--- |
-| `ir.cron` XML | `<!-- audit-ignore-cron: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `_trigger()` to prove batching. |
+| `ir.cron` XML | `` | The test MUST execute `_trigger()` to prove batching. |
 | `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. **CRITICAL TRAP:** The integer `res_id` passed to `send_mail(res_id)` MUST match an existing record of the exact model defined in the template's `model_id`, otherwise Odoo's rendering mixin will crash with a `MissingError`. |
 | `.search()` | `# audit-ignore-search: Tested by [%ANCHOR: example_name]` | The test MUST pass `limit=` or utilize `patch.object(self.env.cr, 'execute')` to assert caching behavior. |
 | `@tools.ormcache` | N/A (Tested implicitly by logic) | To verify a cache hit, NEVER use `self.assertQueryCount(0)`. Odoo's background GC will cause false positives. You MUST use `with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:` and assert `self.assertNotIn("target_table", query)` in `mock_execute.call_args_list`. |
 | Boolean Checks | N/A (Flake8 E712) | NEVER use `== True` or `== False`. You MUST use `is True`, `is False`, or `if cond:`. |
-| `<xpath>` | `<!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. **Note:** `get_view()` only works on `ir.ui.view` records. For testing structural `<template>` records (QWeb), you MUST use `self.env.ref('...').with_context(lang=None)._get_combined_arch()`. |
+| `<xpath>` | `` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. **Note:** `get_view()` only works on `ir.ui.view` records. For testing structural `<template>` records (QWeb), you MUST use `self.env.ref('...').with_context(lang=None)._get_combined_arch()`. |
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
-| `ir.ui.view` | `<!-- audit-ignore-view: Tested by [%ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
+| `ir.ui.view` | `` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
 | I18N Strings | `# audit-ignore-i18n: Tested by [%ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
 | Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
 | Test Commit | `# burn-ignore-test-commit` | Exclusively for `RealTransactionCase` where real DB commits are required to test ORM caches. |
@@ -121,7 +121,7 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 
 1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
 2. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document.
-3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: `<!-- Verified by [%ANCHOR: ...] -->`. 
+3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: ``. 
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
 
 ---
@@ -136,3 +136,40 @@ To protect the codebase from LLM-specific failure modes (like hallucination, laz
 * **Markdown Balance Checking:** For `.md` files, the extractor validates that all fenced and inline code blocks are perfectly balanced. Unclosed blocks will abort the write to prevent rendering corruption.
 * **Strict URL-Encoding Mandate for XML Comments:** Web UI Markdown renderers will silently delete HTML/XML comments before the extraction script ever sees them. To prevent this data loss, LLMs MUST use the `Encoding: url-encoded` header in their Parcel block and percent-encode the angle brackets for any comments.
 * **Automated Linting Hooks:** The extractor automatically pipes generated files through `flake8` (Python), `xml.etree` (XML), `json.load` (JSON), and the custom `check_burn_list.py` before committing the write, surfacing architectural failures immediately.
+
+---
+
+## 9. 🔒 Security Patterns & Native Idioms (Extended)
+
+You MUST utilize one of the following native Odoo idioms when traversing or limiting boundaries:
+
+* **The "Centralized Security Utility" Pattern:**
+  * **Context:** The system needs to retrieve system parameters (`ir.config_parameter`) or resolve XML IDs (`ir.model.data`), which generally require escalated privileges.
+  * **Mandate:** Delegate to `zero_sudo.security.utils` via `request.env['zero_sudo.security.utils']._get_system_param(key)` or `_get_service_uid(xml_id)`. The latter employs RAM caching (`@tools.ormcache`) to execute the database lookup securely once per boot cycle.
+
+* **The "Service Account" Pattern (Dedicated Execution Context):**
+  * **Context:** The system needs to perform an elevated background task, API token validation, or cryptographic operation triggered by an unauthenticated or under-privileged user.
+  * **The Persona Capability Limit:** You MUST NOT use a Service Account simply to bypass read ACLs to display masked/aggregated data to an unprivileged user. For read-only data presentation, you MUST use a PostgreSQL View (`_auto = False`) and grant the user native read access to the View (See ADR-0069).
+  * **Mandate:**
+      1. Create an isolated `res.groups` with no human members.
+      2. Create a dedicated internal `res.users` (the Service Account) belonging *only* to that group.
+      3. **Separation of Privilege & Explicit Scoping:** Ensure the account is a *Micro-Service Account* dedicated to a single domain action. Service accounts must be explicitly granted the security groups of the external models they interact with, not just `base.group_user`. Do not bundle disparate permissions or fall back to `base.user_admin`.
+      4. Flag the user with `is_service_account="True"` in the XML to permanently block interactive web logins (See ADR-0005).
+      5. Grant that specific group the exact ACLs (`ir.model.access.csv`) and Record Rules (`ir.rule`) required for the task.
+      6. In the controller or method, fetch the Service Account's ID securely via `env['zero_sudo.security.utils']._get_service_uid('module.user_xml_id')` and execute the logic using `.with_user(svc_uid)`.
+
+* **The "Public Guest User" Idiom:**
+  * **Context:** An unauthenticated guest needs to submit data (e.g., a contact form, an issue report).
+  * **Mandate:** Define an Access Control List (`ir.model.access.csv`) granting `perm_create=1` to `base.group_public` for that specific model. Rely purely on the database layer to restrict read/write access.
+
+* **The "Impersonation" Idiom (`with_user`):**
+  * **Context:** An API webhook or background task identifies a specific user via a token, but the request arrives unauthenticated.
+  * **Mandate:** Shift the environment context to the identified user: `request.env['target.model'].with_user(user).create(...)`. This ensures the action is strictly bound by the user's Record Rules.
+
+* **The "Login As" Session Swap Idiom:**
+  * **Context:** A System Administrator needs to investigate a user's isolated portal state.
+  * **Mandate:** Swap the underlying `request.session.uid` directly in the HTTP controller. This action MUST ALWAYS be preceded by a `message_post` to the target user's chatter log to maintain an immutable audit trail.
+
+* **The "Self-Writeable Fields" Idiom:**
+  * **Context:** A user needs to update their own preferences on `res.users`.
+  * **Mandate:** Override `SELF_WRITEABLE_FIELDS` (or `_get_writeable_fields` in Odoo 18+) on the `res.users` model to explicitly whitelist the specific preference fields.

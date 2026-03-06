@@ -44,7 +44,20 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertEqual(called_data["secret"], "my_super_secret_key")
         self.assertEqual(called_data["response"], "fake_token_123")
 
-    def test_03_tunnel_setup(self):
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.create_cfd_tunnel")
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.get_cfd_tunnel_token")
+    def test_03_tunnel_setup(self, mock_get_token, mock_create):
         # [%ANCHOR: test_cf_tunnel_setup]
         # Tests [%ANCHOR: cf_tunnel_setup]
-        self.assertTrue(True)
+        mock_create.return_value = (True, "tunnel_id_123")
+        mock_get_token.return_value = (True, "mock_token_xyz")
+
+        website = self.env["website"].get_current_website()
+        website.write({"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"})
+        settings = self.env["res.config.settings"].create({"website_id": website.id})
+
+        action = settings.action_generate_tunnel_command()
+        self.assertEqual(action["res_model"], "cloudflare.tunnel.wizard")
+
+        wizard = self.env["cloudflare.tunnel.wizard"].browse(action["res_id"])
+        self.assertIn("mock_token_xyz", wizard.command)

@@ -26,10 +26,9 @@ class IrHttp(models.AbstractModel):
         path = request.httprequest.path
 
         # 1. Media & Assets (Max aggressive caching: 1 year)
-        if any(
-            path.startswith(prefix)
-            for prefix in ("/web/static", "/web/assets", "/web/image", "/web/content")
-        ):
+        # CRITICAL: /web/image and /web/content MUST NOT be aggressively cached here,
+        # as it bypasses Odoo ACLs and causes Edge Cache IDORs for private attachments.
+        if any(path.startswith(prefix) for prefix in ("/web/static", "/web/assets")):
             response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=31536000"
             response.headers["Cache-Tag"] = "odoo-static-assets"
             return res

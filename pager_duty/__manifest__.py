@@ -6,7 +6,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "calendar", "bus", "zero_sudo"],
+    "depends": ["base", "mail", "calendar", "bus", "zero_sudo", "distributed_redis_cache"],
     "data": [
         "data/cron.xml",
         "security/security.xml",

@@ -306,18 +306,19 @@ class BackupConfig(models.Model):
         # [%ANCHOR: backup_board_data]
         configs = self.search_read([], ["name", "engine", "target_path"])
         now = fields.Datetime.now()
+
+        latest_snaps = self.env["backup.latest.snapshot.view"].search_read(
+            [], ["config_id", "snapshot_id", "start_time", "size_bytes", "status"]
+        )
+        snap_map = {s["config_id"][0]: s for s in latest_snaps if s.get("config_id")}
+
         for c in configs:
-            snap = self.env["backup.snapshot"].search_read(
-                [("config_id", "=", c["id"])],
-                ["snapshot_id", "start_time", "size_bytes", "status"],
-                order="start_time desc",
-                limit=1,
-            )
+            snap = snap_map.get(c["id"])
             if snap:
-                c["latest_snapshot"] = snap[0]
+                c["latest_snapshot"] = snap
                 delta = (
-                    (now - snap[0]["start_time"]).total_seconds()
-                    if snap[0]["start_time"]
+                    (now - snap["start_time"]).total_seconds()
+                    if snap["start_time"]
                     else 999999
                 )
                 c["is_stale"] = delta > (26 * 60 * 60)

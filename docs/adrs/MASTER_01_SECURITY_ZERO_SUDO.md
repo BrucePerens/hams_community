@@ -25,11 +25,18 @@ To prevent leaked daemon credentials from being used interactively:
 * **Open Source Compatibility:** The central `zero_sudo` module provides this field and logic natively to the open-source layer, ensuring both proprietary and community modules benefit from absolute daemon isolation without breaking external RPC integration.
 
 ### 3. Centralized Security Utility
-All allowed privilege escalations (such as resolving XML IDs or fetching configuration parameters) MUST route through `ham.security.utils`:
+All allowed privilege escalations (such as resolving XML IDs or fetching configuration parameters) MUST route through `zero_sudo.security.utils`:
 * `_get_service_uid(xml_id)`: Safely resolves Service Account IDs.
 * `_get_system_param(key)`: Fetches parameters against a strict `frozenset` whitelist. Cryptographic keys are explicitly excluded to prevent QWeb extraction (SSTI).
 
-### 4. Strict Linter Bypass Confinement (ADR-0052)
+### 4. Persona Capability Limit & View Abstraction (ADR-0068, ADR-0069)
+We do not increase privilege beyond the capability of the persona requesting the data, unless there is absolutely no other way. 
+
+To present restricted, masked, or aggregated data to an unprivileged user (e.g., public directories, maps, or statistics), you MUST NOT use a Service Account to fetch the raw records and mask them in Python. 
+
+Instead, create a PostgreSQL View (`_auto = False`) that strictly selects only the safe columns or applies SQL-level masking. Grant the public/portal persona read access exclusively to the View via `ir.model.access.csv`, and execute the read natively without privilege escalation. Sensitive data must never enter the WSGI worker's memory during an unprivileged request.
+
+### 5. Strict Linter Bypass Confinement (ADR-0052)
 Generic `# burn-ignore` tags are strictly prohibited. The bypass comment MUST specify the exact rule or pattern being bypassed (e.g., `# burn-ignore-sudo`, `# audit-ignore-mail`, `# audit-ignore-search`).
 
 Furthermore, ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the automated unit test that validates it (e.g., `# burn-ignore-sudo: Tested by [%ANCHOR: example_unique_name]`).

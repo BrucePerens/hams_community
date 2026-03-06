@@ -106,11 +106,13 @@ class TestManualRobustness(odoo.tests.common.HttpCase):
 
     def test_04_backend_views_rendering(self):
         # [%ANCHOR: test_manual_backend_views_rendering]
-        self.env["knowledge.article"].get_view(
+        v1 = self.env["knowledge.article"].get_view(
             view_id=self.env.ref("manual_library.view_knowledge_article_tree").id,
             view_type="list",
         )
-        self.env["knowledge.article"].get_view(
+        self.assertIn("parent_id", v1["arch"])
+        v2 = self.env["knowledge.article"].get_view(
             view_id=self.env.ref("manual_library.view_knowledge_article_form").id,
             view_type="form",
         )
+        self.assertIn("internal_permission", v2["arch"])

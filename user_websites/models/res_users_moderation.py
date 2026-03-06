@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import odoo
-from odoo import models, fields, api, tools, _
+from odoo import models, fields, api, _
 from .res_users import _async_unpublish_content
+import json
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
 
 
 class ResUsersModeration(models.Model):
@@ -24,7 +26,7 @@ class ResUsersModeration(models.Model):
     )
 
     @api.model
-    @tools.ormcache("slug")
+    @distributed_cache()
     def _get_user_id_by_slug(self, slug, override_svc_uid=None):
         """
         High-performance RAM cache for slug resolution.
@@ -62,6 +64,9 @@ class ResUsersModeration(models.Model):
                 self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                     "res.users", slugs
                 )
+                invalidate_model_cache(self.env, self._name)
+                payload = json.dumps({"model": self._name})
+                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
         res = super(ResUsersModeration, self).write(vals)
 
@@ -70,6 +75,9 @@ class ResUsersModeration(models.Model):
             self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                 "res.users", vals["website_slug"]
             )
+            invalidate_model_cache(self.env, self._name)
+            payload = json.dumps({"model": self._name})
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
         return res
 
@@ -81,6 +89,9 @@ class ResUsersModeration(models.Model):
             self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                 "res.users", slugs
             )
+            invalidate_model_cache(self.env, self._name)
+            payload = json.dumps({"model": self._name})
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
         return super(ResUsersModeration, self).unlink()
 

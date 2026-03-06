@@ -100,15 +100,7 @@ class UserWebsitesController(http.Controller):
     def community_directory(self, page=1, **kwargs):
         # [%ANCHOR: controller_community_directory]
         # Verified by [%ANCHOR: test_tour_community_directory]
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-
-        domain = [
-            ("privacy_show_in_directory", "=", True),
-            ("website_slug", "!=", False),
-        ]
-
+        domain = []
         step = 24
 
         # Optimize COUNT(*) via Redis with a 5-minute TTL to prevent DB exhaustion on high traffic
@@ -124,20 +116,14 @@ class UserWebsitesController(http.Controller):
                 pass
 
         if total_users is None:
-            total_users = (
-                request.env["res.users"].with_user(svc_uid).search_count(domain)
-            )
+            total_users = request.env["user_websites.public.directory.view"].search_count(domain)
             if not odoo.tools.config.get("test_enable"):
                 try:
                     redis_client.setex(cache_key, 300, total_users)
                 except Exception:
                     pass
 
-        users = (
-            request.env["res.users"]
-            .with_user(svc_uid)
-            .search(domain, limit=step, offset=(page - 1) * step)
-        )
+        users = request.env["user_websites.public.directory.view"].search(domain, limit=step, offset=(page - 1) * step)
 
         pager = request.website.pager(
             url="/community",
@@ -203,35 +189,12 @@ class UserWebsitesController(http.Controller):
         content_owner_id = False
         content_group_id = False
 
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        page = (
-            request.env["website.page"]
-            .with_user(svc_uid)
-            .search([("url", "=", url)], limit=1)
-        )
-        if page:
-            if page.owner_user_id:
-                content_owner_id = page.owner_user_id.id
-            elif page.user_websites_group_id:
-                content_group_id = page.user_websites_group_id.id
-
-        if not content_owner_id and not content_group_id:
-            parts = [p for p in url.split("/") if p]
-            if parts:
-                potential_slug = parts[0].lower()
-                cached_uid = request.env["res.users"]._get_user_id_by_slug(
-                    potential_slug, override_svc_uid=svc_uid
-                )
-                if cached_uid:
-                    content_owner_id = cached_uid
-                else:
-                    cached_gid = request.env[
-                        "user.websites.group"
-                    ]._get_group_id_by_slug(potential_slug, override_svc_uid=svc_uid)
-                    if cached_gid:
-                        content_group_id = cached_gid
+        route = request.env["user_websites.content.routing.view"].search([("target_url", "=", url)], limit=1)
+        if route:
+            if route.content_owner_id:
+                content_owner_id = route.content_owner_id.id
+            elif route.content_group_id:
+                content_group_id = route.content_group_id.id
 
         request.env["content.violation.report"].create(
             {
@@ -310,7 +273,8 @@ class UserWebsitesController(http.Controller):
                     page.with_user(svc_uid).write({"view_count": page.view_count + 1})
 
                 # Retrieve avatar for OpenGraph og:image if available
-                avatar_url = f"/web/image/res.users/{user.id}/avatar_128"
+                ts = int(user.write_date.timestamp()) if user.write_date else 0
+                avatar_url = f"/web/image/res.users/{user.id}/avatar_128?unique={ts}"
 
                 response = request.render(
                     page.view_id.id,
@@ -491,7 +455,7 @@ class UserWebsitesController(http.Controller):
             "type": "qweb",
             "website_id": (
                 request.website.id
-                if hasattr(request, "website") and request.website
+                if hasattr(request, "website") and getattr(request, "website", False)
                 else request.env["website"].get_current_website().id
             ),
             "key": unique_key,

@@ -7,7 +7,7 @@
 ---
 
 ## 1. Overview & Architecture
-The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) suite. It uses a **CQRS Architecture**: Odoo acts purely as the configuration control plane (`ham.pager.check`), while a standalone Python daemon (`generalized_monitor.py`) handles the execution loop and state holding outside the WSGI workers.
+The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) suite. It uses a **CQRS Architecture**: Odoo acts purely as the configuration control plane (`pager.check`), while a standalone Python daemon (`generalized_monitor.py`) handles the execution loop and state holding outside the WSGI workers.
 
 ### Key Architectural Features:
 * **Zero-Sudo RPC:** The daemon pushes incidents to Odoo using the `pager_service_internal` micro-account.

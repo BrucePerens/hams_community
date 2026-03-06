@@ -93,24 +93,22 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             }
         )
 
-        # Simulate an interrupted batch by explicitly setting the last_digest_key to this user's partner
-        # The key format is "{model}_{id}"
-        simulated_key = f"res.partner_{self.test_user.partner_id.id}"
+        # Simulate an interrupted batch by explicitly setting the last_digest_id to a high number
         self.env["ir.config_parameter"].with_user(svc_uid).set_param(
-            "user_websites.last_digest_key", simulated_key
+            "user_websites.last_digest_id", "999999"
         )
 
         # Run the cron method directly
         self.env["blog.post"].send_weekly_digest()
 
-        # Because the key was set to our test user, the batching logic should skip them.
-        # If there are no users after them in the DB state, the cron should cleanly finish and clear the key.
+        # Because the id was set very high, the batching logic should skip them.
+        # It should cleanly finish and reset the id to 0.
         final_key = self.env["zero_sudo.security.utils"]._get_system_param(
-            "user_websites.last_digest_key"
+            "user_websites.last_digest_id"
         )
-        self.assertFalse(
-            final_key,
-            "Cron must safely clear the digest key after completing the remaining queue.",
+        self.assertEqual(
+            final_key, "0",
+            "Cron must safely reset the digest id to 0 after completing the remaining queue.",
         )
         self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
 

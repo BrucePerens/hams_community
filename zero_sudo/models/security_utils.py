@@ -9,6 +9,7 @@ PARAM_WHITELIST = frozenset(
         "web.base.url",
         "cloudflare.last_static_mtime",
         "user_websites.last_digest_key",
+        "user_websites.last_digest_id",
         "user_websites.global_website_page_limit",
         "user_websites.company_abuse_email",
         "cloudflare.turnstile_secret",

@@ -9,3 +9,5 @@ access_res_partner_backup_svc,res.partner svc,base.model_res_partner,group_backu
 access_res_users_backup_svc,res.users svc,base.model_res_users,group_backup_admin,1,0,0,0
 access_res_company_backup_svc,res.company svc,base.model_res_company,group_backup_admin,1,0,0,0
 access_mail_alias_domain_backup_svc,mail.alias.domain svc,mail.model_mail_alias_domain,group_backup_admin,1,0,0,0
+access_backup_latest_snapshot_view_admin,backup latest snapshot admin,model_backup_latest_snapshot_view,group_backup_admin,1,0,0,0
+access_backup_latest_snapshot_view_system,backup latest snapshot system,model_backup_latest_snapshot_view,base.group_system,1,0,0,0

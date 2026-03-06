@@ -3,10 +3,12 @@
 This file defines the Odoo model for User Websites Groups.
 """
 
-from odoo import models, fields, api, _, tools
+from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 from ..utils import slugify
+import json
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
 
 RESERVED_SLUGS = {
     "community",
@@ -89,7 +91,7 @@ class UserWebsitesGroup(models.Model):
                 )
 
     @api.model
-    @tools.ormcache("slug")
+    @distributed_cache()
     def _get_group_id_by_slug(self, slug, override_svc_uid=None):
         if not slug:
             return False
@@ -216,6 +218,9 @@ class UserWebsitesGroup(models.Model):
                 self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                     "user.websites.group", slugs
                 )
+                invalidate_model_cache(self.env, self._name)
+                payload = json.dumps({"model": self._name})
+                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
 
             if vals.get("website_slug"):
                 if len(self) == 1:
@@ -299,4 +304,7 @@ class UserWebsitesGroup(models.Model):
             self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                 "user.websites.group", slugs
             )
+            invalidate_model_cache(self.env, self._name)
+            payload = json.dumps({"model": self._name})
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
         return super(UserWebsitesGroup, self).unlink()

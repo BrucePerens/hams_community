@@ -18,19 +18,37 @@ class TestCloudflareHeaders(HttpCase):
         )
 
     def test_01_static_asset_caching(self):
-        """Verify media and assets receive the 1-year aggressive cache header."""
-        # We test a dynamic media route (/web/image) rather than a raw file (/web/static).
-        # Raw static files bypass Odoo's ir.http middleware entirely and are served by
-        # the StaticDispatcher, meaning the controller cannot append headers to them.
-        # (Cloudflare caches static extensions natively at the edge regardless).
+        """Verify media and assets receive the correct cache headers."""
+        from unittest.mock import patch, Mock
+        from odoo.http import Response
+
         company_id = self.env.company.id
-        response = self.url_open(f"/web/image/res.company/{company_id}/logo")
-        self.assertEqual(response.status_code, 200)
+
+        # 1. Test Private Attachment (MUST NOT CACHE)
+        response_img = self.url_open(f"/web/image/res.company/{company_id}/logo")
+        self.assertEqual(response_img.status_code, 200)
         self.assertEqual(
-            response.headers.get("Cloudflare-CDN-Cache-Control"),
-            "max-age=31536000",
-            "Static assets and media MUST be cached at the edge for 1 year.",
+            response_img.headers.get("Cloudflare-CDN-Cache-Control"),
+            "no-cache, no-store",
+            "Private media MUST NOT be cached aggressively.",
         )
+
+        # 2. Test Core Asset (MUST CACHE)
+        # We explicitly mock the request to bypass test-environment 404s for missing static assets
+        mock_response = Response()
+        mock_request = Mock()
+        mock_request.httprequest.path = "/web/assets/1/dummy.js"
+        mock_request.httprequest.host = "localhost"
+
+        with patch("odoo.http.request", mock_request), \
+             patch("odoo.addons.cloudflare.models.ir_http.request", mock_request), \
+             patch("odoo.addons.utm.models.ir_http.request", mock_request):
+            res = self.env["ir.http"]._post_dispatch(mock_response)
+            self.assertEqual(
+                res.headers.get("Cloudflare-CDN-Cache-Control"),
+                "max-age=31536000",
+                "Static assets MUST be cached at the edge for 1 year.",
+            )
 
     def test_02_dynamic_route_no_store(self):
         """Verify dynamic and API routes explicitly forbid edge caching."""

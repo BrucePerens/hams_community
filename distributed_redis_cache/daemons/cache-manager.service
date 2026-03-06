@@ -1,0 +1,30 @@
+[Unit]
+Description=Odoo Distributed Cache Manager (Redis Pub/Sub)
+After=network.target postgresql.service redis-server.service
+Requires=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=odoo
+Group=odoo
+# Adjust WorkingDirectory to point to your specific addons path
+WorkingDirectory=/opt/odoo/addons/distributed_redis_cache/daemons
+
+# Database & Redis Configuration
+Environment="DB_HOST=127.0.0.1"
+Environment="DB_PORT=5432"
+Environment="DB_NAME=odoo"
+Environment="DB_USER=odoo"
+Environment="DB_PASS=odoo"
+Environment="REDIS_HOST=127.0.0.1"
+Environment="REDIS_PORT=6379"
+
+ExecStart=/usr/bin/env python3 cache_manager.py
+
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

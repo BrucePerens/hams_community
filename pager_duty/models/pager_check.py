@@ -1,5 +1,7 @@
 import uuid
-from odoo import models, fields, api, _, tools
+import json
+from odoo import models, fields, api, _
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
 
 
 class PagerCheck(models.Model):
@@ -49,10 +51,21 @@ class PagerCheck(models.Model):
             ("memcached", "Memcached Server (Ping)"),
             ("ssh", "SSH Handshake"),
             ("systemd", "Systemd Service Status"),
+            ("ftp", "FTP Login"),
+            ("imap", "IMAP Login"),
+            ("pop3", "POP3 Login"),
+            ("mysql", "MySQL DB (Ping)"),
+            ("snmp", "SNMP Get"),
+            ("load", "System Load Average"),
         ],
         string="Monitor Type",
         required=True,
     )
+
+    snmp_community = fields.Char(string="SNMP Community", default="public")
+    snmp_oid = fields.Char(string="SNMP OID")
+    partition = fields.Char(string="Disk Partition", default="/", help="Specific mount point to check for disk usage.")
+    warning_threshold = fields.Integer(string="Warning Threshold %")
 
     target = fields.Char(
         string="Target (Host/URL/File)",
@@ -102,7 +115,7 @@ class PagerCheck(models.Model):
     last_heartbeat = fields.Datetime(string="Last Heartbeat", readonly=True)
 
     @api.model
-    @tools.ormcache("hb_uuid")
+    @distributed_cache()
     def _get_check_id_by_uuid(self, hb_uuid, override_svc_uid=None):
         if not hb_uuid:
             return False
@@ -116,8 +129,17 @@ class PagerCheck(models.Model):
         )
         return check.id if check else False
 
+    def write(self, vals):
+        res = super().write(vals)
+        invalidate_model_cache(self.env, self._name)
+        payload = json.dumps({"model": self._name})
+        self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+        return res
+
     def unlink(self):
-        self.env.registry.clear_cache()
+        invalidate_model_cache(self.env, self._name)
+        payload = json.dumps({"model": self._name})
+        self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
         return super().unlink()
 
     @api.model

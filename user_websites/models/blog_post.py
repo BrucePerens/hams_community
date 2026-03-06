@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 from odoo import models, fields, api, _
-from datetime import timedelta
+import time
 import hashlib
 import hmac
 from markupsafe import Markup
@@ -197,203 +197,64 @@ class BlogPost(models.Model):
         # Verified by [%ANCHOR: test_weekly_digest_mail_template]
         """
         Cron job method to send a weekly email digest.
-        Implements stateless batching via ir.config_parameter and _trigger() to
-        prevent database transaction timeouts on large subscriber bases.
         """
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        one_week_ago = fields.Datetime.now() - timedelta(days=7)
 
-        # Use _read_group to find authors with recent posts without loading all posts into memory (OOM prevention)
-        post_groups = (
-            self.env["blog.post"]
-            .with_user(svc_uid)
-            ._read_group(
-                [("is_published", "=", True), ("create_date", ">=", one_week_ago)],
-                ["owner_user_id", "user_websites_group_id"],
-            )
+        last_processed_id = int(self.env["zero_sudo.security.utils"]._get_system_param(
+            "user_websites.last_digest_id", "0"
+        ) or "0")
+
+        digests = self.env["user_websites.weekly.digest.view"].with_user(svc_uid).search(
+            [("id", ">", last_processed_id)], order="id asc", limit=50
         )
 
-        digests_keys = set()
-        for owner_user, group_owner in post_groups:
-            if owner_user:
-                digests_keys.add(("res.partner", owner_user.partner_id))
-            elif group_owner:
-                digests_keys.add(("user.websites.group", group_owner))
-
-        if not digests_keys:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
-                "user_websites.last_digest_key", ""
-            )
+        if not digests:
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", "0")
             return
 
-        sorted_keys = sorted(list(digests_keys), key=lambda k: f"{k[0]}_{k[1].id}")
-        last_processed_str = self.env["zero_sudo.security.utils"]._get_system_param(
-            "user_websites.last_digest_key", ""
-        )
-
-        start_idx = 0
-        if last_processed_str:
-            for i, k in enumerate(sorted_keys):
-                if f"{k[0]}_{k[1].id}" == last_processed_str:
-                    start_idx = i + 1
-                    break
-
-        batch_keys = sorted_keys[start_idx : start_idx + 10]
-
-        if not batch_keys:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
-                "user_websites.last_digest_key", ""
-            )
-            return
-
-        template = self.env.ref(
-            "user_websites.email_template_weekly_digest", raise_if_not_found=False
-        )
+        template = self.env.ref("user_websites.email_template_weekly_digest", raise_if_not_found=False)
         if not template:
             return
 
-        base_url = self.env["zero_sudo.security.utils"]._get_system_param(
-            "web.base.url"
-        )
+        base_url = self.env["zero_sudo.security.utils"]._get_system_param("web.base.url")
         db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]  # fmt: skip
 
-        # ADR-0022: Pre-fetch posts for the entire batch outside the loop to prevent N+1 queries
-        partner_ids = [k[1].id for k in batch_keys if k[0] == "res.partner"]
-        group_ids = [k[1].id for k in batch_keys if k[0] == "user.websites.group"]
-
-        domain = [("is_published", "=", True), ("create_date", ">=", one_week_ago)]
-        if partner_ids and group_ids:
-            domain.extend(
-                [
-                    "|",
-                    ("owner_user_id.partner_id", "in", partner_ids),
-                    ("user_websites_group_id", "in", group_ids),
-                ]
-            )
-        elif partner_ids:
-            domain.append(("owner_user_id.partner_id", "in", partner_ids))
-        elif group_ids:
-            domain.append(("user_websites_group_id", "in", group_ids))
-
-        batch_posts = (
-            self.env["blog.post"].with_user(svc_uid).search(domain, limit=1000)
-        )
-
-        # Map the pre-fetched posts in O(1) time
-        posts_by_owner = {}
-        for post in batch_posts:
-            if post.owner_user_id:
-                key = ("res.partner", post.owner_user_id.partner_id.id)
-            elif post.user_websites_group_id:
-                key = ("user.websites.group", post.user_websites_group_id.id)
-            else:
+        for digest in digests:
+            partner = digest.partner_id
+            if not partner or not partner.email:
                 continue
 
-            if key not in posts_by_owner:
-                posts_by_owner[key] = []
-            posts_by_owner[key].append(post)
+            timestamp = int(time.time())
+            message = f"{digest.owner_model}-{digest.owner_record_id}-{partner.id}-{timestamp}".encode("utf-8")
+            token = hmac.new(db_secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+            unsub_url = f"{base_url}/website/unsubscribe/{digest.owner_model}/{digest.owner_record_id}/{partner.id}/{timestamp}/{token}"
 
-            # ADR-0022: Pre-fetch followers outside the loop to prevent N+1 queries
-        f_domain = []
-        if partner_ids and group_ids:
-            f_domain = [
-                "|",
-                "&",
-                ("res_model", "=", "res.partner"),
-                ("res_id", "in", partner_ids),
-                "&",
-                ("res_model", "=", "user.websites.group"),
-                ("res_id", "in", group_ids),
-            ]
-        elif partner_ids:
-            f_domain = [
-                ("res_model", "=", "res.partner"),
-                ("res_id", "in", partner_ids),
-            ]
-        elif group_ids:
-            f_domain = [
-                ("res_model", "=", "user.websites.group"),
-                ("res_id", "in", group_ids),
-            ]
+            headers = {
+                "List-Unsubscribe": f"<{unsub_url}>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            }
 
-        all_followers = (
-            self.env["mail.followers"].with_user(svc_uid).search(f_domain, limit=5000)
-            if f_domain
-            else []
-        )
-        followers_by_record = {}
-        for fol in all_followers:
-            f_key = (fol.res_model, fol.res_id)
-            if f_key not in followers_by_record:
-                followers_by_record[f_key] = []
-            if fol.partner_id:
-                followers_by_record[f_key].append(fol.partner_id)
+            post_ids = [int(pid) for pid in digest.post_ids_string.split(',') if pid]
+            posts = self.env['blog.post'].with_user(svc_uid).browse(post_ids)
+            post_links_html = "".join(f"<li><a href='{base_url}{p.website_url}'>{p.name}</a></li>" for p in posts)
 
-        for owner_model, owner_record in batch_keys:
-            # Retrieve from map instead of database
-            posts = posts_by_owner.get((owner_model, owner_record.id), [])
-            if not posts:
-                continue
+            ctx = {
+                "author_name": digest.author_name,
+                "post_links": Markup(post_links_html),
+                "email_to": partner.email,
+                "unsub_url": unsub_url,
+            }
+            email_vals = {
+                "headers": repr(headers),
+                "recipient_ids": [(4, partner.id)],
+                "email_to": partner.email,
+            }
+            template.with_user(svc_uid).with_context(**ctx).send_mail(digest.first_post_id, force_send=False, email_values=email_vals) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
-            followers = followers_by_record.get((owner_model, owner_record.id), [])
-            if not followers:
-                continue
-
-            post_links = Markup(
-                "".join(
-                    [
-                        f"<li><a href='{base_url}{p.website_url}'>{p.name}</a></li>"
-                        for p in posts
-                    ]
-                )
-            )
-            author_name = owner_record.name
-
-            for partner in followers:
-                if not partner.email:
-                    continue
-
-                import time
-
-                timestamp = int(time.time())
-                message = (
-                    f"{owner_model}-{owner_record.id}-{partner.id}-{timestamp}".encode(
-                        "utf-8"
-                    )
-                )
-                token = hmac.new(
-                    db_secret.encode("utf-8"), message, hashlib.sha256
-                ).hexdigest()
-
-                unsub_url = f"{base_url}/website/unsubscribe/{owner_model}/{owner_record.id}/{partner.id}/{timestamp}/{token}"
-
-                headers = {
-                    "List-Unsubscribe": f"<{unsub_url}>",
-                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                }
-
-                ctx = {
-                    "author_name": author_name,
-                    "post_links": post_links,
-                    "email_to": partner.email,
-                    "unsub_url": unsub_url,
-                }
-                email_vals = {
-                    "headers": repr(headers),
-                    "recipient_ids": [(4, partner.id)],
-                    "email_to": partner.email,
-                }
-                template.with_user(svc_uid).with_context(**ctx).send_mail(posts[0].id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
-
-        if len(sorted_keys) > start_idx + 10:
-            last_key = batch_keys[-1]
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
-                "user_websites.last_digest_key", f"{last_key[0]}_{last_key[1].id}"
-            )
+        if len(digests) == 50:
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", str(digests[-1].id))
             self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
         else:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
-                "user_websites.last_digest_key", ""
-            )
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", "0")

@@ -24,6 +24,7 @@ This module enables:
         "mail",
         "portal",
         "zero_sudo",
+        "distributed_redis_cache",
     ],
     "external_dependencies": {
         "python": ["redis"],

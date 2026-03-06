@@ -1,0 +1,19 @@
+[Unit]
+Description=Hams.com Generalized Pager Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=bruce
+Group=bruce
+WorkingDirectory=/home/bruce/hams_private/daemons/pager_duty
+EnvironmentFile=/etc/hams_daemons.env
+Environment="ODOO_USER=pager_service_internal"
+ExecStart=/usr/bin/env bash /home/bruce/hams_private/daemons/run_daemon.sh /home/bruce/hams_private/daemons/pager_duty generalized_monitor.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

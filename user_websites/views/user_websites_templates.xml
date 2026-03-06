@@ -6,11 +6,11 @@
             <div class="container">
                 <a class="navbar-brand" t-attf-href="/#{resolved_slug}/home">
                     <t t-if="profile_user">
-                        <img t-attf-src="/web/image/res.users/#{profile_user.id}/avatar_128" width="30" height="30" class="d-inline-block align-top rounded-circle me-2" alt=""/>
-                        <t t-out="profile_user.name"/>
+                        <img t-attf-src="/web/image/res.users/#{profile_user.id}/avatar_128?unique=#{profile_user.sudo().write_date and int(profile_user.sudo().write_date.timestamp()) or 0}" width="30" height="30" class="d-inline-block align-top rounded-circle me-2" alt=""/>
+                        <t t-out="profile_user.sudo().name"/>
                     </t>
                     <t t-elif="profile_group">
-                        <i class="fa fa-users me-2" aria-hidden="true"/> <t t-out="profile_group.name"/>
+                        <i class="fa fa-users me-2" aria-hidden="true"/> <t t-out="profile_group.sudo().name"/>
                     </t>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbarNav" aria-label="Toggle navigation">
@@ -157,9 +157,9 @@
                             <div class="card h-100 shadow-sm border-0">
                                 <div class="card-body text-center">
                                     <div class="mb-3">
-                                        <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
+                                        <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128?unique=#{user.sudo().write_date and int(user.sudo().write_date.timestamp()) or 0}" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
                                     </div>
-                                    <h5 class="card-title fw-bold" t-field="user.name"/>
+                                    <h5 class="card-title fw-bold" t-out="user.sudo().name"/>
                                     <a t-attf-href="/{{ user.website_slug }}/home" class="btn btn-outline-primary w-100 mt-2">
                                         Visit Website
                                     </a>
