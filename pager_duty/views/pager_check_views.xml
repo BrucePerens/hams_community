@@ -4,6 +4,10 @@
         <field name="model">pager.check</field>
         <field name="arch" type="xml">
             <list string="Monitoring Checks" decoration-danger="status == 'failing'" decoration-warning="status == 'maintenance'" decoration-success="status == 'passing'">
+                <header>
+                    <button name="action_pull_from_yaml" type="object" string="Pull from Daemon (YAML)" class="btn-secondary" confirm="This will overwrite your database checks with the current daemon YAML file. Continue?"/>
+                    <button name="action_push_to_yaml" type="object" string="Push to Daemon (YAML)" class="btn-primary" confirm="This will write your current database checks to the daemon's YAML file and apply them. Continue?"/>
+                </header>
                 <field name="name"/>
                 <field name="check_type"/>
                 <field name="target"/>

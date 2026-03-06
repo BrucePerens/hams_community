@@ -1,7 +1,14 @@
 import uuid
 import json
+import os
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 
 class PagerCheck(models.Model):
@@ -152,6 +159,138 @@ class PagerCheck(models.Model):
             return False
         delta = (fields.Datetime.now() - check.last_heartbeat).total_seconds()
         return delta <= interval_sec
+
+    @api.model
+    def _get_config_path(self):
+        base_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "daemon")
+        )
+        return os.path.join(base_dir, "pager_config.yaml")
+
+    @api.model
+    def action_pull_from_yaml(self):
+        if not yaml:
+            raise UserError(_("PyYAML is not installed."))
+        path = self._get_config_path()
+        if not os.path.exists(path):
+            raise UserError(_("No YAML configuration found at %s") % path)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except Exception as e:
+            raise UserError(_("Invalid YAML Format: %s") % str(e))
+
+        self.search([], limit=1000).unlink()
+        checks = data.get("checks", []) if isinstance(data, dict) else []
+        for c in checks:
+            self.create(
+                {
+                    "name": c.get("name", "Unnamed"),
+                    "check_type": c.get("type", "system"),
+                    "target": c.get("target", ""),
+                    "port": c.get("port", 0),
+                    "payload_send": c.get("send", ""),
+                    "payload_send_hex": c.get("send_hex", ""),
+                    "payload_expect": c.get("expect", ""),
+                    "dbname": c.get("dbname", ""),
+                    "dbuser": c.get("user", ""),
+                    "dbpass": c.get("password", ""),
+                    "query": c.get("query", ""),
+                    "script": c.get("script", ""),
+                    "rpc_method": c.get("rpc_method", ""),
+                    "rpc_params": c.get("rpc_params", ""),
+                    "regex": c.get("regex", ""),
+                    "critical_threshold": c.get("critical", 0),
+                    "warning_threshold": c.get("warning", 0),
+                    "snmp_community": c.get("snmp_community", ""),
+                    "snmp_oid": c.get("snmp_oid", ""),
+                    "partition": c.get("partition", "/"),
+                    "interval": c.get("interval", 60),
+                    "grace_period": c.get("grace", 0),
+                    "auto_remediate_script": c.get("remediate", ""),
+                }
+            )
+
+        all_checks = self.search([], limit=1000)
+        name_to_id = {rec.name: rec.id for rec in all_checks}
+        for c in checks:
+            if (
+                c.get("parent")
+                and c.get("parent") in name_to_id
+                and c.get("name") in name_to_id
+            ):
+                check_rec = next(
+                    (r for r in all_checks if r.id == name_to_id[c.get("name")]), None
+                )
+                if check_rec:
+                    check_rec.write({"parent_check_id": name_to_id[c.get("parent")]})
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Import Successful"),
+                "message": _("Database checks updated from YAML file."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    @api.model
+    def action_push_to_yaml(self):
+        # [%ANCHOR: generalized_pager_config]
+        if not yaml:
+            raise UserError(_("PyYAML is not installed."))
+        checks = self.search([("active", "=", True)], limit=1000)
+        check_list = []
+        for c in checks:
+            d = {
+                "name": c.name,
+                "type": c.check_type,
+                "target": c.target,
+                "interval": c.interval,
+            }
+            if c.port: d["port"] = c.port
+            if c.payload_send: d["send"] = c.payload_send
+            if c.payload_send_hex: d["send_hex"] = c.payload_send_hex
+            if c.payload_expect: d["expect"] = c.payload_expect
+            if c.dbname: d["dbname"] = c.dbname
+            if c.dbuser: d["user"] = c.dbuser
+            if c.dbpass: d["password"] = c.dbpass
+            if c.query: d["query"] = c.query
+            if c.script: d["script"] = c.script
+            if c.rpc_method: d["rpc_method"] = c.rpc_method
+            if c.rpc_params: d["rpc_params"] = c.rpc_params
+            if c.regex: d["regex"] = c.regex
+            if c.critical_threshold: d["critical"] = c.critical_threshold
+            if c.warning_threshold: d["warning"] = c.warning_threshold
+            if c.snmp_community: d["snmp_community"] = c.snmp_community
+            if c.snmp_oid: d["snmp_oid"] = c.snmp_oid
+            if c.partition and c.partition != "/": d["partition"] = c.partition
+            if c.grace_period: d["grace"] = c.grace_period
+            if c.parent_check_id: d["parent"] = c.parent_check_id.name
+            if c.maintenance_start: d["maint_start"] = c.maintenance_start.strftime("%Y-%m-%d %H:%M:%S")
+            if c.maintenance_end: d["maint_end"] = c.maintenance_end.strftime("%Y-%m-%d %H:%M:%S")
+            if c.auto_remediate_script: d["remediate"] = c.auto_remediate_script
+            if c.check_type == "heartbeat": d["uuid"] = c.heartbeat_uuid
+            check_list.append(d)
+
+        yaml_content = yaml.safe_dump({"checks": check_list}, sort_keys=False)
+        path = self._get_config_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(yaml_content)
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Export Successful"),
+                "message": _("Checks exported to YAML daemon configuration."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
     def action_trigger_check(self):
         return {

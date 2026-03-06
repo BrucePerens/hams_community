@@ -27,16 +27,12 @@ checks:
         Then it MUST successfully parse the YAML and create the corresponding pager.check records.
         """
         # Tests [%ANCHOR: generalized_pager_config]
-        wizard = (
-            self.env["pager.config.wizard"]
-            .with_user(self.admin)
-            .create({"yaml_content": self.yaml_payload})
-        )
+        check_model = self.env["pager.check"].with_user(self.admin)
 
-        # Mock the file write to prevent polluting the test environment filesystem
-        m_open = mock_open()
-        with patch("builtins.open", m_open):
-            wizard.action_save_to_file_and_db()
+        # Mock the file read to supply our YAML payload
+        m_open = mock_open(read_data=self.yaml_payload)
+        with patch("builtins.open", m_open), patch("os.path.exists", return_value=True):
+            check_model.action_pull_from_yaml()
 
         m_open.assert_called_once()
 
@@ -55,5 +51,4 @@ checks:
         # Tests [%ANCHOR: test_pager_view]
         self.env["pager.check"].get_view(view_type="form")
         self.env["pager.check"].get_view(view_type="list")
-        self.env["pager.config.wizard"].get_view(view_type="form")
         self.assertTrue(True)

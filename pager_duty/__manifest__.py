@@ -13,7 +13,6 @@
         "security/ir.model.access.csv",
         "views/incident_views.xml",
         "views/schedule_views.xml",
-        "wizard/pager_config_wizard_views.xml",
         "views/pager_check_views.xml",
     ],
     "assets": {
