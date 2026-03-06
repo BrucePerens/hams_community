@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_pager_check_list" model="ir.ui.view"> <field name="name">pager.check.list</field>
+    <record id="view_pager_check_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_pager_view] -->
+        <field name="name">pager.check.list</field>
         <field name="model">pager.check</field>
         <field name="arch" type="xml">
             <list string="Monitoring Checks" decoration-danger="status == 'failing'" decoration-warning="status == 'maintenance'" decoration-success="status == 'passing'">
@@ -17,7 +18,8 @@
         </field>
     </record>
 
-    <record id="view_pager_check_form" model="ir.ui.view"> <field name="name">pager.check.form</field>
+    <record id="view_pager_check_form" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_pager_view] -->
+        <field name="name">pager.check.form</field>
         <field name="model">pager.check</field>
         <field name="arch" type="xml">
             <form string="Monitoring Check">

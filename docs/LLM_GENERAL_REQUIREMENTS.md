@@ -138,7 +138,9 @@ When generating or modifying code, you MUST output your response using the MIME-
 4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.
 5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
 6. **Mode (Optional):** To change or set file permissions (e.g., for bash scripts), include "Mode: 0755" in the headers.
-7. **Encoding:** Use "Encoding: url-encoded" for files containing XML or HTML comments. You must percent-encode the payload to prevent UI renderers from stripping the tags before extraction.
+7. **Encoding:** If your payload contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include Encoding: url-encoded in the header. To safely bypass the renderer, you must percent-encode angle brackets (< to %3C, > to %3E) and literal percent signs (% to %25). You MUST NOT URL-encode newlines or carriage returns (\n, \r); leave them as literal line breaks to prevent the payload from collapsing into a single line and triggering truncation limits.
+the carriage-return or new-line character will cause the line to grow too
+long and be truncated in your output.
 8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.
 9. **The Content:** Output the file payload exactly as it should be written to disk.
 10. **The Terminator:** End the entire archive by appending "--" to your final boundary string.

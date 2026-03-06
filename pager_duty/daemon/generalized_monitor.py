@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import os, sys, time, socket, psutil, urllib.request, subprocess, re, threading, binascii, logging, smtplib, random, ssl, json, datetime, platform, shutil
+import os, sys, time, socket, psutil, urllib.request, subprocess, re, binascii, logging, smtplib, secrets, ssl, json, datetime, platform, shutil
+import concurrent.futures
 from email.message import EmailMessage
 
 try:
@@ -869,7 +870,7 @@ def polling_thread(client, check):
         FAILING_CHECKS.discard(name)
 
     # Apply stochastic jitter before entering the main cycle to prevent thundering herds
-    jitter = random.uniform(0, interval)
+    jitter = secrets.SystemRandom().uniform(0, interval)
     logger.info(f"[{name}] Applying startup jitter: sleeping for {jitter:.1f}s")
     time.sleep(jitter)  # audit-ignore-sleep
 
@@ -926,7 +927,6 @@ def log_tail_thread(client, check):
         f"Starting log tail thread for [{name}] on {filepath} (Grace: {grace}s)"
     )
 
-    pattern = re.compile(regex_str, re.IGNORECASE) if regex_str else None
     cur_inode = None
     f = None
     while True:
@@ -951,7 +951,7 @@ def log_tail_thread(client, check):
                 if not line:
                     time.sleep(1)  # audit-ignore-sleep
                     continue
-                if pattern and pattern.search(line):
+                if regex_str and re.search(regex_str, line, re.IGNORECASE):
                     if time.time() - thread_start_time < grace:
                         logger.info(
                             f"[{name}] Suppressed log alert during grace period."
@@ -979,18 +979,13 @@ if __name__ == "__main__":
     checks = config.get("checks", [])
     logger.info(f"Loaded {len(checks)} checks from configuration.")
 
-    threads = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(checks)))
+    futures = []
     for check in checks:
         if check.get("type") == "log":
-            t = threading.Thread(
-                target=log_tail_thread, args=(client, check), daemon=True
-            )
+            futures.append(executor.submit(log_tail_thread, client, check))
         else:
-            t = threading.Thread(
-                target=polling_thread, args=(client, check), daemon=True
-            )
-        t.start()
-        threads.append(t)
+            futures.append(executor.submit(polling_thread, client, check))
 
     # Main thread becomes the Watchdog
     try:

@@ -167,7 +167,6 @@ class PagerCheck(models.Model):
         )
         return os.path.join(base_dir, "pager_config.yaml")
 
-    @api.model
     def action_pull_from_yaml(self):
         if not yaml:
             raise UserError(_("PyYAML is not installed."))
@@ -180,10 +179,10 @@ class PagerCheck(models.Model):
         except Exception as e:
             raise UserError(_("Invalid YAML Format: %s") % str(e))
 
-        self.search([], limit=1000).unlink()
+        self.env["pager.check"].search([], limit=1000).unlink()
         checks = data.get("checks", []) if isinstance(data, dict) else []
         for c in checks:
-            self.create(
+            self.env["pager.check"].create(
                 {
                     "name": c.get("name", "Unnamed"),
                     "check_type": c.get("type", "system"),
@@ -211,7 +210,7 @@ class PagerCheck(models.Model):
                 }
             )
 
-        all_checks = self.search([], limit=1000)
+        all_checks = self.env["pager.check"].search([], limit=1000)
         name_to_id = {rec.name: rec.id for rec in all_checks}
         for c in checks:
             if (
@@ -236,12 +235,11 @@ class PagerCheck(models.Model):
             },
         }
 
-    @api.model
     def action_push_to_yaml(self):
         # [%ANCHOR: generalized_pager_config]
         if not yaml:
             raise UserError(_("PyYAML is not installed."))
-        checks = self.search([("active", "=", True)], limit=1000)
+        checks = self.env["pager.check"].search([("active", "=", True)], limit=1000)
         check_list = []
         for c in checks:
             d = {
