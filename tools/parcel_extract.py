@@ -1,494 +1,523 @@
 #!/usr/bin/env python3
-import re
 import os
 import sys
-import json
-import argparse
-import urllib.parse
-import shutil
-import ast
-import difflib
-import warnings
+import re
 import subprocess
+import xml.etree.ElementTree as ET
+import json
+import ast
 
-MAX_LINE_LENGTH = 3000
 
-def validate_line_length(data, file_name, block_name):
-    if isinstance(data, list):
-        for i, line in enumerate(data):
-            if len(line) > MAX_LINE_LENGTH:
-                print(f"❌ Error: Line {i+1} in {block_name} of {file_name} exceeds {MAX_LINE_LENGTH} characters. Use shorter lines.")
-                return False
-    elif isinstance(data, str):
-        if len(data) > MAX_LINE_LENGTH:
-            print(f"❌ Error: {block_name} of {file_name} exceeds {MAX_LINE_LENGTH} characters. Split into an array of shorter lines.")
-            return False
-    return True
-
-def extract_json_payloads(input_text):
-    input_text = input_text.replace('\xa0', ' ')
-    input_text = input_text.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
-    
-    pattern = re.compile(r'```(?:json)?\s*(\{.*?\})\s*```', re.DOTALL)
-    matches = pattern.findall(input_text)
-    if matches:
-        return matches
-        
-    start_idx = input_text.find('{')
-    if start_idx != -1:
-        end_idx = input_text.rfind('}')
-        if end_idx != -1 and end_idx > start_idx:
-            return [input_text[start_idx:end_idx+1]]
-        else:
-            return [input_text[start_idx:]]
-    return [input_text.strip()]
-
-def _recover_json(payload_text):
+def verify_python(filepath):
+    """Runs flake8 to verify Python syntax and style."""
     try:
-        return json.loads(payload_text, strict=False)
-    except json.JSONDecodeError as e:
-        print(f"⚠️ JSON decode failed ({e}). Attempting RegEx/AST recovery...")
-        
-    payload_text_clean = re.sub(r',\s*([\]\}])', r'\1', payload_text)
+        result = subprocess.run(
+            ["flake8", "--extend-ignore=E203,E302,E501", filepath], capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return f"[WARN] flake8 found issues:\n{result.stdout.strip()}"
+    except FileNotFoundError:
+        return "[WARN] flake8 is not installed. Skipping verification."
+    return None
+
+
+def verify_xml(filepath):
+    """Verifies that the XML is well-formed."""
     try:
-        payload = json.loads(payload_text_clean, strict=False)
-        print("✅ RegEx recovery successful.")
-        return payload
-    except json.JSONDecodeError:
-        print("⚠️ RegEx recovery failed. Falling back to AST literal_eval...")
-        
+        ET.parse(filepath)
+    except ET.ParseError as e:
+        return f"[WARN] XML Parsing Error: {e}"
+    return None
+
+
+def verify_markdown(filepath):
+    """Checks for unclosed code blocks."""
     try:
-        ast_text = re.sub(r'\btrue\b', 'True', payload_text_clean)
-        ast_text = re.sub(r'\bfalse\b', 'False', ast_text)
-        ast_text = re.sub(r'\bnull\b', 'None', ast_text)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", SyntaxWarning)
-            payload = ast.literal_eval(ast_text)
-        print("✅ AST literal_eval recovery successful.")
-        return payload
-    except Exception as ast_e:
-        print(f"❌ AST recovery failed: {ast_e}")
-        print("🚨 The payload is too severely mangled to recover. If using a Web UI, check if the LLM output was truncated!")
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+        code_block_markers = re.findall(r"^\s*`{3,}", content, flags=re.MULTILINE)
+        if len(code_block_markers) % 2 != 0:
+            return "[WARN] Markdown issue: Odd number of code block markers."
+    except Exception as e:
+        return f"[WARN] Could not verify Markdown: {e}"
+    return None
+
+
+def verify_json(filepath):
+    """Verifies JSON payload validity."""
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            json.load(f)
+    except Exception as e:
+        return f"[WARN] Invalid JSON: {e}"
+    return None
+
+
+def run_burn_list_linter(filepath):
+    """Runs custom project linter to catch architectural issues."""
+    linter_path = os.path.join(os.path.dirname(__file__), "check_burn_list.py")
+    if os.path.exists(linter_path):
+        try:
+            result = subprocess.run(
+                [sys.executable, linter_path, filepath], capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                out = result.stdout.strip()
+                return f"[❌ LINTER FAILED] check_burn_list.py rejected:\n{out}"
+        except Exception as e:
+            return f"[WARN] Failed to execute custom linter: {e}"
+    return None
+
+
+def mask_markdown_and_check_balance(payload):
+    """
+    Masks out content inside inline and fenced code blocks in Markdown.
+    Raises ValueError if blocks do not balance.
+    """
+    masked = []
+    i = 0
+    n = len(payload)
+    in_fenced = False
+    fence_str = ""
+    in_inline = False
+    inline_str = ""
+
+    while i < n:
+        if not in_fenced and not in_inline:
+            # Match fenced block: up to 3 spaces, then 3+ backticks/tildes
+            fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})", payload[i:])
+            if fence_match and (i == 0 or payload[i - 1] == "\n"):
+                in_fenced = True
+                fence_str = fence_match.group(2)
+                advance = len(fence_match.group(0))
+                masked.append(payload[i : i + advance])
+                i += advance
+                continue
+
+            # Match inline code
+            inline_match = re.match(r"^`+", payload[i:])
+            if inline_match:
+                in_inline = True
+                inline_str = inline_match.group(0)
+                advance = len(inline_match.group(0))
+                masked.append(payload[i : i + advance])
+                i += advance
+                continue
+
+            masked.append(payload[i])
+            i += 1
+
+        elif in_fenced:
+            # Look for closing fence
+            fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})[ \t]*(\n|$)", payload[i:])
+            if (
+                fence_match
+                and (i == 0 or payload[i - 1] == "\n")
+                and fence_match.group(2)[0] == fence_str[0]
+                and len(fence_match.group(2)) >= len(fence_str)
+            ):
+                in_fenced = False
+                advance = len(fence_match.group(0))
+                if payload[i : i + advance].endswith("\n"):
+                    advance -= 1
+                masked.append(payload[i : i + advance])
+                i += advance
+                continue
+
+            # Mask character
+            masked.append(" ")
+            i += 1
+
+        elif in_inline:
+            # Look for closing inline code
+            inline_match = re.match(r"^`+", payload[i:])
+            if inline_match:
+                if inline_match.group(0) == inline_str:
+                    in_inline = False
+                    advance = len(inline_str)
+                    masked.append(payload[i : i + advance])
+                    i += advance
+                else:
+                    # Consume the entire non-matching backtick sequence
+                    advance = len(inline_match.group(0))
+                    for _ in range(advance):
+                        masked.append(" ")
+                    i += advance
+                continue
+
+            masked.append(" ")
+            i += 1
+
+    if in_fenced:
+        raise ValueError("Markdown Error: Unclosed fenced code block.")
+    if in_inline:
+        raise ValueError("Markdown Error: Unclosed inline code snippet.")
+
+    return "".join(masked)
+
+
+def check_ai_foibles(payload, filepath=""):
+    """Strips rogue markdown wrappers and rejects laziness placeholders."""
+    # LLMs occasionally wrap their payload in standard markdown blocks
+    payload = re.sub(r"^\s*```[a-zA-Z]*\n", "", payload)
+    payload = re.sub(r"\n\s*```\s*$", "\n", payload)
+
+    text_to_check = payload
+    if filepath.endswith(".md"):
+        text_to_check = mask_markdown_and_check_balance(payload)
+
+    # Strings split mathematically to avoid triggering the extractor on itself
+    foibles = [
+        r"#" + r"\s*\.\.\.\s*rest of",
+        r"//" + r"\s*\.\.\.\s*rest of",
+        r"<!" + r"--\s*\.\.\.\s*rest of",
+        r"#" + r"\s*Code unchanged",
+        r"//" + r"\s*Code unchanged",
+        r"#" + r"\s*\.\.\.\s*existing code\s*\.\.\.",
+    ]
+    for f in foibles:
+        if re.search(f, text_to_check, re.IGNORECASE):
+            raise ValueError(
+                f"AI Laziness Foible: Found placeholder matching {f}. "
+                "Payload rejected to prevent file corruption."
+            )
+
+    return payload
+
+
+def whitespace_agnostic_replace(original_text, search_text, replace_text):
+    """Finds search block ignoring spaces/newlines ensuring drift safety."""
+    search_stripped = "".join(search_text.split())
+    if not search_stripped:
+        return original_text
+
+    chars = []
+    indices = []
+    for i, c in enumerate(original_text):
+        if not c.isspace():
+            chars.append(c)
+            indices.append(i)
+
+    orig_stripped = "".join(chars)
+    idx = orig_stripped.find(search_stripped)
+    if idx == -1:
         return None
 
-def _decode_blocks(blocks, encoding):
-    decoded_blocks = []
-    for block in blocks:
-        search_raw = block.get("search", [])
-        replace_raw = block.get("replace", [])
-        search_str = "".join(search_raw) if isinstance(search_raw, list) else search_raw
-        replace_str = "".join(replace_raw) if isinstance(replace_raw, list) else replace_raw
+    start_idx = indices[idx]
+    end_idx = indices[idx + len(search_stripped) - 1]
 
-        if encoding in ["url-encoded", "url", "percent-encoded"]:
-            # if "%20" in search_str or "%20" in replace_str:
-            #     raise ValueError("CRITICAL: Payload contains '%20'. Spaces must NOT be percent-encoded. Use raw spaces.")
-            # Enforcement on hold until LLMs have a broader cognitive horizon or better token generation constraints.
-            search_text = urllib.parse.unquote(search_str)
-            replace_text = urllib.parse.unquote(replace_str)
-        else:
-            search_text = search_str
-            replace_text = replace_str
+    # Prevent double-indentation. original_text[:start_idx] includes the
+    # original leading whitespace. Strip leading spaces/tabs from the
+    # replacement so it docks perfectly onto the original indentation.
+    replace_text = replace_text.lstrip(" \t")
 
-        replace_text = re.sub(r'^```[a-zA-Z0-9]*\n', '', replace_text)
-        replace_text = re.sub(r'\n```\s*$', '\n', replace_text)
-        search_text = re.sub(r'^```[a-zA-Z0-9]*\n', '', search_text)
-        search_text = re.sub(r'\n```\s*$', '\n', search_text)
-        
-        decoded_blocks.append((search_text, replace_text, search_str))
-    return decoded_blocks
+    return original_text[:start_idx] + replace_text + original_text[end_idx + 1 :]
 
-def _check_for_laziness(filepath, replace_text):
-    lazy_patterns = [
-        r'\/\/ \.\.\.', r'# \.\.\.', r'<\!\-\- \.\.\. \-\->',
-        r'\.\.\. rest of', r'\[\s*Code unchanged\s*\]',
-        r'\(\s*rest of method\s*\)', r'\(\s*Code unchanged\s*\)'
-    ]
-    is_meta_file = filepath.endswith('AGENTS.md') or 'LLM_' in filepath or filepath.endswith('simple_create.py') or filepath.endswith('parcel_extract.py')
-    
-    if not filepath.endswith(".md") and not is_meta_file:
-        for pat in lazy_patterns:
-            if re.search(pat, replace_text, re.IGNORECASE):
-                return True
-    return False
 
-def _strip_whitespace(text):
-    return re.sub(r'\s+', '', text)
+def ast_fallback_replace(original_text, search_text, replace_text):
+    """If exact string matching fails in Python, replace the AST node."""
+    try:
+        search_tree = ast.parse(search_text)
+        target_name = None
+        valid_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        for node in search_tree.body:
+            if isinstance(node, valid_types):
+                target_name = node.name
+                break
 
-def _apply_fuzzy_match(search_text, file_text, idx):
-    print(f"⚠️  Note: Search block {idx+1} regex fallback failed. Attempting fuzzy match...")
-    search_lines = search_text.splitlines(keepends=True)
-    file_lines = file_text.splitlines(keepends=True)
-    
-    base_window = len(search_lines)
-    if base_window == 0:
-        return search_text, 0
-        
-    search_stripped = _strip_whitespace(search_text)
-    search_len = len(search_stripped)
-    
-    # Dynamic threshold scaling based on character length
-    if search_len < 50:
-        threshold = 0.95
-    elif search_len > 500:
-        threshold = 0.75
-    else:
-        threshold = 0.95 - (0.20 * ((search_len - 50) / 450))
+        if not target_name:
+            return None
 
-    best_ratio = 0
-    best_idx = -1
-    best_window = 0
-    
-    for w_offset in [-2, -1, 0, 1, 2]:
-        window_size = base_window + w_offset
-        if window_size <= 0 or len(file_lines) < window_size:
+        orig_tree = ast.parse(original_text)
+        target_node = None
+        for node in ast.walk(orig_tree):
+            if getattr(node, "name", None) == target_name:
+                target_node = node
+                break
+
+        if not target_node:
+            return None
+
+        lines = original_text.splitlines()
+        start_line = target_node.lineno - 1
+        end_line = target_node.end_lineno
+
+        new_lines = lines[:start_line] + replace_text.splitlines() + lines[end_line:]
+        return "\n".join(new_lines) + "\n"
+    except SyntaxError:
+        return None
+
+
+def extract_parcel(raw_text):
+    lines = raw_text.splitlines()
+
+    # Find the absolute first boundary string and ignore everything else
+    boundary = None
+    for line_item in lines:
+        stripped = line_item.strip()
+        if stripped.startswith("@@BOUNDARY_") and stripped.endswith("@@"):
+            boundary = stripped
+            break
+
+    if not boundary:
+        print("❌ Error: Invalid Parcel format. Missing boundary string.\n")
+        return
+
+    terminator = boundary + "--"
+
+    if terminator not in raw_text:
+        print("❌ [WARN] Parcel terminator missing. Attempting extract...\n")
+
+    # Split strictly on the detected boundary
+    pattern = rf"^{re.escape(boundary)}$"
+    parts = re.split(pattern, raw_text, flags=re.MULTILINE)
+
+    tasks_by_file = {}
+
+    for part in parts:
+        if not part.strip() or part.strip().startswith("--"):
             continue
-            
-        for i in range(len(file_lines) - window_size + 1):
-            window_text = "".join(file_lines[i:i+window_size])
-            window_stripped = _strip_whitespace(window_text)
-            
-            sm = difflib.SequenceMatcher(None, search_stripped, window_stripped)
-            if sm.real_quick_ratio() < threshold - 0.10:
+
+        # Strip leading whitespace for header parsing, keep trailing
+        part = part.lstrip()
+        if "\n\n" not in part:
+            continue
+
+        header, payload = part.split("\n\n", 1)
+
+        path_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Path: ")]
+        if not path_lines:
+            continue
+
+        filepath = path_lines[0].replace("Path: ", "").strip()
+
+        operation_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Operation: ")]
+        operation = operation_lines[0].replace("Operation: ", "").strip().lower() if operation_lines else "overwrite"
+
+        new_path_lines = [line_item for line_item in header.splitlines() if line_item.startswith("New-Path: ")]
+        new_filepath = new_path_lines[0].replace("New-Path: ", "").strip() if new_path_lines else None
+
+        encoding_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Encoding: ")]
+        encoding = encoding_lines[0].replace("Encoding: ", "").strip().lower() if encoding_lines else "utf-8"
+
+        mode_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Mode: ")]
+        mode_str = mode_lines[0].replace("Mode: ", "").strip() if mode_lines else None
+
+        # Clean terminator from the payload if it's attached
+        if terminator in payload:
+            payload = payload.split(terminator)[0]
+
+        if encoding == "url-encoded":
+            import urllib.parse
+            payload = urllib.parse.unquote(payload)
+
+        try:
+            payload = check_ai_foibles(payload, filepath)
+        except ValueError as e:
+            tasks_by_file.setdefault(filepath, []).append({"error": str(e)})
+            continue
+
+        # Ensure payload ends with exactly one newline
+        payload = payload.rstrip() + "\n"
+
+        task = {
+            "operation": operation,
+            "filepath": filepath,
+            "new_filepath": new_filepath,
+            "mode_str": mode_str,
+            "payload": payload,
+            "error": None
+        }
+        tasks_by_file.setdefault(filepath, []).append(task)
+
+    def _print_summary(fp, errs, warns, aborted, count):
+        if aborted:
+            print(f"❌ Extracted with errors: {fp} ({count} operations)")
+            for err in errs:
+                print(f"  {err}")
+            print(f"  [!] Aborted all modifications for {fp} due to errors.\n")
+        elif warns:
+            print(f"⚠️  Extracted with warnings: {fp} ({count} operations)")
+            for w in warns:
+                print(f"  {w}")
+            print()
+        else:
+            op_text = "operation" if count == 1 else "operations"
+            print(f"✅ Extracted: {fp} ({count} {op_text})")
+
+    import shutil
+
+    for filepath, tasks in tasks_by_file.items():
+        errors = []
+        warnings = []
+
+        for t in tasks:
+            if t.get("error"):
+                errors.append(t["error"])
+
+        if errors:
+            _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+            continue
+
+        target_dir = os.path.dirname(filepath)
+        if target_dir:
+            os.makedirs(target_dir, exist_ok=True)
+
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    current_text = f.read()
+            except Exception as e:
+                errors.append(f"Failed to read existing file {filepath}: {e}")
+                _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
                 continue
-                
-            ratio = sm.ratio()
-            if ratio > best_ratio:
-                best_ratio = ratio
-                best_idx = i
-                best_window = window_size
-                
-    if best_ratio >= threshold:
-        print(f"✅ Fuzzy match found with {best_ratio*100:.1f}% similarity (Threshold: {threshold*100:.1f}%).")
-        return "".join(file_lines[best_idx:best_idx+best_window]), 1
-        
-    print(f"❌ Fuzzy match failed. Best ratio was {best_ratio*100:.1f}% (Needed {threshold*100:.1f}%).")
-    return search_text, 0
-
-def _apply_whitespace_match(search_text, file_text, replace_text, idx):
-    parts = [re.escape(p) for p in re.split(r'\s+', search_text) if p]
-    if not parts:
-        return search_text, replace_text, None, 0
-        
-    pattern = r'\s+'.join(parts)
-    search_regex = re.compile(pattern)
-    matches = list(search_regex.finditer(file_text))
-    match_count = len(matches)
-    
-    if match_count == 1:
-        print(f"⚠️  Note: Search block {idx+1} matched using flexible whitespace fallback.")
-        search_leading_ws_match = re.match(r'^\s*', search_text)
-        search_trailing_ws_match = re.search(r'\s*$', search_text)
-        search_leading_ws = search_leading_ws_match.group() if search_leading_ws_match else ""
-        search_trailing_ws = search_trailing_ws_match.group() if search_trailing_ws_match else ""
-        
-        if replace_text.startswith(search_leading_ws):
-            replace_text = replace_text[len(search_leading_ws):]
-        if replace_text.endswith(search_trailing_ws) and len(search_trailing_ws) > 0:
-            replace_text = replace_text[:-len(search_trailing_ws)]
-            
-    return search_text, replace_text, search_regex, match_count
-
-def _process_search_and_replace(full_path, filepath, blocks, encoding):
-    if not os.path.exists(full_path):
-        print(f"❌ Error: File not found for patching: {filepath}")
-        return False
-        
-    with open(full_path, 'r', encoding='utf-8') as f:
-        file_text = f.read()
-        
-    decoded_blocks = _decode_blocks(blocks, encoding)
-    valid_blocks = []
-    
-    for idx, (search_text, replace_text, search_raw_str) in enumerate(decoded_blocks):
-        if _check_for_laziness(filepath, replace_text):
-            print(f"❌ Error: LLM hallucinated a truncation placeholder in the replacement block for {filepath}. Aborting file patch to prevent deleting code.")
-            return False
-            
-        match_count = file_text.count(search_text)
-        search_regex = None
-        
-        if match_count == 0 and search_text != search_raw_str:
-            if file_text.count(search_raw_str) > 0:
-                print(f"⚠️  Note: Search block {idx+1} matched using raw (unquoted) string fallback due to missing double-encoding.")
-                search_text = search_raw_str
-                match_count = file_text.count(search_text)
-        
-        if match_count == 0:
-            search_text, replace_text, search_regex, match_count = _apply_whitespace_match(search_text, file_text, replace_text, idx)
-            
-        if match_count == 0:
-            search_text, match_count = _apply_fuzzy_match(search_text, file_text, idx)
-            search_regex = None
-            
-        if match_count == 0:
-            print(f"❌ Error: Search block {idx+1} not found in {filepath}. Aborting file patch to prevent corruption.")
-            return False
-        elif match_count > 1:
-            print(f"❌ Error: Search block {idx+1} matches {match_count} times in {filepath}. Aborting due to ambiguity.")
-            return False
-            
-        valid_blocks.append((search_text, replace_text, search_regex))
-        
-    for search_text, replace_text, search_regex in valid_blocks:
-        if search_regex:
-            match = search_regex.search(file_text)
-            if match:
-                start, end = match.span()
-                matched_str = match.group()
-                actual_leading_ws = re.match(r'^\s*', matched_str).group()
-                actual_trailing_ws = re.search(r'\s*$', matched_str).group()
-                final_replace = actual_leading_ws + replace_text + actual_trailing_ws
-                file_text = file_text[:start] + final_replace + file_text[end:]
         else:
-            file_text = file_text.replace(search_text, replace_text, 1)
-            
-    tmp_path = full_path + ".tmp"
-    with open(tmp_path, 'w', encoding='utf-8') as f:
-        f.write(file_text)
-    if os.path.exists(full_path):
-        shutil.copymode(full_path, tmp_path)
-    os.replace(tmp_path, full_path)
-    print(f"✅ Patched (search-and-replace): {filepath}")
-    return True
+            current_text = ""
 
-def _process_ast_replace(full_path, filepath, file_data, encoding):
-    if not os.path.exists(full_path):
-        print(f"❌ Error: File not found for AST patching: {filepath}")
-        return False
-        
-    target_name = file_data.get("target_name")
-    target_type = file_data.get("target_type", "function")
-    parent_class = file_data.get("parent_class")
-    content_raw = file_data.get("content", "")
-    
-    if not target_name:
-        print("❌ Error: AST replace requires 'target_name'.")
-        return False
+        file_mutated = False
+        mode_int = None
+        file_deleted = False
+        renamed_to = None
+        copied_to = None
 
-    content_str = "".join(content_raw) if isinstance(content_raw, list) else content_raw
-    if encoding in ["url-encoded", "url", "percent-encoded"]:
-        replace_text = urllib.parse.unquote(content_str)
-    else:
-        replace_text = content_str
-
-    replace_text = re.sub(r'^```[a-zA-Z0-9]*\n', '', replace_text)
-    replace_text = re.sub(r'\n```\s*$', '\n', replace_text)
-
-    with open(full_path, 'r', encoding='utf-8') as f:
-        file_text = f.read()
-        
-    try:
-        tree = ast.parse(file_text, filename=filepath)
-    except SyntaxError as e:
-        print(f"❌ Error: Cannot perform AST replace. Target file {filepath} has invalid syntax: {e}")
-        return False
-
-    target_node = None
-    nodes_to_search = []
-
-    if parent_class:
-        class_node = next((n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == parent_class), None)
-        if not class_node:
-            print(f"❌ Error: Parent class '{parent_class}' not found in {filepath}.")
-            return False
-        nodes_to_search = ast.walk(class_node)
-    else:
-        nodes_to_search = ast.walk(tree)
-        
-    for node in nodes_to_search:
-        if target_type == "function" and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if node.name == target_name:
-                target_node = node
-                break
-        elif target_type == "class" and isinstance(node, ast.ClassDef):
-            if node.name == target_name:
-                target_node = node
-                break
-
-    if not target_node:
-        print(f"❌ Error: Target {target_type} '{target_name}' not found in {filepath}.")
-        return False
-        
-    end_line = getattr(target_node, 'end_lineno', None)
-    if end_line is None:
-        print("❌ Error: Python version does not support end_lineno in AST. Cannot perform AST replace.")
-        return False
-
-    real_start_line = target_node.lineno
-    if hasattr(target_node, 'decorator_list') and target_node.decorator_list:
-        real_start_line = min(d.lineno for d in target_node.decorator_list)
-        
-    file_lines = file_text.splitlines(keepends=True)
-    new_lines = file_lines[:real_start_line - 1] + [replace_text] + (['\n'] if not replace_text.endswith('\n') else []) + file_lines[end_line:]
-    
-    tmp_path = full_path + ".tmp"
-    with open(tmp_path, 'w', encoding='utf-8') as f:
-        f.write("".join(new_lines))
-    if os.path.exists(full_path):
-        shutil.copymode(full_path, tmp_path)
-    os.replace(tmp_path, full_path)
-    print(f"✅ Patched (ast-replace): {filepath} ({target_type} '{target_name}')")
-    return True
-
-def _run_linters(full_path, filepath, abs_base_dir):
-    # 1. Flake8 (Python only)
-    if full_path.endswith('.py'):
         try:
-            flake8_args = ['flake8', full_path, '--select=E9,F']
-            if os.path.basename(full_path) == '__init__.py':
-                flake8_args.append('--extend-ignore=F401')
-            
-            venv_flake8 = os.path.join(abs_base_dir, '.venv', 'bin', 'flake8')
-            cmd = venv_flake8 if os.path.exists(venv_flake8) else 'flake8'
-            flake8_args[0] = cmd
-            
-            res = subprocess.run(flake8_args, capture_output=True, text=True)
-            if res.returncode != 0 and res.stdout.strip():
-                print(f"  [Linter] ❌ flake8 flagged {filepath}:\n{res.stdout.strip()}")
-        except Exception:
-            pass
+            for task in tasks:
+                op = task["operation"]
+                payload = task["payload"]
+                mode_str = task["mode_str"]
 
-    # 2. Burn List Linter (Python, XML, JS)
-    if full_path.endswith(('.py', '.xml', '.js')):
-        tools_dir = os.path.join(abs_base_dir, 'tools')
-        if tools_dir not in sys.path:
-            sys.path.insert(0, tools_dir)
+                if mode_str:
+                    try:
+                        mode_int = int(mode_str, 8)
+                    except ValueError:
+                        raise ValueError(f"Invalid mode format: {mode_str}. Must be octal.")
+
+                if op in ("delete", "remove"):
+                    file_deleted = True
+                    break
+
+                elif op == "rename":
+                    if not task["new_filepath"]:
+                        raise ValueError("Rename requires 'New-Path: <target>'")
+                    if not os.path.exists(filepath):
+                        raise FileNotFoundError(f"Cannot rename missing file: {filepath}")
+                    renamed_to = task["new_filepath"]
+
+                elif op == "copy":
+                    if not task["new_filepath"]:
+                        raise ValueError("Copy requires 'New-Path: <target>'")
+                    if not os.path.exists(filepath):
+                        raise FileNotFoundError(f"Cannot copy missing file: {filepath}")
+                    copied_to = task["new_filepath"]
+
+                elif op == "chmod":
+                    if not mode_str:
+                        raise ValueError("Chmod requires 'Mode: <octal_string>'")
+                    if not os.path.exists(filepath) and not file_mutated:
+                        raise FileNotFoundError(f"Cannot chmod missing file: {filepath}")
+
+                elif op == "overwrite":
+                    current_text = payload
+                    if not payload.strip():
+                        warnings.append("[WARN] Extracted payload is empty.")
+                    file_mutated = True
+
+                elif op == "search-and-replace":
+                    if not os.path.exists(filepath) and not file_mutated:
+                        raise FileNotFoundError(f"Cannot search-and-replace missing file: {filepath}")
+
+                    pattern = r"^<<<< SEARCH\n(.*?)\n^====\n(.*?)\n^>>>> REPLACE"
+                    search_blocks = list(re.finditer(pattern, payload, re.DOTALL | re.MULTILINE))
+
+                    if not search_blocks:
+                        raise ValueError("Malformed search-and-replace block. Missing markers.")
+
+                    for match in search_blocks:
+                        search_text = match.group(1)
+                        replace_text = match.group(2)
+
+                        new_text = whitespace_agnostic_replace(current_text, search_text, replace_text)
+                        if new_text is None:
+                            if filepath.endswith(".py"):
+                                new_text = ast_fallback_replace(current_text, search_text, replace_text)
+                                if new_text is None:
+                                    raise ValueError("AST fallback failed for search block.")
+                            else:
+                                raise ValueError("Search block not found.")
+                        current_text = new_text
+                    file_mutated = True
+
+        except Exception as e:
+            errors.append(str(e))
+
+        if errors:
+            _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+            continue
+
+        # Commit Phase
         try:
-            import check_burn_list
-            errors, warnings = check_burn_list.scan_file(full_path)
-            if errors or warnings:
-                print(f"  [Linter] 🚨 Burn List flagged {filepath}:")
-                for w in warnings:
-                    print(f"    ⚠️ WARNING: {w}")
-                for e in errors:
-                    print(f"    ❌ ERROR: {e}")
-        except Exception:
-            pass
+            if file_deleted:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                print(f"✅ Deleted: {filepath}")
+                continue
 
-def _process_file(file_data, abs_base_dir):
-    filepath = file_data.get("path", "").strip()
-    operation = file_data.get("operation", "overwrite")
-    content_raw = file_data.get("content", "")
-    encoding = file_data.get("encoding", "url-encoded")
+            if renamed_to:
+                os.makedirs(os.path.dirname(renamed_to), exist_ok=True)
+                os.rename(filepath, renamed_to)
+                print(f"✅ Renamed: {filepath} -> {renamed_to}")
+                continue
 
-    if not filepath:
-        return
+            if copied_to:
+                os.makedirs(os.path.dirname(copied_to), exist_ok=True)
+                shutil.copy2(filepath, copied_to)
+                print(f"✅ Copied: {filepath} -> {copied_to}")
+                continue
 
-    if not validate_line_length(content_raw, filepath, "content"):
-        return
+            if file_mutated:
+                if filepath.endswith(".py"):
+                    current_text = re.sub(r"[ \t]+$", "", current_text, flags=re.MULTILINE)
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(current_text)
 
-    if encoding not in ["url-encoded", "url", "percent-encoded"]:
-        print(f"❌ Error: File {filepath} rejected. You MUST use 'url-encoded'. Legacy encodings and backslash escapes are strictly forbidden.")
-        return
+            if mode_int is not None:
+                os.chmod(filepath, mode_int)
 
-    full_path = os.path.abspath(os.path.join(abs_base_dir, filepath))
-    if not full_path.startswith(abs_base_dir):
-        print(f"🚨 SECURITY ALERT: Path traversal blocked for '{filepath}'.")
-        return
+            ext = os.path.splitext(filepath)[1].lower()
+            if ext == ".py":
+                err = verify_python(filepath)
+                if err: warnings.append(err)
+            elif ext == ".xml":
+                err = verify_xml(filepath)
+                if err: warnings.append(err)
+            elif ext == ".md":
+                err = verify_markdown(filepath)
+                if err: warnings.append(err)
+            elif ext == ".json":
+                err = verify_json(filepath)
+                if err: warnings.append(err)
 
-    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            if ext in (".py", ".xml", ".js"):
+                err = run_burn_list_linter(filepath)
+                if err: warnings.append(err)
 
-    try:
-        if operation == "ast-replace":
-            if _process_ast_replace(full_path, filepath, file_data, encoding):
-                _run_linters(full_path, filepath, abs_base_dir)
-            return
+            _print_summary(filepath, errors, warnings, aborted=False, count=len(tasks))
 
-        if operation == "search-and-replace":
-            blocks = file_data.get("blocks", [])
-            valid_length = True
-            for idx, block in enumerate(blocks):
-                if not validate_line_length(block.get("search", ""), filepath, f"search block {idx+1}"):
-                    valid_length = False
-                if not validate_line_length(block.get("replace", ""), filepath, f"replace block {idx+1}"):
-                    valid_length = False
-            if not valid_length:
-                return
-            if _process_search_and_replace(full_path, filepath, blocks, encoding):
-                _run_linters(full_path, filepath, abs_base_dir)
-            return
+        except Exception as e:
+            errors.append(f"Commit failed: {e}")
+            _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
 
-        content_str = "".join(content_raw) if isinstance(content_raw, list) else content_raw
-        
-        # if encoding in ["url-encoded", "url", "percent-encoded"] and "%20" in content_str:
-        #     print(f"❌ Error: File {filepath} rejected. Payload contains '%20'. Spaces must NOT be percent-encoded.")
-        #     return
-        # %20 prohibition enforcement on hold until LLMs have a broader cognitive horizon.
-
-        content = urllib.parse.unquote(content_str)
-        file_bytes = content.encode('utf-8')
-
-        if operation == "overwrite":
-            tmp_path = full_path + ".tmp"
-            with open(tmp_path, 'wb') as f:
-                f.write(file_bytes)
-            if os.path.exists(full_path):
-                shutil.copymode(full_path, tmp_path)
-            os.replace(tmp_path, full_path)
-            print(f"✅ Wrote: {filepath}")
-            _run_linters(full_path, filepath, abs_base_dir)
-        elif operation == "delete":
-            if os.path.exists(full_path):
-                os.remove(full_path)
-                print(f"🗑️ Deleted: {filepath}")
-            else:
-                print(f"⚠️  Note: File already missing or deleted: {filepath}")
-        else:
-            print(f"❌ Unknown operation '{operation}' for {filepath}")
-
-    except Exception as e:
-        print(f"❌ Error processing {filepath}: {e}")
-
-def parse_json_and_write_files(input_text, base_dir="."):
-    payload_texts = extract_json_payloads(input_text)
-    all_files = []
-    version = "legacy"
-    
-    for payload_text in payload_texts:
-        payload = _recover_json(payload_text)
-        if payload and isinstance(payload, dict):
-            version = payload.get("parcel_version", payload.get("aef_version", version))
-            all_files.extend(payload.get("files", []))
-            
-    if not all_files:
-        print("❌ No valid files found in the payload.")
-        sys.exit(1)
-        
-    print(f"🔍 Found {len(all_files)} files to process (Parcel {version})...")
-    abs_base_dir = os.path.abspath(base_dir)
-
-    for file_data in all_files:
-        _process_file(file_data, abs_base_dir)
-
-def main():
-    parser = argparse.ArgumentParser(description="Extract files from Parcel output.")
-    parser.add_argument("input_file", nargs='?', help="Path to the file containing LLM output.")
-    
-    args = parser.parse_args()
-    input_text = ""
-
-    if args.input_file:
-        if os.path.exists(args.input_file):
-            with open(args.input_file, 'r', encoding='utf-8') as f:
-                input_text = f.read()
-        else:
-            print(f"❌ File not found: {args.input_file}")
-            sys.exit(1)
-    else:
-        print("📥 Reading from Standard Input (Press Ctrl+D to finish)...")
-        try:
-            input_text = sys.stdin.read()
-        except KeyboardInterrupt:
-            sys.exit(0)
-
-    if not input_text.strip():
-        print("❌ No content received.")
-        sys.exit(1)
-
-    parse_json_and_write_files(input_text)
-    print("\n🏁 Processing complete.")
 
 if __name__ == "__main__":
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", SyntaxWarning)
-        main()
+    if len(sys.argv) > 1:
+        try:
+            with open(sys.argv[1], "r", encoding="utf-8") as f:
+                input_data = f.read()
+        except FileNotFoundError:
+            print(f"❌ Error: File '{sys.argv[1]}' not found.\n")
+            sys.exit(1)
+    else:
+        # Running entirely silent on stdin prevents terminal noise
+        input_data = sys.stdin.read()
+
+    extract_parcel(input_data)

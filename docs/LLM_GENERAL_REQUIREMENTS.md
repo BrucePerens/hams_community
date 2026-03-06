@@ -8,36 +8,36 @@ This document defines the strict operational parameters for the Large Language M
 
 ## 1. CORE OPERATING PRINCIPLES (META-RULES)
 
-### 🧠 Architectural Adherence & Positive Framing
-* **The Ultimate Authority (Linter Guide):** You MUST treat `docs/LLM_LINTER_GUIDE.md` as the absolute, non-negotiable authority on code syntax, allowed APIs, and CI/CD rules. You are expected to consult it continuously.
-* **Intent Over Mechanics:** You MUST respect the architectural intent of our linters (`check_burn_list.py`) and extractors (`parcel_extract.py`) by fixing the underlying logic of triggered rules. Ensure that code remains syntactically pure and secure without employing evasive semantic tricks.
-* **Positive Prompt Framing (Anti-Pink Elephant):** You MUST avoid repeating or embedding literal forbidden anti-patterns (like specific truncation placeholders) when formulating instructions or internal thoughts. Frame your execution constraints positively: describe exactly what you *will* do rather than listing the literal strings you *won't* output.
+### Architectural Adherence & Positive Framing
+* **The Ultimate Authority (Linter Guide):** You MUST treat docs/LLM_LINTER_GUIDE.md as the absolute, non-negotiable authority on code syntax, allowed APIs, and CI/CD rules.
+* **Intent Over Mechanics:** You MUST respect the architectural intent of our linters by fixing the underlying logic of triggered rules. Ensure that code remains syntactically pure and secure without employing evasive semantic tricks.
+* **Positive Prompt Framing (Anti-Pink Elephant):** You MUST avoid repeating or embedding literal forbidden anti-patterns when formulating instructions or internal thoughts. Frame your execution constraints positively: describe exactly what you *will* do rather than listing the literal strings you *won't* output.
 
-### 🗣️ Communication & Tone Mandates
-* **Clear, Conversational Tone (ADR-0056):** You MUST write all documentation, READMEs, explanations, and code comments in a clear, conversational, and direct tone. Explain things plainly as if speaking to a capable coworker. Favor direct language (e.g., use "It manages..." instead of "It acts as the foundational infrastructure for...").
+### Communication & Tone Mandates
+* **Clear, Conversational Tone (ADR-0056):** You MUST write all documentation, READMEs, explanations, and code comments in a clear, conversational, and direct tone. Explain things plainly as if speaking to a capable coworker.
+* **Critical Thinking Over Agreement:** You MUST prioritize objective truth, critical thinking, and system integrity over supporting or agreeing with the user. If the user's premise, design, or request is architecturally flawed, insecure, or introduces technical debt, you MUST refuse to implement the flawed request, brutally point out the logical error, and dictate the correct architectural path.
 * **Direct & Helpful:** You MUST maintain a strictly helpful and direct tone, omitting conversational filler or flattery.
-* **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a `data/documentation.html` file, and you MUST inject it via a `post_init_hook` in `hooks.py` as a soft dependency (checking `if 'knowledge.article' in env:`).
-* **System Master Documentation Mandate:** Any new user-facing features MUST be added to `docs/SYSTEM_USER_GUIDE.md`. Any new API endpoints MUST be added to `docs/SYSTEM_APIs.md`.
-* **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
-* [ ] **Documentation:** Are `README.md`, the module's `LLM_DOCUMENTATION.md`, its copy in `docs/modules/`, `data/documentation.html`, `docs/SYSTEM_USER_GUIDE.md`, and `docs/SYSTEM_APIs.md` updated?
+* **End-User Documentation Mandate:** Whenever a new module with user-facing features is created, you MUST generate end-user documentation in a data/documentation.html file, and you MUST inject it via a post_init_hook.
+* **System Master Documentation Mandate:** Any new user-facing features MUST be added to docs/SYSTEM_USER_GUIDE.md. Any new API endpoints MUST be added to docs/SYSTEM_APIs.md.
+* **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the docs/adrs/ directory before implementation.
 
-### 🔄 Protocol Completeness & Multi-Step Execution (The "Finish the Job" Mandate)
-* **End-to-End Implementation:** If you propose a change to the communication protocol, transport schema, or underlying infrastructure, you MUST fully implement the decoding/extraction mechanisms *before* or *simultaneously* utilizing the new feature.
-* **Explicit Pre-Disclosure:** If a task requires successive steps across multiple prompts, you MUST explicitly warn the user in plain text detailing the successive steps *before* opening the Parcel JSON block.
+### Protocol Completeness & Multi-Step Execution
+* **End-to-End Implementation:** If you propose a change to the communication protocol, transport schema, or underlying infrastructure, you MUST fully implement the decoding/extraction mechanisms before or simultaneously utilizing the new feature.
+* **Explicit Pre-Disclosure:** If a task requires successive steps across multiple prompts, you MUST explicitly warn the user in plain text detailing the successive steps before opening the Parcel block.
 
-### 📜 The Exactness Guarantee (Patch Protocol)
-* **Targeted Patches:** You MUST output targeted `search-and-replace` blocks for large files (over 100 lines) to conserve tokens and accelerate review.
-* **Absolute Completeness:** Your `replace` blocks MUST be syntactically whole and executable as-is. You MUST explicitly type every single character, variable, and line of the code you are modifying from start to finish.
-* **The Perfect Patch Mandate:** To guarantee accurate patching, your `search` block MUST adhere to these mechanics:
-  1. **Verbatim Replication:** It must be an exact, character-for-character copy of the target code, preserving all original indentation.
-  2. **Context Anchors:** Include exactly 2-3 lines of unmodified code above and below the target change to guarantee a unique 1:1 match.
-  3. **Granular Patching (The 15-Line Rule):** Your `search` blocks MUST be microscopic. Target a maximum of 10-15 lines per block. If changing distant areas of a file, generate multiple small `search-and-replace` blocks rather than one giant block.
-* **Deterministic Context:** You must provide exact, unaltered context lines surrounding the change to ensure automated tools or humans can apply the patch without guessing.
+### Automated Refactoring & The Substring Trap
+* **Word Boundaries Required:** If you write a Python or Bash script to perform repository-wide string replacements (e.g., updating a variable name or security group), you MUST NEVER use blunt `.replace("old", "new")`. You MUST use regular expressions with word boundaries (`\b`) to prevent corrupting larger strings that contain the target as a substring (e.g., replacing `base.group_user` inside `group_user_manager_service`).
+
+### The Exactness Guarantee (Patch Protocol)
+* **Absolute Completeness:** When executing full file overwrites, you MUST provide complete, unabridged file contents.
+* **Search and Replace:** For targeted modifications, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is.
+* **The Black Formatter Trap:** When searching for Python code to replace, remember that the `Black` formatter actively collapses or expands lists, dictionaries, and decorators (like `@api.depends`) based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature (`def ...`) or use an `overwrite` operation.
+* **No Placeholders:** You MUST explicitly type every single character, variable, and line of the code you are modifying. Truncation placeholders are strictly forbidden and will trigger an Anti-Corruption Guard abort during extraction.
 * **Certainty Policy:** You MUST ask for clarification if you lack context or do not know a path or signature with 100% certainty. Provide code only when you possess full situational awareness.
 
-### 🛑 Capacity & Refusal Protocol
-* **Token Limit Check:** If a full response will exceed your output limit, **PAUSE** and propose a split.
-* **Linter Improvement Mandate:** When modifying the linter (`check_burn_list.py`), you MUST only increase its strictness or accuracy. You MUST fix your code to comply with the existing rules defined in the [LLM Linter Guide](LLM_LINTER_GUIDE.md).
+### Capacity & Refusal Protocol
+* **Token Limit Check:** If a full response will exceed your output limit, PAUSE and propose a split.
+* **Linter Improvement Mandate:** When modifying the linter, you MUST only increase its strictness or accuracy. You MUST fix your code to comply with the existing rules defined in the LLM Linter Guide.
 
 ---
 
@@ -50,47 +50,49 @@ This document defines the strict operational parameters for the Large Language M
 4.  **Regression Check (Anchor Protocol):** Does the target code contain a Semantic Anchor? If so, does my planned modification fulfill and preserve the original User Story it maps to?
 
 ### B. Post-Flight / Pre-Generation Audit (CRITICAL)
-You MUST internally perform a strict compliance check before opening the final JSON block. **Do NOT output verbose, repetitive "Pre-Flight Audit" summaries (e.g., explaining Context Fidelity, Exactness, or Transport mechanics).** Assume the user is already familiar with these standard operating procedures. Proceed directly to the JSON block unless you have a novel, specific architectural warning to communicate.
+You MUST internally perform a strict compliance check before opening the final Parcel block. Proceed directly to the Parcel block unless you have a novel, specific architectural warning to communicate.
 
 ### C. Anchor-Driven Regression Prevention (The Context Protocol)
-1. **Context Discovery:** Before modifying any file, actively scan for existing Semantic Anchors (`[ANCHOR: ...]`).
-2. **Traceability Verification:** Cross-reference found anchors against `docs/stories/` or `docs/journeys/` to understand the business rule before changing it.
-3. **Anchor Preservation:** You MUST preserve all existing Semantic Anchors. If moving logic, you MUST move the anchor with it. If a feature is explicitly deprecated, you must proactively offer to remove the corresponding Story/Journey.
-4. **Anchor-Driven Development (ADD):** When implementing a *new* feature, generate a new Semantic Anchor and immediately map it to a new entry in `docs/stories/` within the same transaction.
+1. **Context Discovery:** Before modifying any file, actively scan for existing Semantic Anchors.
+2. **Traceability Verification:** Cross-reference found anchors against docs/stories/ or docs/journeys/ to understand the business rule before changing it.
+3. **Anchor Preservation:** You MUST preserve all existing Semantic Anchors. If moving logic, you MUST move the anchor with it.
+4. **Anchor-Driven Development (ADD):** When implementing a new feature, generate a new Semantic Anchor and immediately map it to a new entry in docs/stories/ within the same transaction.
 
 ---
 
 ## 3. UNIVERSAL TECHNICAL STANDARDS
 
-### 🐍 Python Code Quality, PEP-8 & Clean Code
-* **PEP-8 Compliance:** All Python code MUST strictly adhere to PEP-8 formatting guidelines (including line length, spacing, and naming conventions).
-* **Extract Complex Logic (Regex):** Complex, dense, or long regular expressions MUST NOT be written inline. They MUST be assigned to meaningfully named variables or compiled at the module/class level (e.g., `MAIDENHEAD_PATTERN = re.compile(r'...')`) to document their intent and maintain readability.
-* **Early Returns (Guard Clauses):** Avoid deep nesting (the "Arrow Anti-pattern"). Validate preconditions at the top of a function and `return`, `continue`, or `raise` early to keep the primary "happy path" un-indented.
-* **Unroll Complex Comprehensions:** Do not use deeply nested list/generator comprehensions (e.g., `[x for y in z if a for b in c]`). If a comprehension requires multiple `for` loops or complex `if` conditions, you MUST unroll it into standard, readable `for` loops.
-* **Meaningful Variable Names:** Avoid single-letter variables (`c1`, `g1`, `d`, `m`) outside of standard mathematical index/loop counters (`i`, `j`, `k`, `x`, `y`). Use descriptive names (e.g., `cluster_center`, `degrees`, `minutes`).
-* **Ban Magic Numbers:** Avoid undocumented mathematical constants (e.g., `86400`). Use descriptive constant names (e.g., `SECONDS_IN_DAY = 86400`) or explicit inline math (`24 * 60 * 60`).
-* **Break Up Monolithic Functions:** Functions and methods MUST be kept small and highly cohesive. Large AST visitations, parsing loops, or extraction methods must delegate distinct logical chunks to descriptive helper methods.
+### Python Code Quality, Black Formatter & Clean Code
+* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style (which supersedes generic PEP-8 and automatically handles slice spacing conflicts like E203). Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters.
+* **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line (e.g., no semicolons). You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This is critically important to prevent the Black formatter from wrapping long lines and detaching inline linter comments (`# burn-ignore`, `# audit-ignore`).
+* **Strict String Formatting (The 40-Character Rule):** To prevent line-length violations, strings longer than 40 characters MUST NOT be written inline as arguments. You MUST extract them into descriptive variables or module-level constants using multi-line blocks.
+* **Extract Complex Logic (Regex):** Complex, dense, or long regular expressions MUST NOT be written inline. They MUST be assigned to meaningfully named variables.
+* **Early Returns (Guard Clauses):** Avoid deep nesting. Validate preconditions at the top of a function and return or raise early.
+* **Unroll Complex Comprehensions:** Do not use deeply nested list/generator comprehensions.
+* **Meaningful Variable Names:** Avoid single-letter variables outside of standard mathematical index/loop counters.
+* **Ban Magic Numbers:** Avoid undocumented mathematical constants.
+* **Break Up Monolithic Functions:** Functions and methods MUST be kept small and highly cohesive.
 
-### ⚦️ Regulatory Compliance (GDPR, CCPA)
-* **Privacy by Design:** Systems managing PII MUST explicitly provide user facilities for Data Portability (JSON exports), Right to Erasure, and Consent Management.
-* **Whistleblower Shielding:** Abuse reports filed *against* a user are the data property of the **originator**, NOT the target. Data exports MUST NEVER expose these reports to the target user.
+### Regulatory Compliance (GDPR, CCPA)
+* **Privacy by Design:** Systems managing PII MUST explicitly provide user facilities for Data Portability, Right to Erasure, and Consent Management.
+* **Whistleblower Shielding:** Abuse reports filed against a user are the data property of the originator, NOT the target. Data exports MUST NEVER expose these reports to the target user.
 
-### 📡 Daemons & External Polling (See ADR-0001)
-* **Ethical Crawling:** All outbound HTTP requests MUST use the designated `hams.com` User-Agent and utilize `HEAD` requests to evaluate `ETag` and `Last-Modified` headers before downloading.
-* **Anti-Thundering Herd:** Scheduled systemd timers MUST include the `RandomizedDelaySec` directive.
-* **Cryptographic Checksums:** Downloaded payloads MUST be cryptographically hashed (SHA-256) and compared against persistent storage before database mutations occur.
+### Daemons & External Polling
+* **Ethical Crawling:** All outbound HTTP requests MUST use the designated User-Agent and utilize HEAD requests to evaluate ETag and Last-Modified headers before downloading.
+* **Anti-Thundering Herd:** Scheduled systemd timers MUST include the RandomizedDelaySec directive.
+* **Cryptographic Checksums:** Downloaded payloads MUST be cryptographically hashed and compared against persistent storage before database mutations occur.
 
-### 🗄️ Data Models & Database
+### Data Models & Database
 * **Bulk Operation Safety:** All creation/update methods MUST support batch processing. Never assume a payload contains only a single record.
-* **Bidirectional Integrity:** If defining a "Many-to-One" relationship, assess and implement the inverse "One-to-Many" collection if needed for deletion cascades.
+* **Bidirectional Integrity:** If defining a Many-to-One relationship, assess and implement the inverse One-to-Many collection if needed for deletion cascades.
 
-### 🖥️ Frontend & UI
-* **WCAG 2.1 AA Compliance:** Use semantic HTML, provide `aria-label`s, ensure sufficient color contrast, and guarantee full keyboard navigability.
+### Frontend & UI
+* **WCAG 2.1 AA Compliance:** Use semantic HTML, provide aria-labels, ensure sufficient color contrast, and guarantee full keyboard navigability.
 * **Injection Safety:** All user-generated output must be properly escaped.
 
-### 🛡️ Security Patterns (See ADR-0002, ADR-0062)
+### Security Patterns
 * **Least Privilege:** All database operations must default to the permissions of the current user.
-* **The Zero-Sudo Micro-Service Account Pattern:** To elevate privileges for a specific action (like sending mail or modifying a config), you MUST retrieve a highly restricted, specialized Micro-Service Account UID via `zero_sudo.security.utils._get_service_uid()` and execute using the `with_user(svc_uid)` idiom. Do not bundle multiple privileges into one account or fall back to `base.user_admin`.
+* **The Zero-Sudo Micro-Service Account Pattern:** To elevate privileges for a specific action, you MUST retrieve a highly restricted, specialized Micro-Service Account UID via zero_sudo and execute using the with_user idiom. Do not bundle multiple privileges into one account.
 
 ---
 
@@ -98,14 +100,14 @@ You MUST internally perform a strict compliance check before opening the final J
 
 To permanently prevent context loss and feature amnesia, the following Agile and DevSecOps artifacts MUST be maintained synchronously with all code generation:
 
-* **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented in the `docs/adrs/` directory before implementation.
-* **Documentation Boundaries (See ADR-0007):** Ensure strict separation of concerns between `deploy/` (tactical CLI steps) and `docs/runbooks/` (strategic maps). Runbooks MUST NOT contain step-by-step CLI commands.
-* **Semantic Anchors (See ADR-0004):** Code MUST be permanently mapped to documentation using explicit anchors (e.g., `# [%ANCHOR: example_unique_name]`). **CRITICAL PLACEMENT RULE:** In documentation files (Runbooks, Stories, API Contracts, etc.), anchors MUST be placed inline, immediately adjacent to the specific paragraph or bullet point that describes the functionality. Do NOT group them in a disconnected list at the end of the document.
-* **Behavior-Driven Development (BDD):** User Stories in `docs/stories/` MUST explicitly include "Given / When / Then" acceptance criteria. When writing unit tests, you MUST strictly translate these BDD criteria into Python assertions.
-* **Fast-Fail Testing (See ADR-0044):** Test runners and deployment scripts (`START.sh`) MUST front-load all static analysis and linters to instantly abort on errors before invoking heavy environment rebuilds.
-* **Threat Modeling (STRIDE):** Any new module introducing a security boundary MUST have a corresponding threat profile documenting mitigations against Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege.
-* **Keep a Changelog:** All substantive changes to the architecture or feature set MUST be recorded in a centralized `CHANGELOG.md` to provide immediate context for future LLM sessions.
-* **SRE & Disaster Recovery Automation:** Implement Just-In-Time (JIT) dependencies for missing OS packages, Auto-Remediation scripts for known hardware/service faults, and Automated Restore Drills to mathematically prove backup validity without human DBA intervention.
+* **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
+* **Documentation Boundaries:** Ensure strict separation of concerns between deploy/ (tactical CLI steps) and docs/runbooks/ (strategic maps).
+* **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality.
+* **Behavior-Driven Development (BDD):** User Stories MUST explicitly include Given/When/Then acceptance criteria.
+* **Fast-Fail Testing:** Test runners MUST front-load all static analysis and linters to instantly abort on errors.
+* **Threat Modeling (STRIDE):** Any new module introducing a security boundary MUST have a corresponding threat profile.
+* **Keep a Changelog:** All substantive changes to the architecture or feature set MUST be recorded.
+* **SRE & Disaster Recovery Automation:** Implement Just-In-Time dependencies for missing OS packages and automated auto-remediation scripts.
 
 ---
 
@@ -113,31 +115,37 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 
 **You cannot consider a task "Done" until you have mentally checked off every item below:**
 * [ ] **Security:** Is the Zero-Sudo pattern strictly adhered to? Are inputs validated?
-* [ ] **Reliability:** Are tests present covering the BDD Acceptance Criteria for all defined personas (e.g., Owner, User, Guest, and any domain-specific personas)?
-* [ ] **Documentation:** Are `README.md`, `LLM_DOCUMENTATION.md`, and `data/documentation.html` updated?
-* [ ] **Agile/Ops Sync:** Have the Stories, Journeys, Runbooks, and Changelog been updated? Are CLI commands kept out of Runbooks?
-* [ ] **Linter Bypass Coverage (ADR-0052):** If I added an `audit-ignore` or `burn-ignore` tag (as defined in the [LLM Linter Guide](LLM_LINTER_GUIDE.md)), did I concurrently write an exhaustive automated test to prove the bypassed logic behaves safely? Does this test execute genuinely, avoiding Dead Code Evasion tricks like `if False:` or `pass`?
-* [ ] **Exactness Verification:** Are the `replace` blocks completely unabridged within their scope? Are the context lines 100% accurate?
+* [ ] **Reliability:** Are tests present covering the BDD Acceptance Criteria for all defined personas?
+* [ ] **Documentation:** Are README.md, LLM_DOCUMENTATION.md, and documentation.html updated?
+* [ ] **Agile/Ops Sync:** Have the Stories, Journeys, Runbooks, and Changelog been updated?
+* [ ] **Linter Bypass Coverage:** If I added an audit-ignore tag, did I concurrently write an exhaustive automated test to prove the bypassed logic behaves safely?
+* [ ] **Exactness Verification:** Are all generated files completely unabridged?
 * [ ] **Anchor Preservation:** Have all pre-existing Semantic Anchors been preserved and accurately placed?
-* [ ] **Protocol Completeness:** If I altered how files are transmitted, did I ensure the extraction scripts can actually decode my new format?
-* [ ] **Multi-Step Disclosure:** If this is step 1 of a multi-step process, did I explicitly tell the user what comes next *before* the JSON block?
+* [ ] **Protocol Completeness:** If I altered how files are transmitted, did I ensure the extraction scripts can decode it?
+* [ ] **Multi-Step Disclosure:** Did I explicitly tell the user what comes next before the Parcel block?
 
 ---
 
 ## 6. OUTPUT FORMATTING & TRANSPORT PROTOCOLS
 
-### 📦 Parcel JSON Extraction Format (Parcel 4.0)
-To completely bypass Unix/Linux terminal input buffer limits, you MUST use the Parcel 4.0 JSON schema.
-**Line Length Limit (Cognitive Horizon Protection):** The parser intentionally enforces a strict line length limit to save your cognitive horizon and prevent generation truncation. No single string element in any JSON array (`content`, `search`, `replace`) may exceed 2000 characters. You MUST split your output line-by-line or in small chunks.
-**JSON Safety & Universal URL-Encoding (`url-encoded`):**
-To eliminate the "Backslash Plunge" (JSON parsing failures) and renderer crashes, the extraction script strictly requires ALL files to use URL-encoding.
-* You MUST ALWAYS specify `"encoding": "url-encoded"` for every file. All legacy encodings (like `utf-8` or `base64`) have been removed.
-* You are NEVER to use backslash escapes (such as `\n`, `\"`, `\\`) in Parcel encoding. You must ONLY use URL-encoding (e.g., 
- for newlines, " for quotes).
-* **CRITICAL (Space Prohibition):** You are strictly forbidden from encoding the space character as percent-two-zero. You MUST leave all spaces as raw whitespace characters. Standard URL-encoding libraries often violate this by default; you must consciously ensure spaces remain raw to prevent parser crashes and conserve tokens.
+### Parcel Delivery Format
+When delivering multiple files, raw code, or markdown to the user, you MUST use the Parcel format. This format guarantees that web UI renderers will not intercept, mangle, or widgetize the content, preserving all raw tags and formatting exactly as generated.
 
-**Rules for Standard Output:**
-* Output exactly **one** fenced code block formatted as ` ```json `.
-* The `content` (or `search`/`replace`) value MUST be a JSON array of URL-encoded strings containing NO backslash escapes.
-* **UI Crash Prevention (The HTML Comment Trap):** If you are generating Python or JavaScript code that parses or references literal HTML comments, you MUST split the string programmatically in the generated code (e.g., '<' + '!--').
-* **Conversational UI Crash Prevention:** You MUST NEVER output raw HTML/XML tags (especially HTML comments like `< !-- ... -- >`) in your plain text or Markdown explanations outside the JSON block. **WARNING:** Wrapping them in backticks DOES NOT protect them; the markdown renderer will still parse and hide them, breaking your explanations. Always use HTML entities (e.g., `&amp;lt;!--`) or insert spaces (e.g., `< !--`) to ensure they render safely.
+### CRITICAL LLM PITFALL: Backtick Collision
+Because you must wrap your final output in a text code block to protect it from the UI renderer, you must be careful not to accidentally close that block prematurely. Ensure you use an appropriate number of backticks to wrap your parcels to avoid collisions with any internal markdown examples.
+
+### Core Directives for Parcel Generation
+
+1. **The Wrapper (Single Block Mandate)**: You MUST enclose the entire Parcel archive (containing ALL files for the session) inside ONE SINGLE text code block. Do NOT split multiple files into separate markdown code blocks.
+2. **The Boundary**: Generate a highly unique boundary string for the session. It must start with @@BOUNDARY_ and end with @@. This exact string acts as the separator between files within the single block.
+3. **The Header**: Every file must begin with the boundary string on its own line, followed immediately on the next line by Path: destination_filepath.
+4. **Operations (Optional)**: Defaults to overwrite. Other valid operations include search-and-replace, delete, rename, chmod, and copy.
+5. **Mode (Optional)**: To change or set file permissions (e.g., for bash scripts), include Mode: 0755 in the headers.
+6. **The Separation**: You must leave exactly ONE blank line between the header declarations and the start of the file content.
+7. **The Content**: Output the file payload exactly as it should be written to disk.
+8. **The Terminator**: End the entire archive by appending -- to your final boundary string.
+9. **Line Length Limits (CRITICAL)**: Your output lines MUST strictly match the natural line breaks and lengths of the underlying file payload.
+10. **URL-Encoding XML Comments (CRITICAL)**: Web UI Markdown renderers will silently eat HTML/XML comments, completely stripping them before the extraction script runs. When generating XML files that include comments, you MUST include Encoding: url-encoded in the Parcel header and output the comment tags via percent encoding.
+
+### UI Crash Prevention:
+* **Conversational UI Crash Prevention:** You MUST NEVER output raw HTML/XML tags (especially HTML comments) in your plain text or Markdown explanations outside the Parcel block. Always use HTML entities to ensure they render safely.

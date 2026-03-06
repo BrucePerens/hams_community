@@ -1,4 +1,4 @@
-# 📟 Ham Pager Duty & Generalized Monitoring (`ham_pager_duty`)
+# 📟 Pager Duty & Generalized Monitoring (`pager_duty`)
 
 *Copyright © Bruce Perens K6BP. AGPL-3.0.*
 
@@ -7,7 +7,7 @@
 ---
 
 ## 1. Overview & Architecture
-The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) suite. It uses a **CQRS Architecture**: Odoo acts purely as the configuration control plane (`ham.pager.check`), while a standalone Python daemon (`generalized_monitor.py`) handles the execution loop and state holding outside the WSGI workers.
+The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) suite. It uses a **CQRS Architecture**: Odoo acts purely as the configuration control plane (`pager.check`), while a standalone Python daemon (`generalized_monitor.py`) handles the execution loop and state holding outside the WSGI workers.
 
 ### Key Architectural Features:
 * **Zero-Sudo RPC:** The daemon pushes incidents to Odoo using the `pager_service_internal` micro-account.
@@ -19,7 +19,7 @@ The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) 
 * **Cascading Suppression & Maintenance:** The daemon parses `parent` and `maint_start`/`maint_end` dependencies to short-circuit execution natively, preventing alert storms.
 * **Push Monitoring (Heartbeat):** The `/api/v1/pager/heartbeat/<uuid>` REST endpoint accepts check-ins from external bash scripts. The daemon queries `check_heartbeat_rpc` via XML-RPC to verify TTL breaches.
 * **Multi-Tier Escalation:** An Odoo `ir.cron` (`cron_escalate_incidents`) sweeps for forgotten incidents and escalates them to the whole admin group.
-* **SRE Analytics:** The `ham.pager.incident` model auto-computes `mtta` and `mttr` in minutes during state transitions.
+* **SRE Analytics:** The `pager.incident` model auto-computes `mtta` and `mttr` in minutes during state transitions.
 
 ---
 
@@ -77,7 +77,7 @@ If you create a new plugin, you **MUST** update `daemons/pager_duty/test_general
 ---
 
 ## 6. Semantic Anchors
-* `[%ANCHOR: doc_inject_ham_pager_duty]`
+* `[%ANCHOR: doc_inject_pager_duty]`
 * `[%ANCHOR: test_pager_escalation]`
 * `[%ANCHOR: report_incident_rate_limit]`
 * `[%ANCHOR: test_pager_notification]`

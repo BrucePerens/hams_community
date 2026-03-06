@@ -14,9 +14,8 @@ echo "========================================================"
 FAILED_MODULES=()
 
 for MOD in "${MODULES[@]}"; do
-    if [ -d "$DIR/$MOD" ]; then
-        echo -e "\n[*] ----------------------------------------------------"
-        echo "[*] Testing Module: $MOD"
+    if [ -f "$DIR/$MOD/__manifest__.py" ]; then
+        echo -e "\n[*] ----------------------------------------------------"        echo "[*] Testing Module: $MOD"
         echo "[*] ----------------------------------------------------"
         
         # Call START.sh with the specific module to force a clean DB per module

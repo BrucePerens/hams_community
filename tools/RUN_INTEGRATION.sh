@@ -44,16 +44,7 @@ createdb "$DB_NAME"
 /usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -i "$TARGET_MODULE" --stop-after-init > /dev/null 2>&1
 
 echo "[*] Starting Background Daemons..."
-# Start DX Firehose (asyncpg)
-"$VENV_PYTHON" "$DIR/daemons/dx_firehose/dx_firehose.py" &
-FIREHOSE_PID=$!
-
-# Start Cache Manager (Redis)
-"$VENV_PYTHON" "$DIR/daemons/cache_manager/cache_manager.py" &
-CACHE_PID=$!
-
-# Give daemons a moment to bind ports and connect to Postgres
-sleep 2
+# (Background daemons would be started here if needed for integration)
 
 echo "[*] Executing Test Suite in Integration Mode..."
 # Run tests natively. The Python tests will see HAMS_INTEGRATION_MODE=1 and bypass MagicMocks.
@@ -61,8 +52,7 @@ echo "[*] Executing Test Suite in Integration Mode..."
 TEST_EXIT=$?
 
 echo "[*] Tearing down Daemons..."
-kill $FIREHOSE_PID 2>/dev/null
-kill $CACHE_PID 2>/dev/null
+# (Daemons would be killed here)
 
 echo "[*] Cleaning up test database..."
 dropdb --if-exists "$DB_NAME" || true

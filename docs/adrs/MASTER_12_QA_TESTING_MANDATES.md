@@ -28,13 +28,13 @@ To guarantee the stability and security of the platform without a massive QA dep
 
 ### 6. Security & Architecture Behavior Testing (0050, 0051)
 * **Proxy Ownership & IDOR (The Multi-Persona Rule):** Tests must rigorously prove data isolation across the entire spectrum of platform users. You MUST assert that the Owner can edit, and that the following distinct personas are violently denied:
-  1. Standard Odoo User (No Ham/Web groups)
-  2. Web-Only User (Has User Websites group, no Ham groups)
-  3. Ham Operator (Fully licensed)
-  4. SWL (Prospective Operator)
+  1. Standard Odoo User
+  2. Web-Only User (Has User Websites group)
+  3. Domain Operator (Fully authorized)
+  4. Restricted User (Sandbox)
   5. Public Guest (Unauthenticated)
 * **GDPR Erasure:** Tests must assert that calling the erasure hook actually executes the hard-delete cascade.
-* **Zero-DB:** Abstract models (e.g., DX Spots) must be tested using `assertQueryCount(0)` on mutations to guarantee they do not write to PostgreSQL.
+* **Zero-DB:** Abstract models (e.g., telemetry events) must be tested using `assertQueryCount(0)` on mutations to guarantee they do not write to PostgreSQL.
 
 ### 7. The View-Tour UI Mandate
 * Every `<template>` and `<record model="ir.ui.view">` defined in XML MUST contain a bidirectional semantic anchor linking it to an automated JS Tour.

@@ -4,14 +4,15 @@ import shutil
 import argparse
 from datetime import datetime
 
+
 def create_workspace(dest_dir):
     """
-    Generates an isolated task workspace containing only formal documentation, 
+    Generates an isolated task workspace containing only formal documentation,
     API contracts, and tooling to preserve LLM token context when building new features.
     """
     # Resolve to absolute path to safely copy outside the repo if requested
     dest_path = os.path.abspath(dest_dir)
-    
+
     if not os.path.exists(dest_path):
         os.makedirs(dest_path)
 
@@ -22,7 +23,7 @@ def create_workspace(dest_dir):
     for target_dir in dirs_to_copy:
         src = target_dir
         dest = os.path.join(dest_path, target_dir)
-        
+
         if os.path.exists(src):
             # dirs_exist_ok=True requires Python 3.8+
             shutil.copytree(src, dest, dirs_exist_ok=True)
@@ -41,11 +42,16 @@ def create_workspace(dest_dir):
     print("[*] Source code explicitly excluded to preserve LLM token context.")
     print("[*] Workspace generation complete.")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate an isolated Task Workspace for LLM development.")
+    parser = argparse.ArgumentParser(
+        description="Generate an isolated Task Workspace for LLM development."
+    )
     # Default to placing it outside the current git tree to avoid accidental commits
     default_dest = f"../task_workspace_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    parser.add_argument("--dest", default=default_dest, help="Destination directory for the workspace")
+    parser.add_argument(
+        "--dest", default=default_dest, help="Destination directory for the workspace"
+    )
     args = parser.parse_args()
-    
+
     create_workspace(args.dest)

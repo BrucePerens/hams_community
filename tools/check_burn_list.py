@@ -6,6 +6,7 @@ import ast
 import argparse
 import xml.parsers.expat
 
+
 class XMLNode:
     def __init__(self, tag, attrs, lineno):
         self.tag = tag
@@ -29,14 +30,19 @@ class XMLNode:
             p = p.parent
         return anc
 
+
 def parse_odoo_xml(content):
     def preserve_lines(match):
-        return re.sub(r'[^\n]', ' ', match.group(0))
+        return re.sub(r"[^\n]", " ", match.group(0))
 
-    content_clean = re.sub(r'^\s*<\?xml[^>]*\?>', preserve_lines, content, flags=re.IGNORECASE)
-    content_clean = re.sub(r'<!DOCTYPE[^>]*>', preserve_lines, content_clean, flags=re.IGNORECASE)
-    content_clean = content_clean.replace('&', '&amp;')
-    
+    content_clean = re.sub(
+        r"^\s*<\?xml[^>]*\?>", preserve_lines, content, flags=re.IGNORECASE
+    )
+    content_clean = re.sub(
+        r"<!DOCTYPE[^>]*>", preserve_lines, content_clean, flags=re.IGNORECASE
+    )
+    content_clean = content_clean.replace("&", "&amp;")
+
     wrapped = f"<root_wrapper>{content_clean}</root_wrapper>"
     parser = xml.parsers.expat.ParserCreate()
     stack = []
@@ -62,7 +68,7 @@ def parse_odoo_xml(content):
             stack[-1].text += data
 
     def comment(data):
-        node = XMLNode('#comment', {'text': data}, parser.CurrentLineNumber)
+        node = XMLNode("#comment", {"text": data}, parser.CurrentLineNumber)
         if stack:
             node.parent = stack[-1]
             stack[-1].children.append(node)
@@ -71,20 +77,64 @@ def parse_odoo_xml(content):
     parser.EndElementHandler = end_element
     parser.CharacterDataHandler = char_data
     parser.CommentHandler = comment
-    
+
     parser.Parse(wrapped, True)
     return root
 
+
 ERROR_RULES = [
-    (r'\.js$', re.compile(r'\.bindPopup\(\s*`|\.innerHTML\s*=\s*`'), "JS DOM XSS: Template literal passed to bindPopup or innerHTML."),
-    (r'\.py$', re.compile(r"['\"]groups_id['\"]\s*:"), "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'."),
-    (r'\.py$', re.compile(r'^\s*_sql_constraints\s*='), "CRITICAL DEPRECATION: Use 'models.Constraint' class attributes instead."),
-    (r'\.py$', re.compile(r' get_module_resource '), "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19."),
-    (r'controllers/.*\.py$', re.compile(r'@(?:tools\.)?ormcache'), "CRITICAL ARCHITECTURE: Cannot use @ormcache on Controller methods."),
-    (r'\.js$', re.compile(r'\$\('), "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components."),
-    (r'\.js$', re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'), "useService('company') is deprecated in modern Odoo frontends."),
-    (r'\.(py|js)$', re.compile(r"['\"]state['\"]\s*,\s*['\"](=|in)['\"]\s*,\s*(?:\[\s*)?['\"](open|closed)['\"]"), "CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean)."),
-    (r'test_.*\.py$', re.compile(r'\b(?:self\.)?env\.cr\.(?:commit|rollback)\(\)'), "TEST CURSOR CORRUPTION: Calling commit() or rollback() inside tests breaks the Odoo 19 test cursor.")
+    (
+        r"\.js$",
+        re.compile(r"\.bindPopup\(\s*`|\.innerHTML\s*=\s*`"),
+        "JS DOM XSS: Template literal passed to bindPopup or innerHTML.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"['\"]groups_id['\"]\s*:"),
+        "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"^\s*_sql_constraints\s*="),
+        "CRITICAL DEPRECATION: Use 'models.Constraint' class attributes instead.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r" get_module_resource "),
+        "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19.",
+    ),
+    (
+        r"controllers/.*\.py$",
+        re.compile(r"@(?:tools\.)?ormcache"),
+        "CRITICAL ARCHITECTURE: Cannot use @ormcache on Controller methods.",
+    ),
+    (
+        r"\.js$",
+        re.compile(r"\$\("),
+        "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components.",
+    ),
+    (
+        r"\.js$",
+        re.compile(r'useService\s*\(\s*["\']company["\']\s*\)'),
+        "useService('company') is deprecated in modern Odoo frontends.",
+    ),
+    (
+        r"\.(py|js)$",
+        re.compile(
+            r"['\"]state['\"]\s*,\s*['\"](=|in)['\"]\s*,\s*(?:\[\s*)?['\"](open|closed)['\"]"
+        ),
+        "CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).",
+    ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"\b(?:self\.)?env\.cr\.(?:commit|rollback)\(\)"),
+        "TEST CURSOR CORRUPTION: Calling commit() or rollback() inside tests breaks the Odoo 19 test cursor.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"['\"]detailed_type['\"]\s*:"),
+        "CRITICAL DEPRECATION: 'detailed_type' on product.template was reverted to 'type' in Odoo 19.",
+    ),
 ]
 
 WARNING_RULES = []
@@ -92,6 +142,7 @@ MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
 REQUIRE_TEST_VERIFICATION = []
 FOUND_TEST_CONTENTS = {}
+
 
 def check_ast_vulnerabilities(filepath, content, lines):
     errors = []
@@ -102,7 +153,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
     except SyntaxError as e:
         errors.append((e.lineno or 1, f"CRITICAL SYNTAX/INDENTATION ERROR: {e.msg}"))
         return errors, warnings
-        
+
     class TaintVisitor(ast.NodeVisitor):
         def __init__(self, filename, lines):
             self.errors = []
@@ -116,17 +167,29 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.current_method = None
             self.current_decorators = []
             self.current_kwarg_name = None
-            self.defined_functions = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+            self.defined_functions = {
+                n.name
+                for n in ast.walk(tree)
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
 
         def add_error(self, lineno, msg):
-            if lineno <= len(self.lines) and 'burn-ignore' in self.lines[lineno - 1]:
+            if lineno <= len(self.lines) and "burn-ignore" in self.lines[lineno - 1]:
                 return
             self.errors.append((lineno, msg))
 
         def add_warning(self, lineno, msg):
             if lineno <= len(self.lines):
                 line_content = self.lines[lineno - 1]
-                if 'burn-ignore' in line_content or ('audit-ignore-mail' in line_content and 'Mail Templates' in msg) or ('audit-ignore-search' in line_content and 'Data Integrity' in msg) or ('audit-ignore-i18n' in line_content and 'I18N' in msg):
+                if (
+                    "burn-ignore" in line_content
+                    or ("audit-ignore-mail" in line_content and "Mail Templates" in msg)
+                    or (
+                        "audit-ignore-search" in line_content
+                        and "Data Integrity" in msg
+                    )
+                    or ("audit-ignore-i18n" in line_content and "I18N" in msg)
+                ):
                     return
             self.warnings.append((lineno, msg))
 
@@ -138,8 +201,15 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     return "%% interpolation"
                 if isinstance(node.op, ast.Add):
                     return "string concatenation"
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'format':
-                is_safe_sql = isinstance(node.func.value, ast.Call) and getattr(node.func.value.func, 'attr', '') == 'SQL'
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "format"
+            ):
+                is_safe_sql = (
+                    isinstance(node.func.value, ast.Call)
+                    and getattr(node.func.value.func, "attr", "") == "SQL"
+                )
                 if not is_safe_sql:
                     return ".format()"
             if isinstance(node, ast.Name):
@@ -156,26 +226,46 @@ def check_ast_vulnerabilities(filepath, content, lines):
         def is_untranslated_string(self, node):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 val = node.value.strip()
-                if len(val) < 5 or ' ' not in val or val.upper().startswith(('SELECT ', 'UPDATE ', 'INSERT ', 'DELETE ')):
+                if (
+                    len(val) < 5
+                    or " " not in val
+                    or val.upper().startswith(
+                        ("SELECT ", "UPDATE ", "INSERT ", "DELETE ")
+                    )
+                ):
                     return False
                 return True
             elif isinstance(node, ast.JoinedStr):
                 return True
-            elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mod, ast.Add)):
+            elif isinstance(node, ast.BinOp) and isinstance(
+                node.op, (ast.Mod, ast.Add)
+            ):
                 return self.is_untranslated_string(node.left)
             elif isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute) and node.func.attr == 'format':
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "format":
                     return self.is_untranslated_string(node.func.value)
-                if isinstance(node.func, ast.Name) and node.func.id == '_':
+                if isinstance(node.func, ast.Name) and node.func.id == "_":
                     return False
             return False
 
         def visit_With(self, node):
-            is_cursor = any(isinstance(item.context_expr, ast.Call) and isinstance(item.context_expr.func, ast.Attribute) and item.context_expr.func.attr == 'cursor' for item in node.items)
+            is_cursor = any(
+                isinstance(item.context_expr, ast.Call)
+                and isinstance(item.context_expr.func, ast.Attribute)
+                and item.context_expr.func.attr == "cursor"
+                for item in node.items
+            )
             if is_cursor:
                 for child in ast.walk(node):
-                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and child.func.attr in ('commit', 'rollback'):
-                        self.add_error(child.lineno, "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block.")
+                    if (
+                        isinstance(child, ast.Call)
+                        and isinstance(child.func, ast.Attribute)
+                        and child.func.attr in ("commit", "rollback")
+                    ):
+                        self.add_error(
+                            child.lineno,
+                            "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block.",
+                        )
             self.generic_visit(node)
 
         def visit_Dict(self, node):
@@ -183,125 +273,281 @@ def check_ast_vulnerabilities(filepath, content, lines):
             for k, v in zip(node.keys, node.values):
                 if isinstance(k, ast.Constant) and isinstance(k.value, str):
                     keys_found.add(k.value)
-                    if k.value in ('error', 'success', 'warning', 'message') and self.is_untranslated_string(v):
-                        self.add_warning(node.lineno, f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.")
-                    if k.value == 'groups_id':
-                        self.add_error(node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'.")
-            if 'owner_user_id' in keys_found and 'user_websites_group_id' in keys_found:
-                self.add_error(node.lineno, "MUTUAL EXCLUSIVITY TRAP: Cannot assign both 'owner_user_id' and 'user_websites_group_id'.")
+                    if k.value in (
+                        "error",
+                        "success",
+                        "warning",
+                        "message",
+                    ) and self.is_untranslated_string(v):
+                        self.add_warning(
+                            node.lineno,
+                            f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.",
+                        )
+                    if k.value == "groups_id":
+                        self.add_error(
+                            node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
+                        )
+            if "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
+                self.add_error(
+                    node.lineno,
+                    "MUTUAL EXCLUSIVITY TRAP: Cannot assign both 'owner_user_id' and 'user_websites_group_id'.",
+                )
             self.generic_visit(node)
 
         def visit_For(self, node):
             is_chunking_loop = False
-            if isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range' and len(node.iter.args) == 3:
+            if (
+                isinstance(node.iter, ast.Call)
+                and getattr(node.iter.func, "id", "") == "range"
+                and len(node.iter.args) == 3
+            ):
                 step_arg = node.iter.args[2]
-                if isinstance(step_arg, ast.Name) and step_arg.id in ('chunk_size', 'batch_size'):
+                if isinstance(step_arg, ast.Name) and step_arg.id in (
+                    "chunk_size",
+                    "batch_size",
+                ):
                     is_chunking_loop = True
             if not is_chunking_loop:
                 self.loop_depth += 1
             self.generic_visit(node)
             if not is_chunking_loop:
                 self.loop_depth -= 1
-                
+
         def _check_test_empty(self, node):
-            if self.filename.startswith('test_') and node.name.startswith('test_'):
-                calls_external = any(isinstance(child, ast.Call) and getattr(child.func, 'id', getattr(child.func, 'attr', None)) not in self.defined_functions for child in ast.walk(node))
+            if self.filename.startswith("test_") and node.name.startswith("test_"):
+                calls_external = any(
+                    isinstance(child, ast.Call)
+                    and getattr(child.func, "id", getattr(child.func, "attr", None))
+                    not in self.defined_functions
+                    for child in ast.walk(node)
+                )
                 if not calls_external:
-                    self.add_error(node.lineno, f"EMPTY TEST: Test '{node.name}' must call external functions.")
-                
+                    self.add_error(
+                        node.lineno,
+                        f"EMPTY TEST: Test '{node.name}' must call external functions.",
+                    )
+
                 for i, stmt in enumerate(node.body):
-                    if isinstance(stmt, (ast.Return, ast.Raise, ast.Break, ast.Continue)) and i < len(node.body) - 1:
-                        self.add_error(stmt.lineno, f"AST EVASION: Unreachable code detected after return/raise/break/continue in '{node.name}'.")
+                    if (
+                        isinstance(
+                            stmt, (ast.Return, ast.Raise, ast.Break, ast.Continue)
+                        )
+                        and i < len(node.body) - 1
+                    ):
+                        self.add_error(
+                            stmt.lineno,
+                            f"AST EVASION: Unreachable code detected after return/raise/break/continue in '{node.name}'.",
+                        )
 
         def visit_FunctionDef(self, node):
-            is_controller = any((isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute) and dec.func.attr == 'route') or (isinstance(dec, ast.Attribute) and dec.attr == 'route') for dec in node.decorator_list)
+            is_controller = any(
+                (
+                    isinstance(dec, ast.Call)
+                    and isinstance(dec.func, ast.Attribute)
+                    and dec.func.attr == "route"
+                )
+                or (isinstance(dec, ast.Attribute) and dec.attr == "route")
+                for dec in node.decorator_list
+            )
             for dec in node.decorator_list:
-                if (isinstance(dec, ast.Attribute) and dec.attr == 'returns' and getattr(dec.value, 'id', '') == 'api') or (isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute) and dec.func.attr == 'returns' and getattr(dec.func.value, 'id', '') == 'api'):
+                if (
+                    isinstance(dec, ast.Attribute)
+                    and dec.attr == "returns"
+                    and getattr(dec.value, "id", "") == "api"
+                ) or (
+                    isinstance(dec, ast.Call)
+                    and isinstance(dec.func, ast.Attribute)
+                    and dec.func.attr == "returns"
+                    and getattr(dec.func.value, "id", "") == "api"
+                ):
                     self.add_error(node.lineno, "@api.returns is deprecated.")
-            
+
             self._check_test_empty(node)
-            
-            old_assignments, old_http, old_method, old_decorators, old_kwarg = self.assignments.copy(), self.in_http_controller, self.current_method, self.current_decorators, self.current_kwarg_name
-            self.assignments, self.in_http_controller, self.current_method = {}, is_controller, node.name
-            self.current_decorators = [dec.attr if isinstance(dec, ast.Attribute) else (getattr(dec.func, 'attr', '') if hasattr(dec, 'func') else getattr(dec, 'id', '')) for dec in node.decorator_list]
+
+            old_assignments, old_http, old_method, old_decorators, old_kwarg = (
+                self.assignments.copy(),
+                self.in_http_controller,
+                self.current_method,
+                self.current_decorators,
+                self.current_kwarg_name,
+            )
+            self.assignments, self.in_http_controller, self.current_method = (
+                {},
+                is_controller,
+                node.name,
+            )
+            self.current_decorators = [
+                (
+                    dec.attr
+                    if isinstance(dec, ast.Attribute)
+                    else (
+                        getattr(dec.func, "attr", "")
+                        if hasattr(dec, "func")
+                        else getattr(dec, "id", "")
+                    )
+                )
+                for dec in node.decorator_list
+            ]
             self.current_kwarg_name = node.args.kwarg.arg if node.args.kwarg else None
 
             self.generic_visit(node)
 
-            self.assignments, self.in_http_controller, self.current_method, self.current_decorators, self.current_kwarg_name = old_assignments, old_http, old_method, old_decorators, old_kwarg
+            (
+                self.assignments,
+                self.in_http_controller,
+                self.current_method,
+                self.current_decorators,
+                self.current_kwarg_name,
+            ) = (old_assignments, old_http, old_method, old_decorators, old_kwarg)
 
         def visit_Assign(self, node):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     self.assignments[target.id] = node.value
-                elif isinstance(target, ast.Attribute) and target.attr == 'context' and isinstance(target.value, ast.Attribute) and target.value.attr == 'env' and getattr(target.value.value, 'id', '') == 'self':
-                    self.add_error(node.lineno, "Never modify `self.env.context` directly. Use `self.with_context()`.")
-                elif isinstance(target, ast.Name) and target.id == '_sql_constraints':
-                    self.add_error(node.lineno, "Use 'models.Constraint' instead of '_sql_constraints'.")
-                elif isinstance(target, ast.Subscript) and getattr(target, 'slice', None) and getattr(target.slice, 'value', None) in ('error', 'success', 'warning', 'message') and self.is_untranslated_string(node.value):
-                    self.add_warning(node.lineno, "[AUDIT] I18N: Untranslated string assigned to dict key.")
+                elif (
+                    isinstance(target, ast.Attribute)
+                    and target.attr == "context"
+                    and isinstance(target.value, ast.Attribute)
+                    and target.value.attr == "env"
+                    and getattr(target.value.value, "id", "") == "self"
+                ):
+                    self.add_error(
+                        node.lineno,
+                        "Never modify `self.env.context` directly. Use `self.with_context()`.",
+                    )
+                elif isinstance(target, ast.Name) and target.id == "_sql_constraints":
+                    self.add_error(
+                        node.lineno,
+                        "Use 'models.Constraint' instead of '_sql_constraints'.",
+                    )
+                elif (
+                    isinstance(target, ast.Subscript)
+                    and getattr(target, "slice", None)
+                    and getattr(target.slice, "value", None)
+                    in ("error", "success", "warning", "message")
+                    and self.is_untranslated_string(node.value)
+                ):
+                    self.add_warning(
+                        node.lineno,
+                        "[AUDIT] I18N: Untranslated string assigned to dict key.",
+                    )
             self.generic_visit(node)
 
         def visit_Import(self, node):
             for alias in node.names:
-                if alias.name == 'pickle':
-                    self.add_error(node.lineno, "CRITICAL RCE: The pickle module is vulnerable.")
-                elif alias.name == 'random':
+                if alias.name == "pickle":
+                    self.add_error(
+                        node.lineno, "CRITICAL RCE: The pickle module is vulnerable."
+                    )
+                elif alias.name == "random":
                     self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random'.")
             self.generic_visit(node)
 
         def visit_ImportFrom(self, node):
-            if node.module == 'pickle':
-                self.add_error(node.lineno, "CRITICAL RCE: The pickle module is vulnerable.")
-            elif node.module == 'random':
+            if node.module == "pickle":
+                self.add_error(
+                    node.lineno, "CRITICAL RCE: The pickle module is vulnerable."
+                )
+            elif node.module == "random":
                 self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random'.")
-            elif getattr(node, 'module', '') == 'odoo.modules' and any(alias.name == 'get_module_resource' for alias in node.names):
-                self.add_error(node.lineno, "CRITICAL DEPRECATION: 'get_module_resource' is removed.")
+            elif getattr(node, "module", "") == "odoo.modules" and any(
+                alias.name == "get_module_resource" for alias in node.names
+            ):
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL DEPRECATION: 'get_module_resource' is removed.",
+                )
             self.generic_visit(node)
 
         def visit_Constant(self, node):
-            if isinstance(node.value, str) and re.search(r' numbercall ', node.value):
-                self.add_error(node.lineno, "Remove 'numbercall'. Odoo 18+ crons run indefinitely.")
+            if isinstance(node.value, str) and re.search(r" numbercall ", node.value):
+                self.add_error(
+                    node.lineno, "Remove 'numbercall'. Odoo 18+ crons run indefinitely."
+                )
             self.generic_visit(node)
 
         def visit_Name(self, node):
-            if node.id == 'numbercall':
+            if node.id == "numbercall":
                 self.add_error(node.lineno, "Remove 'numbercall'.")
-            elif node.id == '_sql_constraints':
+            elif node.id == "_sql_constraints":
                 self.add_error(node.lineno, "Use 'models.Constraint'.")
             self.generic_visit(node)
 
         def visit_keyword(self, node):
-            if node.arg == 'numbercall':
-                self.add_error(getattr(node, 'lineno', 1), "Remove 'numbercall'.")
-            elif node.arg == 'groups_id':
-                self.add_error(getattr(node, 'lineno', 1), "CRITICAL BIAS TRAP: Do not use 'groups_id'.")
-            elif node.arg in ('oldname', 'select'):
-                self.add_error(getattr(node, 'lineno', 1), f"CRITICAL DEPRECATION: '{node.arg}' is a legacy attribute.")
-            elif node.arg == 'type' and getattr(node.value, 'value', None) == 'json':
-                self.add_error(getattr(node, 'lineno', 1), "Use type='jsonrpc'.")
-            elif node.arg == 'index' and getattr(node.value, 'value', None) == 'trgm':
-                self.add_error(getattr(node, 'lineno', 1), "Use index='trigram'.")
-            elif node.arg == 'csrf' and getattr(node.value, 'value', None) in (False, 0) and not re.search(r'.*_?api\.py$', self.filename):
-                self.add_error(getattr(node, 'lineno', 1), "SECURITY ALERT: csrf=False found outside an API.")
-            elif node.arg == 'shell' and getattr(node.value, 'value', None) == True:
-                self.add_error(getattr(node, 'lineno', 1), "CRITICAL SHELL INJECTION: Avoid shell=True.")
-            elif node.arg == 'related' and getattr(node.value, 'value', '').endswith('.users'):
-                self.add_error(getattr(node, 'lineno', 1), "Legacy security relation: Use 'user_ids'.")
+            if node.arg == "numbercall":
+                self.add_error(getattr(node, "lineno", 1), "Remove 'numbercall'.")
+            elif node.arg == "groups_id":
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    "CRITICAL BIAS TRAP: Do not use 'groups_id'.",
+                )
+            elif node.arg in ("oldname", "select"):
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    f"CRITICAL DEPRECATION: '{node.arg}' is a legacy attribute.",
+                )
+            elif node.arg == "type" and getattr(node.value, "value", None) == "json":
+                self.add_error(getattr(node, "lineno", 1), "Use type='jsonrpc'.")
+            elif node.arg == "index" and getattr(node.value, "value", None) == "trgm":
+                self.add_error(getattr(node, "lineno", 1), "Use index='trigram'.")
+            elif (
+                node.arg == "csrf"
+                and getattr(node.value, "value", None) in (False, 0)
+                and not re.search(r".*_?api\.py$", self.filename)
+            ):
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    "SECURITY ALERT: csrf=False found outside an API.",
+                )
+            elif node.arg == "shell" and getattr(node.value, "value", None) is True:
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    "CRITICAL SHELL INJECTION: Avoid shell=True.",
+                )
+            elif node.arg == "related" and getattr(node.value, "value", "").endswith(
+                ".users"
+            ):
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    "Legacy security relation: Use 'user_ids'.",
+                )
             self.generic_visit(node)
 
         def visit_Attribute(self, node):
-            if node.attr == 'sudo':
-                line_content = self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""
-                if self.filename == 'security_utils.py':
-                    if '.sudo()._xmlid_to_res_id' not in line_content and '.sudo().get_param' not in line_content:
-                        self.add_error(node.lineno, "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.")
-                elif not ('# burn-ignore' in line_content and ('database.secret' in line_content or '.sudo().unlink()' in line_content)):
-                    self.add_error(node.lineno, "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.")
-            if getattr(node.value, 'id', '') == 'self':
-                if node.attr in ('_context', '_uid'):
-                    self.add_error(node.lineno, f"Use 'self.env.{node.attr.strip('_')}'.")
-            elif node.attr == 'users' and getattr(node.value, 'id', getattr(node.value, 'attr', '')) in ('group', 'groups', '_group_id'):
+            if node.attr == "sudo":
+                line_content = (
+                    self.lines[node.lineno - 1]
+                    if node.lineno <= len(self.lines)
+                    else ""
+                )
+                if self.filename == "security_utils.py":
+                    if (
+                        ".sudo()._xmlid_to_res_id" not in line_content
+                        and ".sudo().get_param" not in line_content
+                    ):
+                        self.add_error(
+                            node.lineno,
+                            "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
+                        )
+                elif not (
+                    "# burn-ignore" in line_content
+                    and (
+                        "database.secret" in line_content
+                        or ".sudo().unlink()" in line_content
+                    )
+                ):
+                    self.add_error(
+                        node.lineno,
+                        "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
+                    )
+            if getattr(node.value, "id", "") == "self":
+                if node.attr in ("_context", "_uid"):
+                    self.add_error(
+                        node.lineno, f"Use 'self.env.{node.attr.strip('_')}'."
+                    )
+            elif node.attr == "users" and getattr(
+                node.value, "id", getattr(node.value, "attr", "")
+            ) in ("group", "groups", "_group_id"):
                 self.add_error(node.lineno, "Legacy security relation: Use 'user_ids'.")
             self.generic_visit(node)
 
@@ -309,113 +555,252 @@ def check_ast_vulnerabilities(filepath, content, lines):
             if not isinstance(node.func, ast.Name):
                 return
             fid = node.func.id
-            if fid == 'hash':
-                self.add_error(node.lineno, "CRITICAL NON-DETERMINISM: Python's native `hash()` is salted...")
-            elif fid == 'eval':
+            if fid == "hash":
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL NON-DETERMINISM: Python's native `hash()` is salted...",
+                )
+            elif fid == "eval":
                 self.add_error(node.lineno, "CRITICAL RCE: Never use native eval()...")
-            elif fid == 'exec':
-                self.add_error(node.lineno, "CRITICAL RCE: The use of exec() is strictly forbidden.")
-            elif fid == '_sign_token':
-                self.add_error(node.lineno, "Verify '_sign_token' is not called on models lacking an 'access_token' field...")
-            elif fid == 'clear_caches':
-                self.add_error(node.lineno, "ORM cache invalidation in Odoo 19+ MUST use `self.env.registry.clear_cache()`.")
-            elif fid == '_check_recursion':
+            elif fid == "exec":
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL RCE: The use of exec() is strictly forbidden.",
+                )
+            elif fid == "_sign_token":
+                self.add_error(
+                    node.lineno,
+                    "Verify '_sign_token' is not called on models lacking an 'access_token' field...",
+                )
+            elif fid == "clear_caches":
+                self.add_error(
+                    node.lineno,
+                    "ORM cache invalidation in Odoo 19+ MUST use targeted `.clear_cache(self)` or `self.env.registry.clear_cache()`.",
+                )
+            elif fid == "_check_recursion":
                 self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
-            elif fid == 'getattr' and len(node.args) >= 2 and getattr(node.args[1], 'value', None) == 'sudo':
-                self.add_error(node.lineno, "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().")
+            elif (
+                fid == "getattr"
+                and len(node.args) >= 2
+                and getattr(node.args[1], "value", None) == "sudo"
+            ):
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().",
+                )
 
         def _check_i18n_messages(self, node, func_name):
-            if func_name in ('UserError', 'AccessError', 'ValidationError'):
+            if func_name in ("UserError", "AccessError", "ValidationError"):
                 if node.args and self.is_untranslated_string(node.args[0]):
-                    self.add_warning(node.lineno, f"[AUDIT] I18N: User-facing exception message in '{func_name}' should be wrapped in _() for translation.")
-            elif func_name in ('message_post', 'message_subscribe'):
+                    self.add_warning(
+                        node.lineno,
+                        f"[AUDIT] I18N: User-facing exception message in '{func_name}' should be wrapped in _() for translation.",
+                    )
+            elif func_name in ("message_post", "message_subscribe"):
                 for kw in node.keywords:
-                    if kw.arg in ('body', 'subject') and self.is_untranslated_string(kw.value):
-                        self.add_warning(node.lineno, f"[AUDIT] I18N: User-facing chatter '{kw.arg}' in {func_name} should be wrapped in _() for translation.")
+                    if kw.arg in ("body", "subject") and self.is_untranslated_string(
+                        kw.value
+                    ):
+                        self.add_warning(
+                            node.lineno,
+                            f"[AUDIT] I18N: User-facing chatter '{kw.arg}' in {func_name} should be wrapped in _() for translation.",
+                        )
 
         def _check_forbidden_attributes(self, node, attr):
             is_cr_execute = False
-            if attr == 'execute' and getattr(node.func.value, 'attr', getattr(node.func.value, 'id', '')) == 'cr':
+            if (
+                attr == "execute"
+                and getattr(node.func.value, "attr", getattr(node.func.value, "id", ""))
+                == "cr"
+            ):
                 is_cr_execute = True
-            elif attr == 'send_mail':
-                self.add_warning(node.lineno, "[AUDIT] Mail Templates: Verify model_id matches.")
-            elif attr == '_sign_token':
+            elif attr == "send_mail":
+                self.add_warning(
+                    node.lineno, "[AUDIT] Mail Templates: Verify model_id matches."
+                )
+            elif attr == "_sign_token":
                 self.add_error(node.lineno, "Verify '_sign_token' context...")
-            elif attr == 'clear_caches':
-                self.add_error(node.lineno, "ORM cache invalidation MUST use `self.env.registry.clear_cache()`.")
-            elif attr == 'clear_cache' and getattr(node.func.value, 'attr', getattr(node.func.value, 'id', '')) != 'registry':
-                self.add_error(node.lineno, "ORM cache invalidation MUST use `self.env.registry.clear_cache()`.")
-            elif attr in ('search', 'create', 'browse') and getattr(node.func.value, 'id', '') == 'self':
-                self.add_error(node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`")
-            elif attr == '_check_recursion':
+            elif attr == "clear_caches":
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL DEPRECATION: `clear_caches()` is removed. Use `self.method.clear_cache(self)` or `self.env.registry.clear_cache()`.",
+                )
+            elif (
+                attr in ("search", "create", "browse")
+                and getattr(node.func.value, "id", "") == "self"
+            ):
+                self.add_error(
+                    node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`"
+                )
+            elif attr == "_check_recursion":
                 self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
-            elif attr in ('message_post', 'message_subscribe') and ('res.users' in (ast.unparse(node.func.value).strip() if hasattr(ast, 'unparse') else "") or str(getattr(node.func.value, 'attr', '')) in ('user_id', 'user')):
-                self.add_error(node.lineno, "Messaging & Followers: Do not call on res.users directly.")
-            elif attr in ('loads', 'dumps') and getattr(node.func.value, 'id', '') == 'pickle':
-                self.add_error(node.lineno, "CRITICAL RCE: The pickle module is vulnerable.")
-            elif attr in ('md5', 'sha1') and getattr(node.func.value, 'id', '') == 'hashlib':
+            elif attr in ("message_post", "message_subscribe") and (
+                "res.users"
+                in (
+                    ast.unparse(node.func.value).strip()
+                    if hasattr(ast, "unparse")
+                    else ""
+                )
+                or str(getattr(node.func.value, "attr", "")) in ("user_id", "user")
+            ):
+                self.add_error(
+                    node.lineno,
+                    "Messaging & Followers: Do not call on res.users directly.",
+                )
+            elif attr == "ref" and len(node.args) == 1 and isinstance(node.args[0], ast.Constant) and node.args[0].value == "base.group_user":
+                if not ("mail_service" in self.filename or "user_manager" in self.filename):
+                    self.add_warning(
+                        node.lineno,
+                        "[AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Use base.group_portal.",
+                    )
+            elif (
+                attr in ("loads", "dumps")
+                and getattr(node.func.value, "id", "") == "pickle"
+            ):
+                self.add_error(
+                    node.lineno, "CRITICAL RCE: The pickle module is vulnerable."
+                )
+            elif (
+                attr in ("md5", "sha1")
+                and getattr(node.func.value, "id", "") == "hashlib"
+            ):
                 self.add_error(node.lineno, "WEAK CRYPTO: MD5/SHA1 broken.")
-            elif attr in ('choice', 'randint', 'random') and getattr(node.func.value, 'id', '') == 'random':
+            elif (
+                attr in ("choice", "randint", "random")
+                and getattr(node.func.value, "id", "") == "random"
+            ):
                 self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random'.")
-            elif attr == 'sleep' and getattr(node.func.value, 'id', '') == 'time' and 'audit-ignore-sleep' not in (self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""):
-                self.add_warning(node.lineno, "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...")
-            elif attr == 'Thread' and getattr(node.func.value, 'id', '') == 'threading':
+            elif (
+                attr == "sleep"
+                and getattr(node.func.value, "id", "") == "time"
+                and "audit-ignore-sleep"
+                not in (
+                    self.lines[node.lineno - 1]
+                    if node.lineno <= len(self.lines)
+                    else ""
+                )
+            ):
+                self.add_warning(
+                    node.lineno,
+                    "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...",
+                )
+            elif attr == "Thread" and getattr(node.func.value, "id", "") == "threading":
                 self.add_error(node.lineno, "CRITICAL DOS VECTOR: Unbounded Thread.")
-            
+
             if self.in_http_controller:
-                if attr == 'get' and getattr(node.func.value, 'id', '') == self.current_kwarg_name:
-                    self.add_warning(node.lineno, "[AUDIT] CONTROLLER BINDING: Ensure explicit inputs.")
-                elif attr in ('create', 'write') and (any(getattr(arg, 'id', '') in ('kwargs', 'kw', 'post') for arg in node.args) or any(getattr(kw.value, 'id', '') in ('kwargs', 'kw', 'post') for kw in node.keywords if kw.arg is None)):
-                    self.add_warning(node.lineno, "[AUDIT] RPC MASS ASSIGNMENT: Never pass raw request payloads directly to create/write.")
+                if (
+                    attr == "get"
+                    and getattr(node.func.value, "id", "") == self.current_kwarg_name
+                ):
+                    self.add_warning(
+                        node.lineno,
+                        "[AUDIT] CONTROLLER BINDING: Ensure explicit inputs.",
+                    )
+                elif attr in ("create", "write") and (
+                    any(
+                        getattr(arg, "id", "") in ("kwargs", "kw", "post")
+                        for arg in node.args
+                    )
+                    or any(
+                        getattr(kw.value, "id", "") in ("kwargs", "kw", "post")
+                        for kw in node.keywords
+                        if kw.arg is None
+                    )
+                ):
+                    self.add_warning(
+                        node.lineno,
+                        "[AUDIT] RPC MASS ASSIGNMENT: Never pass raw request payloads directly to create/write.",
+                    )
             return is_cr_execute
 
         def _check_search_methods(self, node, attr):
-            if getattr(node.func.value, 'id', '') == 're':
+            if getattr(node.func.value, "id", "") == "re":
                 return
-            if attr == 'search':
-                if not any(kw.arg == 'limit' for kw in node.keywords) and not self.filename.startswith('test_'):
-                    self.add_warning(node.lineno, "[AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'.")
-                if any(kw.arg == 'count' for kw in node.keywords):
-                    self.add_error(node.lineno, "CRITICAL DEPRECATION: Use `search_count(...)`.")
-            
+            if attr == "search":
+                if not any(
+                    kw.arg == "limit" for kw in node.keywords
+                ) and not self.filename.startswith("test_"):
+                    self.add_warning(
+                        node.lineno,
+                        "[AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'.",
+                    )
+                if any(kw.arg == "count" for kw in node.keywords):
+                    self.add_error(
+                        node.lineno, "CRITICAL DEPRECATION: Use `search_count(...)`."
+                    )
+
             val = node.func.value
-            is_env_subscript = isinstance(val, ast.Subscript) and getattr(val.value, 'attr', getattr(val.value, 'id', '')) == 'env'
-            if is_env_subscript and (self.current_method in ('create', 'write') or (self.current_method or '').startswith(('_check_', '_validate_')) or any(d in self.current_decorators for d in ('constrains', 'onchange'))):
-                self.add_warning(node.lineno, f"[AUDIT] Data Integrity: Direct `{attr}()` on env without `.sudo()`.")
+            is_env_subscript = (
+                isinstance(val, ast.Subscript)
+                and getattr(val.value, "attr", getattr(val.value, "id", "")) == "env"
+            )
+            if is_env_subscript and (
+                self.current_method in ("create", "write")
+                or (self.current_method or "").startswith(("_check_", "_validate_"))
+                or any(d in self.current_decorators for d in ("constrains", "onchange"))
+            ):
+                self.add_warning(
+                    node.lineno,
+                    f"[AUDIT] Data Integrity: Direct `{attr}()` on env without `.sudo()`.",
+                )
 
         def _check_cr_execute(self, node, is_cr_execute):
             if is_cr_execute and node.args:
                 taint_reason = self.is_tainted_sql(node.args[0])
                 if taint_reason:
-                    self.add_error(node.lineno, f"CRITICAL SQLi: Query constructed via {taint_reason} passed to cr.execute().")
+                    self.add_error(
+                        node.lineno,
+                        f"CRITICAL SQLi: Query constructed via {taint_reason} passed to cr.execute().",
+                    )
 
         def visit_Call(self, node):
             self._check_forbidden_functions(node)
-            func_name = getattr(node.func, 'id', getattr(node.func, 'attr', ''))
+            func_name = getattr(node.func, "id", getattr(node.func, "attr", ""))
             self._check_i18n_messages(node, func_name)
-            
+
             is_cr_execute = False
-            attr = getattr(node.func, 'attr', '') if isinstance(node.func, ast.Attribute) else ''
+            attr = (
+                getattr(node.func, "attr", "")
+                if isinstance(node.func, ast.Attribute)
+                else ""
+            )
             if attr:
                 is_cr_execute = self._check_forbidden_attributes(node, attr)
-                
-            if self.loop_depth > 0 and attr in ('search', 'search_count', 'read_group'):
-                caller_id = getattr(node.func.value, 'id', '') if hasattr(node.func, 'value') else ''
-                if caller_id != 're' and 'regex' not in caller_id:
-                    self.add_error(node.lineno, f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.")
-                
-            if attr in ('search', 'search_count'):
+
+            if self.loop_depth > 0 and attr in ("search", "search_count", "read_group"):
+                caller_id = (
+                    getattr(node.func.value, "id", "")
+                    if hasattr(node.func, "value")
+                    else ""
+                )
+                if caller_id != "re" and "regex" not in caller_id:
+                    self.add_error(
+                        node.lineno,
+                        f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.",
+                    )
+
+            if attr in ("search", "search_count"):
                 self._check_search_methods(node, attr)
-                
+
             self._check_cr_execute(node, is_cr_execute)
 
-            if attr == 'execute' and not is_cr_execute:
-                if len(node.args) >= 2 and getattr(node.args[1], 'value', None) in ('search', 'search_read', 'read'):
+            if attr == "execute" and not is_cr_execute:
+                if len(node.args) >= 2 and getattr(node.args[1], "value", None) in (
+                    "search",
+                    "search_read",
+                    "read",
+                ):
                     for arg in node.args[2:]:
                         if isinstance(arg, ast.Dict):
-                            keys = [getattr(k, 'value', None) for k in arg.keys]
-                            if any(k in ('fields', 'limit', 'offset', 'order') for k in keys):
-                                self.add_error(node.lineno, "CRITICAL XML-RPC KWARGS: Do not pass a dictionary of kwargs as a positional argument to search/search_read. Use explicit keyword arguments (e.g., fields=...).")
+                            keys = [getattr(k, "value", None) for k in arg.keys]
+                            if any(
+                                k in ("fields", "limit", "offset", "order")
+                                for k in keys
+                            ):
+                                self.add_error(
+                                    node.lineno,
+                                    "CRITICAL XML-RPC KWARGS: Do not pass a dictionary of kwargs as a positional argument to search/search_read. Use explicit keyword arguments (e.g., fields=...).",
+                                )
 
             self.generic_visit(node)
 
@@ -423,90 +808,189 @@ def check_ast_vulnerabilities(filepath, content, lines):
     visitor.visit(tree)
     return visitor.errors, visitor.warnings
 
+
 def scan_file(filepath):
     errors_found, warnings_found = [], []
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
             lines = content.splitlines()
     except Exception as e:
         return [f"Could not read file: {e}"], []
 
     filename = os.path.basename(filepath)
-    if filename.endswith('.xml'):
+    if filename.endswith(".xml"):
         try:
             root_node = parse_odoo_xml(content)
             for node in root_node.walk():
-                if node.tag == 'template' or (node.tag == 'record' and node.attrs.get('model') == 'ir.ui.view'):
-                    has_tour = any(["[%ANCHOR:" in child.attrs.get('text', '') for child in node.walk() if child.tag == '#comment'])
-                    if not has_tour and node.parent and node.parent.children.index(node) > 0:
-                        prev = node.parent.children[node.parent.children.index(node) - 1]
-                        if prev.tag == '#comment' and "[%ANCHOR:" in prev.attrs.get('text', ''):
+                if node.tag == "template" or (
+                    node.tag == "record" and node.attrs.get("model") == "ir.ui.view"
+                ):
+                    has_tour = any(
+                        [
+                            "[%ANCHOR:" in child.attrs.get("text", "")
+                            for child in node.walk()
+                            if child.tag == "#comment"
+                        ]
+                    )
+                    if (
+                        not has_tour
+                        and node.parent
+                        and node.parent.children.index(node) > 0
+                    ):
+                        prev = node.parent.children[
+                            node.parent.children.index(node) - 1
+                        ]
+                        if prev.tag == "#comment" and "[%ANCHOR:" in prev.attrs.get(
+                            "text", ""
+                        ):
                             has_tour = True
                     if not has_tour:
-                        raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
+                        raw_text = "\n".join(
+                            lines[
+                                max(0, node.lineno - 2) : min(
+                                    len(lines), node.end_lineno + 1
+                                )
+                            ]
+                        )
                         if "[%ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:
                             has_tour = True
                     if not has_tour:
-                        errors_found.append(f"Line {node.lineno}: UI TOUR MANDATE VIOLATION.")
-                    if node.attrs.get('inherit_id') in ('website.snippet_options', 'web_editor.snippet_options'):
-                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: snippet_options inheritance is highly volatile/removed in Odoo 19. Do not use it.")
-                if node.tag == 'record' and node.attrs.get('model') in ('ir.rule', 'res.groups') and not any(anc.tag == 'data' and anc.attrs.get('noupdate') in ('1', 'True', 'true') for anc in node.get_ancestors()):
-                    errors_found.append(f"Line {node.lineno}: CRITICAL SECURITY: <record> must be inside noupdate data block.")
-                if node.tag == 'xpath' and node.attrs.get('position') not in ('inside', 'replace', 'before', 'after', 'attributes'):
+                        errors_found.append(
+                            f"Line {node.lineno}: UI TOUR MANDATE VIOLATION."
+                        )
+                    if node.attrs.get("inherit_id") in (
+                        "website.snippet_options",
+                        "web_editor.snippet_options",
+                    ):
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL DEPRECATION: snippet_options inheritance is highly volatile/removed in Odoo 19. Do not use it."
+                        )
+                if (
+                    node.tag == "record"
+                    and node.attrs.get("model") in ("ir.rule", "res.groups")
+                    and not any(
+                        anc.tag == "data"
+                        and anc.attrs.get("noupdate") in ("1", "True", "true")
+                        for anc in node.get_ancestors()
+                    )
+                ):
+                    errors_found.append(
+                        f"Line {node.lineno}: CRITICAL SECURITY: <record> must be inside noupdate data block."
+                    )
+                if node.tag == "xpath" and node.attrs.get("position") not in (
+                    "inside",
+                    "replace",
+                    "before",
+                    "after",
+                    "attributes",
+                ):
                     errors_found.append(f"Line {node.lineno}: INVALID XPATH position.")
-                if node.tag == 'field' and 'name' not in node.attrs:
-                    errors_found.append(f"Line {node.lineno}: CRITICAL XML missing name.")
-                if 't-raw' in node.attrs:
+                if node.tag == "field" and "name" not in node.attrs:
+                    errors_found.append(
+                        f"Line {node.lineno}: CRITICAL XML missing name."
+                    )
+                if "t-raw" in node.attrs:
                     errors_found.append(f"Line {node.lineno}: CRITICAL XSS: use t-out.")
-                if node.tag == 'field' and node.attrs.get('name') in ('category_id', 'users', 'groups_id'):
-                    record_anc = next((anc for anc in node.get_ancestors() if anc.tag == 'record'), None)
-                    model = record_anc.attrs.get('model') if record_anc else None
-                    if model == 'res.groups' and node.attrs.get('name') == 'users':
-                        errors_found.append(f"Line {node.lineno}: CRITICAL BIAS TRAP: use user_ids.")
-                
+                if node.tag == "field" and node.attrs.get("name") in (
+                    "category_id",
+                    "users",
+                    "groups_id",
+                ):
+                    record_anc = next(
+                        (anc for anc in node.get_ancestors() if anc.tag == "record"),
+                        None,
+                    )
+                    model = record_anc.attrs.get("model") if record_anc else None
+                    if model == "res.groups" and node.attrs.get("name") == "users":
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL BIAS TRAP: use user_ids."
+                        )
+
                 for k, v in node.attrs.items():
                     v_str = str(v)
-                    if 'request.env' in v_str:
-                        errors_found.append(f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution.")
-                    if '.state' in v_str and ('open' in v_str or 'closed' in v_str) and ('==' in v_str or '!=' in v_str):
-                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).")
+                    if "request.env" in v_str:
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution."
+                        )
+                    if (
+                        ".state" in v_str
+                        and ("open" in v_str or "closed" in v_str)
+                        and ("==" in v_str or "!=" in v_str)
+                    ):
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean)."
+                        )
                 if node.text:
-                    if 'request.env' in node.text:
-                        errors_found.append(f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution.")
-                    if '.state' in node.text and ('open' in node.text or 'closed' in node.text) and ('==' in node.text or '!=' in node.text):
-                        errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).")
-                
-                if node.tag == 'record' and node.attrs.get('model') == 'ir.cron':
-                    raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
-                    if 'audit-ignore-cron' not in raw_text:
-                        warnings_found.append(f"Line {node.lineno}: [AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger().")
-                if node.tag == 'xpath':
-                    raw_text = "\n".join(lines[max(0, node.lineno - 2):min(len(lines), node.end_lineno + 1)])
-                    if 'audit-ignore-xpath' not in raw_text:
-                        warnings_found.append(f"Line {node.lineno}: [AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly.")
+                    if "request.env" in node.text:
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL SSTI: Using 'request.env' inside QWeb templates exposes the database to Remote Code Execution."
+                        )
+                    if (
+                        ".state" in node.text
+                        and ("open" in node.text or "closed" in node.text)
+                        and ("==" in node.text or "!=" in node.text)
+                    ):
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean)."
+                        )
+
+                if node.tag == "record" and node.attrs.get("model") == "ir.cron":
+                    raw_text = "\n".join(
+                        lines[
+                            max(0, node.lineno - 2) : min(
+                                len(lines), node.end_lineno + 1
+                            )
+                        ]
+                    )
+                    if "audit-ignore-cron" not in raw_text:
+                        warnings_found.append(
+                            f"Line {node.lineno}: [AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger()."
+                        )
+                if node.tag == "xpath":
+                    raw_text = "\n".join(
+                        lines[
+                            max(0, node.lineno - 2) : min(
+                                len(lines), node.end_lineno + 1
+                            )
+                        ]
+                    )
+                    if "audit-ignore-xpath" not in raw_text:
+                        warnings_found.append(
+                            f"Line {node.lineno}: [AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly."
+                        )
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
-        
-    if filename.startswith('test_') and filename.endswith('.py'):
+
+    if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
-    if filename.endswith('.py'):
+    if filename.endswith(".py"):
         ast_errs, ast_warns = check_ast_vulnerabilities(filepath, content, lines)
         for lineno, msg in ast_errs:
             code_snippet = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            errors_found.append(f"Line {lineno} (AST): {msg}\n      Code: `{code_snippet}`")
+            errors_found.append(
+                f"Line {lineno} (AST): {msg}\n      Code: `{code_snippet}`"
+            )
         for lineno, msg in ast_warns:
             code_snippet = lines[lineno - 1].strip() if lineno <= len(lines) else ""
-            warnings_found.append(f"Line {lineno} (AST): {msg}\n      Code: `{code_snippet}`")
+            warnings_found.append(
+                f"Line {lineno} (AST): {msg}\n      Code: `{code_snippet}`"
+            )
 
-    if filename.endswith('.js') and 'web_tour.tours' in content and 'trigger:' not in content:
-        errors_found.append("UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:.")
+    if (
+        filename.endswith(".js")
+        and "web_tour.tours" in content
+        and "trigger:" not in content
+    ):
+        errors_found.append(
+            "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
+        )
 
     in_py_multiline = False
     py_multiline_marker = None
     for line_num, line in enumerate(lines, 1):
         stripped = line.strip()
-        if filename.endswith('.py'):
+        if filename.endswith(".py"):
             if not in_py_multiline:
                 if '"""' in line or "'''" in line:
                     marker = '"""' if '"""' in line else "'''"
@@ -517,47 +1001,94 @@ def scan_file(filepath):
                 if py_multiline_marker in line:
                     in_py_multiline, py_multiline_marker = False, None
                 continue
-            if stripped.startswith('#'):
+            if stripped.startswith("#"):
                 continue
 
-        if filename.endswith('.js') and stripped.startswith('//'):
+        if filename.endswith(".js") and stripped.startswith("//"):
             continue
-        if filename.endswith('.xml') and stripped.startswith('<!--'):
+        if filename.endswith(".xml") and stripped.startswith("<!--"):
             continue
 
-        if 'burn-ignore' in line and not any(allowed in line for allowed in ['database.secret', 'burn-ignore-test-commit', '.sudo().unlink()']):
-            errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`")
-            
-        if 'audit-ignore' in line:
-            valid_audits = ['audit-ignore-cron', 'audit-ignore-mail', 'audit-ignore-search', 'audit-ignore-xpath', 'audit-ignore-sleep', 'audit-ignore-view', 'audit-ignore-i18n']
+        if "burn-ignore" in line and not any(
+            allowed in line
+            for allowed in [
+                "database.secret",
+                "burn-ignore-test-commit",
+                ".sudo().unlink()",
+            ]
+        ):
+            errors_found.append(
+                f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`"
+            )
+
+        if "audit-ignore" in line:
+            valid_audits = [
+                "audit-ignore-cron",
+                "audit-ignore-mail",
+                "audit-ignore-search",
+                "audit-ignore-xpath",
+                "audit-ignore-sleep",
+                "audit-ignore-view",
+                "audit-ignore-i18n",
+            ]
             if not any(tag in line for tag in valid_audits):
-                errors_found.append(f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`")
+                errors_found.append(
+                    f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`"
+                )
             else:
-                anchor_match = re.search(r'\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]', line)
+                anchor_match = re.search(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
                 if anchor_match:
-                    REQUIRE_TEST_VERIFICATION.append({'anchor': anchor_match.group(1), 'type': next((tag for tag in valid_audits if tag in line), None), 'file': filepath, 'line': line_num})
+                    REQUIRE_TEST_VERIFICATION.append(
+                        {
+                            "anchor": anchor_match.group(1),
+                            "type": next(
+                                (tag for tag in valid_audits if tag in line), None
+                            ),
+                            "file": filepath,
+                            "line": line_num,
+                        }
+                    )
 
-        if 'burn-ignore-sudo' in line:
-            anchor_match = re.search(r'\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]', line)
+        if "burn-ignore-sudo" in line:
+            anchor_match = re.search(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
             if anchor_match:
-                REQUIRE_TEST_VERIFICATION.append({'anchor': anchor_match.group(1), 'type': 'burn-ignore-sudo', 'file': filepath, 'line': line_num})
+                REQUIRE_TEST_VERIFICATION.append(
+                    {
+                        "anchor": anchor_match.group(1),
+                        "type": "burn-ignore-sudo",
+                        "file": filepath,
+                        "line": line_num,
+                    }
+                )
 
         for ext_pattern, regex, msg in ERROR_RULES:
             if re.search(ext_pattern, filename) and regex.search(line):
-                if 'burn-ignore' not in line:
-                    errors_found.append(f"Line {line_num}: {msg}\n      Code: `{stripped}`")
+                if "burn-ignore" not in line:
+                    errors_found.append(
+                        f"Line {line_num}: {msg}\n      Code: `{stripped}`"
+                    )
         for ext_pattern, regex, msg in WARNING_RULES:
             if re.search(ext_pattern, filename) and regex.search(line):
-                if 'audit-ignore' not in line:
-                    warnings_found.append(f"Line {line_num}: {msg}\n      Code: `{stripped}`")
-                
+                if "audit-ignore" not in line:
+                    warnings_found.append(
+                        f"Line {line_num}: {msg}\n      Code: `{stripped}`"
+                    )
+
     return errors_found, warnings_found
 
-def _verify_test_ast(req, target_content, target_file, verification_errors, total_errors):
-    anchor, b_type = req['anchor'], req['type']
-    if target_file.endswith('.js'):
-        if b_type == 'audit-ignore-xpath' and not any(k in target_content for k in ('get_view', 'url_open', '_get_combined_arch', 'trigger:')):
-            print("  ❌ ERROR: Invalid JS Test Implementation. Must contain 'trigger:' to verify UI rendering in JS.")
+
+def _verify_test_ast(
+    req, target_content, target_file, verification_errors, total_errors
+):
+    anchor, b_type = req["anchor"], req["type"]
+    if target_file.endswith(".js"):
+        if b_type == "audit-ignore-xpath" and not any(
+            k in target_content
+            for k in ("get_view", "url_open", "_get_combined_arch", "trigger:")
+        ):
+            print(
+                "  ❌ ERROR: Invalid JS Test Implementation. Must contain 'trigger:' to verify UI rendering in JS."
+            )
             return verification_errors + 1, total_errors + 1
         return verification_errors, total_errors
 
@@ -576,14 +1107,16 @@ def _verify_test_ast(req, target_content, target_file, verification_errors, tota
     target_func = None
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
-            start_line = getattr(node, 'lineno', 0)
-            end_line = getattr(node, 'end_lineno', float('inf'))
+            start_line = getattr(node, "lineno", 0)
+            end_line = getattr(node, "end_lineno", float("inf"))
             if start_line <= anchor_line <= end_line:
                 target_func = node
                 break
 
     if not target_func:
-        print(f"  ❌ ERROR: Test Anchor '{anchor}' is not inside an AST FunctionDef in {target_file}.")
+        print(
+            f"  ❌ ERROR: Test Anchor '{anchor}' is not inside an AST FunctionDef in {target_file}."
+        )
         return verification_errors + 1, total_errors + 1
 
     found_qcount = False
@@ -593,63 +1126,110 @@ def _verify_test_ast(req, target_content, target_file, verification_errors, tota
 
     for node in ast.walk(target_func):
         if isinstance(node, ast.Call):
-            func_attr = getattr(node.func, 'attr', '')
-            if func_attr in ('assertQueryCount', 'assertLess', 'assertLessEqual'):
+            func_attr = getattr(node.func, "attr", "")
+            if func_attr in ("assertQueryCount", "assertLess", "assertLessEqual"):
                 found_qcount = True
-            if func_attr in ('get_view', 'url_open', '_get_combined_arch'):
+            if func_attr in ("get_view", "url_open", "_get_combined_arch"):
                 found_view = True
-            if func_attr == '_trigger':
+            if func_attr == "_trigger":
                 found_trigger = True
-            if func_attr in ('send_mail', 'message_post'):
+            if func_attr in ("send_mail", "message_post"):
                 found_mail = True
-            if func_attr == 'object':
-                for arg in getattr(node, 'args', []):
-                    if isinstance(arg, ast.Constant) and arg.value in ('send_mail', 'message_post'):
-                        found_mail = True
-        
+            if func_attr == "object":
+                for arg in getattr(node, "args", []):
+                    if isinstance(arg, ast.Constant) and arg.value in (
+                        "send_mail",
+                        "message_post",
+                        "execute",
+                    ):
+                        if arg.value == "execute":
+                            found_qcount = True
+                        else:
+                            found_mail = True
+
         if isinstance(node, ast.With):
             for item in node.items:
                 if isinstance(item.context_expr, ast.Call):
-                    if getattr(item.context_expr.func, 'attr', '') == 'assertQueryCount':
+                    if (
+                        getattr(item.context_expr.func, "attr", "")
+                        == "assertQueryCount"
+                    ):
                         found_qcount = True
 
     for node in ast.walk(target_func):
         if isinstance(node, (ast.For, ast.While)):
             for child in ast.walk(node):
-                if isinstance(child, ast.Call) and getattr(child.func, 'attr', '') in ('get_view', 'url_open'):
-                    print(f"  ❌ ERROR: AST Evasion Detected. Found loop wrapping view/URL validation in test anchor '{anchor}' in {target_file}.")
+                if isinstance(child, ast.Call) and getattr(child.func, "attr", "") in (
+                    "get_view",
+                    "url_open",
+                ):
+                    print(
+                        f"  ❌ ERROR: AST Evasion Detected. Found loop wrapping view/URL validation in test anchor '{anchor}' in {target_file}."
+                    )
                     return verification_errors + 1, total_errors + 1
 
     is_valid, msg = True, ""
-    if b_type in ('audit-ignore-xpath', 'audit-ignore-view'):
-        is_valid, msg = (True, "") if found_view else (False, "AST requires 'get_view', 'url_open', or '_get_combined_arch' call.")
-    elif b_type == 'audit-ignore-search':
-        is_valid, msg = (True, "") if found_qcount else (False, "AST requires 'assertQueryCount'.")
-    elif b_type == 'audit-ignore-cron':
-        is_valid, msg = (True, "") if found_trigger else (False, "AST requires '_trigger()' call.")
-    elif b_type == 'audit-ignore-mail':
-        is_valid, msg = (True, "") if found_mail else (False, "AST requires 'send_mail' or 'message_post'.")
-    elif b_type == 'audit-ignore-i18n':
+    if b_type in ("audit-ignore-xpath", "audit-ignore-view"):
+        is_valid, msg = (
+            (True, "")
+            if found_view
+            else (
+                False,
+                "AST requires 'get_view', 'url_open', or '_get_combined_arch' call.",
+            )
+        )
+    elif b_type == "audit-ignore-search":
+        is_valid, msg = (
+            (True, "") if found_qcount else (False, "AST requires 'assertQueryCount'.")
+        )
+    elif b_type == "audit-ignore-cron":
+        is_valid, msg = (
+            (True, "") if found_trigger else (False, "AST requires '_trigger()' call.")
+        )
+    elif b_type == "audit-ignore-mail":
+        is_valid, msg = (
+            (True, "")
+            if found_mail
+            else (False, "AST requires 'send_mail' or 'message_post'.")
+        )
+    elif b_type == "audit-ignore-i18n":
         is_valid, msg = True, ""
 
     if not is_valid:
-        print(f"  ❌ ERROR: Invalid Test Implementation (AST). {b_type} cites anchor '{anchor}'. {msg}")
+        print(
+            f"  ❌ ERROR: Invalid Test Implementation (AST). {b_type} cites anchor '{anchor}'. {msg}"
+        )
         return verification_errors + 1, total_errors + 1
     return verification_errors, total_errors
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("directory", nargs='?', default=".")
+    parser.add_argument("directory", nargs="?", default=".")
     args = parser.parse_args()
     target_dir = os.path.abspath(args.directory)
     total_errors, total_warnings, scanned_files = 0, 0, 0
 
     for root, dirs, files in os.walk(target_dir):
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('__pycache__', 'node_modules', 'tools', 'daemons', 'venv', 'env', 'hams_local_relay')]
+        dirs[:] = [
+            d
+            for d in dirs
+            if not d.startswith(".")
+            and d
+            not in (
+                "__pycache__",
+                "node_modules",
+                "tools",
+                "daemons",
+                "venv",
+                "env",
+                "hams_local_relay",
+            )
+        ]
         for file in files:
-            if file in (os.path.basename(__file__), 'LLM_LINTER_GUIDE.md'):
+            if file in (os.path.basename(__file__), "LLM_LINTER_GUIDE.md"):
                 continue
-            if file.endswith(('.py', '.xml', '.js')):
+            if file.endswith((".py", ".xml", ".js")):
                 filepath = os.path.join(root, file)
                 scanned_files += 1
                 errors, warnings = scan_file(filepath)
@@ -664,24 +1244,38 @@ def main():
 
     verification_errors = 0
     for req in REQUIRE_TEST_VERIFICATION:
-        anchor = req['anchor']
-        target_content, target_file = next(((c, f) for f, c in FOUND_TEST_CONTENTS.items() if f"[%ANCHOR: {anchor}]" in c), (None, None))
+        anchor = req["anchor"]
+        target_content, target_file = next(
+            (
+                (c, f)
+                for f, c in FOUND_TEST_CONTENTS.items()
+                if f"[%ANCHOR: {anchor}]" in c
+            ),
+            (None, None),
+        )
         if not target_content:
-            print(f"  ❌ ERROR: Orphaned Bypass. {req['type']} in {req['file']}:{req['line']} cites anchor '{anchor}' not found in any test file.")
+            print(
+                f"  ❌ ERROR: Orphaned Bypass. {req['type']} in {req['file']}:{req['line']} cites anchor '{anchor}' not found in any test file."
+            )
             verification_errors += 1
             total_errors += 1
             continue
-        verification_errors, total_errors = _verify_test_ast(req, target_content, target_file, verification_errors, total_errors)
+        verification_errors, total_errors = _verify_test_ast(
+            req, target_content, target_file, verification_errors, total_errors
+        )
 
     if total_errors > 0 or total_warnings > 0:
         print(f"\nScan Complete: Checked {scanned_files} files.")
-        print(f"Total Errors: {total_errors} | Total Warnings (Audits): {total_warnings}")
-    
+        print(
+            f"Total Errors: {total_errors} | Total Warnings (Audits): {total_warnings}"
+        )
+
     if total_errors > 0:
         sys.exit(1)
     if total_warnings > 0:
         print("✅ Passed with warnings. Audits require manual verification.")
     sys.exit(0)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -38,6 +38,7 @@ fi
 dropdb --if-exists "$DB_NAME" || true
 
 LOG_FILE="/tmp/odoo_test_run_$$.log"
+# Install the modules and run tests in a single pass on the clean database
 /usr/bin/odoo \
   --addons-path="$ADDONS_PATH" \
   --dev=all -d "$DB_NAME" \

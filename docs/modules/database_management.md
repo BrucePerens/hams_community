@@ -1,4 +1,4 @@
-# 🛢 Ham Database Management (`ham_database_management`)
+# 🛢 Database Management (`database_management`)
 
 ## Architecture
 Provides an enterprise-grade Application Performance Monitoring (APM) and DBA suite directly within Odoo.

@@ -1,7 +1,7 @@
 # ADR-0065: Headless API Translation Ban
 
 ## Context
-Headless API controllers (e.g., `ham_logbook` ADIF and Live QSO endpoints) return JSON payloads containing error messages. Previously, these error strings were wrapped in Odoo's `_()` translation function. During headless automated testing, the `request.env` context often lacks a fully bound user session. This causes `odoo.tools.translate._get_uid` to throw an `AttributeError: 'NoneType' object has no attribute 'uid'`, crashing the entire endpoint.
+Headless API controllers (e.g., batch processing and telemetry endpoints) return JSON payloads containing error messages. Previously, these error strings were wrapped in Odoo's `_()` translation function. During headless automated testing, the `request.env` context often lacks a fully bound user session. This causes `odoo.tools.translate._get_uid` to throw an `AttributeError: 'NoneType' object has no attribute 'uid'`, crashing the entire endpoint.
 
 ## Decision
 We strictly **ban** the use of the `_()` translation wrapper around string literals within JSON responses in headless API controllers.

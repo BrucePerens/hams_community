@@ -18,12 +18,18 @@ TARGET_MODULES="${1:-}"
 if [ -n "$TARGET_MODULES" ]; then
     IFS=',' read -ra MOD_ARRAY <<< "$TARGET_MODULES"
     for MOD in "${MOD_ARRAY[@]}"; do
-        if [ -d "$DIR/$MOD" ]; then
-            OUT="$("$VENV_PYTHON" "$DIR/tools/pre_flight_check.py" -m "$DIR/$MOD" --addons-path "$ADDONS_PATH" 2>&1)"
-            if [ $? -ne 0 ]; then
-                echo "$OUT"
-                LINTERS_FAILED=1
-            fi
+        if [ -f "$DIR/$MOD/__manifest__.py" ]; then
+            MOD_PATH="$DIR/$MOD"
+        elif [ -f "$COMMUNITY_DIR/$MOD/__manifest__.py" ]; then
+            MOD_PATH="$COMMUNITY_DIR/$MOD"
+        else
+            continue
+        fi
+        
+        OUT="$("$VENV_PYTHON" "$DIR/tools/pre_flight_check.py" -m "$MOD_PATH" --addons-path "$ADDONS_PATH" 2>&1)"
+        if [ $? -ne 0 ]; then
+            echo "$OUT"
+            LINTERS_FAILED=1
         fi
     done
 fi
@@ -51,7 +57,8 @@ elif [ -n "$OUT" ]; then
 fi
 
 # 3. Semantic Anchors Verification
-OUT="$("$VENV_PYTHON" "$DIR/tools/verify_anchors.py" "$DIR" 2>&1)"
+# Pass both private and community directories to resolve cross-repository anchor links
+OUT="$("$VENV_PYTHON" "$DIR/tools/verify_anchors.py" "$DIR" "$COMMUNITY_DIR" 2>&1)"
 if [ $? -ne 0 ]; then
     echo "$OUT"
     LINTERS_FAILED=1

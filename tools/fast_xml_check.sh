@@ -10,7 +10,7 @@ ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 DB_NAME="${1:-hams_prod}"
 
 if [ -f "$DIR/default_modules.txt" ]; then
-    IFS=',' read -r -a MODULES <<< "$(cat "$DIR/default_modules.txt)"
+    IFS=',' read -r -a MODULES <<< "$(cat "$DIR/default_modules.txt")"
 else
     MODULES=($(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}'))
 fi
@@ -23,7 +23,7 @@ echo "========================================================"
 FAILED_MODULES=()
 
 for MOD in "${MODULES[@]}"; do
-    if [ -d "$DIR/$MOD" ]; then
+    if [ -f "$DIR/$MOD/__manifest__.py" ]; then
         echo -e "\n[*] Checking XML views in: $MOD"
         # Run the update command, capture stderr, stop after init, no tests
         /usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -i "$MOD" -u "$MOD" --stop-after-init --log-level=error

@@ -16,8 +16,8 @@ You MUST consult the **[LLM Linter Guide](LLM_LINTER_GUIDE.md)** for the exhaust
 * **Architectural Adherence Policy:** You MUST respect the architectural intent of our linters (`check_burn_list.py`) by fixing the underlying logic of triggered rules.
 Ensure that code remains syntactically pure and secure without employing evasive semantic tricks.
 * You MUST avoid assigning elevated context properties to intermediate variables dynamically.
-* You MUST use parameterized psycopg2 queries directly;
-do not build f-strings mapped to intermediate variables and pass them into execution.
+* You MUST use parameterized psycopg2 queries directly for data values (`%s`).
+* **Dynamic SQL Mandate:** If you must dynamically alter the query structure or inject schema identifiers (e.g., column names in a SQL View), you are strictly forbidden from using f-strings. You MUST use the `psycopg2.sql` module. Do not build f-strings mapped to intermediate variables and pass them into execution.
 * You MUST resolve architectural flaws at their root, preserving the structural and security integrity of the Odoo framework.
 * **Bypass Protocols (`audit-ignore` / `burn-ignore`):** The strict requirements for bypassing the linter using automated AST test verification are exhaustively documented in the [LLM Linter Guide](LLM_LINTER_GUIDE.md).
 ---
@@ -45,6 +45,7 @@ Audits must actively scan for modules that specify a daemon dependency where the
       * Feature-specific extensions: Create `models/res_users_feature.py` (e.g., `res_users_website.py`) to maintain separation of concerns.
 
 ### 🗄️ Models & Logic
+* **Long String Formatting (40-Character Rule):** Strings exceeding 40 characters MUST be declared as variables or constants using triple-quotes (`"""`) and wrapped to fit the 70-character limit before being passed as arguments.
 * **Constraints:** Use `models.Constraint` (Python class attribute) instead of the banned legacy syntax.
 * **Bulk Operation Safety:** All creation/update methods MUST support batch processing to avoid N+1 query issues.
 Never assume a payload contains only a single record.
@@ -57,7 +58,7 @@ Use `if 'field' in record._fields:` to check field existence before access.
   * **Test Isolation Mandate:** In Odoo's `TransactionCase`, `One2many` inverse relations are not automatically populated in the local cache immediately after record creation. If testing a method that iterates over a `One2many` field (like a GDPR export), you MUST call `self.user.invalidate_recordset()` inside the test *before* executing the method. You are strictly **FORBIDDEN** from replacing `One2many` calls with explicit `.search()` queries in production code just to bypass this test environment caching artifact.
 
 ### 🏎️ Performance & Scalability
-* **Ban Brittle ORM Query Counting in CI/CD:** Do not use `self.assertQueryCount()` to validate functional success. CI/CD environments are noisy, and random background jobs or GC can trigger SQL queries, masking actual regressions. Use deterministic Behavior-Driven Development (BDD) tests instead. (Note: 0-query assertions for cache hits are the only exception).
+* **Ban Brittle ORM Query Counting in CI/CD:** Do not use `self.assertQueryCount()` to validate functional success. CI/CD environments are noisy, and random background jobs or GC can trigger SQL queries, masking actual regressions. Use deterministic Behavior-Driven Development (BDD) tests instead. For testing `@tools.ormcache` hits, mock the cursor (`patch.object(self.env.cr, 'execute')`) and verify the specific table wasn't queried rather than using `assertQueryCount(0)`.
 * **Cron Batching:** Long-running scheduled actions MUST NOT attempt to process an entire database table in one transaction.
 They MUST process records in manageable batches (e.g., array slicing) and programmatically re-trigger themselves (`self.env.ref('my_module.my_cron')._trigger()`) if unprocessed records remain.
 * **ORM Caching:** High-traffic frontend lookups (e.g., resolving string slugs to database IDs on every page load) MUST utilize Odoo's `@tools.ormcache`.
@@ -65,11 +66,13 @@ Cache MUST be explicitly cleared (e.g., `self.env.registry.clear_cache()`) in th
 
 ### 🔒 Security Patterns & Native Idioms
 You are strictly **FORBIDDEN** from using absolute database overrides as a crutch to bypass access errors (See [LLM Linter Guide](LLM_LINTER_GUIDE.md)).
+
+* **The Domain Sandbox Mandate:** You MUST NEVER grant `base.group_user` (Internal User) to community members or use it as a catch-all in Record Rules (`ir.rule`) or ACLs (`ir.model.access.csv`). Doing so exposes the internal ERP `/web` backend to external users. All external community access MUST be governed by `base.group_portal` combined with custom domain groups (e.g., `group_custom_system_operator`). The ONLY exceptions are the `user_manager_service_internal` and `mail_service_internal` proxy accounts.
 You MUST utilize one of the following native Odoo idioms:
 
 * **The "Centralized Security Utility" Pattern:**
   * **Context:** The system needs to retrieve system parameters (`ir.config_parameter`) or resolve XML IDs (`ir.model.data`), which generally require escalated privileges.
-  * **Mandate:** Delegate to `user_websites.security.utils` via `request.env['user_websites.security.utils']._get_system_param(key)` or `_get_service_uid(xml_id)`. The latter employs RAM caching (`@tools.ormcache`) to execute the database lookup securely once per boot cycle.
+  * **Mandate:** Delegate to `zero_sudo.security.utils` via `request.env['zero_sudo.security.utils']._get_system_param(key)` or `_get_service_uid(xml_id)`. The latter employs RAM caching (`@tools.ormcache`) to execute the database lookup securely once per boot cycle.
   * **Skeleton Key Prevention (RPC & SSTI):**
       * Methods on the utility model MUST be prefixed with an underscore (`_get_...`) to strictly block public XML-RPC / JSON-RPC execution.
       * `_get_system_param` MUST implement a strict hardcoded `frozenset` whitelist. You MUST NEVER add cryptographic keys (like `database.secret`) to this whitelist, as QWeb template injection could expose it.
@@ -82,7 +85,7 @@ You MUST utilize one of the following native Odoo idioms:
       3. **Separation of Privilege & Explicit Scoping:** Ensure the account is a *Micro-Service Account* dedicated to a single domain action. Service accounts must be explicitly granted the security groups of the external models they interact with, not just `base.group_user`. Do not bundle disparate permissions or fall back to `base.user_admin`.
       4. Flag the user with `is_service_account="True"` in the XML to permanently block interactive web logins (See ADR-0005).
       5. Grant that specific group the exact ACLs (`ir.model.access.csv`) and Record Rules (`ir.rule`) required for the task.
-      5. In the controller or method, fetch the Service Account's ID securely via `env['user_websites.security.utils']._get_service_uid('module.user_xml_id')` and execute the logic using `.with_user(svc_uid)`.
+      5. In the controller or method, fetch the Service Account's ID securely via `env['zero_sudo.security.utils']._get_service_uid('module.user_xml_id')` and execute the logic using `.with_user(svc_uid)`.
 * **The "Public Guest User" Idiom:**
   * **Context:** An unauthenticated guest needs to submit data (e.g., a contact form, an issue report).
   * **Mandate:** Define an Access Control List (`ir.model.access.csv`) granting `perm_create=1` to `base.group_public` for that specific model.
@@ -151,6 +154,7 @@ This is achieved by passing `default_title`, `default_description`, and `default
 
 ## 5. CONTROLLERS & ROUTING
 
+* **Application vs. CMS Page Segregation:** Build system facilities and interactive applications (like Dashboards, tools, or the Web Shack) using dedicated HTTP controllers (`@http.route`) that return standard QWeb `<template>` views. You MUST NOT provision them as CMS-editable `website.page` records in XML. Reserving `website.page` provisioning strictly for paradigms where end-user drag-and-drop CMS editing is the exact intended functionality (e.g., personal blogs or user-customizable pages) prevents clashes with Proxy Ownership intercepts.
 * **API:** Use `get_current_website()` instead of `get_main_website()`.
 * **Slugs:** Dynamic routing must handle slugs safely.
 * **Auth:** Routes creating content must require `auth="user"`. Routes for reading content can be `auth="public"`.
