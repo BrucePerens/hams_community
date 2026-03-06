@@ -2,11 +2,12 @@ from odoo import models, fields, tools, _
 from odoo.exceptions import UserError
 from psycopg2 import sql
 
+
 class DatabasePgSetting(models.Model):
-    _name = 'database.pg.setting'
-    _description = 'PostgreSQL Configuration Parameter'
+    _name = "database.pg.setting"
+    _description = "PostgreSQL Configuration Parameter"
     _auto = False
-    _order = 'category asc, name asc'
+    _order = "category asc, name asc"
 
     name = fields.Char(string="Parameter", readonly=True)
     setting = fields.Char(string="Current Value", readonly=True)
@@ -33,14 +34,21 @@ class DatabasePgSetting(models.Model):
             )
         """)
 
+
 class PgOptimizeWizard(models.TransientModel):
-    _name = 'pg.optimize.wizard'
-    _description = 'PostgreSQL Optimization Wizard'
+    _name = "pg.optimize.wizard"
+    _description = "PostgreSQL Optimization Wizard"
 
     ram_gb = fields.Integer(string="Total Server RAM (GB)", required=True, default=8)
     cpu_cores = fields.Integer(string="Total CPU Cores", required=True, default=4)
-    storage_type = fields.Selection([('ssd', 'SSD / NVMe'), ('hdd', 'Traditional HDD')], required=True, default='ssd')
-    max_connections = fields.Integer(string="Max Connections", required=True, default=200)
+    storage_type = fields.Selection(
+        [("ssd", "SSD / NVMe"), ("hdd", "Traditional HDD")],
+        required=True,
+        default="ssd",
+    )
+    max_connections = fields.Integer(
+        string="Max Connections", required=True, default=200
+    )
 
     def action_apply_optimizations(self):
         # [%ANCHOR: pg_optimize_wizard]
@@ -52,52 +60,62 @@ class PgOptimizeWizard(models.TransientModel):
         effective_cache_mb = int((self.ram_gb * 1024) * 0.75)
         maintenance_work_mem_mb = min(1024, int((self.ram_gb * 1024) * 0.05))
         work_mem_mb = max(4, int(((self.ram_gb * 1024) * 0.25) / self.max_connections))
-        random_page_cost = 1.1 if self.storage_type == 'ssd' else 4.0
+        random_page_cost = 1.1 if self.storage_type == "ssd" else 4.0
         max_worker_processes = self.cpu_cores
         max_parallel_workers = max(2, int(self.cpu_cores / 2))
 
         settings = {
-            'shared_buffers': f"{shared_buffers_mb}MB",
-            'effective_cache_size': f"{effective_cache_mb}MB",
-            'maintenance_work_mem': f"{maintenance_work_mem_mb}MB",
-            'work_mem': f"{work_mem_mb}MB",
-            'max_worker_processes': str(max_worker_processes),
-            'max_parallel_workers_per_gather': str(max_parallel_workers),
-            'max_parallel_workers': str(max_worker_processes),
-            'random_page_cost': str(random_page_cost),
-            'max_connections': str(self.max_connections)
+            "shared_buffers": f"{shared_buffers_mb}MB",
+            "effective_cache_size": f"{effective_cache_mb}MB",
+            "maintenance_work_mem": f"{maintenance_work_mem_mb}MB",
+            "work_mem": f"{work_mem_mb}MB",
+            "max_worker_processes": str(max_worker_processes),
+            "max_parallel_workers_per_gather": str(max_parallel_workers),
+            "max_parallel_workers": str(max_worker_processes),
+            "random_page_cost": str(random_page_cost),
+            "max_connections": str(self.max_connections),
         }
 
         for param, val in settings.items():
             # CRITICAL: AST-compliant parameterized execution for ALTER SYSTEM
             query = sql.SQL("ALTER SYSTEM SET {} = {}").format(
-                sql.Identifier(param),
-                sql.Literal(val)
+                sql.Identifier(param), sql.Literal(val)
             )
             self.env.cr.execute(query)
 
         self.env.cr.execute("SELECT pg_reload_conf()")
 
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Optimizations Applied'),
-                'message': _('Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect.'),
-                'type': 'warning',
-                'sticky': True,
-            }
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Optimizations Applied"),
+                "message": _(
+                    "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
+                ),
+                "type": "warning",
+                "sticky": True,
+            },
         }
 
+
 class PgHaWizard(models.TransientModel):
-    _name = 'pg.ha.wizard'
-    _description = 'High Availability Failover Wizard'
+    _name = "pg.ha.wizard"
+    _description = "High Availability Failover Wizard"
 
-    primary_ip = fields.Char(string="Primary Node IP", required=True, default="10.0.0.1")
-    secondary_ip = fields.Char(string="Secondary Node IP", required=True, default="10.0.0.2")
-    replication_pass = fields.Char(string="Replication Password", required=True, default="SecureRepPass123!")
+    primary_ip = fields.Char(
+        string="Primary Node IP", required=True, default="10.0.0.1"
+    )
+    secondary_ip = fields.Char(
+        string="Secondary Node IP", required=True, default="10.0.0.2"
+    )
+    replication_pass = fields.Char(
+        string="Replication Password", required=True, default="SecureRepPass123!"
+    )
 
-    state = fields.Selection([('input', 'Input'), ('generated', 'Generated')], default='input')
+    state = fields.Selection(
+        [("input", "Input"), ("generated", "Generated")], default="input"
+    )
     patroni_primary = fields.Text(string="Primary Patroni YAML", readonly=True)
     patroni_secondary = fields.Text(string="Secondary Patroni YAML", readonly=True)
     pgbouncer_ini = fields.Text(string="PgBouncer INI", readonly=True)
@@ -105,26 +123,35 @@ class PgHaWizard(models.TransientModel):
     def _get_executable(self, cmd_name):
         import shutil, platform, os, urllib.request, tarfile, tempfile, odoo
         from odoo.exceptions import UserError
-        path = shutil.which(cmd_name)
-        if path: return path
 
-        if cmd_name == 'etcd':
-            if platform.system() != 'Linux' or platform.machine() != 'x86_64':
-                raise UserError(_("Auto-install of etcd is only supported on Linux x86_64."))
-            data_dir = odoo.tools.config.get('data_dir', '/var/lib/odoo')
-            bin_dir = os.path.join(data_dir, 'hams_bin')
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        if cmd_name == "etcd":
+            if platform.system() != "Linux" or platform.machine() != "x86_64":
+                raise UserError(
+                    _("Auto-install of etcd is only supported on Linux x86_64.")
+                )
+            data_dir = odoo.tools.config.get("data_dir", "/var/lib/odoo")
+            bin_dir = os.path.join(data_dir, "hams_bin")
             os.makedirs(bin_dir, exist_ok=True)
-            etcd_bin = os.path.join(bin_dir, 'etcd')
-            if os.path.exists(etcd_bin): return etcd_bin
+            etcd_bin = os.path.join(bin_dir, "etcd")
+            if os.path.exists(etcd_bin):
+                return etcd_bin
 
             url = "https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz"
             try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.tar.gz') as tmp:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
                     urllib.request.urlretrieve(url, tmp.name)
-                with tarfile.open(tmp.name, 'r:gz') as tar:
+                with tarfile.open(tmp.name, "r:gz") as tar:
                     for member in tar.getmembers():
-                        if member.name.endswith('/etcd') and not member.name.endswith('etcdctl') and not member.name.endswith('etcdutl'):
-                            member.name = 'etcd'
+                        if (
+                            member.name.endswith("/etcd")
+                            and not member.name.endswith("etcdctl")
+                            and not member.name.endswith("etcdutl")
+                        ):
+                            member.name = "etcd"
                             tar.extract(member, path=bin_dir)
                             break
                 os.chmod(etcd_bin, 0o755)
@@ -133,18 +160,20 @@ class PgHaWizard(models.TransientModel):
             except Exception as e:
                 raise UserError(_("Failed to auto-install etcd: %s") % str(e))
 
-        pkg_map = {
-            'patroni': 'patroni',
-            'pgbouncer': 'pgbouncer'
-        }
+        pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer"}
         pkg = pkg_map.get(cmd_name, cmd_name)
-        raise UserError(_("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').") % (cmd_name, pkg))
+        raise UserError(
+            _(
+                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
+            )
+            % (cmd_name, pkg)
+        )
 
     def action_generate(self):
         # [%ANCHOR: pg_ha_wizard]
-        self._get_executable('etcd')
-        self._get_executable('patroni')
-        self._get_executable('pgbouncer')
+        self._get_executable("etcd")
+        self._get_executable("patroni")
+        self._get_executable("pgbouncer")
 
         self.patroni_primary = f"""scope: hams_cluster
 namespace: /db/
@@ -208,11 +237,11 @@ max_client_conn = 1000
 default_pool_size = 20
 """
 
-        self.state = 'generated'
+        self.state = "generated"
         return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'pg.ha.wizard',
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'new',
+            "type": "ir.actions.act_window",
+            "res_model": "pg.ha.wizard",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "new",
         }

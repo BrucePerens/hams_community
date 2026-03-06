@@ -17,7 +17,6 @@ Implements the Best-in-Class Hybrid Architecture proposed for unified backup man
 ---
 
 ## Semantic Anchors
-* `[%ANCHOR: doc_inject_backup]`
 * `[%ANCHOR: backup_restore_command]`
 * `[%ANCHOR: backup_trigger_execution]`
 * `[%ANCHOR: backup_apply_policies]`

@@ -14,3 +14,6 @@ This module eliminates the dangerous native `.sudo()` ORM method. It implements 
 
 ## 3. Parameter Safety
 `env['zero_sudo.security.utils']._get_system_param('key')` fetches parameters against a strict `frozenset` whitelist, protecting cryptographic keys from Server-Side Template Injection.
+
+## 4. Semantic Anchors
+* `[%ANCHOR: coherent_cache_signal]`, `[%ANCHOR: get_service_uid]`.

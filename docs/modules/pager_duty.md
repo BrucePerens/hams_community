@@ -77,7 +77,6 @@ If you create a new plugin, you **MUST** update `daemons/pager_duty/test_general
 ---
 
 ## 6. Semantic Anchors
-* `[%ANCHOR: doc_inject_pager_duty]`
 * `[%ANCHOR: test_pager_escalation]`
 * `[%ANCHOR: report_incident_rate_limit]`
 * `[%ANCHOR: test_pager_notification]`

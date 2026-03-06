@@ -3,8 +3,9 @@ from odoo import http, tools
 from odoo.http import request
 from odoo.modules.module import get_module_path
 
+
 class ServiceWorkerController(http.Controller):
-    
+
     _static_info_cache = None
 
     def _get_global_static_info(self):
@@ -18,17 +19,19 @@ class ServiceWorkerController(http.Controller):
 
         max_mtime = 0.0
         file_sizes = []
-        
+
         # Raw SQL to get installed modules quickly without ORM/sudo overhead
-        request.env.cr.execute("SELECT name FROM ir_module_module WHERE state = 'installed'")
+        request.env.cr.execute(
+            "SELECT name FROM ir_module_module WHERE state = 'installed'"
+        )
         installed_modules = [row[0] for row in request.env.cr.fetchall()]
-        
+
         for module_name in installed_modules:
             mod_path = get_module_path(module_name)
             if not mod_path:
                 continue
-                
-            static_path = os.path.join(mod_path, 'static')
+
+            static_path = os.path.join(mod_path, "static")
             if os.path.exists(static_path):
                 for root, dirs, files in os.walk(static_path):
                     for file in files:
@@ -40,16 +43,16 @@ class ServiceWorkerController(http.Controller):
                             file_sizes.append(os.path.getsize(filepath))
                         except OSError:
                             pass
-                            
+
         # Conservative browser quota estimate: 50MB
         # Reserve 15MB for Odoo's compiled /web/assets/ bundles and overhead
-        SAFE_QUOTA = 35 * 1024 * 1024 
-        
+        SAFE_QUOTA = 35 * 1024 * 1024
+
         file_sizes.sort(reverse=True)
         total_size = sum(file_sizes)
-        
+
         if not file_sizes:
-            res = (str(int(max_mtime)), str(10 * 1024 * 1024)) # Default 10MB
+            res = (str(int(max_mtime)), str(10 * 1024 * 1024))  # Default 10MB
             type(self)._static_info_cache = res
             return res
 
@@ -72,7 +75,7 @@ class ServiceWorkerController(http.Controller):
         type(self)._static_info_cache = res
         return res
 
-    @http.route('/sw.js', type='http', auth='public', sitemap=False)
+    @http.route("/sw.js", type="http", auth="public", sitemap=False)
     def service_worker(self):
         """
         Serves the Service Worker script from the root scope.
@@ -80,18 +83,18 @@ class ServiceWorkerController(http.Controller):
         and the calculated max file size (for quota protection).
         """
         try:
-            with tools.file_open('caching/static/src/sw/sw.js', 'r') as f:
+            with tools.file_open("caching/static/src/sw/sw.js", "r") as f:
                 content = f.read()
         except FileNotFoundError:
             return request.not_found()
 
         latest_mtime, max_file_size = self._get_global_static_info()
-        
-        content = content.replace('__CACHE_NAME__', f'odoo-assets-cache-{latest_mtime}')
-        content = content.replace('__MAX_FILE_SIZE_BYTES__', max_file_size)
+
+        content = content.replace("__CACHE_NAME__", f"odoo-assets-cache-{latest_mtime}")
+        content = content.replace("__MAX_FILE_SIZE_BYTES__", max_file_size)
 
         headers = [
-            ('Content-Type', 'application/javascript'),
-            ('Cache-Control', 'no-cache, max-age=0') 
+            ("Content-Type", "application/javascript"),
+            ("Cache-Control", "no-cache, max-age=0"),
         ]
         return request.make_response(content, headers=headers)

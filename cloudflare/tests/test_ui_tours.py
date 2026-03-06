@@ -2,28 +2,33 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
 
-@odoo.tests.common.tagged('post_install', '-at_install')
+
+@odoo.tests.common.tagged("post_install", "-at_install")
 class TestCloudflareUITours(odoo.tests.HttpCase):
 
     def setUp(self):
         super().setUp()
-        
+
         # Seed backend records to be asserted by the frontend tours
-        self.env['cloudflare.ip.ban'].create({
-            'ip_address': '192.168.9.9',
-            'mode': 'block',
-            'state': 'active',
-            'notes': 'Tour Seed Record'
-        })
-        
-        self.env['cloudflare.waf.rule'].create({
-            'name': 'Tour XML-RPC Rule',
-            'action': 'block',
-            'expression': 'http.request.uri.path contains "/tour"'
-        })
-        
+        self.env["cloudflare.ip.ban"].create(
+            {
+                "ip_address": "192.168.9.9",
+                "mode": "block",
+                "state": "active",
+                "notes": "Tour Seed Record",
+            }
+        )
+
+        self.env["cloudflare.waf.rule"].create(
+            {
+                "name": "Tour XML-RPC Rule",
+                "action": "block",
+                "expression": 'http.request.uri.path contains "/tour"',
+            }
+        )
+
         # Ensure the admin has system access to view these menus
-        self.admin = self.env.ref('base.user_admin')
+        self.admin = self.env.ref("base.user_admin")
 
     def test_01_ip_ban_tour(self):
         """Executes the JS tour simulating an administrator reviewing honeypot bans."""
@@ -37,7 +42,7 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
 
     def test_03_backend_views_rendering(self):
         # [%ANCHOR: test_cf_backend_views_rendering]
-        self.env['cloudflare.config.backup'].get_view(view_type='list')
-        self.env['cloudflare.ip.ban'].get_view(view_type='list')
-        self.env['cloudflare.tunnel.wizard'].get_view(view_type='form')
-        self.env['cloudflare.waf.rule'].get_view(view_type='list')
+        self.env["cloudflare.config.backup"].get_view(view_type="list")
+        self.env["cloudflare.ip.ban"].get_view(view_type="list")
+        self.env["cloudflare.tunnel.wizard"].get_view(view_type="form")
+        self.env["cloudflare.waf.rule"].get_view(view_type="list")

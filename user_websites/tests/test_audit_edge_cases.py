@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
 
-@odoo.tests.common.tagged('post_install', '-at_install')
+
+@odoo.tests.common.tagged("post_install", "-at_install")
 class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
     """
     Advanced integration tests targeting edge cases discovered during
@@ -11,13 +12,24 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
     def setUp(self):
         super(TestAuditEdgeCases, self).setUp()
 
-        self.test_user = self.env['res.users'].create({
-            'name': 'Edge Case User',
-            'login': 'edgeuser',
-            'email': 'edge@example.com',
-            'website_slug': 'edgeuser',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
+        self.test_user = self.env["res.users"].create(
+            {
+                "name": "Edge Case User",
+                "login": "edgeuser",
+                "email": "edge@example.com",
+                "website_slug": "edgeuser",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
 
     def test_01_gdpr_erasure_suspended_user(self):
         """
@@ -25,24 +37,31 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         can still legally exercise their Right to Erasure.
         """
         # 1. Create User Content
-        page = self.env['website.page'].create({
-            'url': f'/{self.test_user.website_slug}/home',
-            'name': 'Home',
-            'type': 'qweb',
-            'owner_user_id': self.test_user.id
-        })
+        page = self.env["website.page"].create(
+            {
+                "url": f"/{self.test_user.website_slug}/home",
+                "name": "Home",
+                "type": "qweb",
+                "owner_user_id": self.test_user.id,
+            }
+        )
 
         # 2. Force a Suspension (3 Strikes)
         self.test_user.violation_strike_count = 3
         self.test_user.action_suspend_user_websites()
         self.assertTrue(self.test_user.is_suspended_from_websites)
-        self.assertFalse(page.website_published, "Page should be unpublished by suspension.")
+        self.assertFalse(
+            page.website_published, "Page should be unpublished by suspension."
+        )
 
         # 3. Execute GDPR Erasure
         self.test_user._execute_gdpr_erasure()
 
         # 4. Verify permanent deletion
-        self.assertFalse(page.exists(), "Suspended user content must be fully unlinked on GDPR erasure, not just unpublished.")
+        self.assertFalse(
+            page.exists(),
+            "Suspended user content must be fully unlinked on GDPR erasure, not just unpublished.",
+        )
 
     def test_02_cron_batching_resumption(self):
         # [%ANCHOR: test_cron_batching_resumption]
@@ -52,56 +71,76 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         and resumes processing from the correct index.
         """
         # AST Verification Requirement (ADR-0059)
-        self.env.ref('user_websites.ir_cron_send_weekly_digest')._trigger()
+        self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
         # Ensure a clean state for the system parameter
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        self.env['ir.config_parameter'].with_user(svc_uid).set_param('user_websites.last_digest_key', '')
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
+        self.env["ir.config_parameter"].with_user(svc_uid).set_param(
+            "user_websites.last_digest_key", ""
+        )
 
-        blog = self.env['blog.blog'].search([('name', '=', 'Community Blog')], limit=1)
+        blog = self.env["blog.blog"].search([("name", "=", "Community Blog")], limit=1)
         if not blog:
-            blog = self.env['blog.blog'].create({'name': 'Community Blog'})
+            blog = self.env["blog.blog"].create({"name": "Community Blog"})
 
-        self.env['blog.post'].create({
-            'name': 'Cron Test Post',
-            'blog_id': blog.id,
-            'owner_user_id': self.test_user.id,
-            'is_published': True
-        })
+        self.env["blog.post"].create(
+            {
+                "name": "Cron Test Post",
+                "blog_id": blog.id,
+                "owner_user_id": self.test_user.id,
+                "is_published": True,
+            }
+        )
 
         # Simulate an interrupted batch by explicitly setting the last_digest_key to this user's partner
         # The key format is "{model}_{id}"
         simulated_key = f"res.partner_{self.test_user.partner_id.id}"
-        self.env['ir.config_parameter'].with_user(svc_uid).set_param('user_websites.last_digest_key', simulated_key)
+        self.env["ir.config_parameter"].with_user(svc_uid).set_param(
+            "user_websites.last_digest_key", simulated_key
+        )
 
         # Run the cron method directly
-        self.env['blog.post'].send_weekly_digest()
+        self.env["blog.post"].send_weekly_digest()
 
         # Because the key was set to our test user, the batching logic should skip them.
         # If there are no users after them in the DB state, the cron should cleanly finish and clear the key.
-        final_key = self.env['zero_sudo.security.utils']._get_system_param('user_websites.last_digest_key')
-        self.assertFalse(final_key, "Cron must safely clear the digest key after completing the remaining queue.")
-        self.env.ref('user_websites.ir_cron_send_weekly_digest')._trigger()
+        final_key = self.env["zero_sudo.security.utils"]._get_system_param(
+            "user_websites.last_digest_key"
+        )
+        self.assertFalse(
+            final_key,
+            "Cron must safely clear the digest key after completing the remaining queue.",
+        )
+        self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
 
     def test_03_service_account_tamper_resistance(self):
         """
         Verify that if the Zero-Sudo Service Account is tampered with (e.g., archived),
         the proxy ownership mixin fails closed securely.
         """
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('user_websites.user_user_websites_service_account')
-        svc_user = self.env['res.users'].browse(svc_uid)
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
+        svc_user = self.env["res.users"].browse(svc_uid)
 
         # Simulate an administrator accidentally archiving the crucial service account
         svc_user.active = False
 
         # The creation of a website.page utilizes the service account internally via with_user(svc_uid)
         # to bypass the strict Odoo base UI constraints. It must fail safely if the user is inactive.
-        with self.assertRaises(Exception, msg="System must fail closed if the service account is disabled, denying record creation."):
-            self.env['website.page'].with_user(self.test_user).create({
-                'url': f'/{self.test_user.website_slug}/fail-test',
-                'name': 'Fail Page',
-                'type': 'qweb',
-                'owner_user_id': self.test_user.id
-            })
+        with self.assertRaises(
+            Exception,
+            msg="System must fail closed if the service account is disabled, denying record creation.",
+        ):
+            self.env["website.page"].with_user(self.test_user).create(
+                {
+                    "url": f"/{self.test_user.website_slug}/fail-test",
+                    "name": "Fail Page",
+                    "type": "qweb",
+                    "owner_user_id": self.test_user.id,
+                }
+            )
 
     def test_04_bdd_ormcache_query_counting_slugs(self):
         # [%ANCHOR: test_slug_cache_invalidation]
@@ -112,25 +151,27 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         When resolving slugs repeatedly
         Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger SQL.
         """
-        user = self.env['res.users'].create({
-            'name': 'Cache User',
-            'login': 'cache_user',
-            'website_slug': 'cacheuser'
-        })
+        user = self.env["res.users"].create(
+            {"name": "Cache User", "login": "cache_user", "website_slug": "cacheuser"}
+        )
 
         # 1. Prime the cache
-        self.env['res.users']._get_user_id_by_slug('cacheuser')
+        self.env["res.users"]._get_user_id_by_slug("cacheuser")
 
         # 2. Verify 0 queries on hit
         with self.assertQueryCount(0):
-            self.env['res.users']._get_user_id_by_slug('cacheuser')
+            self.env["res.users"]._get_user_id_by_slug("cacheuser")
 
         # 3. Trigger Invalidation
-        user.write({'website_slug': 'newslug'})
+        user.write({"website_slug": "newslug"})
 
         # 4. Verify cache was cleared (next call must execute SQL)
-        user_id = self.env['res.users']._get_user_id_by_slug('newslug')
-        self.assertEqual(user_id, user.id, "The new slug must resolve correctly, proving the cache was cleared.")
+        user_id = self.env["res.users"]._get_user_id_by_slug("newslug")
+        self.assertEqual(
+            user_id,
+            user.id,
+            "The new slug must resolve correctly, proving the cache was cleared.",
+        )
 
         user.unlink()
 
@@ -143,24 +184,29 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         When resolving group slugs repeatedly
         Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger SQL.
         """
-        group = self.env['user.websites.group'].create({
-            'name': 'Cache Group',
-            'website_slug': 'cachegroup'
-        })
+        group = self.env["user.websites.group"].create(
+            {"name": "Cache Group", "website_slug": "cachegroup"}
+        )
 
         # 1. Prime the cache
-        self.env['user.websites.group']._get_group_id_by_slug('cachegroup')
+        self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
 
         # 2. Verify 0 queries on hit
         with self.assertQueryCount(0):
-            self.env['user.websites.group']._get_group_id_by_slug('cachegroup')
+            self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
 
         # 3. Trigger Invalidation
-        group.write({'website_slug': 'newcachegroup'})
+        group.write({"website_slug": "newcachegroup"})
 
         # 4. Verify cache was cleared (next call must execute SQL)
-        group_id = self.env['user.websites.group']._get_group_id_by_slug('newcachegroup')
-        self.assertEqual(group_id, group.id, "The new group slug must resolve correctly, proving the cache was cleared.")
+        group_id = self.env["user.websites.group"]._get_group_id_by_slug(
+            "newcachegroup"
+        )
+        self.assertEqual(
+            group_id,
+            group.id,
+            "The new group slug must resolve correctly, proving the cache was cleared.",
+        )
 
         group.unlink()
 
@@ -175,34 +221,44 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         """
         from unittest.mock import patch, MagicMock
 
-        page = self.env['website.page'].create({
-            'url': f'/{self.test_user.website_slug}/redis-flush-test',
-            'name': 'Redis Flush Test',
-            'type': 'qweb',
-            'owner_user_id': self.test_user.id
-        })
+        page = self.env["website.page"].create(
+            {
+                "url": f"/{self.test_user.website_slug}/redis-flush-test",
+                "name": "Redis Flush Test",
+                "type": "qweb",
+                "owner_user_id": self.test_user.id,
+            }
+        )
 
         initial_views = page.view_count
 
-        with patch('odoo.addons.user_websites.models.website_page.redis_client') as mock_client:
+        with patch(
+            "odoo.addons.user_websites.models.website_page.redis_client"
+        ) as mock_client:
             # Simulate scan returning a cursor of 5 (more data) and one key
             mock_client.scan.return_value = (5, [f"views:page:{page.id}"])
 
             # Simulate pipeline execution returning the view count '42' and a DEL success '1'
             mock_pipeline = MagicMock()
             mock_client.pipeline.return_value = mock_pipeline
-            mock_pipeline.execute.return_value = ['42', 1]
+            mock_pipeline.execute.return_value = ["42", 1]
 
-            cron = self.env.ref('user_websites.ir_cron_flush_view_counters', raise_if_not_found=False)
+            cron = self.env.ref(
+                "user_websites.ir_cron_flush_view_counters", raise_if_not_found=False
+            )
             if not cron:
                 self.fail("Cron record ir_cron_flush_view_counters not found.")
 
-            with patch.object(type(cron), '_trigger') as mock_trigger:
-                self.env['website.page']._flush_redis_view_counters()
+            with patch.object(type(cron), "_trigger") as mock_trigger:
+                self.env["website.page"]._flush_redis_view_counters()
 
                 # Verify Postgres was updated
-                page.invalidate_recordset(['view_count'])
-                self.assertEqual(page.view_count, initial_views + 42, "PostgreSQL view_count must be incremented by the Redis value.")
+                page.invalidate_recordset(["view_count"])
+                self.assertEqual(
+                    page.view_count,
+                    initial_views + 42,
+                    "PostgreSQL view_count must be incremented by the Redis value.",
+                )
 
                 # Verify pipeline operations
                 mock_pipeline.get.assert_called_with(f"views:page:{page.id}")
@@ -219,32 +275,35 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         When resolving page URLs repeatedly
         Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger targeted DB NOTIFY.
         """
-        website_id = self.env['website'].get_current_website().id
-        page = self.env['website.page'].create({
-            'url': f'/{self.test_user.website_slug}/cache-test',
-            'name': 'Cache Page',
-            'type': 'qweb',
-            'owner_user_id': self.test_user.id,
-            'website_published': True
-        })
+        website_id = self.env["website"].get_current_website().id
+        page = self.env["website.page"].create(
+            {
+                "url": f"/{self.test_user.website_slug}/cache-test",
+                "name": "Cache Page",
+                "type": "qweb",
+                "owner_user_id": self.test_user.id,
+                "website_published": True,
+            }
+        )
 
         # 1. Prime the cache
-        self.env['website.page']._get_page_id_by_url(page.url, website_id)
+        self.env["website.page"]._get_page_id_by_url(page.url, website_id)
 
         # 2. Verify 0 queries on hit
         with self.assertQueryCount(0):
-            self.env['website.page']._get_page_id_by_url(page.url, website_id)
+            self.env["website.page"]._get_page_id_by_url(page.url, website_id)
 
         # 3. Trigger Invalidation (Verify the targeted NOTIFY logic doesn't crash)
         from unittest.mock import patch
-        with patch.object(self.env.cr, 'execute') as mock_execute:
-            page.write({'website_published': False})
+
+        with patch.object(self.env.cr, "execute") as mock_execute:
+            page.write({"website_published": False})
 
             # The write method should have called _notify_cache_invalidation which executes pg_notify
             # We must verify the payload was specifically targeted to the URL, not the whole registry
             mock_execute.assert_any_call(
                 "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload",
-                ('cache_invalidation', [f"website.page:{page.url}"])
+                ("cache_invalidation", [f"website.page:{page.url}"]),
             )
 
     def test_08_cron_pending_reports(self):
@@ -255,24 +314,40 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         Prove that the cron correctly summarizes pending reports and emails the admin,
         without crashing and using the correct template model.
         """
-        self.env['content.violation.report'].create({
-            'target_url': '/test-pending',
-            'description': 'Test',
-        })
+        self.env["content.violation.report"].create(
+            {
+                "target_url": "/test-pending",
+                "description": "Test",
+            }
+        )
 
-        self.env['content.violation.report']._cron_notify_pending_reports()
+        self.env["content.violation.report"]._cron_notify_pending_reports()
         self.env.flush_all()
 
-        abuse_email = self.env['zero_sudo.security.utils']._get_system_param('user_websites.company_abuse_email') or self.env.company.email or 'admin@example.com'
-        mail = self.env['mail.mail'].search([
-            ('email_to', 'ilike', abuse_email),
-            ('subject', 'ilike', 'Action Required')
-        ], limit=1)
+        abuse_email = (
+            self.env["zero_sudo.security.utils"]._get_system_param(
+                "user_websites.company_abuse_email"
+            )
+            or self.env.company.email
+            or "admin@example.com"
+        )
+        mail = self.env["mail.mail"].search(
+            [
+                ("email_to", "ilike", abuse_email),
+                ("subject", "ilike", "Action Required"),
+            ],
+            limit=1,
+        )
 
-        self.assertTrue(mail, "Cron MUST generate a summary email to the abuse email address.")
-        self.assertIn('unhandled content violation reports', mail.body_html)
+        self.assertTrue(
+            mail, "Cron MUST generate a summary email to the abuse email address."
+        )
+        self.assertIn("unhandled content violation reports", mail.body_html)
 
-        self.env.ref('user_websites.ir_cron_notify_pending_reports')._trigger()
-        template = self.env.ref('user_websites.email_template_pending_violations_summary', raise_if_not_found=False)
+        self.env.ref("user_websites.ir_cron_notify_pending_reports")._trigger()
+        template = self.env.ref(
+            "user_websites.email_template_pending_violations_summary",
+            raise_if_not_found=False,
+        )
         if template:
-            template.send_mail(self.env.company.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]
+            template.send_mail(self.env.company.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip

@@ -1,46 +1,62 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import HttpCase, tagged
 
-@tagged('post_install', '-at_install')
+
+@tagged("post_install", "-at_install")
 class TestModeration(HttpCase):
 
     def setUp(self):
         super(TestModeration, self).setUp()
-        
+
         # 1. Create a misbehaving user
-        self.bad_user = self.env['res.users'].create({
-            'name': 'Spammer',
-            'login': 'spammer',
-            'email': 'spam@example.com',
-            'website_slug': 'spammer',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
-        
+        self.bad_user = self.env["res.users"].create(
+            {
+                "name": "Spammer",
+                "login": "spammer",
+                "email": "spam@example.com",
+                "website_slug": "spammer",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
+
         # 2. Give them some published content
-        self.spam_page = self.env['website.page'].create({
-            'url': f'/{self.bad_user.website_slug}/home',
-            'name': 'Spam Home',
-            'type': 'qweb',
-            'arch': '<t name="Spam Home" t-name="user_websites.spam_home"><div>Spam</div></t>',
-            'owner_user_id': self.bad_user.id,
-            'is_published': True,
-            'website_published': True
-        })
-        
-        blog = self.env['blog.blog'].create({'name': 'Community Blog'})
-        
-        self.spam_post = self.env['blog.post'].create({
-            'name': 'Spam Post',
-            'blog_id': blog.id,
-            'owner_user_id': self.bad_user.id,
-            'is_published': True
-        })
+        self.spam_page = self.env["website.page"].create(
+            {
+                "url": f"/{self.bad_user.website_slug}/home",
+                "name": "Spam Home",
+                "type": "qweb",
+                "arch": '<t name="Spam Home" t-name="user_websites.spam_home"><div>Spam</div></t>',
+                "owner_user_id": self.bad_user.id,
+                "is_published": True,
+                "website_published": True,
+            }
+        )
+
+        blog = self.env["blog.blog"].create({"name": "Community Blog"})
+
+        self.spam_post = self.env["blog.post"].create(
+            {
+                "name": "Spam Post",
+                "blog_id": blog.id,
+                "owner_user_id": self.bad_user.id,
+                "is_published": True,
+            }
+        )
 
     def test_01_three_strikes_suspension(self):
         # [%ANCHOR: test_moderation_suspension]
         # Tests [%ANCHOR: action_take_action_and_strike]
         """
-        Verify that hitting 3 strikes automatically suspends the user 
+        Verify that hitting 3 strikes automatically suspends the user
         and unpublishes all their content.
         """
         # Ensure starting state is clean
@@ -51,101 +67,143 @@ class TestModeration(HttpCase):
 
         # Admin creates and processes 3 reports
         for i in range(3):
-            report = self.env['content.violation.report'].create({
-                'target_url': f'/test/spam/{i}',
-                'description': f'Spam instance {i}',
-                'content_owner_id': self.bad_user.id
-            })
+            report = self.env["content.violation.report"].create(
+                {
+                    "target_url": f"/test/spam/{i}",
+                    "description": f"Spam instance {i}",
+                    "content_owner_id": self.bad_user.id,
+                }
+            )
             report.action_take_action_and_strike()
 
         # Verify final state
         self.assertEqual(self.bad_user.violation_strike_count, 3)
-        self.assertTrue(self.bad_user.is_suspended_from_websites, "User should be suspended after 3 strikes.")
-        
+        self.assertTrue(
+            self.bad_user.is_suspended_from_websites,
+            "User should be suspended after 3 strikes.",
+        )
+
         # Verify Content was unpublished
-        self.assertFalse(self.spam_page.is_published, "Page should be forcefully unpublished.")
-        self.assertFalse(self.spam_post.is_published, "Blog post should be forcefully unpublished.")
+        self.assertFalse(
+            self.spam_page.is_published, "Page should be forcefully unpublished."
+        )
+        self.assertFalse(
+            self.spam_post.is_published, "Blog post should be forcefully unpublished."
+        )
 
     def test_02_pardon_functionality(self):
         """Verify the pardon action resets strikes and lifts suspension."""
         self.bad_user.violation_strike_count = 3
         self.bad_user.action_suspend_user_websites()
-        
+
         self.assertTrue(self.bad_user.is_suspended_from_websites)
-        
+
         # Admin pardons user
         self.bad_user.action_pardon_user_websites()
-       
+
         self.assertEqual(self.bad_user.violation_strike_count, 0)
         self.assertFalse(self.bad_user.is_suspended_from_websites)
-        # Note: We intentionally do NOT automatically republish content during a pardon. 
+        # Note: We intentionally do NOT automatically republish content during a pardon.
         # The user must do that manually to ensure they reviewed it.
         self.assertFalse(self.spam_page.is_published)
 
     def test_03_suspension_public_access_leak(self):
         """
-        Verify that action_suspend_user_websites strictly revokes public access 
+        Verify that action_suspend_user_websites strictly revokes public access
         and does not inadvertently set or leave public access grants during unpublication.
         """
         # Ensure page is public
         self.authenticate(None, None)
-        res = self.url_open(f'/{self.bad_user.website_slug}/home')
+        res = self.url_open(f"/{self.bad_user.website_slug}/home")
         self.assertEqual(res.status_code, 200)
-        
+
         # Suspend user
         self.bad_user.violation_strike_count = 3
         self.bad_user.action_suspend_user_websites()
-        
+
         # Attempt public access again
-        res_after = self.url_open(f'/{self.bad_user.website_slug}/home')
-        self.assertEqual(res_after.status_code, 404, "Suspended pages must return 404 for public guests to prevent access leaks.")
+        res_after = self.url_open(f"/{self.bad_user.website_slug}/home")
+        self.assertEqual(
+            res_after.status_code,
+            404,
+            "Suspended pages must return 404 for public guests to prevent access leaks.",
+        )
 
     def test_04_group_moderation_cascading_strikes(self):
         """
-        Verify that applying a strike to a group violation report correctly iterates 
+        Verify that applying a strike to a group violation report correctly iterates
         and applies strikes to all member_ids of that group.
         """
-        user_2 = self.env['res.users'].create({
-            'name': 'Spammer 2',
-            'login': 'spammer2',
-            'email': 'spam2@example.com',
-            'website_slug': 'spammer2',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
-        
-        bad_group = self.env['user.websites.group'].create({
-            'name': 'Bad Group',
-            'website_slug': 'bad-group',
-            'member_ids': [(4, self.bad_user.id), (4, user_2.id)]
-        })
-        
+        user_2 = self.env["res.users"].create(
+            {
+                "name": "Spammer 2",
+                "login": "spammer2",
+                "email": "spam2@example.com",
+                "website_slug": "spammer2",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
+
+        bad_group = self.env["user.websites.group"].create(
+            {
+                "name": "Bad Group",
+                "website_slug": "bad-group",
+                "member_ids": [(4, self.bad_user.id), (4, user_2.id)],
+            }
+        )
+
         # Start at 0
         self.assertEqual(self.bad_user.violation_strike_count, 0)
         self.assertEqual(user_2.violation_strike_count, 0)
-        
-        report = self.env['content.violation.report'].create({
-            'target_url': '/bad-group/home',
-            'description': 'Group is spamming',
-            'content_group_id': bad_group.id
-        })
-        
+
+        report = self.env["content.violation.report"].create(
+            {
+                "target_url": "/bad-group/home",
+                "description": "Group is spamming",
+                "content_group_id": bad_group.id,
+            }
+        )
+
         # Strike the group
         report.action_take_action_and_strike()
-        
-        self.assertEqual(self.bad_user.violation_strike_count, 1, "Strike should cascade to member 1.")
-        self.assertEqual(user_2.violation_strike_count, 1, "Strike should cascade to member 2.")
-        
+
+        self.assertEqual(
+            self.bad_user.violation_strike_count,
+            1,
+            "Strike should cascade to member 1.",
+        )
+        self.assertEqual(
+            user_2.violation_strike_count, 1, "Strike should cascade to member 2."
+        )
+
         # Apply 2 more strikes to trigger the automated 3-strike suspension rule
         for i in range(2):
-            r = self.env['content.violation.report'].create({
-                'target_url': f'/bad-group/page{i}',
-                'description': 'More spam',
-                'content_group_id': bad_group.id
-            })
+            r = self.env["content.violation.report"].create(
+                {
+                    "target_url": f"/bad-group/page{i}",
+                    "description": "More spam",
+                    "content_group_id": bad_group.id,
+                }
+            )
             r.action_take_action_and_strike()
-            
-        self.assertTrue(self.bad_user.is_suspended_from_websites, "Member 1 should be suspended after 3 strikes.")
-        self.assertTrue(user_2.is_suspended_from_websites, "Member 2 should be suspended after 3 strikes.")
+
+        self.assertTrue(
+            self.bad_user.is_suspended_from_websites,
+            "Member 1 should be suspended after 3 strikes.",
+        )
+        self.assertTrue(
+            user_2.is_suspended_from_websites,
+            "Member 2 should be suspended after 3 strikes.",
+        )
 
     def test_05_concurrent_strike_locking(self):
         """
@@ -153,34 +211,50 @@ class TestModeration(HttpCase):
         to prevent 'Lost Update' race conditions during concurrent moderation.
         """
         from unittest.mock import patch
-        
+
         # 1. Test Individual User Lock
-        report = self.env['content.violation.report'].create({
-            'target_url': '/test/lock',
-            'description': 'Lock test',
-            'content_owner_id': self.bad_user.id
-        })
-        
-        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+        report = self.env["content.violation.report"].create(
+            {
+                "target_url": "/test/lock",
+                "description": "Lock test",
+                "content_owner_id": self.bad_user.id,
+            }
+        )
+
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             report.action_take_action_and_strike()
-            
+
             # Assert the lock query was injected
             lock_query = "SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE"
             mock_execute.assert_any_call(lock_query, (self.bad_user.id,))
 
         # 2. Test Group Member Lock
-        group_report = self.env['content.violation.report'].create({
-            'target_url': '/test/group_lock',
-            'description': 'Group Lock test',
-            'content_group_id': self.env['user.websites.group'].create({
-                'name': 'Lock Group',
-                'website_slug': 'lock-group',
-                'member_ids': [(4, self.bad_user.id)]
-            }).id
-        })
-        
-        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+        group_report = self.env["content.violation.report"].create(
+            {
+                "target_url": "/test/group_lock",
+                "description": "Group Lock test",
+                "content_group_id": self.env["user.websites.group"]
+                .create(
+                    {
+                        "name": "Lock Group",
+                        "website_slug": "lock-group",
+                        "member_ids": [(4, self.bad_user.id)],
+                    }
+                )
+                .id,
+            }
+        )
+
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             group_report.action_take_action_and_strike()
-            
-            lock_query_group = "SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE"
-            mock_execute.assert_any_call(lock_query_group, (tuple(group_report.content_group_id.member_ids.ids),))
+
+            lock_query_group = (
+                "SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE"
+            )
+            mock_execute.assert_any_call(
+                lock_query_group, (tuple(group_report.content_group_id.member_ids.ids),)
+            )

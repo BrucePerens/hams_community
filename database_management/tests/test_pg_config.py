@@ -1,87 +1,128 @@
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
-@tagged('post_install', '-at_install')
+
+@tagged("post_install", "-at_install")
 class TestPgConfig(TransactionCase):
     def setUp(self):
         super().setUp()
-        self.admin = self.env.ref('base.user_admin')
+        self.admin = self.env.ref("base.user_admin")
 
     def test_01_optimization_wizard(self):
         # Tests [%ANCHOR: pg_optimize_wizard]
-        wizard = self.env['pg.optimize.wizard'].with_user(self.admin).create({
-            'ram_gb': 16,
-            'cpu_cores': 8,
-            'storage_type': 'ssd',
-            'max_connections': 500
-        })
+        wizard = (
+            self.env["pg.optimize.wizard"]
+            .with_user(self.admin)
+            .create(
+                {
+                    "ram_gb": 16,
+                    "cpu_cores": 8,
+                    "storage_type": "ssd",
+                    "max_connections": 500,
+                }
+            )
+        )
         # Execute the optimization (mocked to prevent ActiveSqlTransaction and actual config changes)
-        with patch.object(type(self.env.cr), 'execute') as mock_execute:
+        with patch.object(type(self.env.cr), "execute") as mock_execute:
             res = wizard.action_apply_optimizations()
-            self.assertEqual(res.get('type'), 'ir.actions.client')
+            self.assertEqual(res.get("type"), "ir.actions.client")
             mock_execute.assert_called()
 
-    @patch('odoo.addons.database_management.models.pg_config.PgHaWizard._get_executable', return_value='/bin/mock')
+    @patch(
+        "odoo.addons.database_management.models.pg_config.PgHaWizard._get_executable",
+        return_value="/bin/mock",
+    )
     def test_02_ha_wizard(self, mock_exe):
         # Tests [%ANCHOR: pg_ha_wizard]
-        wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({
-            'primary_ip': '192.168.1.10',
-            'secondary_ip': '192.168.1.11',
-            'replication_pass': 'testpass'
-        })
+        wizard = (
+            self.env["pg.ha.wizard"]
+            .with_user(self.admin)
+            .create(
+                {
+                    "primary_ip": "192.168.1.10",
+                    "secondary_ip": "192.168.1.11",
+                    "replication_pass": "testpass",
+                }
+            )
+        )
         wizard.action_generate()
 
-        self.assertEqual(wizard.state, 'generated')
-        self.assertIn('192.168.1.10', wizard.patroni_primary)
-        self.assertIn('192.168.1.11', wizard.patroni_secondary)
-        self.assertIn('pgbouncer', wizard.pgbouncer_ini)
+        self.assertEqual(wizard.state, "generated")
+        self.assertIn("192.168.1.10", wizard.patroni_primary)
+        self.assertIn("192.168.1.11", wizard.patroni_secondary)
+        self.assertIn("pgbouncer", wizard.pgbouncer_ini)
 
     def test_01b_optimization_wizard_errors(self):
         from odoo.exceptions import UserError
-        wizard = self.env['pg.optimize.wizard'].with_user(self.admin).create({'ram_gb': 0, 'cpu_cores': 8})
+
+        wizard = (
+            self.env["pg.optimize.wizard"]
+            .with_user(self.admin)
+            .create({"ram_gb": 0, "cpu_cores": 8})
+        )
         with self.assertRaises(UserError):
             wizard.action_apply_optimizations()
 
-    @patch('shutil.which')
+    @patch("shutil.which")
     def test_02b_ha_wizard_missing_binaries(self, mock_which):
         from odoo.exceptions import UserError
-        wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({'primary_ip': '10.0.0.1'})
+
+        wizard = (
+            self.env["pg.ha.wizard"]
+            .with_user(self.admin)
+            .create({"primary_ip": "10.0.0.1"})
+        )
 
         # Test missing patroni throws error
         def mock_which_side_effect(cmd):
-            if cmd == 'etcd': return '/bin/etcd'
+            if cmd == "etcd":
+                return "/bin/etcd"
             return None
+
         mock_which.side_effect = mock_which_side_effect
 
         with self.assertRaises(UserError):
             wizard.action_generate()
 
-    @patch('platform.system', return_value='Linux')
-    @patch('platform.machine', return_value='x86_64')
-    @patch('shutil.which', return_value=None)
-    @patch('urllib.request.urlretrieve')
-    @patch('tarfile.open')
-    @patch('os.chmod')
-    @patch('os.unlink')
-    def test_02c_etcd_auto_download(self, mock_unlink, mock_chmod, mock_tar, mock_url, mock_which, mock_mach, mock_sys):
+    @patch("platform.system", return_value="Linux")
+    @patch("platform.machine", return_value="x86_64")
+    @patch("shutil.which", return_value=None)
+    @patch("urllib.request.urlretrieve")
+    @patch("tarfile.open")
+    @patch("os.chmod")
+    @patch("os.unlink")
+    def test_02c_etcd_auto_download(
+        self,
+        mock_unlink,
+        mock_chmod,
+        mock_tar,
+        mock_url,
+        mock_which,
+        mock_mach,
+        mock_sys,
+    ):
         # Prove the system automatically downloads the binary if missing
         mock_tar_instance = MagicMock()
         mock_member = MagicMock()
-        mock_member.name = 'etcd-v3.5.12-linux-amd64/etcd'
+        mock_member.name = "etcd-v3.5.12-linux-amd64/etcd"
         mock_tar_instance.getmembers.return_value = [mock_member]
         mock_tar.return_value.__enter__.return_value = mock_tar_instance
 
-        wizard = self.env['pg.ha.wizard'].with_user(self.admin).create({'primary_ip': '10.0.0.1'})
-        exe_path = wizard._get_executable('etcd')
+        wizard = (
+            self.env["pg.ha.wizard"]
+            .with_user(self.admin)
+            .create({"primary_ip": "10.0.0.1"})
+        )
+        exe_path = wizard._get_executable("etcd")
 
         mock_url.assert_called_once()
         mock_tar_instance.extract.assert_called_once()
         mock_chmod.assert_called_once()
-        self.assertTrue(exe_path.endswith('etcd'))
+        self.assertTrue(exe_path.endswith("etcd"))
 
     def test_03_views(self):
         # [%ANCHOR: test_pg_config_views]
-        self.env['database.pg.setting'].get_view(view_type='list')
-        self.env['pg.optimize.wizard'].get_view(view_type='form')
-        self.env['pg.ha.wizard'].get_view(view_type='form')
+        self.env["database.pg.setting"].get_view(view_type="list")
+        self.env["pg.optimize.wizard"].get_view(view_type="form")
+        self.env["pg.ha.wizard"].get_view(view_type="form")
         self.assertTrue(True)

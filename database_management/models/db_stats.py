@@ -1,17 +1,22 @@
 from odoo import models, fields, api, tools, _
 
+
 class DatabaseTableStat(models.Model):
-    _name = 'database.table.stat'
-    _description = 'Database Table Statistics (Bloat & Vacuum)'
+    _name = "database.table.stat"
+    _description = "Database Table Statistics (Bloat & Vacuum)"
     _auto = False
-    _order = 'dead_percent desc'
+    _order = "dead_percent desc"
 
     table_name = fields.Char(string="Table Name", readonly=True)
     live_tuples = fields.Integer(string="Live Tuples", readonly=True)
     dead_tuples = fields.Integer(string="Dead Tuples", readonly=True)
     dead_percent = fields.Float(string="Dead % (Bloat)", readonly=True)
     total_size_mb = fields.Float(string="Total Size (MB)", readonly=True)
-    cache_hit_percent = fields.Float(string="Cache Hit %", readonly=True, help="Percentage of data reads satisfied by RAM rather than Disk I/O.")
+    cache_hit_percent = fields.Float(
+        string="Cache Hit %",
+        readonly=True,
+        help="Percentage of data reads satisfied by RAM rather than Disk I/O.",
+    )
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, self._table)
@@ -33,14 +38,19 @@ class DatabaseTableStat(models.Model):
     def _get_executable(self, cmd_name):
         import shutil
         from odoo.exceptions import UserError
-        path = shutil.which(cmd_name)
-        if path: return path
 
-        pkg_map = {
-            'vacuumdb': 'postgresql-client'
-        }
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        pkg_map = {"vacuumdb": "postgresql-client"}
         pkg = pkg_map.get(cmd_name, cmd_name)
-        raise UserError(_("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').") % (cmd_name, pkg))
+        raise UserError(
+            _(
+                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
+            )
+            % (cmd_name, pkg)
+        )
 
     def action_vacuum_analyze(self):
         # [%ANCHOR: vacuum_analyze]
@@ -48,16 +58,25 @@ class DatabaseTableStat(models.Model):
         import os
         from odoo.exceptions import UserError
 
-        exe = self._get_executable('vacuumdb')
+        exe = self._get_executable("vacuumdb")
         db_name = self.env.cr.dbname
         env_vars = os.environ.copy()
 
         for rec in self:
             try:
                 # The subprocess bypasses the active ORM transaction block allowing physical vacuuming
-                res = subprocess.run([exe, '-z', '-t', rec.table_name, db_name], capture_output=True, text=True, timeout=300, env=env_vars, shell=False)
+                res = subprocess.run(
+                    [exe, "-z", "-t", rec.table_name, db_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    env=env_vars,
+                    shell=False,
+                )
                 if res.returncode != 0:
-                    raise UserError(_("Vacuum failed for %s: %s") % (rec.table_name, res.stderr))
+                    raise UserError(
+                        _("Vacuum failed for %s: %s") % (rec.table_name, res.stderr)
+                    )
             except subprocess.TimeoutExpired:
                 raise UserError(_("Vacuum timed out for %s.") % rec.table_name)
             except Exception as e:
@@ -67,24 +86,33 @@ class DatabaseTableStat(models.Model):
     @api.model
     def cron_check_bloat(self):
         # [%ANCHOR: bloat_alert_synergy]
-        high_bloat = self.env['database.table.stat'].search([('dead_percent', '>', 20.0), ('dead_tuples', '>', 10000)], limit=1000)
-        if high_bloat and 'pager.incident' in self.env:
+        high_bloat = self.env["database.table.stat"].search(
+            [("dead_percent", ">", 20.0), ("dead_tuples", ">", 10000)], limit=1000
+        )
+        if high_bloat and "pager.incident" in self.env:
             try:
-                pager_uid = self.env['zero_sudo.security.utils']._get_service_uid('pager_duty.user_pager_service_internal')
-                tables = ", ".join([f"{t.table_name} ({t.dead_percent:.1f}%%)" for t in high_bloat])
-                self.env['pager.incident'].with_user(pager_uid).report_incident({
-                    'source': 'DBA Autovacuum Monitor',
-                    'severity': 'medium',
-                    'description': f"Database Bloat Warning! The following tables have >20%% dead tuples and require a manual Vacuum Analyze: {tables}"
-                })
+                pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "pager_duty.user_pager_service_internal"
+                )
+                tables = ", ".join(
+                    [f"{t.table_name} ({t.dead_percent:.1f}%%)" for t in high_bloat]
+                )
+                self.env["pager.incident"].with_user(pager_uid).report_incident(
+                    {
+                        "source": "DBA Autovacuum Monitor",
+                        "severity": "medium",
+                        "description": f"Database Bloat Warning! The following tables have >20%% dead tuples and require a manual Vacuum Analyze: {tables}",
+                    }
+                )
             except Exception:
                 pass
 
+
 class DatabaseQueryStat(models.Model):
-    _name = 'database.query.stat'
-    _description = 'Slow Query Tracking'
+    _name = "database.query.stat"
+    _description = "Slow Query Tracking"
     _auto = False
-    _order = 'total_time desc'
+    _order = "total_time desc"
 
     query = fields.Text(string="SQL Query", readonly=True)
     calls = fields.Integer(string="Execution Count", readonly=True)
@@ -93,7 +121,9 @@ class DatabaseQueryStat(models.Model):
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, self._table)
-        self.env.cr.execute("SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'")
+        self.env.cr.execute(
+            "SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'"
+        )
         if self.env.cr.fetchone():
             self.env.cr.execute("""
                 CREATE OR REPLACE VIEW database_query_stat AS (
@@ -113,11 +143,12 @@ class DatabaseQueryStat(models.Model):
                 )
             """)
 
+
 class DatabaseActivity(models.Model):
-    _name = 'database.activity'
-    _description = 'Active Database Sessions'
+    _name = "database.activity"
+    _description = "Active Database Sessions"
     _auto = False
-    _order = 'duration desc'
+    _order = "duration desc"
 
     pid = fields.Integer(string="PID", readonly=True)
     usename = fields.Char(string="User", readonly=True)
@@ -148,12 +179,13 @@ class DatabaseActivity(models.Model):
             self.env.cr.execute("SELECT pg_terminate_backend(%s)", (rec.pid,))
         return True
 
+
 class DatabaseIndexStat(models.Model):
     # [%ANCHOR: db_index_stats]
-    _name = 'database.index.stat'
-    _description = 'Database Index Health'
+    _name = "database.index.stat"
+    _description = "Database Index Health"
     _auto = False
-    _order = 'idx_scan asc'
+    _order = "idx_scan asc"
 
     table_name = fields.Char(string="Table Name", readonly=True)
     index_name = fields.Char(string="Index Name", readonly=True)

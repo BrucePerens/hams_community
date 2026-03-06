@@ -1,0 +1,17 @@
+asyncpg
+black
+cryptography
+ephem
+flake8
+Flask
+Flask-CORS
+google-genai
+lxml
+passlib
+pika
+psutil
+psycopg2-binary
+pyserial
+PyYAML
+redis==5.0.1
+requests

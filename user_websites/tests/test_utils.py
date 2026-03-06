@@ -2,6 +2,7 @@
 from odoo.tests.common import BaseCase
 from odoo.addons.user_websites.utils import slugify
 
+
 class TestUtils(BaseCase):
     # [%ANCHOR: test_utils_slugify]
     # Tests [%ANCHOR: utils_slugify]
@@ -17,7 +18,7 @@ class TestUtils(BaseCase):
     def test_02_special_characters(self):
         self.assertEqual(slugify("C@f# é & R*staurant!"), "c-f-e-r-staurant")
         self.assertEqual(slugify("Hello_World-2026"), "hello-world-2026")
-        
+
     def test_03_unicode_normalization(self):
         self.assertEqual(slugify("München"), "munchen")
         self.assertEqual(slugify("résumé"), "resume")
@@ -36,4 +37,3 @@ class TestUtils(BaseCase):
     def test_06_leading_and_trailing_hyphens(self):
         self.assertEqual(slugify("---Test---"), "test")
         self.assertEqual(slugify("!@#Test!@#"), "test")
-

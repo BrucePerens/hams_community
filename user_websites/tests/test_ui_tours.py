@@ -1,24 +1,38 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
 
-@odoo.tests.common.tagged('post_install', '-at_install')
+
+@odoo.tests.common.tagged("post_install", "-at_install")
 class TestUserWebsitesUITours(odoo.tests.HttpCase):
     def setUp(self):
         super().setUp()
-        self.user_test = self.env['res.users'].create({
-            'name': 'Tour User',
-            'login': 'touruser',
-            'website_slug': 'touruser',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
-        self.env['website.page'].create({
-            'url': f'/{self.user_test.website_slug}/home',
-            'name': 'Tour Page',
-            'type': 'qweb',
-            'arch': '<t name="Tour Page" t-name="tour"><t t-call="website.layout"><div>Tour Content</div></t></t>',
-            'owner_user_id': self.user_test.id,
-            'website_published': True
-        })
+        self.user_test = self.env["res.users"].create(
+            {
+                "name": "Tour User",
+                "login": "touruser",
+                "website_slug": "touruser",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
+        self.env["website.page"].create(
+            {
+                "url": f"/{self.user_test.website_slug}/home",
+                "name": "Tour Page",
+                "type": "qweb",
+                "arch": '<t name="Tour Page" t-name="tour"><t t-call="website.layout"><div>Tour Content</div></t></t>',
+                "owner_user_id": self.user_test.id,
+                "website_published": True,
+            }
+        )
 
     def test_01_violation_report_tour(self):
         # Access the page as an unauthenticated guest so the Report Violation button is visible
@@ -40,22 +54,45 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/home", "moderation_appeal_tour")
 
     def test_05_create_site_tour(self):
-        user_no_site = self.env['res.users'].create({
-            'name': 'Site Tour User',
-            'login': 'sitetour',
-            'website_slug': 'sitetour',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
+        # [%ANCHOR: test_tour_create_site]
+        user_no_site = self.env["res.users"].create(
+            {
+                "name": "Site Tour User",
+                "login": "sitetour",
+                "website_slug": "sitetour",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
         self.authenticate(user_no_site.login, user_no_site.login)
         self.start_tour(f"/{user_no_site.website_slug}/home", "create_site_tour")
 
     def test_06_create_blog_tour(self):
-        user_no_blog = self.env['res.users'].create({
-            'name': 'Blog Tour User',
-            'login': 'blogtour',
-            'website_slug': 'blogtour',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref('user_websites.group_user_websites_user').id])]
-        })
+        user_no_blog = self.env["res.users"].create(
+            {
+                "name": "Blog Tour User",
+                "login": "blogtour",
+                "website_slug": "blogtour",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_user").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
         self.authenticate(user_no_blog.login, user_no_blog.login)
         self.start_tour(f"/{user_no_blog.website_slug}/blog", "create_blog_tour")
 

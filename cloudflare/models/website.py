@@ -3,13 +3,26 @@
 import os
 from odoo import models, fields
 
-class WebsiteCloudflare(models.Model):
-    _inherit = 'website'
 
-    cloudflare_api_token = fields.Char(string="CF API Token", groups="base.group_system,cloudflare.group_cloudflare_service")
-    cloudflare_zone_id = fields.Char(string="CF Zone ID", groups="base.group_system,cloudflare.group_cloudflare_service")
-    cloudflare_account_id = fields.Char(string="CF Account ID", groups="base.group_system,cloudflare.group_cloudflare_service")
-    cloudflare_turnstile_secret = fields.Char(string="Turnstile Secret", groups="base.group_system,cloudflare.group_cloudflare_service")
+class WebsiteCloudflare(models.Model):
+    _inherit = "website"
+
+    cloudflare_api_token = fields.Char(
+        string="CF API Token",
+        groups="base.group_system,cloudflare.group_cloudflare_service",
+    )
+    cloudflare_zone_id = fields.Char(
+        string="CF Zone ID",
+        groups="base.group_system,cloudflare.group_cloudflare_service",
+    )
+    cloudflare_account_id = fields.Char(
+        string="CF Account ID",
+        groups="base.group_system,cloudflare.group_cloudflare_service",
+    )
+    cloudflare_turnstile_secret = fields.Char(
+        string="Turnstile Secret",
+        groups="base.group_system,cloudflare.group_cloudflare_service",
+    )
 
     def _get_cloudflare_credentials(self):
         """
@@ -17,6 +30,6 @@ class WebsiteCloudflare(models.Model):
         Falls back to global environment variables if not set in the UI.
         """
         self.ensure_one()
-        token = self.cloudflare_api_token or os.environ.get('CLOUDFLARE_API_TOKEN')
-        zone = self.cloudflare_zone_id or os.environ.get('CLOUDFLARE_ZONE_ID')
+        token = self.cloudflare_api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
+        zone = self.cloudflare_zone_id or os.environ.get("CLOUDFLARE_ZONE_ID")
         return token, zone

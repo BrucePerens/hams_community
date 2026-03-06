@@ -12,7 +12,9 @@ def verify_python(filepath):
     """Runs flake8 to verify Python syntax and style."""
     try:
         result = subprocess.run(
-            ["flake8", "--extend-ignore=E203,E302,E501", filepath], capture_output=True, text=True
+            ["flake8", "--extend-ignore=E203,E302,E501", filepath],
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             return f"[WARN] flake8 found issues:\n{result.stdout.strip()}"
@@ -162,7 +164,11 @@ def check_ai_foibles(payload, filepath=""):
     # Safely remove them ONLY if the entire payload is wrapped in backticks.
     if payload.lstrip().startswith("```"):
         lines = payload.strip("\r\n").split("\n")
-        if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip().startswith("```"):
+        if (
+            len(lines) >= 2
+            and lines[0].strip().startswith("```")
+            and lines[-1].strip().startswith("```")
+        ):
             payload = "\n".join(lines[1:-1]) + "\n"
 
     text_to_check = payload
@@ -288,22 +294,54 @@ def extract_parcel(raw_text):
 
         header, payload = part.split("\n\n", 1)
 
-        path_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Path: ")]
+        path_lines = [
+            line_item
+            for line_item in header.splitlines()
+            if line_item.startswith("Path: ")
+        ]
         if not path_lines:
             continue
 
         filepath = path_lines[0].replace("Path: ", "").strip()
 
-        operation_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Operation: ")]
-        operation = operation_lines[0].replace("Operation: ", "").strip().lower() if operation_lines else "overwrite"
+        operation_lines = [
+            line_item
+            for line_item in header.splitlines()
+            if line_item.startswith("Operation: ")
+        ]
+        operation = (
+            operation_lines[0].replace("Operation: ", "").strip().lower()
+            if operation_lines
+            else "overwrite"
+        )
 
-        new_path_lines = [line_item for line_item in header.splitlines() if line_item.startswith("New-Path: ")]
-        new_filepath = new_path_lines[0].replace("New-Path: ", "").strip() if new_path_lines else None
+        new_path_lines = [
+            line_item
+            for line_item in header.splitlines()
+            if line_item.startswith("New-Path: ")
+        ]
+        new_filepath = (
+            new_path_lines[0].replace("New-Path: ", "").strip()
+            if new_path_lines
+            else None
+        )
 
-        encoding_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Encoding: ")]
-        encoding = encoding_lines[0].replace("Encoding: ", "").strip().lower() if encoding_lines else "utf-8"
+        encoding_lines = [
+            line_item
+            for line_item in header.splitlines()
+            if line_item.startswith("Encoding: ")
+        ]
+        encoding = (
+            encoding_lines[0].replace("Encoding: ", "").strip().lower()
+            if encoding_lines
+            else "utf-8"
+        )
 
-        mode_lines = [line_item for line_item in header.splitlines() if line_item.startswith("Mode: ")]
+        mode_lines = [
+            line_item
+            for line_item in header.splitlines()
+            if line_item.startswith("Mode: ")
+        ]
         mode_str = mode_lines[0].replace("Mode: ", "").strip() if mode_lines else None
 
         # Clean terminator from the payload if it's attached
@@ -312,6 +350,7 @@ def extract_parcel(raw_text):
 
         if encoding == "url-encoded":
             import urllib.parse
+
             payload = urllib.parse.unquote(payload)
 
         try:
@@ -329,7 +368,7 @@ def extract_parcel(raw_text):
             "new_filepath": new_filepath,
             "mode_str": mode_str,
             "payload": payload,
-            "error": None
+            "error": None,
         }
         tasks_by_file.setdefault(filepath, []).append(task)
 
@@ -372,7 +411,9 @@ def extract_parcel(raw_text):
                     current_text = f.read()
             except Exception as e:
                 errors.append(f"Failed to read existing file {filepath}: {e}")
-                _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+                _print_summary(
+                    filepath, errors, warnings, aborted=True, count=len(tasks)
+                )
                 continue
         else:
             current_text = ""
@@ -393,7 +434,9 @@ def extract_parcel(raw_text):
                     try:
                         mode_int = int(mode_str, 8)
                     except ValueError:
-                        raise ValueError(f"Invalid mode format: {mode_str}. Must be octal.")
+                        raise ValueError(
+                            f"Invalid mode format: {mode_str}. Must be octal."
+                        )
 
                 if op in ("delete", "remove"):
                     file_deleted = True
@@ -403,7 +446,9 @@ def extract_parcel(raw_text):
                     if not task["new_filepath"]:
                         raise ValueError("Rename requires 'New-Path: <target>'")
                     if not os.path.exists(filepath):
-                        raise FileNotFoundError(f"Cannot rename missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot rename missing file: {filepath}"
+                        )
                     renamed_to = task["new_filepath"]
 
                 elif op == "copy":
@@ -417,7 +462,9 @@ def extract_parcel(raw_text):
                     if not mode_str:
                         raise ValueError("Chmod requires 'Mode: <octal_string>'")
                     if not os.path.exists(filepath) and not file_mutated:
-                        raise FileNotFoundError(f"Cannot chmod missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot chmod missing file: {filepath}"
+                        )
 
                 elif op == "overwrite":
                     current_text = payload
@@ -427,24 +474,36 @@ def extract_parcel(raw_text):
 
                 elif op == "search-and-replace":
                     if not os.path.exists(filepath) and not file_mutated:
-                        raise FileNotFoundError(f"Cannot search-and-replace missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot search-and-replace missing file: {filepath}"
+                        )
 
                     pattern = r"^<<<< SEARCH\n(.*?)\n^====\n(.*?)\n^>>>> REPLACE"
-                    search_blocks = list(re.finditer(pattern, payload, re.DOTALL | re.MULTILINE))
+                    search_blocks = list(
+                        re.finditer(pattern, payload, re.DOTALL | re.MULTILINE)
+                    )
 
                     if not search_blocks:
-                        raise ValueError("Malformed search-and-replace block. Missing markers.")
+                        raise ValueError(
+                            "Malformed search-and-replace block. Missing markers."
+                        )
 
                     for match in search_blocks:
                         search_text = match.group(1)
                         replace_text = match.group(2)
 
-                        new_text = whitespace_agnostic_replace(current_text, search_text, replace_text)
+                        new_text = whitespace_agnostic_replace(
+                            current_text, search_text, replace_text
+                        )
                         if new_text is None:
                             if filepath.endswith(".py"):
-                                new_text = ast_fallback_replace(current_text, search_text, replace_text)
+                                new_text = ast_fallback_replace(
+                                    current_text, search_text, replace_text
+                                )
                                 if new_text is None:
-                                    raise ValueError("AST fallback failed for search block.")
+                                    raise ValueError(
+                                        "AST fallback failed for search block."
+                                    )
                             else:
                                 raise ValueError("Search block not found.")
                         current_text = new_text
@@ -479,7 +538,9 @@ def extract_parcel(raw_text):
 
             if file_mutated:
                 if filepath.endswith(".py"):
-                    current_text = re.sub(r"[ \t]+$", "", current_text, flags=re.MULTILINE)
+                    current_text = re.sub(
+                        r"[ \t]+$", "", current_text, flags=re.MULTILINE
+                    )
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
 
@@ -489,20 +550,25 @@ def extract_parcel(raw_text):
             ext = os.path.splitext(filepath)[1].lower()
             if ext == ".py":
                 err = verify_python(filepath)
-                if err: warnings.append(err)
+                if err:
+                    warnings.append(err)
             elif ext == ".xml":
                 err = verify_xml(filepath)
-                if err: warnings.append(err)
+                if err:
+                    warnings.append(err)
             elif ext == ".md":
                 err = verify_markdown(filepath)
-                if err: warnings.append(err)
+                if err:
+                    warnings.append(err)
             elif ext == ".json":
                 err = verify_json(filepath)
-                if err: warnings.append(err)
+                if err:
+                    warnings.append(err)
 
             if ext in (".py", ".xml", ".js"):
                 err = run_burn_list_linter(filepath)
-                if err: warnings.append(err)
+                if err:
+                    warnings.append(err)
 
             _print_summary(filepath, errors, warnings, aborted=False, count=len(tasks))
 
