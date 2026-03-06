@@ -62,31 +62,38 @@ Give your community the keys to build their own corner of the internet safely an
 * **Dynamic Quota Safety:** Mathematically calculates payload sizes during boot to maximize cache hits without causing browser quota panics.
 * **Zero-Config Integration:** Automatically caches assets for all installed custom modules without writing a single line of integration code.
 
+#### **8. Distributed Redis Cache (`distributed_redis_cache`)**
+*Fine-grained distributed caching for horizontally scaled Odoo clusters.*
+* **Strict Phase Coherence:** Enforces cache invalidation across all WSGI worker nodes simultaneously via a centralized Redis pub/sub bus.
+* **Zero-Stampede Architecture:** Invalidates specific model entries directly from RAM without triggering a global cache clear, preserving overall cluster performance.
+* **Fail-Open Resilience:** Gracefully falls back to localized memory dictionaries if the Redis server goes offline, maintaining operations without crashing the web workers.
+
 ---
 
 ### 📟 Site Reliability Engineering (SRE) & DBA Tooling
 
-#### **8. Pager Duty & Generalized Monitoring (`pager_duty`)**
+#### **9. Pager Duty & Generalized Monitoring (`pager_duty`)**
 *Datadog-level reliability engineering natively integrated with your ERP.*
 * **Airgapped Execution:** Standalone asynchronous Python daemons monitor your system from the outside. If Odoo crashes, the daemon survives to alert you via SMTP or Slack/Discord Webhooks.
 * **Intelligent Calendar Routing:** Natively integrates with Odoo Calendar shifts to instantly ping whoever is currently on call.
-* **Deep Protocol Checks:** Monitors HTTP/3 (QUIC), un-cached DNS root traversals, PostgreSQL sockets, Nginx syntax, and Certbot dry-runs.
+* **Deep Protocol & Nagios-Style Checks:** Monitors HTTP/3 (QUIC), un-cached DNS root traversals, PostgreSQL sockets, Nginx syntax, Certbot dry-runs, and native protocols including FTP, IMAP, POP3, MySQL, SNMP, and Host OS Load Averages.
+* **Graphical Config Engine:** Bidirectionally pulls and pushes configurations between the standalone daemon's YAML file and the Odoo GUI, letting administrators build sophisticated monitoring rules without touching code.
 * **Anomaly Detection:** Write custom SQL queries to establish baselines, and let the system page you if the data stops making sense.
 
-#### **9. Database Management & APM (`database_management`)**
+#### **10. Database Management & APM (`database_management`)**
 *Take absolute control of your PostgreSQL engine.*
 * **Real-Time Telemetry:** Tracks autovacuum bloat, cache hit ratios, and slow queries directly from deep `pg_stat` views.
 * **Active Remediation:** GUI-driven `VACUUM ANALYZE` commands and live session kill-switches to instantly resolve transaction locks.
 * **Optimization Wizards:** Dynamically calculates and applies hardware-aware PostgreSQL tuning configurations (RAM, CPU cores, SSD specs) directly to `postgresql.auto.conf`.
 * **HA Orchestrator:** Generates exact deployment topologies and YAML files for Patroni and PgBouncer high-availability clusters.
 
-#### **10. Unified Backup Management (`backup_management`)**
+#### **11. Unified Backup Management (`backup_management`)**
 *A single pane of glass for multi-engine disaster recovery.*
 * **Hybrid Architecture:** Orchestrates both Kopia (for file and system state) and pgBackRest (for PostgreSQL WAL archiving).
 * **Automated Drills:** Executes and validates automated restore shell scripts to mathematically prove backup integrity before disaster strikes.
 * **Anomaly Detection:** Triggers Pager Duty alerts if snapshots miss minimum expected file sizes or if the system goes 26 hours without a successful sync.
 
-#### **11. Real Transaction Testing Facility (`test_real_transaction`)**
+#### **12. Real Transaction Testing Facility (`test_real_transaction`)**
 *Stop fighting the ORM test cache.*
 * **True Commits:** Bypasses standard Odoo `TransactionCase` savepoints to allow actual database commits during test execution—vital for testing Redis pub/sub and complex inverse relations.
 * **Leak Detection:** Features a strict SQL leak detector that snapshots the schema before and after tests to guarantee pristine environments.
