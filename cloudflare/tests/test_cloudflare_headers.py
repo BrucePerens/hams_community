@@ -13,7 +13,7 @@ class TestCloudflareHeaders(HttpCase):
                 "name": "CF Tester",
                 "login": "cf_tester",
                 "password": "password123",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
 

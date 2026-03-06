@@ -2,7 +2,6 @@
 import { registry } from "@web/core/registry";
 
 // [%ANCHOR: test_tour_cf_waf_rule]
-// Tests [%ANCHOR: cf_waf_rule_ui]
 registry.category("web_tour.tours").add("cf_waf_rule_tour", {
     test: true,
     url: "/web",

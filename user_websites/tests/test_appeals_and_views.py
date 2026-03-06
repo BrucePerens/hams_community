@@ -20,7 +20,7 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )

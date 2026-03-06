@@ -16,7 +16,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )
@@ -54,7 +54,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/home", "moderation_appeal_tour")
 
     def test_05_create_site_tour(self):
-        # [%ANCHOR: test_tour_create_site]
+        # Tests [%ANCHOR: test_tour_create_site]
         user_no_site = self.env["res.users"].create(
             {
                 "name": "Site Tour User",
@@ -65,7 +65,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )
@@ -86,7 +86,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )

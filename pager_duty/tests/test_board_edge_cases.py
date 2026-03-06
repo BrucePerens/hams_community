@@ -17,7 +17,7 @@ class TestBoardEdgeCases(TransactionCase):
                         0,
                         [
                             self.env.ref("pager_duty.group_pager_admin").id,
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                         ],
                     )
                 ],

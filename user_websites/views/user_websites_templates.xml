@@ -128,7 +128,8 @@
         </t>
     </template>
 
-    <template id="template_default_home" name="User Website Home Master Layout"> <!-- Verified by [%ANCHOR: test_tour_create_site] -->
+    <!-- Verified by [%ANCHOR: test_tour_create_site] -->
+    <template id="template_default_home" name="User Website Home Master Layout">
         <t t-call="website.layout">
             <!-- Global User Website Header / Monetization Dropzone -->
             <div id="user_websites_master_header"/>
@@ -259,7 +260,8 @@
         </t>
     </template>
 
-    <template id="placeholder_page" name="Website Placeholder"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_tour_create_site] -->
+    <!-- Verified by [%ANCHOR: test_tour_create_site] -->
+    <template id="placeholder_page" name="Website Placeholder">
         <t t-call="website.layout">
             <div class="container mt-5 mb-5 text-center">
                 <t t-set="entity_name" t-value="profile_user.name if profile_user else profile_group.name"/>

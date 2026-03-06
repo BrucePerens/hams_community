@@ -17,7 +17,7 @@ class TestConfigSettings(TransactionCase):
                 "login": "settingsadmin",
                 "email": "settingsadmin@example.com",
                 "website_slug": "settingsadmin",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
 

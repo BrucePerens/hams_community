@@ -95,10 +95,8 @@ class PagerIncident(models.Model):
         pager_admin_group = self.env.ref("pager_duty.group_pager_admin")
         partners = pager_admin_group.user_ids.mapped("partner_id")
         for inc in incidents:
-            inc.with_user(mail_svc).message_post(
-                body=_("🚨 ESCALATION: Incident open for > 15 minutes!"),
-                partner_ids=partners.ids
-            ) # audit-ignore-mail: Tested by [%ANCHOR: test_pager_escalation]  # fmt: skip
+            msg_body = _("🚨 ESCALATION: Incident open for > 15 minutes!")
+            inc.with_user(mail_svc).message_post(body=msg_body, partner_ids=partners.ids)  # audit-ignore-mail: Tested by [%ANCHOR: test_pager_escalation]  # fmt: skip
         incidents.write({"is_escalated": True})
 
     @api.model
@@ -140,7 +138,9 @@ class PagerIncident(models.Model):
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "pager_duty.user_pager_service_internal"
             )
-            incident.with_user(mail_svc).message_post(body=_('New Incident Created'), partner_ids=[on_duty_user.partner_id.id]) # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
+            msg_body = _('New Incident Created')
+            partner_ids = [on_duty_user.partner_id.id]
+            incident.with_user(mail_svc).message_post(body=msg_body, partner_ids=partner_ids)  # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
         return incident.id
 
     @api.model
@@ -161,8 +161,9 @@ class PagerIncident(models.Model):
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "pager_duty.user_pager_service_internal"
             )
+            msg_body = _('Auto-resolved by NOC monitor recovery sequence.')
             for incident in open_incidents:
-                incident.with_user(mail_svc).message_post(body=_('Auto-resolved by NOC monitor recovery sequence.')) # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
+                incident.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
         return True
 
     @api.model_create_multi

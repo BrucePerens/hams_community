@@ -23,7 +23,7 @@ class TestSubscriptionsAndDigest(HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )
@@ -43,7 +43,7 @@ class TestSubscriptionsAndDigest(HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )
@@ -167,7 +167,7 @@ class TestSubscriptionsAndDigest(HttpCase):
             test_post = self.env["blog.post"].search(
                 [("owner_user_id", "=", self.creator.id)], limit=1
             )
-            template.send_mail(test_post.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            template.send_mail(test_post.id, force_send=False)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
     def test_02_invalid_unsubscribe_token(self):
         """

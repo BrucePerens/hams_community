@@ -11,3 +11,4 @@ access_mail_followers_pager_admin,mail.followers pager admin,mail.model_mail_fol
 access_mail_template_pager_admin,mail.template pager admin,mail.model_mail_template,pager_duty.group_pager_admin,1,0,0,0
 access_res_users_pager_admin,res.users pager admin,base.model_res_users,pager_duty.group_pager_admin,1,0,0,0
 access_mail_alias_domain_pager_admin,mail.alias.domain pager admin,mail.model_mail_alias_domain,pager_duty.group_pager_admin,1,0,0,0
+access_res_partner_pager_admin,res.partner pager admin,base.model_res_partner,pager_duty.group_pager_admin,1,1,0,0

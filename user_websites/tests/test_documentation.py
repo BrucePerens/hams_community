@@ -16,7 +16,7 @@ class TestDocumentation(odoo.tests.common.HttpCase):
                 "name": "Doc Reader",
                 "login": "docreader",
                 "email": "docreader@example.com",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
 

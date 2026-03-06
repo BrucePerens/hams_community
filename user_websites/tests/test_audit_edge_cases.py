@@ -23,7 +23,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.env.ref("user_websites.group_user_websites_user").id,
                         ],
                     )
@@ -350,4 +350,4 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             raise_if_not_found=False,
         )
         if template:
-            template.send_mail(self.env.company.id, force_send=False) # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip
+            template.send_mail(self.env.company.id, force_send=False)  # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip

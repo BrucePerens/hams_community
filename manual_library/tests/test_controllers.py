@@ -13,7 +13,7 @@ class TestManualControllers(odoo.tests.common.HttpCase):
                 "name": "Controller Tester",
                 "login": "controllertester",
                 "email": "tester@manual.com",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
         self.internal_user.partner_id.company_id = self.env.company
@@ -55,6 +55,7 @@ class TestManualControllers(odoo.tests.common.HttpCase):
 
     def test_01_public_guest_routing(self):
         """Public guests can hit the root manual route and see published content."""
+        self.authenticate(None, None)
         response = self.url_open("/manual")
         self.assertEqual(
             response.status_code, 200, "Base route should render successfully."

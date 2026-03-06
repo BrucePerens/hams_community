@@ -6,9 +6,6 @@ import hmac
 import os
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-
-# Bounded executor to prevent OS thread exhaustion DoS
-BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 import odoo
 import redis
 from odoo import http, _
@@ -21,6 +18,9 @@ from odoo.modules.registry import Registry
 from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
+
+# Bounded executor to prevent OS thread exhaustion DoS
+BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 # ADR-0024: Global Connection Pooling for Non-ORM Datastores
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
@@ -284,6 +284,8 @@ class UserWebsitesController(http.Controller):
             )
 
         if user:
+            if getattr(user, "is_suspended_from_websites", False):
+                raise werkzeug.exceptions.NotFound()
             website_id = (
                 request.website.id
                 if hasattr(request, "website") and request.website
@@ -562,6 +564,8 @@ class UserWebsitesController(http.Controller):
         )
 
         if user:
+            if getattr(user, "is_suspended_from_websites", False):
+                raise werkzeug.exceptions.NotFound()
             domain.append(("owner_user_id", "=", user.id))
             main_object = request.env["res.users"]
             meta_title = f"{user.name}'s Blog"

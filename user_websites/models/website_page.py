@@ -415,6 +415,7 @@ class WebsitePage(models.Model):
         self.check_access("unlink")
 
         pages_to_invalidate = [p.url for p in self if p.url]
+        self._invalidate_cloudflare_cache()
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -425,7 +426,6 @@ class WebsitePage(models.Model):
         if pages_to_invalidate:
             utils._notify_cache_invalidation("website.page", pages_to_invalidate)
 
-        self._invalidate_cloudflare_cache()
         return res
 
     @api.model

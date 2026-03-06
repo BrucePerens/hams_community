@@ -87,13 +87,14 @@ class TestManualFeatures(odoo.tests.common.HttpCase):
         # Submit a 'Not Helpful' rating
         response = self.url_open(
             "/manual/feedback",
-            data={  # noqa: F841
+            data={
                 "csrf_token": odoo.http.Request.csrf_token(self),
                 "article_id": self.searchable_article.id,
                 "is_helpful": "0",
             },
             method="POST",
         )
+        self.assertEqual(response.status_code, 200)
 
         # Check that the database counter was incremented
         self.searchable_article.invalidate_recordset(["unhelpful_count"])

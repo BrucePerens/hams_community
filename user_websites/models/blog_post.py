@@ -177,6 +177,7 @@ class BlogPost(models.Model):
         self.check_access("unlink")
 
         urls_to_invalidate = self._get_blog_urls()
+        self._invalidate_cloudflare_cache()
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -187,7 +188,6 @@ class BlogPost(models.Model):
         if urls_to_invalidate:
             utils._notify_cache_invalidation("blog.post", urls_to_invalidate)
 
-        self._invalidate_cloudflare_cache()
         return res
 
     @api.model
@@ -374,22 +374,18 @@ class BlogPost(models.Model):
                     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
                 }
 
-                template.with_user(
-                    svc_uid
-                ).with_context(  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
-                    author_name=author_name,
-                    post_links=post_links,
-                    email_to=partner.email,
-                    unsub_url=unsub_url,
-                ).send_mail(
-                    posts[0].id,
-                    force_send=False,
-                    email_values={
-                        "headers": repr(headers),
-                        "recipient_ids": [(4, partner.id)],
-                        "email_to": partner.email,
-                    },
-                )
+                ctx = {
+                    "author_name": author_name,
+                    "post_links": post_links,
+                    "email_to": partner.email,
+                    "unsub_url": unsub_url,
+                }
+                email_vals = {
+                    "headers": repr(headers),
+                    "recipient_ids": [(4, partner.id)],
+                    "email_to": partner.email,
+                }
+                template.with_user(svc_uid).with_context(**ctx).send_mail(posts[0].id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
         if len(sorted_keys) > start_idx + 10:
             last_key = batch_keys[-1]

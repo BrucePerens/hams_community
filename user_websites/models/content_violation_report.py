@@ -63,11 +63,8 @@ class ContentViolationReport(models.Model):
                 if not abuse_email:
                     abuse_email = self.env.company.email or "admin@example.com"
 
-                template.with_user(svc_uid).with_context(pending_count=count).send_mail(
-                    self.env.company.id,
-                    force_send=False,
-                    email_values={"email_to": abuse_email},
-                )
+                email_vals = {"email_to": abuse_email}
+                template.with_user(svc_uid).with_context(pending_count=count).send_mail(self.env.company.id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip
 
     # --- Moderation Action Methods ---
     def action_mark_under_review(self):

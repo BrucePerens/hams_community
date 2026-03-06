@@ -13,14 +13,14 @@ class TestBackupSecurity(TransactionCase):
             {
                 "name": "Std",
                 "login": "std_backup",
-                "group_ids": [(4, self.env.ref("base.group_user").id)],
+                "group_ids": [(4, self.env.ref("base.group_portal").id)],
             }
         )
 
         web_grp = self.env.ref(
             "user_websites.group_user_websites_user", raise_if_not_found=False
         )
-        groups_web = [self.env.ref("base.group_user").id] + (
+        groups_web = [self.env.ref("base.group_portal").id] + (
             [web_grp.id] if web_grp else []
         )
         self.user_web = self.env["res.users"].create(
@@ -30,7 +30,7 @@ class TestBackupSecurity(TransactionCase):
         ham_grp = self.env.ref(
             "ham_onboarding.group_ham_system_operator", raise_if_not_found=False
         )
-        groups_ham = [self.env.ref("base.group_user").id] + (
+        groups_ham = [self.env.ref("base.group_portal").id] + (
             [ham_grp.id] if ham_grp else []
         )
         self.user_ham = self.env["res.users"].create(
@@ -40,7 +40,7 @@ class TestBackupSecurity(TransactionCase):
         swl_grp = self.env.ref(
             "ham_onboarding.group_ham_system_swl", raise_if_not_found=False
         )
-        groups_swl = [self.env.ref("base.group_user").id] + (
+        groups_swl = [self.env.ref("base.group_portal").id] + (
             [swl_grp.id] if swl_grp else []
         )
         self.user_swl = self.env["res.users"].create(

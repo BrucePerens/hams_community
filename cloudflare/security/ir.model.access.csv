@@ -3,6 +3,8 @@ access_website_cf_svc,website cf svc,website.model_website,cloudflare.group_clou
 access_cloudflare_purge_queue_svc,cloudflare.purge.queue svc,model_cloudflare_purge_queue,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_purge_queue_admin,cloudflare.purge.queue admin,model_cloudflare_purge_queue,base.group_system,1,1,1,1
 access_ir_config_parameter_cf_svc,ir.config_parameter cf svc,base.model_ir_config_parameter,cloudflare.group_cloudflare_service,1,0,0,0
+access_res_company_cf_svc,res.company cf svc,base.model_res_company,cloudflare.group_cloudflare_service,1,0,0,0
+access_res_users_cf_svc,res.users cf svc,base.model_res_users,cloudflare.group_cloudflare_service,1,0,0,0
 access_cloudflare_waf_rule_svc,cloudflare.waf.rule svc,model_cloudflare_waf_rule,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_waf_rule_admin,cloudflare.waf.rule admin,model_cloudflare_waf_rule,base.group_system,1,1,1,1
 access_cloudflare_config_backup_svc,cloudflare.config.backup svc,model_cloudflare_config_backup,cloudflare.group_cloudflare_service,1,1,1,1

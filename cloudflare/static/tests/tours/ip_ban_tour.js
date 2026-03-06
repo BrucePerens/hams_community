@@ -2,7 +2,6 @@
 import { registry } from "@web/core/registry";
 
 // [%ANCHOR: test_tour_cf_ip_ban]
-// Tests [%ANCHOR: cf_ip_ban_ui]
 registry.category("web_tour.tours").add("cf_ip_ban_tour", {
     test: true,
     url: "/web",

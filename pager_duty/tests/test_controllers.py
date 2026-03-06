@@ -29,7 +29,7 @@ class TestPagerControllers(HttpCase):
                 "name": "Test Ham",
                 "login": "tester",
                 "password": "testpassword",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
         self.authenticate("tester", "testpassword")

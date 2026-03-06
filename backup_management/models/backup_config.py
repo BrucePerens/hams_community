@@ -158,7 +158,8 @@ class BackupConfig(models.Model):
 
             url = "https://github.com/kopia/kopia/releases/download/v0.18.2/kopia-0.18.2-linux-x64.tar.gz"
             try:
-                self.message_post(body=_("Kopia binary not found. Auto-downloading static binary from GitHub...")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                msg_body = _("Kopia binary not found. Auto-downloading static binary from GitHub...")
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
                     urllib.request.urlretrieve(url, tmp.name)
                 with tarfile.open(tmp.name, "r:gz") as tar:
@@ -169,7 +170,8 @@ class BackupConfig(models.Model):
                             break
                 os.chmod(kopia_bin, 0o755)
                 os.unlink(tmp.name)
-                self.message_post(body=_("Kopia successfully installed to %s") % kopia_bin) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                msg_body = _("Kopia successfully installed to %s") % kopia_bin
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
                 return kopia_bin
             except Exception as e:
                 raise UserError(_("Failed to auto-install Kopia: %s") % str(e))
@@ -209,7 +211,8 @@ class BackupConfig(models.Model):
             if res.returncode != 0:
                 self._report_backup_failure(f"Kopia backup failed: {res.stderr}")
             else:
-                self.message_post(body=_("Kopia backup completed successfully.")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                msg_body = _("Kopia backup completed successfully.")
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering Kopia: {e}")
@@ -226,7 +229,8 @@ class BackupConfig(models.Model):
             if res.returncode != 0:
                 self._report_backup_failure(f"pgBackRest backup failed: {res.stderr}")
             else:
-                self.message_post(body=_("pgBackRest backup completed successfully.")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                msg_body = _("pgBackRest backup completed successfully.")
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering pgBackRest: {e}")
@@ -261,7 +265,8 @@ class BackupConfig(models.Model):
             if res.returncode != 0:
                 self._report_backup_failure(f"Kopia policy set failed: {res.stderr}")
             else:
-                self.message_post(body=_("Kopia policies applied successfully.")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                msg_body = _("Kopia policies applied successfully.")
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
         except Exception as e:
             self._report_backup_failure(f"Error applying Kopia policy: {e}")
 
@@ -460,6 +465,7 @@ class BackupConfig(models.Model):
                 )
             else:
                 self.last_drill_time = fields.Datetime.now()
-                self.message_post(body=_("Automated Restore Drill completed successfully.")) # audit-ignore-mail: Tested by [%ANCHOR: test_backup_cron]  # fmt: skip
+                msg_body = _("Automated Restore Drill completed successfully.")
+                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_cron]  # fmt: skip
         except Exception as e:
             self._report_backup_failure(f"Error triggering Restore Drill: {e}")

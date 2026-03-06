@@ -67,5 +67,5 @@ queue_env.with_user(svc_uid).enqueue_urls(['/my-custom-url'])
 * `[%ANCHOR: enqueue_urls_base_url]` / `[%ANCHOR: test_purge_queue_base_url_sudo]`: URL queueing validation.
 * `[%ANCHOR: ir_cron_process_cf_purge_queue]` / `[%ANCHOR: test_queue_batching_and_rate_limiting]`: Queue batching limits.
 * `[%ANCHOR: xpath_rendering_cf_settings]` / `[%ANCHOR: test_xpath_rendering_settings]`: UI Configuration settings rendering.
-* `[%ANCHOR: cf_ip_ban_ui]` / `[%ANCHOR: test_tour_cf_ip_ban]`: IP Ban User Interface tour.
-* `[%ANCHOR: cf_waf_rule_ui]` / `[%ANCHOR: test_tour_cf_waf_rule]`: WAF Rule User Interface tour.
+* `[%ANCHOR: test_tour_cf_ip_ban]`: IP Ban User Interface tour.
+* `[%ANCHOR: test_tour_cf_waf_rule]`: WAF Rule User Interface tour.

@@ -52,10 +52,20 @@ def post_init_hook(env):
         "user_websites.group_user_websites_user", raise_if_not_found=False
     )
     if user_group:
+        domain = [
+            ("id", ">", 0),
+            ("is_service_account", "!=", True),
+        ]
+
+        # Explicitly exclude the unauthenticated public guest user
+        public_user = env.ref("base.public_user", raise_if_not_found=False)
+        if public_user:
+            domain.append(("id", "!=", public_user.id))
+
         users = (
             env["res.users"]
             .with_context(active_test=False)
-            .search([("id", ">", 0)], limit=100000)
+            .search(domain, limit=100000)
         )
         user_group.write({"user_ids": [(4, u.id) for u in users]})
 

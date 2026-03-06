@@ -22,7 +22,11 @@ class ResConfigSettings(models.TransientModel):
             "user_websites.group_user_websites_administrator", raise_if_not_found=False
         )
         if admin_group:
-            res["user_websites_administrators_ids"] = [(6, 0, admin_group.user_ids.ids)]
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+            admin_users = admin_group.with_user(svc_uid).user_ids.ids
+            res["user_websites_administrators_ids"] = [(6, 0, admin_users)]
         else:
             res["user_websites_administrators_ids"] = [(6, 0, [])]
         return res

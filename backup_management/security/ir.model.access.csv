@@ -3,3 +3,9 @@ access_backup_config_admin,backup.config admin,model_backup_config,group_backup_
 access_backup_snapshot_admin,backup.snapshot admin,model_backup_snapshot,group_backup_admin,1,1,1,1
 access_backup_config_system,backup.config system,model_backup_config,base.group_system,1,1,1,1
 access_backup_snapshot_system,backup.snapshot system,model_backup_snapshot,base.group_system,1,1,1,1
+access_mail_message_backup_svc,mail.message svc,mail.model_mail_message,group_backup_admin,1,1,1,0
+access_mail_followers_backup_svc,mail.followers svc,mail.model_mail_followers,group_backup_admin,1,1,1,1
+access_res_partner_backup_svc,res.partner svc,base.model_res_partner,group_backup_admin,1,1,0,0
+access_res_users_backup_svc,res.users svc,base.model_res_users,group_backup_admin,1,0,0,0
+access_res_company_backup_svc,res.company svc,base.model_res_company,group_backup_admin,1,0,0,0
+access_mail_alias_domain_backup_svc,mail.alias.domain svc,mail.model_mail_alias_domain,group_backup_admin,1,0,0,0

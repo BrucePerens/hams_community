@@ -17,7 +17,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
                 "login": "testuser1",
                 "email": "testuser1@example.com",
                 "website_slug": "testuser1",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
 
@@ -32,7 +32,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_user").id,
+                            self.env.ref("base.group_portal").id,
                             self.user_websites_admin_group.id,
                         ],
                     )
@@ -47,7 +47,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
                 "login": "reguser",
                 "email": "reguser@example.com",
                 "website_slug": "reguser",
-                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
                 "password": "reguser",
             }
         )

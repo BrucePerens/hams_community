@@ -15,7 +15,6 @@
        <record id="group_manual_manager" model="res.groups">
             <field name="name">Manual Administrator</field>
             <field name="privilege_id" ref="privilege_manual_library"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
             <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
         </record>
         
@@ -26,6 +25,7 @@
         <record id="user_manual_library_service_account" model="res.users">
             <field name="name">Manual Library System</field>
             <field name="login">manual_library_sys</field>
+            <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
             <field name="group_ids" eval="[(6, 0, [ref('manual_library.group_manual_library_service_account')])]"/>
         </record>
@@ -44,7 +44,7 @@
         <record id="knowledge_article_internal_read_rule" model="ir.rule">
             <field name="name">Knowledge Article Internal Read</field>
             <field name="model_id" ref="model_knowledge_article"/>
-            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
             <field name="domain_force">['|', '|', ('internal_permission', '!=', 'none'), ('create_uid', '=', user.id), ('member_ids', 'in', user.ids)]</field>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="False"/>
