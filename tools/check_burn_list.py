@@ -174,7 +174,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             }
 
         def add_error(self, lineno, msg):
-            if lineno <= len(self.lines) and "burn-ignore" in self.lines[lineno - 1]:  # fmt: skip
+            if lineno <= len(self.lines) and "burn-ignore" in self.lines[lineno - 1]:
                 return
             self.errors.append((lineno, msg))
 
@@ -182,13 +182,13 @@ def check_ast_vulnerabilities(filepath, content, lines):
             if lineno <= len(self.lines):
                 line_content = self.lines[lineno - 1]
                 if (
-                    "burn-ignore" in line_content  # fmt: skip
-                    or ("audit-ignore-mail" in line_content and "Mail Templates" in msg)  # fmt: skip
+                    "burn-ignore" in line_content
+                    or ("audit-ignore-mail" in line_content and "Mail Templates" in msg)
                     or (
-                        "audit-ignore-search" in line_content  # fmt: skip
+                        "audit-ignore-search" in line_content
                         and "Data Integrity" in msg
                     )
-                    or ("audit-ignore-i18n" in line_content and "I18N" in msg)  # fmt: skip
+                    or ("audit-ignore-i18n" in line_content and "I18N" in msg)
                 ):
                     return
             self.warnings.append((lineno, msg))
@@ -647,8 +647,15 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     node.lineno,
                     "Messaging & Followers: Do not call on res.users directly.",
                 )
-            elif attr == "ref" and len(node.args) == 1 and isinstance(node.args[0], ast.Constant) and node.args[0].value == "base.group_user":
-                if not ("mail_service" in self.filename or "user_manager" in self.filename):
+            elif (
+                attr == "ref"
+                and len(node.args) == 1
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value == "base.group_user"
+            ):
+                if not (
+                    "mail_service" in self.filename or "user_manager" in self.filename
+                ):
                     self.add_warning(
                         node.lineno,
                         "[AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Use base.group_portal.",
@@ -673,7 +680,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             elif (
                 attr == "sleep"
                 and getattr(node.func.value, "id", "") == "time"
-                and "audit-ignore-sleep"  # fmt: skip
+                and "audit-ignore-sleep"
                 not in (
                     self.lines[node.lineno - 1]
                     if node.lineno <= len(self.lines)
@@ -853,7 +860,7 @@ def scan_file(filepath):
                                 )
                             ]
                         )
-                        if "[%ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:  # fmt: skip
+                        if "[%ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:
                             has_tour = True
                     if not has_tour:
                         errors_found.append(
@@ -943,7 +950,7 @@ def scan_file(filepath):
                             )
                         ]
                     )
-                    if "audit-ignore-cron" not in raw_text:  # fmt: skip
+                    if "audit-ignore-cron" not in raw_text:
                         warnings_found.append(
                             f"Line {node.lineno}: [AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger()."
                         )
@@ -955,7 +962,7 @@ def scan_file(filepath):
                             )
                         ]
                     )
-                    if "audit-ignore-xpath" not in raw_text:  # fmt: skip
+                    if "audit-ignore-xpath" not in raw_text:
                         warnings_found.append(
                             f"Line {node.lineno}: [AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly."
                         )
@@ -1009,11 +1016,11 @@ def scan_file(filepath):
         if filename.endswith(".xml") and stripped.startswith("<!--"):
             continue
 
-        if "burn-ignore" in line and not any(  # fmt: skip
+        if "burn-ignore" in line and not any(
             allowed in line
             for allowed in [
                 "database.secret",
-                "burn-ignore-test-commit",  # fmt: skip
+                "burn-ignore-test-commit",
                 ".sudo().unlink()",
             ]
         ):
@@ -1021,15 +1028,15 @@ def scan_file(filepath):
                 f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`"
             )
 
-        if "audit-ignore" in line:  # fmt: skip
+        if "audit-ignore" in line:
             valid_audits = [
-                "audit-ignore-cron",  # fmt: skip
-                "audit-ignore-mail",  # fmt: skip
-                "audit-ignore-search",  # fmt: skip
-                "audit-ignore-xpath",  # fmt: skip
-                "audit-ignore-sleep",  # fmt: skip
-                "audit-ignore-view",  # fmt: skip
-                "audit-ignore-i18n",  # fmt: skip
+                "audit-ignore-cron",
+                "audit-ignore-mail",
+                "audit-ignore-search",
+                "audit-ignore-xpath",
+                "audit-ignore-sleep",
+                "audit-ignore-view",
+                "audit-ignore-i18n",
             ]
             if not any(tag in line for tag in valid_audits):
                 errors_found.append(
@@ -1049,13 +1056,13 @@ def scan_file(filepath):
                         }
                     )
 
-        if "burn-ignore-sudo" in line:  # fmt: skip
+        if "burn-ignore-sudo" in line:
             anchor_match = re.search(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
             if anchor_match:
                 REQUIRE_TEST_VERIFICATION.append(
                     {
                         "anchor": anchor_match.group(1),
-                        "type": "burn-ignore-sudo",  # fmt: skip
+                        "type": "burn-ignore-sudo",
                         "file": filepath,
                         "line": line_num,
                     }
@@ -1063,13 +1070,13 @@ def scan_file(filepath):
 
         for ext_pattern, regex, msg in ERROR_RULES:
             if re.search(ext_pattern, filename) and regex.search(line):
-                if "burn-ignore" not in line:  # fmt: skip
+                if "burn-ignore" not in line:
                     errors_found.append(
                         f"Line {line_num}: {msg}\n      Code: `{stripped}`"
                     )
         for ext_pattern, regex, msg in WARNING_RULES:
             if re.search(ext_pattern, filename) and regex.search(line):
-                if "audit-ignore" not in line:  # fmt: skip
+                if "audit-ignore" not in line:
                     warnings_found.append(
                         f"Line {line_num}: {msg}\n      Code: `{stripped}`"
                     )
@@ -1082,7 +1089,7 @@ def _verify_test_ast(
 ):
     anchor, b_type = req["anchor"], req["type"]
     if target_file.endswith(".js"):
-        if b_type == "audit-ignore-xpath" and not any(  # fmt: skip
+        if b_type == "audit-ignore-xpath" and not any(
             k in target_content
             for k in ("get_view", "url_open", "_get_combined_arch", "trigger:")
         ):
@@ -1169,7 +1176,7 @@ def _verify_test_ast(
                     return verification_errors + 1, total_errors + 1
 
     is_valid, msg = True, ""
-    if b_type in ("audit-ignore-xpath", "audit-ignore-view"):  # fmt: skip
+    if b_type in ("audit-ignore-xpath", "audit-ignore-view"):
         is_valid, msg = (
             (True, "")
             if found_view
@@ -1178,21 +1185,21 @@ def _verify_test_ast(
                 "AST requires 'get_view', 'url_open', or '_get_combined_arch' call.",
             )
         )
-    elif b_type == "audit-ignore-search":  # fmt: skip
+    elif b_type == "audit-ignore-search":
         is_valid, msg = (
             (True, "") if found_qcount else (False, "AST requires 'assertQueryCount'.")
         )
-    elif b_type == "audit-ignore-cron":  # fmt: skip
+    elif b_type == "audit-ignore-cron":
         is_valid, msg = (
             (True, "") if found_trigger else (False, "AST requires '_trigger()' call.")
         )
-    elif b_type == "audit-ignore-mail":  # fmt: skip
+    elif b_type == "audit-ignore-mail":
         is_valid, msg = (
             (True, "")
             if found_mail
             else (False, "AST requires 'send_mail' or 'message_post'.")
         )
-    elif b_type == "audit-ignore-i18n":  # fmt: skip
+    elif b_type == "audit-ignore-i18n":
         is_valid, msg = True, ""
 
     if not is_valid:

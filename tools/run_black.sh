@@ -32,9 +32,9 @@ def pin_comments(d):
                     continue
                 changed = False
                 for i, line in enumerate(lines):
-                    if ("burn-ignore" in line or "audit-ignore" in line) and "fmt: skip" not in line:
-                        lines[i] = line.rstrip() + "  # fmt: skip\n"
-                        changed = True
+                        if ("# burn-ignore" in line or "# audit-ignore" in line) and "fmt: skip" not in line:
+                            lines[i] = line.rstrip() + "  # fmt: skip\n"
+                            changed = True
                 if changed:
                     with open(path, "w", encoding="utf-8") as file:
                         file.writelines(lines)
