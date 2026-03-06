@@ -183,6 +183,7 @@ class TestBackupManagement(TransactionCase):
         "odoo.addons.backup_management.models.backup_config.urllib.request.urlretrieve"
     )
     @patch("odoo.addons.backup_management.models.backup_config.tarfile.open")
+    @patch("odoo.addons.backup_management.models.backup_config.KOPIA_CHECKSUM", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
     @patch("odoo.addons.backup_management.models.backup_config.os.chmod")
     @patch("odoo.addons.backup_management.models.backup_config.os.unlink")
     def test_08d_kopia_auto_download(
@@ -209,8 +210,8 @@ class TestBackupManagement(TransactionCase):
 
     def test_09_board_data_rpc(self):
         # Tests [%ANCHOR: backup_board_data]
-        self.env["backup.config"].get_board_data()
-        self.assertTrue(True)
+        data = self.env["backup.config"].get_board_data()
+        self.assertIsInstance(data, list)
 
     def test_10_restore_command_computation(self):
         # Tests [%ANCHOR: backup_restore_command]
@@ -225,5 +226,5 @@ class TestBackupManagement(TransactionCase):
 
     def test_05_views(self):
         # [%ANCHOR: test_backup_view]
-        self.env["backup.config"].get_view(view_type="list")
-        self.assertTrue(True)
+        v1 = self.env["backup.config"].get_view(view_type="list")
+        self.assertIn("name", v1["arch"])

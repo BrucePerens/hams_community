@@ -10,7 +10,11 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
         {
             content: "Verify Suspension Alert",
             trigger: '.alert-danger h4:contains("Account Suspended")',
-            run: () => {}
+            run: () => {
+                if (!document.querySelector('.alert-danger')) {
+                    console.error("Suspension alert missing");
+                }
+            }
         },
         {
             content: "Fill out the Appeal Reason",
@@ -25,7 +29,11 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
         {
             content: "Check Pending Status Rendered",
             trigger: 'p:contains("We are currently reviewing your appeal.")',
-            run: () => {}
+            run: () => {
+                if (!document.body.textContent.includes('currently reviewing your appeal')) {
+                    console.error("Appeal pending status missing");
+                }
+            }
         }
     ],
 });

@@ -17,6 +17,8 @@ except ImportError:
     Fernet = None
 
 
+KOPIA_CHECKSUM = "6eb5cc175ccf2b38038bf34710184b251ce7c77f013bd33816650db8182742dd"
+
 class BackupConfig(models.Model):
     _name = "backup.config"
     _description = "Backup Configuration"
@@ -158,10 +160,21 @@ class BackupConfig(models.Model):
 
             url = "https://github.com/kopia/kopia/releases/download/v0.18.2/kopia-0.18.2-linux-x64.tar.gz"
             try:
+                import hashlib
                 msg_body = _("Kopia binary not found. Auto-downloading static binary from GitHub...")
                 self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
                     urllib.request.urlretrieve(url, tmp.name)
+
+                expected_hash = KOPIA_CHECKSUM
+                hasher = hashlib.sha256()
+                with open(tmp.name, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        hasher.update(chunk)
+                if hasher.hexdigest() != expected_hash:
+                    os.unlink(tmp.name)
+                    raise UserError(_("Security Alert: Checksum mismatch for downloaded Kopia binary."))
+
                 with tarfile.open(tmp.name, "r:gz") as tar:
                     for member in tar.getmembers():
                         if member.name.endswith("/kopia") or member.name == "kopia":

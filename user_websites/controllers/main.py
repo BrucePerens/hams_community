@@ -26,7 +26,8 @@ BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 redis_pool = redis.ConnectionPool(
-    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True,
+    socket_timeout=1.0, socket_connect_timeout=1.0
 )
 redis_client = redis.Redis(connection_pool=redis_pool)
 

@@ -99,6 +99,8 @@ class PgOptimizeWizard(models.TransientModel):
         }
 
 
+ETCD_CHECKSUM = "84f1837ff7a107ba6e1b6f0dd51bb8db6e5bc24dbd2a8ec862ffbe4db1d996b5"
+
 class PgHaWizard(models.TransientModel):
     _name = "pg.ha.wizard"
     _description = "High Availability Failover Wizard"
@@ -142,8 +144,19 @@ class PgHaWizard(models.TransientModel):
 
             url = "https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz"
             try:
+                import hashlib
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
                     urllib.request.urlretrieve(url, tmp.name)
+
+                expected_hash = ETCD_CHECKSUM
+                hasher = hashlib.sha256()
+                with open(tmp.name, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        hasher.update(chunk)
+                if hasher.hexdigest() != expected_hash:
+                    os.unlink(tmp.name)
+                    raise UserError(_("Security Alert: Checksum mismatch for downloaded etcd binary."))
+
                 with tarfile.open(tmp.name, "r:gz") as tar:
                     for member in tar.getmembers():
                         if (

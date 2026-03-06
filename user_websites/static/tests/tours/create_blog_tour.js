@@ -15,7 +15,11 @@ registry.category("web_tour.tours").add("create_blog_tour", {
         {
             content: "Verify blog post created",
             trigger: 'span[data-oe-model="blog.post"]:contains("Welcome to my Blog"), h1:contains("Welcome to my Blog"), h2:contains("Welcome to my Blog")',
-            run: () => {}
+            run: () => {
+                if (!document.body.textContent.includes('Welcome to my Blog')) {
+                    console.error("Blog post content not found");
+                }
+            }
         }
     ],
 });

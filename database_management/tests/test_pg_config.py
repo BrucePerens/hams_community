@@ -89,6 +89,7 @@ class TestPgConfig(TransactionCase):
     @patch("shutil.which", return_value=None)
     @patch("urllib.request.urlretrieve")
     @patch("tarfile.open")
+    @patch("odoo.addons.database_management.models.pg_config.ETCD_CHECKSUM", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
     @patch("os.chmod")
     @patch("os.unlink")
     def test_02c_etcd_auto_download(
@@ -122,7 +123,11 @@ class TestPgConfig(TransactionCase):
 
     def test_03_views(self):
         # [%ANCHOR: test_pg_config_views]
-        self.env["database.pg.setting"].get_view(view_type="list")
-        self.env["pg.optimize.wizard"].get_view(view_type="form")
-        self.env["pg.ha.wizard"].get_view(view_type="form")
-        self.assertTrue(True)
+        v1 = self.env["database.pg.setting"].get_view(view_type="list")
+        self.assertIn("setting", v1["arch"])
+
+        v2 = self.env["pg.optimize.wizard"].get_view(view_type="form")
+        self.assertIn("ram_gb", v2["arch"])
+
+        v3 = self.env["pg.ha.wizard"].get_view(view_type="form")
+        self.assertIn("primary_ip", v3["arch"])

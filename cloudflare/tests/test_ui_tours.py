@@ -42,7 +42,14 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
 
     def test_03_backend_views_rendering(self):
         # [%ANCHOR: test_cf_backend_views_rendering]
-        self.env["cloudflare.config.backup"].get_view(view_type="list")
-        self.env["cloudflare.ip.ban"].get_view(view_type="list")
-        self.env["cloudflare.tunnel.wizard"].get_view(view_type="form")
-        self.env["cloudflare.waf.rule"].get_view(view_type="list")
+        v1 = self.env["cloudflare.config.backup"].get_view(view_type="list")
+        self.assertIn("create_date", v1["arch"])
+
+        v2 = self.env["cloudflare.ip.ban"].get_view(view_type="list")
+        self.assertIn("ip_address", v2["arch"])
+
+        v3 = self.env["cloudflare.tunnel.wizard"].get_view(view_type="form")
+        self.assertIn("command", v3["arch"])
+
+        v4 = self.env["cloudflare.waf.rule"].get_view(view_type="list")
+        self.assertIn("action", v4["arch"])

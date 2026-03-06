@@ -148,37 +148,52 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
     def test_08_backend_views_rendering(self):
         # [%ANCHOR: test_user_websites_backend_views_rendering]
         """Verify that standard backend views compile without error."""
-        self.env["content.violation.appeal"].get_view(
+        v1 = self.env["content.violation.appeal"].get_view(
             view_id=self.env.ref("user_websites.view_content_violation_appeal_list").id,
             view_type="list",
         )
-        self.env["content.violation.appeal"].get_view(
+        self.assertIn("user_id", v1["arch"])
+
+        v2 = self.env["content.violation.appeal"].get_view(
             view_id=self.env.ref("user_websites.view_content_violation_appeal_form").id,
             view_type="form",
         )
-        self.env["content.violation.report"].get_view(
+        self.assertIn("reason", v2["arch"])
+
+        v3 = self.env["content.violation.report"].get_view(
             view_id=self.env.ref(
                 "user_websites.view_content_violation_report_kanban"
             ).id,
             view_type="kanban",
         )
-        self.env["content.violation.report"].get_view(
+        self.assertIn("target_url", v3["arch"])
+
+        v4 = self.env["content.violation.report"].get_view(
             view_id=self.env.ref("user_websites.view_content_violation_report_list").id,
             view_type="list",
         )
-        self.env["content.violation.report"].get_view(
+        self.assertIn("content_owner_id", v4["arch"])
+
+        v5 = self.env["content.violation.report"].get_view(
             view_id=self.env.ref("user_websites.view_content_violation_report_form").id,
             view_type="form",
         )
-        self.env["user.websites.group"].get_view(
+        self.assertIn("reported_by_email", v5["arch"])
+
+        v6 = self.env["user.websites.group"].get_view(
             view_id=self.env.ref("user_websites.view_user_websites_group_tree").id,
             view_type="list",
         )
-        self.env["user.websites.group"].get_view(
+        self.assertIn("name", v6["arch"])
+
+        v7 = self.env["user.websites.group"].get_view(
             view_id=self.env.ref("user_websites.view_user_websites_group_form").id,
             view_type="form",
         )
-        self.env["website.page"].get_view(
+        self.assertIn("odoo_group_id", v7["arch"])
+
+        v8 = self.env["website.page"].get_view(
             view_id=self.env.ref("user_websites.view_user_websites_page_tree").id,
             view_type="list",
         )
+        self.assertIn("website_published", v8["arch"])

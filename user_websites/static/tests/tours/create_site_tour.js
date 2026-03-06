@@ -15,7 +15,11 @@ registry.category("web_tour.tours").add("create_site_tour", {
         {
             content: "Verify site created (we land on home page instead of placeholder)",
             trigger: 'p:contains("This is a new user website.")',
-            run: () => {}
+            run: () => {
+                if (!document.body.textContent.includes('This is a new user website.')) {
+                    console.error("Site creation fallback content not found");
+                }
+            }
         }
     ],
 });

@@ -14,7 +14,11 @@ registry.category("web_tour.tours").add("manual_feedback_tour", {
         {
             content: "Check success message",
             trigger: '.alert-success:contains("Thank you for your feedback!")',
-            run: () => {}
+            run: () => {
+                if (!document.querySelector('.alert-success')) {
+                    console.error("Feedback success alert did not render in the DOM.");
+                }
+            }
         }
     ],
 });

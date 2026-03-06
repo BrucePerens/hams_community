@@ -58,9 +58,11 @@ class TestDatabaseManagement(TransactionCase):
 
     def test_03_db_index_stats(self):
         # Tests [%ANCHOR: db_index_stats]
-        self.assertTrue(True)
-        self.env["database.table.stat"].cron_check_bloat()
-        self.assertTrue(True)
+        from unittest.mock import patch
+        with patch.object(type(self.env["database.table.stat"]), "search") as mock_search:
+            mock_search.return_value = []
+            self.env["database.table.stat"].cron_check_bloat()
+            mock_search.assert_called_once()
 
     def test_03_terminate_backend(self):
         # Tests [%ANCHOR: db_terminate_backend]
@@ -78,8 +80,14 @@ class TestDatabaseManagement(TransactionCase):
     def test_04_views(self):
         # [%ANCHOR: test_dba_view]
         # Tests [%ANCHOR: db_index_stats]
-        self.env["database.table.stat"].get_view(view_type="list")
-        self.env["database.query.stat"].get_view(view_type="list")
-        self.env["database.activity"].get_view(view_type="list")
-        self.env["database.index.stat"].get_view(view_type="list")
-        self.assertTrue(True)
+        v1 = self.env["database.table.stat"].get_view(view_type="list")
+        self.assertIn("table_name", v1["arch"])
+
+        v2 = self.env["database.query.stat"].get_view(view_type="list")
+        self.assertIn("query", v2["arch"])
+
+        v3 = self.env["database.activity"].get_view(view_type="list")
+        self.assertIn("pid", v3["arch"])
+
+        v4 = self.env["database.index.stat"].get_view(view_type="list")
+        self.assertIn("index_name", v4["arch"])

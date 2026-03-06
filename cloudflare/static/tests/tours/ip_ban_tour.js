@@ -19,7 +19,11 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
         {
             content: "Check if ban record exists in the list view",
             trigger: 'tr.o_data_row td:contains("192.168.9.9")',
-            run: () => {} // Assert presence
+            run: () => {
+                if (!document.querySelector('tr.o_data_row td')) {
+                    console.error("Ban record missing from DOM");
+                }
+            }
         },
         {
             content: "Click on the IP Ban record to open form view",
@@ -29,7 +33,11 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
         {
             content: "Verify Lift Ban button is rendered",
             trigger: 'button[name="action_lift_ban"]',
-            run: () => {} // Assert presence
+            run: () => {
+                if (!document.querySelector('button[name="action_lift_ban"]')) {
+                    console.error("Lift Ban button missing from DOM");
+                }
+            }
         }
     ],
 });

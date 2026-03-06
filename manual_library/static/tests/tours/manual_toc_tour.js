@@ -10,12 +10,20 @@ registry.category("web_tour.tours").add("manual_toc_tour", {
         {
             content: "Wait for the TOC container to render",
             trigger: '#manual_toc_container ul.nav',
-            run: () => {}
+            run: () => {
+                if (!document.querySelector('#manual_toc_container ul.nav')) {
+                    console.error("TOC nav container missing");
+                }
+            }
         },
         {
             content: "Verify that a heading link was dynamically generated",
             trigger: '#manual_toc_container a.nav-link[href^="#toc-heading-"]',
-            run: () => {}
+            run: () => {
+                if (!document.querySelector('#manual_toc_container a.nav-link')) {
+                    console.error("TOC link missing");
+                }
+            }
         }
     ],
 });

@@ -19,7 +19,11 @@ registry.category("web_tour.tours").add("cf_waf_rule_tour", {
         {
             content: "Check if Tour WAF rule exists in list",
             trigger: 'tr.o_data_row td:contains("Tour XML-RPC Rule")',
-            run: () => {} // Assert presence
+            run: () => {
+                if (!document.querySelector('tr.o_data_row td')) {
+                    console.error("WAF rule missing from DOM");
+                }
+            }
         }
     ],
 });

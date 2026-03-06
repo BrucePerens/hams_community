@@ -27,28 +27,35 @@ publicWidget.registry.ManualTOC = publicWidget.Widget.extend({
             return;
         }
 
-        let tocHtml = '<h5 class="text-uppercase text-muted fs-6 tracking-wide mb-3 border-bottom pb-2">On this page</h5>';
-        tocHtml += '<ul class="nav flex-column">';
+        tocContainer.innerHTML = '';
+        
+        const header = document.createElement('h5');
+        header.className = "text-uppercase text-muted fs-6 tracking-wide mb-3 border-bottom pb-2";
+        header.textContent = "On this page";
+        tocContainer.appendChild(header);
+
+        const ul = document.createElement('ul');
+        ul.className = "nav flex-column";
         
         headings.forEach((heading, index) => {
-            // Ensure the heading has an ID so the anchor link can target it
             const id = heading.id || 'toc-heading-' + index;
             heading.id = id;
             
-            // Indent h3 tags for visual hierarchy
             const levelClass = heading.tagName.toLowerCase() === 'h2' ? 'ps-0 fw-bold' : 'ps-3';
             
-            tocHtml += `
-                <li class="nav-item">
-                    <a class="nav-link text-muted py-1 ${levelClass}" href="#${id}">
-                        ${heading.textContent}
-                    </a>
-                </li>
-            `;
+            const li = document.createElement('li');
+            li.className = "nav-item";
+            
+            const a = document.createElement('a');
+            a.className = `nav-link text-muted py-1 ${levelClass}`;
+            a.href = `#${id}`;
+            a.textContent = heading.textContent;
+            
+            li.appendChild(a);
+            ul.appendChild(li);
         });
         
-        tocHtml += '</ul>';
-        tocContainer.innerHTML = tocHtml;
+        tocContainer.appendChild(ul);
     },
 });
 

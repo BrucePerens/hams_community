@@ -9,7 +9,11 @@ registry.category("web_tour.tours").add("backend_views_tour", {
         {
             content: "Verify backend UI loads",
             trigger: '.o_main_navbar',
-            run: () => {}
+            run: () => {
+                if (!document.querySelector('.o_main_navbar')) {
+                    console.error("Backend navbar missing");
+                }
+            }
         }
     ],
 });

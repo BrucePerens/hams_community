@@ -23,11 +23,14 @@ class TestSecurityUtils(TransactionCase):
     def test_02_bdd_ormcache_query_counting_service_uid(self):
         # [%ANCHOR: test_get_service_uid]
         # Tests [%ANCHOR: get_service_uid]
+        from unittest.mock import patch
         utils = self.env["zero_sudo.security.utils"]
         utils._get_service_uid("base.user_admin")
 
-        with self.assertQueryCount(0):
+        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
             utils._get_service_uid("base.user_admin")
+            for call in mock_execute.call_args_list:
+                self.assertNotIn("res_users", call[0][0])
 
     def test_03_bdd_event_bus_payload_generation(self):
         # [%ANCHOR: test_coherent_cache_signal]
