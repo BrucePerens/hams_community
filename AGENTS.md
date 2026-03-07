@@ -26,7 +26,7 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 ## Output Format & Transport (CRITICAL)
 
 When generating or modifying code, you **MUST** output your response using the **MIME-like Parcel** schema.
-1. **The Wrapper (Four Backticks):** The entire Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You MUST use at least four backticks for the starting and ending boundaries to guarantee that the contents are not altered by the UI markdown renderer.
+1. **THE WRAPPER (FOUR BACKTICKS - ABSOLUTELY CRITICAL):** The ENTIRE Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You **MUST** use AT LEAST FOUR BACKTICKS (````plaintext ... ````) for the starting and ending boundaries. If you use only three backticks, nested code blocks within the payload will prematurely terminate the markdown parser and completely corrupt the file extraction. This is a strict systemic failure condition.
 2. **Parcel Syntax:** Use the "@@BOUNDARY_...@@" separator, followed by "Path: <filepath>", an "Operation:" (e.g., "overwrite" or "search-and-replace"), and exactly one blank line before the payload content.
 3. **Patch Syntax:** If using "Operation: search-and-replace", the payload MUST consist of valid replacement blocks using the standard search, equal signs, and replace marker format.
 4. **URL-Encoding XML Comments:** Web UI renderers will silently eat XML or HTML comments. If your file contains XML comments, you MUST include "Encoding: url-encoded" in the Parcel header and output the comment tags via percent encoding.

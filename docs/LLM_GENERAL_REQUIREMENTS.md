@@ -133,7 +133,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 When generating or modifying code, you MUST output your response using the MIME-like Parcel schema.
 
 ### Core Directives for Parcel Generation
-1. **The Wrapper (Four Backticks):** The entire Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You MUST use at least four backticks for the starting and ending boundaries to guarantee that the contents are not altered by the UI markdown renderer.
+1. **THE WRAPPER (FOUR BACKTICKS - ABSOLUTELY CRITICAL):** The ENTIRE Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You **MUST** use AT LEAST FOUR BACKTICKS (````plaintext ... ````) for the starting and ending boundaries. If you use only three backticks, nested code blocks within the payload will prematurely terminate the markdown parser, completely corrupting the extraction process. This is a strict, non-negotiable failure condition.
 2. **The Boundary:** Generate a highly unique boundary string for the session. It must start with "@@BOUNDARY_" and end with "@@". This exact string acts as the separator between files within the single block.
 3. **The Header:** Every file must begin with the boundary string on its own line, followed immediately on the next line by "Path: destination_filepath".
 4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.

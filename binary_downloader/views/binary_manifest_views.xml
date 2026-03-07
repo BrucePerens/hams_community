@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_binary_downloader_manifest_list" model="ir.ui.view">
-        <field name="name">binary.manifest.list</field>
-        <field name="model">binary.manifest</field>
-        <field name="arch" type="xml">
+        <record id="view_binary_downloader_manifest_list" model="ir.ui.view"> <field name="name">binary.manifest.list</field>
+    <field name="model">binary.manifest</field>
+    <field name="arch" type="xml">
             <list string="Binary Manifests">
                 <field name="name"/>
                 <field name="archive_type"/>
@@ -13,10 +12,9 @@
         </field>
     </record>
 
-    <record id="view_binary_downloader_manifest_form" model="ir.ui.view">
-        <field name="name">binary.manifest.form</field>
-        <field name="model">binary.manifest</field>
-        <field name="arch" type="xml">
+        <record id="view_binary_downloader_manifest_form" model="ir.ui.view"> <field name="name">binary.manifest.form</field>
+    <field name="model">binary.manifest</field>
+    <field name="arch" type="xml">
             <form string="Binary Manifest">
                 <sheet>
                     <div class="oe_title">
