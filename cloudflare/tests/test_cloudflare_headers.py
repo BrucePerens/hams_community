@@ -19,8 +19,6 @@ class TestCloudflareHeaders(HttpCase):
 
     def test_01_static_asset_caching(self):
         """Verify media and assets receive the correct cache headers."""
-        from unittest.mock import patch, Mock
-        from odoo.http import Response
 
         company_id = self.env.company.id
 
@@ -34,16 +32,28 @@ class TestCloudflareHeaders(HttpCase):
         )
 
         # 2. Test Core Asset (MUST CACHE)
-        # We explicitly mock the request to bypass test-environment 404s for missing static assets
-        mock_response = Response()
-        mock_request = Mock()
-        mock_request.httprequest.path = "/web/assets/1/dummy.js"
-        mock_request.httprequest.host = "localhost"
+        # We isolate the method execution to completely bypass Werkzeug's LocalProxy environment
+        # which crashes when testing raw middleware without an active HTTP thread.
+        from odoo.addons.cloudflare.models.ir_http import IrHttp as CloudflareIrHttp
+        from odoo.http import Response
+        from unittest.mock import patch
 
-        with patch("odoo.http.request", mock_request), \
-             patch("odoo.addons.cloudflare.models.ir_http.request", mock_request), \
-             patch("odoo.addons.utm.models.ir_http.request", mock_request):
-            res = self.env["ir.http"]._post_dispatch(mock_response)
+        class DummyBase:
+            @classmethod
+            def _post_dispatch(cls, response):
+                return response
+
+        class DummyIrHttp(CloudflareIrHttp, DummyBase):
+            pass
+
+        mock_response = Response()
+        mock_request = type("MockRequest", (object,), {})()
+        mock_request.httprequest = type("MockHttpRequest", (object,), {})()
+        mock_request.httprequest.path = "/web/assets/1/dummy.js"
+
+        with patch("odoo.addons.cloudflare.models.ir_http.request", mock_request):
+            res = DummyIrHttp._post_dispatch(mock_response)
+
             self.assertEqual(
                 res.headers.get("Cloudflare-CDN-Cache-Control"),
                 "max-age=31536000",
