@@ -6,12 +6,27 @@ Welcome to a comprehensive suite of open-source modules designed for **Odoo 19 C
 
 ## 🤖 Deterministic AI Management & Tooling
 
-Our platform is built to seamlessly integrate Large Language Models (LLMs) into a precise DevSecOps pipeline.
+Our platform is built to seamlessly integrate Large Language Models (LLMs) into a precise DevSecOps pipeline. To prevent AI context loss, hallucination, and architectural drift, we govern agents using a strict suite of guidance files and structural memory systems.
 
-* **[Isolated Task Workspaces](tools/create_task_workspace.py):** Partition tasks to prevent LLM cognitive overload and context drift.
-* **[MIME-Like Parcel Transport](docs/LLM_GENERAL_REQUIREMENTS.md):** Ensure flawless code modifications using a secure, multi-block transport schema.
-* **[Semantic Token Matching](tools/parcel_extract.py):** A patching engine that ignores superficial formatting, ensuring AI-generated patches dock perfectly.
-* **[AST Burn List Linters](docs/LLM_LINTER_GUIDE.md):** Deep AST Verification prevents AI agents from utilizing deprecated syntax or insecure anti-patterns.
+### The AI Instruction Suite & Memory
+We don't rely on basic system prompts; we govern AI agents using a rigorous hierarchy of operational mandates:
+* **The Agent Persona (`AGENTS.md`):** The primary entry point defining the AI's boundaries, tone, and the Exactness Guarantee for file patching.
+* **Universal Standards (`docs/LLM_GENERAL_REQUIREMENTS.md`):** Core rules covering code formatting (Black), security patterns, and multi-step execution logic.
+* **Odoo 19 Mandates (`docs/LLM_ODOO_REQUIREMENTS.md`):** Odoo-specific architectural directives, actively preventing the AI from falling back on legacy Odoo 14-17 training data.
+* **The Burn List (`docs/LLM_LINTER_GUIDE.md`):** An exhaustive, unforgiving list of banned AST structures, evasion tactics, and deprecated APIs that our custom CI/CD linters actively block.
+* **Architecture Decision Records (`docs/adrs/`):** A formal repository of all major structural choices. This acts as the project's long-term memory, ensuring the AI deeply understands the *why* behind our security and performance paradigms.
+
+### The Semantic Anchor System
+To prevent AI "amnesia" and ensure code, tests, and documentation remain permanently synchronized, the platform utilizes a bidirectional **Semantic Anchor System** (`[%ANCHOR: unique_name]`).
+* When an AI generates a business rule or UI view in the code, it drops an anchor.
+* That exact anchor must physically appear in the corresponding automated Python or JS test.
+* That exact anchor must also be referenced inline within the relevant Markdown documentation.
+* Our CI/CD pipeline (`tools/verify_anchors.py`) continuously scans the repository. If an AI modifies the code without updating the linked test or documentation, the build mathematically fails, ensuring total architectural traceability.
+
+### Execution & Extraction
+* **[Isolated Task Workspaces](tools/create_task_workspace.py):** Surgically partition tasks to prevent LLM cognitive overload and context drift.
+* **[MIME-Like Parcel Transport](docs/LLM_GENERAL_REQUIREMENTS.md):** Code modifications are delivered with absolute precision using a secure, multi-block transport schema (requiring strict 4-backtick encapsulation to protect AST formatters).
+* **[Semantic Token Matching](tools/parcel_extract.py):** A patching engine that ignores superficial whitespace and formatting, ensuring AI-generated search-and-replace blocks dock perfectly with the source code.
 * **[True Environment Parity](test_real_transaction/README.md) (`test_real_transaction`):** A testing facility that bypasses Odoo's test cursor wrapper for true database commits and cross-worker behavior testing.
 
 ---
@@ -20,7 +35,7 @@ Our platform is built to seamlessly integrate Large Language Models (LLMs) into 
 
 Security is mathematically enforced at the lowest levels of the architecture.
 
-* **[Zero-Sudo Security Core](zero_sudo/README.md) (`zero_sudo`):** Replaces Odoo's `.sudo()` method with a centralized Micro-Service Account pattern for least-privilege execution.
+* **[Zero-Sudo Security Core](zero_sudo/README.md) (`zero_sudo`):** Replaces Odoo's dangerous `.sudo()` method with a centralized Micro-Service Account pattern for least-privilege execution.
 * **[Binary Downloader](binary_downloader/README.md) (`binary_downloader`):** A database-backed module that securely provisions static executables at runtime, validating strict SHA-256 checksums to protect against Arbitrary File Write vulnerabilities.
 * **[Cloudflare Edge Orchestration](cloudflare/README.md) (`cloudflare`):** Control your CDN directly from Odoo to deploy WAF bans, Zero Trust Tunnels, and Turnstile CAPTCHA.
 
@@ -59,4 +74,3 @@ Use the interactive bare-metal wizard or the provided Docker Compose stack to ge
 ```bash
 python3 tools/deploy_wizard.py
 ```
-@@
