@@ -506,12 +506,29 @@ class TestMonitorExhaustive(unittest.TestCase):
             self.assertTrue(success)
             mock_inst.quit.assert_called()
 
-        # MySQL
-        with patch("generalized_monitor.socket.create_connection") as mock_conn:
-            mock_sock = MagicMock()
-            mock_conn.return_value.__enter__.return_value = mock_sock
-            mock_sock.recv.return_value = b"x\x00\x00\x00\n5.7.35"
+        # MySQL / MariaDB
+        with patch.dict('sys.modules', {'pymysql': MagicMock()}):
+            import pymysql
+            mock_conn = MagicMock()
+            pymysql.connect.return_value = mock_conn
+            mock_cur = MagicMock()
+            mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+            mock_cur.fetchone.return_value = [1]
             success, msg = generalized_monitor.execute_check({"type": "mysql", "target": "127.0.0.1"})
+            self.assertTrue(success)
+            mock_cur.execute.assert_called_with("SELECT 1;")
+
+        # LDAP (Fallback)
+        with patch("generalized_monitor.socket.create_connection") as mock_conn:
+            success, msg = generalized_monitor.execute_check({"type": "ldap", "target": "127.0.0.1"})
+            self.assertTrue(success)
+
+        # NTP (Fallback)
+        with patch("generalized_monitor.socket.socket") as mock_socket:
+            mock_sock_inst = MagicMock()
+            mock_socket.return_value.__enter__.return_value = mock_sock_inst
+            mock_sock_inst.recvfrom.return_value = (b"\x1c" + 47 * b"\0", ("127.0.0.1", 123))
+            success, msg = generalized_monitor.execute_check({"type": "ntp", "target": "127.0.0.1"})
             self.assertTrue(success)
 
         # SNMP

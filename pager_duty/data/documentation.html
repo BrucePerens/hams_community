@@ -14,9 +14,9 @@
         <li><strong>System Resource:</strong> Monitors Disk, Memory, CPU, IO Wait, and Hypervisor Steal percent limits.</li>
         <li><strong>DNS Resolution:</strong> Performs un-cached, full-chain root server lookups (via <code>dig +trace</code>).</li>
         <li><strong>HTTP / HTTP/3 (QUIC):</strong> Validates web server responsiveness across modern and legacy web protocols.</li>
-        <li><strong>TCP &amp; UDP Sockets:</strong> Asserts raw datagram and stream connectivity, supporting hexadecimal payload injection.</li>
-        <li><strong>Native Protocol Handshakes:</strong> Built-in support for executing strict protocol validations against Redis, RabbitMQ (AMQP), XML-RPC, and JSON-RPC.</li>
-        <li><strong>PostgreSQL DB:</strong> Validates database connection pools directly via <code>psycopg2</code>.</li>
+        <li><strong>TCP &amp; UDP Port Monitoring:</strong> Asserts raw datagram and stream connectivity to any custom port, supporting hexadecimal payload injection.</li>
+        <li><strong>Native Protocol Handshakes:</strong> Built-in support for executing strict protocol validations against LDAP, NTP, Redis, RabbitMQ (AMQP), XML-RPC, and JSON-RPC.</li>
+        <li><strong>PostgreSQL &amp; MySQL/MariaDB:</strong> Validates database connection pools directly via <code>psycopg2</code> and <code>pymysql</code> by logging in and executing non-destructive <code>SELECT 1;</code> queries.</li>
         <li><strong>SSL/TLS Certificate Expiry:</strong> Alerts administrators if the domain's certificate expires within a critical threshold.</li>
         <li><strong>Anomaly Detection:</strong> Evaluates a custom SQL query. If the integer drops below the threshold, it fires an alert.</li>
         <li><strong>Synthetic Journeys:</strong> Executes a custom shell script or headless browser test, alerting on non-zero exit codes.</li>

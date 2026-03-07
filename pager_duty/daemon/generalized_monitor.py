@@ -282,14 +282,73 @@ def execute_check(check, client=None):
 
     elif ctype == "mysql":
         port = int(parse_env(check.get("port", 3306)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        dbname = parse_env(check.get("dbname", ""))
         try:
-            with socket.create_connection((target, port), timeout=5) as s:
-                res = s.recv(1024)
-                if len(res) < 5:
-                    return False, "Invalid MySQL greeting"
+            import pymysql
+            conn = pymysql.connect(
+                host=target, port=port, user=user, password=password, database=dbname, connect_timeout=5
+            )
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1;")
+                    cur.fetchone()
+            finally:
+                conn.close()
             return True, "OK"
+        except ImportError:
+            try:
+                with socket.create_connection((target, port), timeout=5) as s:
+                    res = s.recv(1024)
+                    if len(res) < 5:
+                        return False, "Invalid MySQL/MariaDB greeting"
+                return True, "OK (Socket fallback)"
+            except Exception as e:
+                return False, f"MySQL/MariaDB socket fallback failed: {e}"
         except Exception as e:
-            return False, f"MySQL check failed: {e}"
+            return False, f"MySQL/MariaDB check failed: {e}"
+
+    elif ctype == "ldap":
+        port = int(parse_env(check.get("port", 389)))
+        try:
+            import ldap3
+            server = ldap3.Server(target, port=port, get_info=ldap3.ALL, connect_timeout=5)
+            conn = ldap3.Connection(server, auto_bind=True, receive_timeout=5)
+            conn.unbind()
+            return True, "OK"
+        except ImportError:
+            try:
+                with socket.create_connection((target, port), timeout=5):
+                    pass
+                return True, "OK (Socket fallback)"
+            except Exception as e:
+                return False, f"LDAP socket fallback failed: {e}"
+        except Exception as e:
+            return False, f"LDAP check failed: {e}"
+
+    elif ctype == "ntp":
+        port = int(parse_env(check.get("port", 123)))
+        try:
+            import ntplib
+            client = ntplib.NTPClient()
+            response = client.request(target, version=3, timeout=5)
+            return True, f"OK (Offset: {response.offset:.4f}s)"
+        except ImportError:
+            # SNTP v4 client request packet
+            req = b'\x1b' + 47 * b'\0'
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.settimeout(5)
+                    s.sendto(req, (target, port))
+                    data, _ = s.recvfrom(1024)
+                    if len(data) < 48:
+                        return False, "Invalid NTP response length"
+                return True, "OK (UDP fallback)"
+            except Exception as e:
+                return False, f"NTP UDP fallback failed: {e}"
+        except Exception as e:
+            return False, f"NTP check failed: {e}"
 
     elif ctype == "snmp":
         community = parse_env(check.get("snmp_community", "public"))

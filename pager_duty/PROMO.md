@@ -40,15 +40,17 @@ The daemon natively understands and monitors the following layers of your infras
 **Protocols & Network Layers:**
 * **HTTP/HTTPS:** Validates endpoint responsiveness, HTTP status codes, and exact string matches inside returned JSON or HTML payloads.
 * **HTTP/3 (QUIC):** Validates emerging cutting-edge transport protocols over UDP natively.
-* **TCP Sockets:** Opens direct L4 stream connections, sends raw strings or Hexadecimal payloads, and asserts exact byte responses.
-* **UDP Datagrams:** Executes connectionless packet transmissions and expects specific reply payloads.
+* **TCP Sockets:** Opens direct L4 stream connections to monitor any generic TCP port, sends raw strings or Hexadecimal payloads, and asserts exact byte responses.
+* **UDP Datagrams:** Executes connectionless packet transmissions to monitor generic UDP ports and expects specific reply payloads.
+* **LDAP & NTP:** Dedicated protocol handlers for monitoring directory services and time synchronization.
 * **XML-RPC & JSON-RPC:** Natively serializes dictionaries and arrays, executes remote method calls, and validates the un-marshalled Python responses directly.
 * **DNS:** Full-chain resolution bypassing local caches (Root -> TLD -> Authoritative).
 * **SMTP:** Validates outbound email health by executing a complete dry-run TCP handshake and login sequence without sending spam.
 * **SSL/TLS:** Queries live certificate data to mathematically calculate expiration windows.
 
 **System & Infrastructure Facilities:**
-* **PostgreSQL:** Verifies DB health natively via `psycopg2` or raw socket fallbacks, and executes custom SQL threshold queries for Anomaly Detection. Also simulates `pg_dump` backup processes.
+* **PostgreSQL:** Verifies DB health natively via `psycopg2` or raw socket fallbacks. It securely logs in and executes `SELECT 1;` or custom SQL threshold queries for Anomaly Detection. Also simulates `pg_dump` backup processes.
+* **MySQL/MariaDB:** Native client validation that logs in using credentials to execute non-destructive `SELECT 1;` queries to guarantee database responsiveness.
 * **Redis:** Native client simulation. Initiates AUTH sequences and expects synchronous PONG replies.
 * **RabbitMQ:** Native binary protocol simulation via direct AMQP hex handshakes.
 * **Cloudflare Tunnels:** Pre-flights Zero Trust `cloudflared` daemons to ensure certificates are valid and edge connections are active.
