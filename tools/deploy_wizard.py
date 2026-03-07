@@ -313,7 +313,10 @@ webserver-allow-from=127.0.0.1
         if token:
             print("\n[*] Phase 7: Zero Trust Edge Tunnel...")
             self.run_cmd(
-                "curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"
+                "curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/download/2025.9.0/cloudflared-linux-amd64.deb"
+            )
+            self.run_cmd(
+                "echo 'bbde50c639aecd7d1acf0edc4a3a434bbf1ffd985572277ea2671687727556c9  cloudflared.deb' | sha256sum -c -"
             )
             self.run_cmd(["dpkg", "-i", "cloudflared.deb"], ignore_error=True)
             if os.path.exists("cloudflared.deb"):

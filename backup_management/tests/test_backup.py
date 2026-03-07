@@ -167,46 +167,13 @@ class TestBackupManagement(TransactionCase):
                 )
                 mock_msg.assert_called()
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.platform.system",
-        return_value="Linux",
-    )
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.platform.machine",
-        return_value="x86_64",
-    )
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value=None,
-    )
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.urllib.request.urlretrieve"
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.tarfile.open")
-    @patch("odoo.addons.backup_management.models.backup_config.KOPIA_CHECKSUM", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-    @patch("odoo.addons.backup_management.models.backup_config.os.chmod")
-    @patch("odoo.addons.backup_management.models.backup_config.os.unlink")
-    def test_08d_kopia_auto_download(
-        self,
-        mock_unlink,
-        mock_chmod,
-        mock_tar,
-        mock_url,
-        mock_which,
-        mock_mach,
-        mock_sys,
-    ):
-        mock_tar_instance = MagicMock()
-        mock_member = MagicMock()
-        mock_member.name = "kopia"
-        mock_tar_instance.getmembers.return_value = [mock_member]
-        mock_tar.return_value.__enter__.return_value = mock_tar_instance
+    @patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._ensure_executable")
+    def test_08d_kopia_auto_download(self, mock_ensure):
+        mock_ensure.return_value = "/bin/kopia"
         with patch.object(type(self.config_kopia), "message_post"):
             exe_path = self.config_kopia._get_executable("kopia")
-        mock_url.assert_called_once()
-        mock_tar_instance.extract.assert_called_once()
-        mock_chmod.assert_called_once()
-        self.assertTrue(exe_path.endswith("kopia"))
+        mock_ensure.assert_called_once_with("kopia")
+        self.assertEqual(exe_path, "/bin/kopia")
 
     def test_09_board_data_rpc(self):
         # Tests [%ANCHOR: backup_board_data]

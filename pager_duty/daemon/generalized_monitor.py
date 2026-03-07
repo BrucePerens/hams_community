@@ -32,45 +32,69 @@ def ensure_executable(cmd_name):
     path = shutil.which(cmd_name)
     if path:
         return path, ""
+    return None, f"Missing dependency: '{cmd_name}'. Startup verification failed."
 
-    if (
-        cmd_name == "cloudflared"
-        and platform.system() == "Linux"
-        and platform.machine() == "x86_64"
-    ):
-        bin_dir = os.path.join(os.path.dirname(__file__), "bin")
-        os.makedirs(bin_dir, exist_ok=True)
-        cf_bin = os.path.join(bin_dir, "cloudflared")
-        if os.path.exists(cf_bin):
-            return cf_bin, ""
 
-        try:
-            url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-            logger.info(f"Auto-downloading {cmd_name} from {url}...")
-            urllib.request.urlretrieve(url, cf_bin)
-            os.chmod(cf_bin, 0o755)
-            logger.info(f"Successfully installed {cmd_name} to {cf_bin}")
-            return cf_bin, ""
-        except Exception as e:
-            return None, f"Failed to auto-install {cmd_name}: {e}"
-
-    pkg_map = {
-        "dig": "dnsutils or bind-utils",
-        "snmpget": "snmp",
-        "pg_dump": "postgresql-client",
+def verify_and_install_dependencies(client, checks):
+    type_to_cmd = {
+        "dns": "dig",
+        "snmp": "snmpget",
+        "pg_dump": "pg_dump",
         "nginx": "nginx",
         "certbot": "certbot",
         "logrotate": "logrotate",
-        "curl": "curl",
-        "ping": "iputils-ping",
-        "docker": "docker.io",
-        "systemctl": "systemd",
+        "http3": "curl",
+        "icmp": "ping",
+        "docker": "docker",
+        "systemd": "systemctl",
+        "cloudflared": "cloudflared"
     }
-    pkg = pkg_map.get(cmd_name, cmd_name)
-    return (
-        None,
-        f"Missing dependency: '{cmd_name}'. Please install via OS package manager (e.g., apt-get install {pkg}).",
-    )
+
+    required_cmds = set()
+    for check in checks:
+        ctype = check.get("type")
+        if ctype in type_to_cmd:
+            required_cmds.add(type_to_cmd[ctype])
+
+    for cmd in required_cmds:
+        if not shutil.which(cmd):
+            logger.info(f"Dependency '{cmd}' missing. Polling Odoo...")
+            success = False
+            for attempt in range(12):
+                try:
+                    res = client.execute("pager.check", "rpc_ensure_executable", cmd)
+                    if res and res.get("status") == "ok":
+                        bin_path = res.get("path")
+                        logger.info(f"Provisioned {cmd} at {bin_path}")
+                        bin_dir = os.path.dirname(bin_path)
+                        if bin_dir not in os.environ["PATH"]:
+                            os.environ["PATH"] = bin_dir + os.pathsep + os.environ["PATH"]
+                        success = True
+                        break
+                    else:
+                        err_msg = res.get("message")
+                        logger.warning(f"Provision failed: {err_msg}")
+                except Exception as e:
+                    logger.warning(f"RPC unavailable, waiting... ({e})")
+                time.sleep(10)  # audit-ignore-sleep
+
+            if not success:
+                msg = f"FATAL: Missing dependency '{cmd}'. Halting."
+                logger.critical(msg)
+                fallback_notify("Daemon Boot", msg, "critical")
+                try:
+                    client.execute(
+                        "pager.incident",
+                        "report_incident",
+                        {
+                            "source": "Daemon Boot",
+                            "severity": "critical",
+                            "description": msg,
+                        },
+                    )
+                except Exception:
+                    pass
+                sys.exit(1)
 
 
 THREAD_HEARTBEATS = {}
@@ -978,6 +1002,8 @@ if __name__ == "__main__":
 
     checks = config.get("checks", [])
     logger.info(f"Loaded {len(checks)} checks from configuration.")
+
+    verify_and_install_dependencies(client, checks)
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(checks)))
     futures = []

@@ -77,3 +77,94 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
+
+    @api.model
+    def _update_python_venv(self):
+        import subprocess
+        import sys
+        import os
+        from odoo.exceptions import UserError
+
+        req_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt"))
+        if not os.path.exists(req_path):
+            raise UserError(_("Requirements file not found at %s") % req_path)
+
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", req_path],
+                capture_output=True,
+                text=True,
+                check=True,
+                shell=False
+            )
+            return True
+        except subprocess.CalledProcessError as e:
+            raise UserError(_("VENV update failed:\n%s") % e.stderr)
+
+    @api.model
+    def _ensure_executable(self, cmd_name):
+        import shutil, os, platform, json, urllib.request, tarfile, tempfile, hashlib, stat
+        from odoo.exceptions import UserError
+        from odoo import tools
+
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        manifest_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tools", "binary_manifest.json"))
+        if not os.path.exists(manifest_path):
+            raise UserError(_("Binary manifest not found at %s") % manifest_path)
+
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        if cmd_name not in manifest:
+            raise UserError(_("Missing dependency: '%s'. Please install via OS package manager.") % cmd_name)
+
+        if platform.system() != "Linux" or platform.machine() != "x86_64":
+            raise UserError(_("Auto-install of %s is only supported on Linux x86_64. Please install manually.") % cmd_name)
+
+        config = manifest[cmd_name]
+        data_dir = tools.config.get("data_dir", "/var/lib/odoo")
+        bin_dir = os.path.join(data_dir, "hams_bin")
+
+        # Enforce safe directory permissions every time (0o750: rwxr-x---)
+        os.makedirs(bin_dir, exist_ok=True)
+        os.chmod(bin_dir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+
+        target_bin = os.path.join(bin_dir, cmd_name)
+
+        if os.path.exists(target_bin):
+            # Enforce safe file permissions every time it is resolved
+            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+            return target_bin
+
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                urllib.request.urlretrieve(config["url"], tmp.name)
+
+            hasher = hashlib.sha256()
+            with open(tmp.name, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hasher.update(chunk)
+
+            if hasher.hexdigest() != config["checksum"]:
+                os.unlink(tmp.name)
+                raise UserError(_("Security Alert: Checksum mismatch for downloaded %s binary.") % cmd_name)
+
+            if config["type"] == "tar.gz":
+                with tarfile.open(tmp.name, "r:gz") as tar:
+                    for member in tar.getmembers():
+                        if member.name.endswith(f"/{config['extract_member']}") or member.name == config["extract_member"]:
+                            member.name = cmd_name
+                            tar.extract(member, path=bin_dir)
+                            break
+            else:
+                shutil.copy2(tmp.name, target_bin)
+
+            # Lock down the file (0o750: rwxr-x---)
+            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+            os.unlink(tmp.name)
+            return target_bin
+        except Exception as e:
+            raise UserError(_("Failed to auto-install %s: %s") % (cmd_name, str(e)))

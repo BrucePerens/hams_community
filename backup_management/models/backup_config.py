@@ -143,51 +143,12 @@ class BackupConfig(models.Model):
             )
 
         if engine == "kopia":
-            if platform.system() != "Linux" or platform.machine() != "x86_64":
-                raise UserError(
-                    _(
-                        "Auto-install of Kopia is only supported on Linux x86_64. Please install manually."
-                    )
-                )
-
-            data_dir = odoo.tools.config.get("data_dir", "/var/lib/odoo")
-            bin_dir = os.path.join(data_dir, "hams_bin")
-            os.makedirs(bin_dir, exist_ok=True)
-            kopia_bin = os.path.join(bin_dir, "kopia")
-
-            if os.path.exists(kopia_bin):
-                return kopia_bin
-
-            url = "https://github.com/kopia/kopia/releases/download/v0.18.2/kopia-0.18.2-linux-x64.tar.gz"
-            try:
-                import hashlib
-                msg_body = _("Kopia binary not found. Auto-downloading static binary from GitHub...")
-                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
-                    urllib.request.urlretrieve(url, tmp.name)
-
-                expected_hash = KOPIA_CHECKSUM
-                hasher = hashlib.sha256()
-                with open(tmp.name, "rb") as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        hasher.update(chunk)
-                if hasher.hexdigest() != expected_hash:
-                    os.unlink(tmp.name)
-                    raise UserError(_("Security Alert: Checksum mismatch for downloaded Kopia binary."))
-
-                with tarfile.open(tmp.name, "r:gz") as tar:
-                    for member in tar.getmembers():
-                        if member.name.endswith("/kopia") or member.name == "kopia":
-                            member.name = "kopia"
-                            tar.extract(member, path=bin_dir)
-                            break
-                os.chmod(kopia_bin, 0o755)
-                os.unlink(tmp.name)
-                msg_body = _("Kopia successfully installed to %s") % kopia_bin
-                self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
-                return kopia_bin
-            except Exception as e:
-                raise UserError(_("Failed to auto-install Kopia: %s") % str(e))
+            msg_body = _("Kopia binary not found. Deferring to central generalized downloader...")
+            self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+            bin_path = self.env["zero_sudo.security.utils"]._ensure_executable("kopia")
+            msg_body = _("Kopia successfully installed to %s") % bin_path
+            self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+            return bin_path
 
         raise UserError(_("Unknown engine: %s") % engine)
 

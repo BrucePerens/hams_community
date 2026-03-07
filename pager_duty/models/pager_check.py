@@ -150,6 +150,15 @@ class PagerCheck(models.Model):
         return super().unlink()
 
     @api.model
+    def rpc_ensure_executable(self, cmd_name):
+        try:
+            utils = self.env["zero_sudo.security.utils"]
+            path = utils._ensure_executable(cmd_name)
+            return {"status": "ok", "path": path}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    @api.model
     def check_heartbeat_rpc(self, hb_uuid, interval_sec):
         check_id = self._get_check_id_by_uuid(hb_uuid)
         if not check_id:

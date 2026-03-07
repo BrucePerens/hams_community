@@ -25,6 +25,18 @@
                             </div>
                         </div>
 
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_right_pane">
+                                <span class="o_form_label">System Environment</span>
+                                <div class="text-muted">
+                                    Manually synchronize the Python Virtual Environment with requirements.txt.
+                                </div>
+                                <div class="mt8">
+                                    <button name="action_update_python_venv" type="object" string="Update Dependencies" class="btn-warning" icon="fa-cogs" confirm="This will run pip install -r requirements.txt. You must manually restart the server afterward. Proceed?"/>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 

@@ -84,31 +84,10 @@ class TestPgConfig(TransactionCase):
         with self.assertRaises(UserError):
             wizard.action_generate()
 
-    @patch("platform.system", return_value="Linux")
-    @patch("platform.machine", return_value="x86_64")
-    @patch("shutil.which", return_value=None)
-    @patch("urllib.request.urlretrieve")
-    @patch("tarfile.open")
-    @patch("odoo.addons.database_management.models.pg_config.ETCD_CHECKSUM", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-    @patch("os.chmod")
-    @patch("os.unlink")
-    def test_02c_etcd_auto_download(
-        self,
-        mock_unlink,
-        mock_chmod,
-        mock_tar,
-        mock_url,
-        mock_which,
-        mock_mach,
-        mock_sys,
-    ):
-        # Prove the system automatically downloads the binary if missing
-        mock_tar_instance = MagicMock()
-        mock_member = MagicMock()
-        mock_member.name = "etcd-v3.5.12-linux-amd64/etcd"
-        mock_tar_instance.getmembers.return_value = [mock_member]
-        mock_tar.return_value.__enter__.return_value = mock_tar_instance
-
+    @patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._ensure_executable")
+    def test_02c_etcd_auto_download(self, mock_ensure):
+        # Prove the system defers to the generalized downloader
+        mock_ensure.return_value = "/bin/etcd"
         wizard = (
             self.env["pg.ha.wizard"]
             .with_user(self.admin)
@@ -116,10 +95,8 @@ class TestPgConfig(TransactionCase):
         )
         exe_path = wizard._get_executable("etcd")
 
-        mock_url.assert_called_once()
-        mock_tar_instance.extract.assert_called_once()
-        mock_chmod.assert_called_once()
-        self.assertTrue(exe_path.endswith("etcd"))
+        mock_ensure.assert_called_once_with("etcd")
+        self.assertEqual(exe_path, "/bin/etcd")
 
     def test_03_views(self):
         # [%ANCHOR: test_pg_config_views]

@@ -131,47 +131,7 @@ class PgHaWizard(models.TransientModel):
             return path
 
         if cmd_name == "etcd":
-            if platform.system() != "Linux" or platform.machine() != "x86_64":
-                raise UserError(
-                    _("Auto-install of etcd is only supported on Linux x86_64.")
-                )
-            data_dir = odoo.tools.config.get("data_dir", "/var/lib/odoo")
-            bin_dir = os.path.join(data_dir, "hams_bin")
-            os.makedirs(bin_dir, exist_ok=True)
-            etcd_bin = os.path.join(bin_dir, "etcd")
-            if os.path.exists(etcd_bin):
-                return etcd_bin
-
-            url = "https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz"
-            try:
-                import hashlib
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmp:
-                    urllib.request.urlretrieve(url, tmp.name)
-
-                expected_hash = ETCD_CHECKSUM
-                hasher = hashlib.sha256()
-                with open(tmp.name, "rb") as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        hasher.update(chunk)
-                if hasher.hexdigest() != expected_hash:
-                    os.unlink(tmp.name)
-                    raise UserError(_("Security Alert: Checksum mismatch for downloaded etcd binary."))
-
-                with tarfile.open(tmp.name, "r:gz") as tar:
-                    for member in tar.getmembers():
-                        if (
-                            member.name.endswith("/etcd")
-                            and not member.name.endswith("etcdctl")
-                            and not member.name.endswith("etcdutl")
-                        ):
-                            member.name = "etcd"
-                            tar.extract(member, path=bin_dir)
-                            break
-                os.chmod(etcd_bin, 0o755)
-                os.unlink(tmp.name)
-                return etcd_bin
-            except Exception as e:
-                raise UserError(_("Failed to auto-install etcd: %s") % str(e))
+            return self.env["zero_sudo.security.utils"]._ensure_executable("etcd")
 
         pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer"}
         pkg = pkg_map.get(cmd_name, cmd_name)

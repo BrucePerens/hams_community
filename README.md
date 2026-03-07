@@ -1,8 +1,11 @@
 # Odoo Core Modules & Enterprise SRE Platform
 
-Welcome to the foundational Odoo 19 ecosystem. This repository contains a suite of enterprise-grade, open-source modules designed to transform Odoo into a highly secure, heavily optimized, and decentralized community platform. 
+Welcome to the foundational Odoo 19 ecosystem. This repository contains a suite of enterprise-grade, open-source modules designed 
+to transform Odoo into a highly secure, heavily optimized, and decentralized community platform. 
 
-While these modules offer features typically locked behind expensive enterprise SaaS subscriptions, this entire suite is **100% open-source and free**. They are engineered to be perfectly isolated, dropping seamlessly into any Odoo project without relying on proprietary external codebases.
+**About the `hams_community` Name:** This repository is named `hams_community` because it originated as the Open Source portion of a much larger software suite developed specifically for Amateur Radio operators. While the repository bears this historical name, the modules contained within are completely generalized. They contain no radio-specific logic and are designed to drop seamlessly into *any* Odoo project.
+
+While these modules offer features typically locked behind expensive enterprise SaaS subscriptions, this entire suite is **100% open-source and free**. They are engineered to be perfectly isolated, without relying on proprietary external codebases.
 
 ---
 
