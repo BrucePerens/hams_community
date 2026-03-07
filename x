@@ -1,6 +1,10 @@
+@@BOUNDARY_PROMO_README_123@@
+Path: README.md
+Operation: overwrite
+
 # 🚀 Unleash Enterprise Power: The Unified SRE & DevSecOps Platform for Odoo 19
 
-Stop paying enterprise fees for enterprise features. Welcome to a completely open-source, mathematically proven, and highly secure ecosystem designed for **Odoo 19 Community**[cite: 1985, 1995].
+Stop paying enterprise fees for enterprise features. Welcome to a completely open-source, mathematically proven, and highly secure ecosystem designed for **Odoo 19 Community**[cite: 1985, 1995]. 
 
 Whether you are scaling horizontally, defending against malicious bots, or building decentralized user communities, this comprehensive suite of modules provides unparalleled performance, security, and developer ergonomics.
 
@@ -68,3 +72,4 @@ Experience the ultimate open-source ERP environment. Use our interactive bare-me
 ```bash
 python3 tools/deploy_wizard.py
 ```
+@@BOUNDARY_PROMO_README_123@@
