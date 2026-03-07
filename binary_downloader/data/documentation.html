@@ -1,0 +1,27 @@
+<div class="container">
+    <h1>Binary Downloader Facility</h1>
+    <p>
+        The <strong>Binary Downloader</strong> is a highly secure, database-backed orchestration module designed to provide static executable dependencies (such as <code>kopia</code>, <code>etcd</code>, and <code>cloudflared</code>) to other Odoo subsystems at runtime without exposing the underlying OS to Arbitrary File Write vulnerabilities.
+    </p>
+
+    <h2>1. The Security Problem</h2>
+    <p>
+        Traditional dependency provisioners rely on flat JSON or YAML files stored on disk. If an attacker discovers a Directory Traversal or File Write vulnerability in another application, they could subtly alter the flat file to point the download URL to a malicious payload. When Odoo attempts to download the dependency, it installs and executes the malware as the Odoo service user.
+    </p>
+
+    <h2>2. The DB-Backed Solution</h2>
+    <p>
+        This module eliminates flat-file manifests entirely. Download targets, cryptographic SHA-256 checksums, and extraction rules are stored securely within PostgreSQL via the <code>binary.manifest</code> model.
+    </p>
+    <ul>
+        <li><strong>Strict Access Control:</strong> Only users belonging to the <code>base.group_system</code> (Administrators) can modify the manifest URLs or checksums.</li>
+        <li><strong>Cryptographic Enforcement:</strong> Before a downloaded binary is moved into the execution path (<code>hams_bin</code>), its SHA-256 hash is mathematically verified against the database record. Mismatches trigger an instant deletion and an abort.</li>
+        <li><strong>Permission Locking:</strong> Extracted binaries are strictly locked to <code>0o750</code> (rwxr-x---) to prevent horizontal privilege escalation from other OS users.</li>
+    </ul>
+
+    <h2>3. Usage</h2>
+    <p>
+        Other modules can safely request a dependency by invoking the central method:
+    </p>
+    <pre><code>bin_path = self.env["binary.manifest"].ensure_executable("kopia")</code></pre>
+</div>

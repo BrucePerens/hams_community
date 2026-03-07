@@ -2,6 +2,7 @@ from odoo import models, fields, tools, _
 from odoo.exceptions import UserError
 from psycopg2 import sql
 
+
 class DatabasePgSetting(models.Model):
     _name = "database.pg.setting"
     _description = "PostgreSQL Configuration Parameter"
@@ -32,6 +33,7 @@ class DatabasePgSetting(models.Model):
                 FROM pg_settings
             )
         """)
+
 
 class PgOptimizeWizard(models.TransientModel):
     _name = "pg.optimize.wizard"
@@ -96,6 +98,7 @@ class PgOptimizeWizard(models.TransientModel):
             },
         }
 
+
 class PgHaWizard(models.TransientModel):
     _name = "pg.ha.wizard"
     _description = "High Availability Failover Wizard"
@@ -126,7 +129,7 @@ class PgHaWizard(models.TransientModel):
             return path
 
         if cmd_name == "etcd":
-            return self.env["zero_sudo.security.utils"]._ensure_executable("etcd")
+            return self.env["binary.manifest"].ensure_executable("etcd")
 
         pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer"}
         pkg = pkg_map.get(cmd_name, cmd_name)

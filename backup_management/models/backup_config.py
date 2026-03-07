@@ -16,6 +16,7 @@ try:
 except ImportError:
     Fernet = None
 
+
 class BackupConfig(models.Model):
     _name = "backup.config"
     _description = "Backup Configuration"
@@ -140,9 +141,11 @@ class BackupConfig(models.Model):
             )
 
         if engine == "kopia":
-            msg_body = _("Kopia binary not found. Deferring to central generalized downloader...")
+            msg_body = _(
+                "Kopia binary not found. Deferring to central generalized downloader..."
+            )
             self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
-            bin_path = self.env["zero_sudo.security.utils"]._ensure_executable("kopia")
+            bin_path = self.env["binary.manifest"].ensure_executable("kopia")
             msg_body = _("Kopia successfully installed to %s") % bin_path
             self.message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
             return bin_path

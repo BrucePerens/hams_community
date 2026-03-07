@@ -3,7 +3,10 @@ import json
 import os
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import (
+    distributed_cache,
+    invalidate_model_cache,
+)
 
 try:
     import yaml
@@ -73,7 +76,11 @@ class PagerCheck(models.Model):
 
     snmp_community = fields.Char(string="SNMP Community", default="public")
     snmp_oid = fields.Char(string="SNMP OID")
-    partition = fields.Char(string="Disk Partition", default="/", help="Specific mount point to check for disk usage.")
+    partition = fields.Char(
+        string="Disk Partition",
+        default="/",
+        help="Specific mount point to check for disk usage.",
+    )
     warning_threshold = fields.Integer(string="Warning Threshold %")
 
     target = fields.Char(
@@ -142,20 +149,23 @@ class PagerCheck(models.Model):
         res = super().write(vals)
         invalidate_model_cache(self.env, self._name)
         payload = json.dumps({"model": self._name})
-        self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+        self.env.cr.execute(
+            "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+        )
         return res
 
     def unlink(self):
         invalidate_model_cache(self.env, self._name)
         payload = json.dumps({"model": self._name})
-        self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+        self.env.cr.execute(
+            "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+        )
         return super().unlink()
 
     @api.model
     def rpc_ensure_executable(self, cmd_name):
         try:
-            utils = self.env["zero_sudo.security.utils"]
-            path = utils._ensure_executable(cmd_name)
+            path = self.env["binary.manifest"].ensure_executable(cmd_name)
             return {"status": "ok", "path": path}
         except Exception as e:
             return {"status": "error", "message": str(e)}
@@ -201,11 +211,13 @@ class PagerCheck(models.Model):
             for fp in log_config.get("files", []):
                 self.env["pager.log.file"].create({"filepath": fp})
             for pat in log_config.get("patterns", []):
-                self.env["pager.log.pattern"].create({
-                    "name": pat.get("name", "Unnamed"),
-                    "regex": pat.get("regex", ""),
-                    "severity": pat.get("severity", "high")
-                })
+                self.env["pager.log.pattern"].create(
+                    {
+                        "name": pat.get("name", "Unnamed"),
+                        "regex": pat.get("regex", ""),
+                        "severity": pat.get("severity", "high"),
+                    }
+                )
 
         checks = data.get("checks", []) if isinstance(data, dict) else []
         for c in checks:
@@ -325,7 +337,11 @@ class PagerCheck(models.Model):
 
         yaml_dict = {"checks": check_list}
 
-        log_files = self.env["pager.log.file"].search([("active", "=", True)]).mapped("filepath")
+        log_files = (
+            self.env["pager.log.file"]
+            .search([("active", "=", True)])
+            .mapped("filepath")
+        )
         log_patterns = self.env["pager.log.pattern"].search([("active", "=", True)])
 
         yaml_dict["log_analyzer"] = {
@@ -333,7 +349,7 @@ class PagerCheck(models.Model):
             "patterns": [
                 {"name": p.name, "regex": p.regex, "severity": p.severity}
                 for p in log_patterns
-            ]
+            ],
         }
 
         yaml_content = yaml.safe_dump(yaml_dict, sort_keys=False)

@@ -25,6 +25,7 @@ PARAM_WHITELIST = frozenset(
     ]
 )
 
+
 class ZeroSudoSecurityUtils(models.AbstractModel):
     _name = "zero_sudo.security.utils"
     _description = "Centralized Security and Privilege Utilities"
@@ -84,7 +85,9 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _update_python_venv(self):
-        req_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt"))
+        req_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")
+        )
         if not os.path.exists(req_path):
             raise UserError(_("Requirements file not found at %s") % req_path)
 
@@ -94,7 +97,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 capture_output=True,
                 text=True,
                 check=True,
-                shell=False
+                shell=False,
             )
             return True
         except subprocess.CalledProcessError as e:
@@ -102,55 +105,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _ensure_executable(self, cmd_name):
-        path = shutil.which(cmd_name)
-        if path:
-            return path
-
-        manifest_record = self.env["zero_sudo.binary.manifest"].search([("name", "=", cmd_name)], limit=1)
-        if not manifest_record:
-            raise UserError(_("Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager.") % cmd_name)
-
-        if platform.system() != "Linux" or platform.machine() != "x86_64":
-            raise UserError(_("Auto-install of %s is only supported on Linux x86_64. Please install manually.") % cmd_name)
-
-        data_dir = tools.config.get("data_dir", "/var/lib/odoo")
-        bin_dir = os.path.join(data_dir, "hams_bin")
-
-        os.makedirs(bin_dir, exist_ok=True)
-        os.chmod(bin_dir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-
-        target_bin = os.path.join(bin_dir, cmd_name)
-
-        if os.path.exists(target_bin):
-            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-            return target_bin
-
-        try:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                urllib.request.urlretrieve(manifest_record.url, tmp.name)
-
-            hasher = hashlib.sha256()
-            with open(tmp.name, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hasher.update(chunk)
-
-            if hasher.hexdigest() != manifest_record.checksum:
-                os.unlink(tmp.name)
-                raise UserError(_("Security Alert: Checksum mismatch for downloaded %s binary.") % cmd_name)
-
-            if manifest_record.archive_type == "tar.gz":
-                with tarfile.open(tmp.name, "r:gz") as tar:
-                    for member in tar.getmembers():
-                        extract_target = manifest_record.extract_member or cmd_name
-                        if member.name.endswith(f"/{extract_target}") or member.name == extract_target:
-                            member.name = cmd_name
-                            tar.extract(member, path=bin_dir)
-                            break
-            else:
-                shutil.copy2(tmp.name, target_bin)
-
-            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-            os.unlink(tmp.name)
-            return target_bin
-        except Exception as e:
-            raise UserError(_("Failed to auto-install %s: %s") % (cmd_name, str(e)))
+        # Forward-compatible proxy stub. The logic has been securely
+        # migrated to the dedicated binary_downloader module.
+        return self.env["binary.manifest"].ensure_executable(cmd_name)

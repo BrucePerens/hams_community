@@ -1,6 +1,7 @@
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
+
 @tagged("post_install", "-at_install")
 class TestPgConfig(TransactionCase):
     def setUp(self):
@@ -83,7 +84,9 @@ class TestPgConfig(TransactionCase):
         with self.assertRaises(UserError):
             wizard.action_generate()
 
-    @patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._ensure_executable")
+    @patch(
+        "odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable"
+    )
     def test_02c_etcd_auto_download(self, mock_ensure):
         # Prove the system defers to the generalized downloader
         mock_ensure.return_value = "/bin/etcd"

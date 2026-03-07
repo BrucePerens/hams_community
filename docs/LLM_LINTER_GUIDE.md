@@ -2,7 +2,7 @@
 
 *Copyright © Bruce Perens K6BP.*
 
-**Purpose:** This document is the ultimate reference sheet for the platform's DevSecOps pipeline. It exhaustively details every syntax pattern, AST structure, and architectural anti-pattern that the custom linters (`check_burn_list.py`, `verify_anchors.py`) will physically reject.  
+**Purpose:** This document is the ultimate reference sheet for the platform's DevSecOps pipeline. It exhaustively details every syntax pattern, AST structure, and architectural anti-pattern that the custom linters (`check_burn_list.py`, `verify_anchors.py`) will physically reject.
 
 You MUST consult this guide to understand the *intent* of the rules and format your code to pass the CI/CD pipeline on the first attempt.
 
@@ -16,7 +16,7 @@ You MUST consult this guide to understand the *intent* of the rules and format y
 
 The AST linter recursively tracks assignments and function calls to block absolute privilege escalation. You MUST use the **Service Account Pattern** (`with_user(svc_uid)`) or the **Public User Idiom**.
 
-* **`sudo()` is Blocked:** Any use of `.sudo()` on recordsets, environments, or intermediate variables is physically blocked. 
+* **`sudo()` is Blocked:** Any use of `.sudo()` on recordsets, environments, or intermediate variables is physically blocked.
   * *Exception:* Fetching cryptographic keys (`.sudo().get_param('database.secret')`) is permitted ONLY if tagged with `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]`.
 * **Obfuscation is Caught:** The linter tracks `getattr(..., 'sudo')` and intermediate variable assignments (e.g., `AdminEnv = env.sudo()`). Do not attempt to evade the AST.
 * **Shell Injection:** `subprocess.run` MUST explicitly use `shell=False` and pass arguments as lists.
@@ -30,7 +30,7 @@ The AST linter recursively tracks assignments and function calls to block absolu
 
 The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL injection.
 
-* **SQL Injection (SQLi) & Dynamic Queries:** You MUST use parameterized queries for data values (`cr.execute("SELECT * FROM table WHERE id = %s", (my_id,))`). 
+* **SQL Injection (SQLi) & Dynamic Queries:** You MUST use parameterized queries for data values (`cr.execute("SELECT * FROM table WHERE id = %s", (my_id,))`).
   * The linter recursively traces and physically blocks string concatenation (`+`), `%` formatting, `.format()`, and `f-strings` applied to `cr.execute()`. Formatting strings into intermediate variables before execution will still trigger the ban.
   * **Dynamic Schema Mandate:** If you must dynamically inject identifiers (like column names, table names, or dynamic `WHERE` clauses for SQL Views), you are strictly **FORBIDDEN** from using f-strings. Standard `%s` parameterization does not work for schema identifiers. You MUST use the `psycopg2.sql` module (e.g., `query = sql.SQL("...").format(col=sql.Identifier("..."))`).
 * **N+1 Loops:** Calling `.search()`, `.search_count()`, or `.read_group()` inside a `for` loop is banned. You MUST pre-fetch data into memory-mapped dictionaries outside the loop (O(1) lookups).
@@ -68,7 +68,7 @@ The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL inj
 
 ## 4. 🎨 XML, QWeb, and UI Elements
 
-* **XSS Prevention:** `` is banned. Use ``.
+* **XSS Prevention:** `<t t-raw...>` is banned. Use `<t t-out...>`.
 * **SSTI Prevention:** Using `request.env` anywhere inside an XML QWeb template is a critical Server-Side Template Injection vector and is banned. Compute values in Python controllers and pass them to the rendering context.
 * **Legacy View Tags:** `<tree>` is banned (use `<list>`). `t-name="kanban-box"` is banned (use `t-name="card"`).
 * **Deprecated Directives:** `t-esc` is banned. Use `t-out`.
@@ -121,18 +121,21 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 
 1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
 2. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document.
-3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: ``. 
+3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: ``.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
 
 ---
 
 ## 8. 🤖 LLM Extraction Defenses & Parcel Features
 
-To protect the codebase from LLM-specific failure modes (like hallucination, laziness, and truncation), the `parcel_extract.py` tool enforces the following automated defenses and operational behaviors:
+To protect the codebase from LLM-specific failure modes (like hallucination, laziness, and truncation), the `parcel_extract.py` tool enforces the following automated defenses and operational behaviors.
+
+**Meta-Tooling Exception:** Because the `parcel_extract.py` script powers these defenses, you MUST modify it exclusively using full-file `overwrite` operations. You are forbidden from using `search-and-replace` to patch `parcel_extract.py` to prevent self-referential AST corruption and indentation errors.
 
 * **Anti-Corruption Guard (Laziness Traps):** The extractor actively scans payloads for laziness placeholders. If it detects `# ... rest of`, `// Code unchanged`, or HTML comments containing existing code placeholders, it instantly aborts the file write to prevent deleting valid code.
-* **Fuzzy Fallbacks & Whitespace Agnosticism:** The search-and-replace engine strips all whitespace and indentation when comparing the SEARCH block to the target file. This immunizes the patch against minor LLM formatting drift or tab-vs-space errors.
-* **Python AST Fallback:** If string matching completely fails for a `.py` file, the extractor seamlessly falls back to an Abstract Syntax Tree (AST) parser. It parses the SEARCH block, identifies the target `FunctionDef`, `AsyncFunctionDef`, or `ClassDef` by name, and surgically replaces that exact logical AST node boundary in the original file.
+* **Semantic Token Matchers (Python, XML, Markdown):** The extraction engine uses semantic tokenization for `.py`, `.xml`, and `.md` files. For Python, it ignores non-semantic whitespace, comments, and quote types. For Markdown, it strips punctuation drift and normalizes list/header markers. For XML, it alphabetically sorts attributes and ignores tag whitespace spacing. This immunizes the patch against LLM formatting drift.
+* **The Convergence Principle:** Patched Python files are automatically routed through the `black` formatter before saving, ensuring subsequent reads match the LLM's canonical style expectations.
+* **Fuzzy & AST Fallbacks:** If token matching fails, the extractor falls back to stripping all whitespace. For Python, it also employs an Abstract Syntax Tree (AST) parser to identify and surgically replace target `FunctionDef` or `ClassDef` nodes by name.
 * **Markdown Balance Checking:** For `.md` files, the extractor validates that all fenced and inline code blocks are perfectly balanced. Unclosed blocks will abort the write to prevent rendering corruption.
 * **Strict URL-Encoding Mandate for XML Comments:** Web UI Markdown renderers will silently delete HTML/XML comments before the extraction script ever sees them. To prevent this data loss, LLMs MUST use the `Encoding: url-encoded` header in their Parcel block and percent-encode the angle brackets for any comments.
 * **Automated Linting Hooks:** The extractor automatically pipes generated files through `flake8` (Python), `xml.etree` (XML), `json.load` (JSON), and the custom `check_burn_list.py` before committing the write, surfacing architectural failures immediately.

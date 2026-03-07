@@ -31,6 +31,7 @@ This document defines the strict operational parameters for the Large Language M
 ### The Exactness Guarantee (Patch Protocol)
 * **Absolute Completeness:** When executing full file overwrites, you MUST provide complete, unabridged file contents.
 * **Search and Replace:** For targeted modifications, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is.
+* **Meta-Tooling Exception:** When modifying `tools/parcel_extract.py`, you MUST use the `overwrite` operation to provide the complete, unabridged file content. You are forbidden from using `search-and-replace` on the extractor itself.
 * **The Black Formatter Trap:** When searching for Python code to replace, remember that the formatter actively collapses or expands lists, dictionaries, and decorators based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature or use an overwrite operation.
 * **No Placeholders:** You MUST explicitly type every single character, variable, and line of the code you are modifying. Truncation placeholders are strictly forbidden and will trigger an Anti-Corruption Guard abort during extraction.
 * **Certainty Policy:** You MUST ask for clarification if you lack context or do not know a path or signature with 100% certainty. Provide code only when you possess full situational awareness.
@@ -139,8 +140,6 @@ When generating or modifying code, you MUST output your response using the MIME-
 5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
 6. **Mode (Optional):** To change or set file permissions (e.g., for bash scripts), include "Mode: 0755" in the headers.
 7. **Encoding:** If your payload contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include Encoding: url-encoded in the header. To safely bypass the renderer, you must percent-encode angle brackets (< to %3C, > to %3E) and literal percent signs (% to %25). You MUST NOT URL-encode newlines or carriage returns (\n, \r); leave them as literal line breaks to prevent the payload from collapsing into a single line and triggering truncation limits.
-the carriage-return or new-line character will cause the line to grow too
-long and be truncated in your output.
 8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.
 9. **The Content:** Output the file payload exactly as it should be written to disk.
 10. **The Terminator:** End the entire archive by appending "--" to your final boundary string.
@@ -153,7 +152,9 @@ When "Operation: search-and-replace" is used, the payload MUST consist of one or
 [code to replace it with]
 >>>> REPLACE
 
-* **Fuzzy Matching & AST Fallback:** The extraction engine ignores whitespace/indentation drift during matching. For Python files, if exact matching fails, it parses the AST to find a matching class or function and replaces that node. It is highly recommended your SEARCH block encompasses a complete function or class signature.
+* **Semantic Token Matcher (Python, XML, Markdown):** For Python files, the engine ignores non-semantic elements (whitespace, newlines, comments, quote styles). For Markdown files, it ignores line-wrapping, punctuation drift, and list-marker styles. For XML files, it ignores attribute ordering (alphabetically sorting them prior to match) and whitespace inside tags. This ensures patches succeed even if your formatting drifts from the original.
+* **The Convergence Principle (Black Formatter):** Successfully patched Python files are immediately piped through the `black` formatter before being written to disk, ensuring the file continuously converges to your expected canonical style.
+* **Fuzzy & AST Fallbacks:** For other files, it strips whitespace for comparison. For Python, if token matching fails, it falls back to AST parsing to replace specific functions or classes by name.
 
 ### Anti-Laziness Guardrails
 The extraction script will instantly ABORT the entire parcel if it detects laziness placeholders in your generated payload (e.g., comments implying code is unchanged or skipped). You MUST output the full replacement block or the unabridged file.

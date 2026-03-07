@@ -1,5 +1,4 @@
 from . import models  # noqa: F401
-from . import controllers  # noqa: F401
 
 
 def post_init_hook(env):
@@ -13,9 +12,9 @@ def post_init_hook(env):
 
     if "manual.article" in env:
         env["manual.article"].sudo().create(
-            {"name": "Pager Duty & SRE", "body": content}
+            {"name": "Binary Downloader", "body": content}
         )
     elif "knowledge.article" in env:
         env["knowledge.article"].sudo().create(
-            {"name": "Pager Duty & SRE", "body": content}
+            {"name": "Binary Downloader", "body": content}
         )

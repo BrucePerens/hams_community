@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_zero_sudo_binary_manifest_list" model="ir.ui.view"> <field name="name">zero_sudo.binary.manifest.list</field>
-        <field name="model">zero_sudo.binary.manifest</field>
+    <record id="view_binary_downloader_manifest_list" model="ir.ui.view">
+        <field name="name">binary.manifest.list</field>
+        <field name="model">binary.manifest</field>
         <field name="arch" type="xml">
             <list string="Binary Manifests">
                 <field name="name"/>
@@ -12,8 +13,9 @@
         </field>
     </record>
 
-    <record id="view_zero_sudo_binary_manifest_form" model="ir.ui.view"> <field name="name">zero_sudo.binary.manifest.form</field>
-        <field name="model">zero_sudo.binary.manifest</field>
+    <record id="view_binary_downloader_manifest_form" model="ir.ui.view">
+        <field name="name">binary.manifest.form</field>
+        <field name="model">binary.manifest</field>
         <field name="arch" type="xml">
             <form string="Binary Manifest">
                 <sheet>
@@ -31,15 +33,15 @@
         </field>
     </record>
 
-    <record id="action_zero_sudo_binary_manifest" model="ir.actions.act_window">
+    <record id="action_binary_downloader_manifest" model="ir.actions.act_window">
         <field name="name">Binary Manifests</field>
-        <field name="res_model">zero_sudo.binary.manifest</field>
+        <field name="res_model">binary.manifest</field>
         <field name="view_mode">list,form</field>
     </record>
 
-    <menuitem id="menu_zero_sudo_binary_manifest"
+    <menuitem id="menu_binary_downloader_manifest"
               name="Binary Manifests"
               parent="base.menu_custom"
-              action="action_zero_sudo_binary_manifest"
+              action="action_binary_downloader_manifest"
               sequence="150"/>
 </odoo>

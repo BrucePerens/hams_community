@@ -3,6 +3,7 @@ from odoo import fields
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
+
 @tagged("post_install", "-at_install")
 class TestBackupManagement(TransactionCase):
     def setUp(self):
@@ -166,7 +167,9 @@ class TestBackupManagement(TransactionCase):
                 )
                 mock_msg.assert_called()
 
-    @patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._ensure_executable")
+    @patch(
+        "odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable"
+    )
     def test_08d_kopia_auto_download(self, mock_ensure):
         mock_ensure.return_value = "/bin/kopia"
         with patch.object(type(self.config_kopia), "message_post"):

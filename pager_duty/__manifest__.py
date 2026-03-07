@@ -4,9 +4,17 @@
     "author": "Bruce Perens K6BP",
     "website": "https://perens.com/",
     "category": "Ham Radio",
+    "post_init_hook": "post_init_hook",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "calendar", "bus", "zero_sudo", "distributed_redis_cache"],
+    "depends": [
+        "base",
+        "mail",
+        "calendar",
+        "bus",
+        "zero_sudo",
+        "distributed_redis_cache",
+    ],
     "data": [
         "data/cron.xml",
         "security/security.xml",
