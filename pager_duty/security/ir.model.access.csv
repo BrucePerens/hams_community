@@ -11,3 +11,7 @@ access_mail_template_pager_admin,mail.template pager admin,mail.model_mail_templ
 access_res_users_pager_admin,res.users pager admin,base.model_res_users,pager_duty.group_pager_admin,1,0,0,0
 access_mail_alias_domain_pager_admin,mail.alias.domain pager admin,mail.model_mail_alias_domain,pager_duty.group_pager_admin,1,0,0,0
 access_res_partner_pager_admin,res.partner pager admin,base.model_res_partner,pager_duty.group_pager_admin,1,1,0,0
+access_pager_log_pattern_admin,pager.log.pattern admin,model_pager_log_pattern,base.group_system,1,1,1,1
+access_pager_log_file_admin,pager.log.file admin,model_pager_log_file,base.group_system,1,1,1,1
+access_pager_log_pattern_svc,pager.log.pattern svc,model_pager_log_pattern,pager_duty.group_pager_admin,1,1,1,1
+access_pager_log_file_svc,pager.log.file svc,model_pager_log_file,pager_duty.group_pager_admin,1,1,1,1

@@ -1,0 +1,18 @@
+[Unit]
+Description=Hams.com Chrooted Log Analyzer (Splunk Engine)
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/bruce/hams_private/daemons/pager_duty
+EnvironmentFile=/etc/hams_daemons.env
+ExecStart=/usr/bin/env bash /home/bruce/hams_private/daemons/run_daemon.sh /home/bruce/hams_private/daemons/pager_duty pager_log_analyzer.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

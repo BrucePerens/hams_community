@@ -1,20 +1,39 @@
 #!/usr/bin/env python3
-import os, sys, time, socket, psutil, urllib.request, subprocess, re, binascii, logging, smtplib, secrets, ssl, json, datetime, platform, shutil
+import binascii
 import concurrent.futures
+import datetime
+import json
+import logging
+import os
+import psutil
+import re
+import secrets
+import shutil
+import smtplib
+import socket
+import ssl
+import subprocess
+import sys
+import time
+import urllib.request
 from email.message import EmailMessage
 
 try:
     import psycopg2
 except ImportError:
     psycopg2 = None
+
 try:
     import yaml
 except ImportError:
     print("[!] PyYAML required for generalized monitor.")
     sys.exit(1)
 
+# Ensure the system path is updated after all standard imports but before
+# internal project imports, complying with Flake8 E402.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from hams_config import get_odoo_client
+from hams_config import get_odoo_client  # noqa: E402
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s"
@@ -72,7 +91,7 @@ def verify_and_install_dependencies(client, checks):
                         success = True
                         break
                     else:
-                        err_msg = res.get("message")
+                        err_msg = res.get("message") if res else "Unknown error"
                         logger.warning(f"Provision failed: {err_msg}")
                 except Exception as e:
                     logger.warning(f"RPC unavailable, waiting... ({e})")
@@ -331,8 +350,8 @@ def execute_check(check, client=None):
         port = int(parse_env(check.get("port", 123)))
         try:
             import ntplib
-            client = ntplib.NTPClient()
-            response = client.request(target, version=3, timeout=5)
+            client_ntp = ntplib.NTPClient()
+            response = client_ntp.request(target, version=3, timeout=5)
             return True, f"OK (Offset: {response.offset:.4f}s)"
         except ImportError:
             # SNTP v4 client request packet
@@ -924,13 +943,11 @@ def polling_thread(client, check):
     grace = int(check.get("grace", 0))
     thread_start_time = time.time()
 
-    # Give the thread 3x its interval or at least 5 minutes before we consider it dead
     THREAD_TIMEOUTS[name] = max(300, interval * 3)
     logger.info(
         f"Starting polling thread for [{name}] every {interval}s (Grace: {grace}s)"
     )
 
-    # Do all monitoring once immediately at startup
     THREAD_HEARTBEATS[name] = time.time()
     success, msg = execute_check(check, client)
     clean_loops = 1 if success else 0
@@ -952,7 +969,6 @@ def polling_thread(client, check):
     else:
         FAILING_CHECKS.discard(name)
 
-    # Apply stochastic jitter before entering the main cycle to prevent thundering herds
     jitter = secrets.SystemRandom().uniform(0, interval)
     logger.info(f"[{name}] Applying startup jitter: sleeping for {jitter:.1f}s")
     time.sleep(jitter)  # audit-ignore-sleep
@@ -1004,7 +1020,6 @@ def log_tail_thread(client, check):
     grace = int(check.get("grace", 0))
     thread_start_time = time.time()
 
-    # Log tail checks continuously; if it hangs for 2 minutes, something is deeply wrong
     THREAD_TIMEOUTS[name] = 120
     logger.info(
         f"Starting log tail thread for [{name}] on {filepath} (Grace: {grace}s)"
@@ -1015,17 +1030,15 @@ def log_tail_thread(client, check):
     while True:
         THREAD_HEARTBEATS[name] = time.time()
         try:
-            stat = os.stat(filepath)
-            new_inode = stat.st_ino
+            stat_obj = os.stat(filepath)
+            new_inode = stat_obj.st_ino
             if cur_inode != new_inode:
                 if f:
                     f.close()
                 f = open(filepath, "r")
                 if cur_inode is None:
-                    # First run: start from the end to avoid alerting on historical data
                     f.seek(0, 2)
                 else:
-                    # File rotated: start from the absolute beginning to catch all new lines
                     f.seek(0, 0)
                 cur_inode = new_inode
                 logger.info(f"Tailing log file {filepath} (inode: {cur_inode})")
@@ -1064,15 +1077,29 @@ if __name__ == "__main__":
 
     verify_and_install_dependencies(client, checks)
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(checks)))
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(checks) + 1))
     futures = []
+
+    def log_anomaly_proxy(cl):
+        import redis as redis_lib
+        r = redis_lib.Redis(host=os.getenv("REDIS_HOST", "127.0.0.1"), port=int(os.getenv("REDIS_PORT", "6379")), db=0, decode_responses=True)
+        while True:
+            try:
+                _, data = r.blpop("pager_log_anomalies", timeout=5)
+                if data:
+                    payload = json.loads(data)
+                    report(cl, payload["source"], payload["description"], payload["severity"])
+            except Exception:
+                time.sleep(1)  # audit-ignore-sleep
+
+    futures.append(executor.submit(log_anomaly_proxy, client))
+
     for check in checks:
         if check.get("type") == "log":
             futures.append(executor.submit(log_tail_thread, client, check))
         else:
             futures.append(executor.submit(polling_thread, client, check))
 
-    # Main thread becomes the Watchdog
     try:
         while True:
             time.sleep(10)  # audit-ignore-sleep
@@ -1083,8 +1110,6 @@ if __name__ == "__main__":
                     logger.critical(
                         f"WATCHDOG: Thread '{t_name}' hung for {now - last_beat:.1f}s (Timeout: {timeout}s)! Force restarting daemon."
                     )
-                    os._exit(
-                        1
-                    )  # OS-level exit forces systemd/docker to cleanly respawn the daemon
+                    os._exit(1)
     except KeyboardInterrupt:
         logger.info("Shutting down monitoring daemon.")

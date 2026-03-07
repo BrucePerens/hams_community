@@ -191,6 +191,22 @@ class PagerCheck(models.Model):
             raise UserError(_("Invalid YAML Format: %s") % str(e))
 
         self.env["pager.check"].search([], limit=1000).unlink()
+
+        # Parse Log Analyzer Config
+        if "log_analyzer" in data:
+            log_config = data["log_analyzer"]
+            self.env["pager.log.file"].search([], limit=1000).unlink()
+            self.env["pager.log.pattern"].search([], limit=1000).unlink()
+
+            for fp in log_config.get("files", []):
+                self.env["pager.log.file"].create({"filepath": fp})
+            for pat in log_config.get("patterns", []):
+                self.env["pager.log.pattern"].create({
+                    "name": pat.get("name", "Unnamed"),
+                    "regex": pat.get("regex", ""),
+                    "severity": pat.get("severity", "high")
+                })
+
         checks = data.get("checks", []) if isinstance(data, dict) else []
         for c in checks:
             self.env["pager.check"].create(
@@ -259,32 +275,68 @@ class PagerCheck(models.Model):
                 "target": c.target,
                 "interval": c.interval,
             }
-            if c.port: d["port"] = c.port
-            if c.payload_send: d["send"] = c.payload_send
-            if c.payload_send_hex: d["send_hex"] = c.payload_send_hex
-            if c.payload_expect: d["expect"] = c.payload_expect
-            if c.dbname: d["dbname"] = c.dbname
-            if c.dbuser: d["user"] = c.dbuser
-            if c.dbpass: d["password"] = c.dbpass
-            if c.query: d["query"] = c.query
-            if c.script: d["script"] = c.script
-            if c.rpc_method: d["rpc_method"] = c.rpc_method
-            if c.rpc_params: d["rpc_params"] = c.rpc_params
-            if c.regex: d["regex"] = c.regex
-            if c.critical_threshold: d["critical"] = c.critical_threshold
-            if c.warning_threshold: d["warning"] = c.warning_threshold
-            if c.snmp_community: d["snmp_community"] = c.snmp_community
-            if c.snmp_oid: d["snmp_oid"] = c.snmp_oid
-            if c.partition and c.partition != "/": d["partition"] = c.partition
-            if c.grace_period: d["grace"] = c.grace_period
-            if c.parent_check_id: d["parent"] = c.parent_check_id.name
-            if c.maintenance_start: d["maint_start"] = c.maintenance_start.strftime("%Y-%m-%d %H:%M:%S")
-            if c.maintenance_end: d["maint_end"] = c.maintenance_end.strftime("%Y-%m-%d %H:%M:%S")
-            if c.auto_remediate_script: d["remediate"] = c.auto_remediate_script
-            if c.check_type == "heartbeat": d["uuid"] = c.heartbeat_uuid
+            if c.port:
+                d["port"] = c.port
+            if c.payload_send:
+                d["send"] = c.payload_send
+            if c.payload_send_hex:
+                d["send_hex"] = c.payload_send_hex
+            if c.payload_expect:
+                d["expect"] = c.payload_expect
+            if c.dbname:
+                d["dbname"] = c.dbname
+            if c.dbuser:
+                d["user"] = c.dbuser
+            if c.dbpass:
+                d["password"] = c.dbpass
+            if c.query:
+                d["query"] = c.query
+            if c.script:
+                d["script"] = c.script
+            if c.rpc_method:
+                d["rpc_method"] = c.rpc_method
+            if c.rpc_params:
+                d["rpc_params"] = c.rpc_params
+            if c.regex:
+                d["regex"] = c.regex
+            if c.critical_threshold:
+                d["critical"] = c.critical_threshold
+            if c.warning_threshold:
+                d["warning"] = c.warning_threshold
+            if c.snmp_community:
+                d["snmp_community"] = c.snmp_community
+            if c.snmp_oid:
+                d["snmp_oid"] = c.snmp_oid
+            if c.partition and c.partition != "/":
+                d["partition"] = c.partition
+            if c.grace_period:
+                d["grace"] = c.grace_period
+            if c.parent_check_id:
+                d["parent"] = c.parent_check_id.name
+            if c.maintenance_start:
+                d["maint_start"] = c.maintenance_start.strftime("%Y-%m-%d %H:%M:%S")
+            if c.maintenance_end:
+                d["maint_end"] = c.maintenance_end.strftime("%Y-%m-%d %H:%M:%S")
+            if c.auto_remediate_script:
+                d["remediate"] = c.auto_remediate_script
+            if c.check_type == "heartbeat":
+                d["uuid"] = c.heartbeat_uuid
             check_list.append(d)
 
-        yaml_content = yaml.safe_dump({"checks": check_list}, sort_keys=False)
+        yaml_dict = {"checks": check_list}
+
+        log_files = self.env["pager.log.file"].search([("active", "=", True)]).mapped("filepath")
+        log_patterns = self.env["pager.log.pattern"].search([("active", "=", True)])
+
+        yaml_dict["log_analyzer"] = {
+            "files": log_files,
+            "patterns": [
+                {"name": p.name, "regex": p.regex, "severity": p.severity}
+                for p in log_patterns
+            ]
+        }
+
+        yaml_content = yaml.safe_dump(yaml_dict, sort_keys=False)
         path = self._get_config_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:

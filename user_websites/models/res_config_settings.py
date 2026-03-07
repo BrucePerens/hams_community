@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
-
+from odoo import models, fields, api, _
 
 class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
@@ -14,9 +14,6 @@ class ResConfigSettings(models.TransientModel):
 
     @api.model
     def get_values(self):
-        """
-        Load the current members of the Administrator group.
-        """
         res = super(ResConfigSettings, self).get_values()
         admin_group = self.env.ref(
             "user_websites.group_user_websites_administrator", raise_if_not_found=False
@@ -32,9 +29,6 @@ class ResConfigSettings(models.TransientModel):
         return res
 
     def set_values(self):
-        """
-        Save changes by updating the Administrator group members.
-        """
         super(ResConfigSettings, self).set_values()
         admin_group = self.env.ref(
             "user_websites.group_user_websites_administrator", raise_if_not_found=False

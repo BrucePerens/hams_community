@@ -14,11 +14,14 @@
         "views/incident_views.xml",
         "views/schedule_views.xml",
         "views/pager_check_views.xml",
+        "views/log_analyzer_views.xml",
     ],
     "assets": {
         "web.assets_backend": [
             "pager_duty/static/src/components/board/board.js",
             "pager_duty/static/src/components/board/board.xml",
+            "pager_duty/static/src/components/log_viewer/log_viewer.js",
+            "pager_duty/static/src/components/log_viewer/log_viewer.xml",
         ]
     },
 }

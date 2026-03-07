@@ -2,7 +2,6 @@ from odoo import models, fields, tools, _
 from odoo.exceptions import UserError
 from psycopg2 import sql
 
-
 class DatabasePgSetting(models.Model):
     _name = "database.pg.setting"
     _description = "PostgreSQL Configuration Parameter"
@@ -33,7 +32,6 @@ class DatabasePgSetting(models.Model):
                 FROM pg_settings
             )
         """)
-
 
 class PgOptimizeWizard(models.TransientModel):
     _name = "pg.optimize.wizard"
@@ -98,9 +96,6 @@ class PgOptimizeWizard(models.TransientModel):
             },
         }
 
-
-ETCD_CHECKSUM = "84f1837ff7a107ba6e1b6f0dd51bb8db6e5bc24dbd2a8ec862ffbe4db1d996b5"
-
 class PgHaWizard(models.TransientModel):
     _name = "pg.ha.wizard"
     _description = "High Availability Failover Wizard"
@@ -123,7 +118,7 @@ class PgHaWizard(models.TransientModel):
     pgbouncer_ini = fields.Text(string="PgBouncer INI", readonly=True)
 
     def _get_executable(self, cmd_name):
-        import shutil, platform, os, urllib.request, tarfile, tempfile, odoo
+        import shutil
         from odoo.exceptions import UserError
 
         path = shutil.which(cmd_name)

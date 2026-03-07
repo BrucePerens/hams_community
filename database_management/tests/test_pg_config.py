@@ -1,7 +1,6 @@
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
-
 @tagged("post_install", "-at_install")
 class TestPgConfig(TransactionCase):
     def setUp(self):

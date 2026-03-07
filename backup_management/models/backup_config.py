@@ -16,9 +16,6 @@ try:
 except ImportError:
     Fernet = None
 
-
-KOPIA_CHECKSUM = "6eb5cc175ccf2b38038bf34710184b251ce7c77f013bd33816650db8182742dd"
-
 class BackupConfig(models.Model):
     _name = "backup.config"
     _description = "Backup Configuration"

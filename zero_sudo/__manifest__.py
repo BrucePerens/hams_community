@@ -6,7 +6,11 @@
     "version": "1.0",
     "license": "AGPL-3",
     "depends": ["base", "web"],
-    "data": [],
+    "data": [
+        "security/ir.model.access.csv",
+        "data/binary_manifest_data.xml",
+        "views/binary_manifest_views.xml",
+    ],
     "installable": True,
     "auto_install": False,
 }
