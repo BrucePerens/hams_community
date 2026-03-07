@@ -10,18 +10,18 @@ Our platform is built to seamlessly integrate Large Language Models (LLMs) into 
 
 ### The AI Instruction Suite & Memory
 We don't rely on basic system prompts; we govern AI agents using a rigorous hierarchy of operational mandates:
-* **The Agent Persona (`AGENTS.md`):** The primary entry point defining the AI's boundaries, tone, and the Exactness Guarantee for file patching.
-* **Universal Standards (`docs/LLM_GENERAL_REQUIREMENTS.md`):** Core rules covering code formatting (Black), security patterns, and multi-step execution logic.
-* **Odoo 19 Mandates (`docs/LLM_ODOO_REQUIREMENTS.md`):** Odoo-specific architectural directives, actively preventing the AI from falling back on legacy Odoo 14-17 training data.
-* **The Burn List (`docs/LLM_LINTER_GUIDE.md`):** An exhaustive, unforgiving list of banned AST structures, evasion tactics, and deprecated APIs that our custom CI/CD linters actively block.
-* **Architecture Decision Records (`docs/adrs/`):** A formal repository of all major structural choices. This acts as the project's long-term memory, ensuring the AI deeply understands the *why* behind our security and performance paradigms.
+* **The Agent Persona ([`AGENTS.md`](AGENTS.md)):** The primary entry point defining the AI's boundaries, tone, and the Exactness Guarantee for file patching.
+* **Universal Standards ([`docs/LLM_GENERAL_REQUIREMENTS.md`](docs/LLM_GENERAL_REQUIREMENTS.md)):** Core rules covering code formatting (Black), security patterns, and multi-step execution logic.
+* **Odoo 19 Mandates ([`docs/LLM_ODOO_REQUIREMENTS.md`](docs/LLM_ODOO_REQUIREMENTS.md)):** Odoo-specific architectural directives, actively preventing the AI from falling back on legacy Odoo 14-17 training data.
+* **The Burn List ([`docs/LLM_LINTER_GUIDE.md`](docs/LLM_LINTER_GUIDE.md)):** An exhaustive, unforgiving list of banned AST structures, evasion tactics, and deprecated APIs that our custom CI/CD linters actively block.
+* **Architecture Decision Records ([`docs/adrs/`](docs/adrs/)):** A formal repository of all major structural choices. This acts as the project's long-term memory, ensuring the AI deeply understands the *why* behind our security and performance paradigms.
 
 ### The Semantic Anchor System
 To prevent AI "amnesia" and ensure code, tests, and documentation remain permanently synchronized, the platform utilizes a bidirectional **Semantic Anchor System** (`[%ANCHOR: unique_name]`).
 * When an AI generates a business rule or UI view in the code, it drops an anchor.
 * That exact anchor must physically appear in the corresponding automated Python or JS test.
 * That exact anchor must also be referenced inline within the relevant Markdown documentation.
-* Our CI/CD pipeline (`tools/verify_anchors.py`) continuously scans the repository. If an AI modifies the code without updating the linked test or documentation, the build mathematically fails, ensuring total architectural traceability.
+* Our CI/CD pipeline ([`tools/verify_anchors.py`](tools/verify_anchors.py)) continuously scans the repository. If an AI modifies the code without updating the linked test or documentation, the build mathematically fails, ensuring total architectural traceability.
 
 ### Execution & Extraction
 * **[Isolated Task Workspaces](tools/create_task_workspace.py):** Surgically partition tasks to prevent LLM cognitive overload and context drift.
