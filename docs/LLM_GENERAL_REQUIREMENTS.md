@@ -146,11 +146,13 @@ When generating or modifying code, you MUST output your response using the MIME-
 
 ### Search-and-Replace Syntax (CRITICAL)
 When "Operation: search-and-replace" is used, the payload MUST consist of one or more replacement blocks using this exact structural marker format:
+```
 <<<< SEARCH
 [exact code to find]
 ====
 [code to replace it with]
 >>>> REPLACE
+```
 
 * **Semantic Token Matcher (Python, XML, Markdown):** For Python files, the engine ignores non-semantic elements (whitespace, newlines, comments, quote styles). For Markdown files, it ignores line-wrapping, punctuation drift, and list-marker styles. For XML files, it ignores attribute ordering (alphabetically sorting them prior to match) and whitespace inside tags. This ensures patches succeed even if your formatting drifts from the original.
 * **The Convergence Principle (Black Formatter):** Successfully patched Python files are immediately piped through the `black` formatter before being written to disk, ensuring the file continuously converges to your expected canonical style.
