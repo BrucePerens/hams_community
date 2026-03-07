@@ -1,4 +1,4 @@
-# Hams.com Unified SRE & DevSecOps Platform
+# Unified SRE & DevSecOps Platform
 
 This repository contains the enterprise-grade modules for Odoo 19 Community, focusing on high availability, security, decentralization, and robust disaster recovery.
 
