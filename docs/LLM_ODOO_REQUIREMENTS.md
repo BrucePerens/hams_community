@@ -1,10 +1,9 @@
 # ODOO-SPECIFIC TECHNICAL STANDARDS
 
-# Meta-Data
 *Copyright © Bruce Perens K6BP. All Rights Reserved. This software is proprietary and confidential.*
 
-**Inheritance:** This document extends `LLM_GENERAL_REQUIREMENTS.md`. All global operational mandates (Completeness, Refusal Protocol, Pre-Flight Checks, and WCAG Compliance) apply here.
-**Context:** These standards apply specifically to Odoo 19+ module development.
+*Inheritance:* This document extends `LLM_GENERAL_REQUIREMENTS.md`. All global operational mandates (Completeness, Refusal Protocol, Pre-Flight Checks, and WCAG Compliance) apply here.
+*Context:* These standards apply specifically to Odoo 19+ module development.
 ---
 
 ## 1. ANTI-BIAS & THE BURN LIST (CRITICAL)
