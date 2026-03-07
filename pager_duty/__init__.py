@@ -12,10 +12,6 @@ def post_init_hook(env):
         content = f.read()
 
     if "manual.article" in env:
-        env["manual.article"].sudo().create(
-            {"name": "Pager Duty & SRE", "body": content}
-        )
+        env["manual.article"].create({"name": "Pager Duty & SRE", "body": content})
     elif "knowledge.article" in env:
-        env["knowledge.article"].sudo().create(
-            {"name": "Pager Duty & SRE", "body": content}
-        )
+        env["knowledge.article"].create({"name": "Pager Duty & SRE", "body": content})

@@ -15,6 +15,7 @@ We don't rely on basic system prompts; we govern AI agents using a rigorous hier
 * **Odoo 19 Mandates ([`docs/LLM_ODOO_REQUIREMENTS.md`](docs/LLM_ODOO_REQUIREMENTS.md)):** Odoo-specific architectural directives, actively preventing the AI from falling back on legacy Odoo 14-17 training data.
 * **The Burn List ([`docs/LLM_LINTER_GUIDE.md`](docs/LLM_LINTER_GUIDE.md)):** An exhaustive, unforgiving list of banned AST structures, evasion tactics, and deprecated APIs that our custom CI/CD linters actively block.
 * **Architecture Decision Records ([`docs/adrs/`](docs/adrs/)):** A formal repository of all major structural choices. This acts as the project's long-term memory, ensuring the AI deeply understands the *why* behind our security and performance paradigms.
+* **The AI's own Experience File** ([`docs/LLM_EXPERIENCE.md`](docs/LLM_EXPERIENCE.md)): ** The AI's own notes to itself, it chooses what goes in this file. Sometimes, experience will be promoted to more formal documents.
 
 ### The Semantic Anchor System
 To prevent AI "amnesia" and ensure code, tests, and documentation remain permanently synchronized, the platform utilizes a bidirectional **Semantic Anchor System** (`[%ANCHOR: unique_name]`).

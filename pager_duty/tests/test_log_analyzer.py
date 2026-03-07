@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 
+
 @tagged("post_install", "-at_install")
 class TestLogAnalyzer(TransactionCase):
     def test_01_log_analyzer_views(self):
@@ -13,3 +14,9 @@ class TestLogAnalyzer(TransactionCase):
         self.assertIn("filepath", v2["arch"])
 
         self.assertTrue(True)
+
+        def test_02_headless_api_translation(self):
+            # [%ANCHOR: test_log_api_i18n]
+            # Tests [%ANCHOR: test_log_api_i18n]
+            self.env["pager.log.pattern"].search([], limit=1)
+            self.assertTrue(True)

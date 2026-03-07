@@ -39,8 +39,6 @@ def verify_markdown(filepath):
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
-        # Utilize the robust character-by-character state machine to mathematically
-        # verify nested backticks (e.g. inline backticks inside fenced blocks).
         mask_markdown_and_check_balance(content)
     except ValueError as e:
         return f"[WARN] {e}"
@@ -90,7 +88,6 @@ def mask_markdown_and_check_balance(payload):
 
     while i < n:
         if not in_fenced and not in_inline:
-            # Match fenced block: up to 3 spaces, then 3+ backticks/tildes
             fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})", payload[i:])
             if fence_match and (i == 0 or payload[i - 1] == "\n"):
                 in_fenced = True
@@ -100,7 +97,6 @@ def mask_markdown_and_check_balance(payload):
                 i += advance
                 continue
 
-            # Match inline code
             inline_match = re.match(r"^`+", payload[i:])
             if inline_match:
                 in_inline = True
@@ -114,7 +110,6 @@ def mask_markdown_and_check_balance(payload):
             i += 1
 
         elif in_fenced:
-            # Look for closing fence
             fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})[ \t]*(\n|$)", payload[i:])
             if (
                 fence_match
@@ -130,12 +125,10 @@ def mask_markdown_and_check_balance(payload):
                 i += advance
                 continue
 
-            # Mask character
             masked.append(" ")
             i += 1
 
         elif in_inline:
-            # Look for closing inline code
             inline_match = re.match(r"^`+", payload[i:])
             if inline_match:
                 if inline_match.group(0) == inline_str:
@@ -144,7 +137,6 @@ def mask_markdown_and_check_balance(payload):
                     masked.append(payload[i : i + advance])
                     i += advance
                 else:
-                    # Consume the entire non-matching backtick sequence
                     advance = len(inline_match.group(0))
                     for _ in range(advance):
                         masked.append(" ")
@@ -164,8 +156,6 @@ def mask_markdown_and_check_balance(payload):
 
 def check_ai_foibles(payload, filepath=""):
     """Strips rogue markdown wrappers and rejects laziness placeholders."""
-    # LLMs occasionally wrap their payload in standard markdown blocks.
-    # Safely remove them ONLY if the entire payload is wrapped in backticks.
     if payload.lstrip().startswith("```"):
         lines = payload.strip("\r\n").split("\n")
         if (
@@ -179,7 +169,6 @@ def check_ai_foibles(payload, filepath=""):
     if filepath.endswith(".md"):
         text_to_check = mask_markdown_and_check_balance(payload)
 
-    # Strings split mathematically to avoid triggering the extractor on itself
     foibles = [
         r"#" + r"\s*\.\.\.\s*rest of",
         r"//" + r"\s*\.\.\.\s*rest of",
@@ -224,7 +213,6 @@ def get_semantic_tokens(source_text):
     """
     Converts source code into a list of meaningful tokens, stripping
     formatting, comments, and line breaks.
-    Returns a list of dicts containing the token value and its absolute character span.
     """
     lines = source_text.splitlines(keepends=True)
     line_offsets = [0]
@@ -258,14 +246,42 @@ def get_semantic_tokens(source_text):
             tokens.append(
                 {"type": tok.type, "val": val, "start": start_char, "end": end_char}
             )
-    except tokenize.TokenError:
+    except (tokenize.TokenError, IndentationError, SyntaxError):
         return None
 
     return tokens
 
 
+def process_indented_replacement(replace_text, indentation):
+    """Preserves relative nesting when injecting multiline code blocks."""
+    replace_lines = replace_text.strip("\n").split("\n")
+
+    base_replace_indent = None
+    for line in replace_lines:
+        if line.strip():
+            indent = len(line) - len(line.lstrip(" \t"))
+            if base_replace_indent is None or indent < base_replace_indent:
+                base_replace_indent = indent
+    if base_replace_indent is None:
+        base_replace_indent = 0
+
+    indented_replace = replace_lines[0].lstrip(" \t")
+    if len(replace_lines) > 1:
+        for line in replace_lines[1:]:
+            if line.strip():
+                relative_line = (
+                    line[base_replace_indent:]
+                    if len(line) >= base_replace_indent
+                    and line[:base_replace_indent].isspace()
+                    else line.lstrip(" \t")
+                )
+                indented_replace += "\n" + indentation + relative_line
+            else:
+                indented_replace += "\n"
+    return indented_replace
+
+
 def semantic_token_replace(original_text, search_text, replace_text):
-    """Finds the search block using syntactic meaning rather than string matching."""
     target_tokens = get_semantic_tokens(original_text)
     search_tokens = get_semantic_tokens(search_text)
 
@@ -292,12 +308,7 @@ def semantic_token_replace(original_text, search_text, replace_text):
             line_start = original_text.rfind("\n", 0, start_idx) + 1
             indentation = original_text[line_start:start_idx]
 
-            replace_lines = replace_text.strip("\n").split("\n")
-            indented_replace = replace_lines[0]
-            if len(replace_lines) > 1:
-                for line in replace_lines[1:]:
-                    indented_replace += "\n" + indentation + line.lstrip(" \t")
-
+            indented_replace = process_indented_replacement(replace_text, indentation)
             return (
                 original_text[:start_idx] + indented_replace + original_text[end_idx:]
             )
@@ -306,10 +317,6 @@ def semantic_token_replace(original_text, search_text, replace_text):
 
 
 def get_markdown_tokens(text):
-    """
-    Converts Markdown text into a stream of normalized semantic tokens.
-    Strips punctuation, formatting drift, and normalizes bullet/header markers.
-    """
     tokens = []
     strip_chars = "*_~`.!?,;:()[]{}\"'<>"
     for match in re.finditer(r"\S+", text):
@@ -343,7 +350,6 @@ def get_markdown_tokens(text):
 
 
 def semantic_markdown_replace(original_text, search_text, replace_text):
-    """Finds the search block using Markdown syntactic meaning."""
     target_tokens = get_markdown_tokens(original_text)
     search_tokens = get_markdown_tokens(search_text)
 
@@ -367,17 +373,18 @@ def semantic_markdown_replace(original_text, search_text, replace_text):
             start_idx = target_tokens[i]["start"]
             end_idx = target_tokens[i + search_len - 1]["end"]
 
-            # Strip ONLY the leading indentation of the first line of the replacement.
-            # This allows it to cleanly dock onto the original text's leading whitespace
-            # while preserving the LLM's intentional nested formatting for subsequent lines.
-            replace_clean = replace_text.lstrip(" \t")
-            return original_text[:start_idx] + replace_clean + original_text[end_idx:]
+            line_start = original_text.rfind("\n", 0, start_idx) + 1
+            indentation = original_text[line_start:start_idx]
+
+            indented_replace = process_indented_replacement(replace_text, indentation)
+            return (
+                original_text[:start_idx] + indented_replace + original_text[end_idx:]
+            )
 
     return None
 
 
 def get_xml_tokens(text):
-    """Tokenizes XML into normalized tags and text, ignoring attribute order and whitespace."""
     tokens = []
     pattern = re.compile(r"(<!\[CDATA\[.*?\]\]>||<[^>]+>|[^<]+)", re.DOTALL)
 
@@ -404,9 +411,7 @@ def get_xml_tokens(text):
 
         attr_pattern = re.compile(r'([\w\-\:]+)\s*=\s*(["\'])(.*?)\2', re.DOTALL)
         attrs = attr_pattern.findall(attrs_str)
-        # Sort attributes alphabetically to make the match attribute-order agnostic
         sorted_attrs = sorted(attrs, key=lambda x: x[0])
-
         norm_attr_str = " ".join([f'{k}="{v}"' for k, q, v in sorted_attrs])
 
         res = f"<{tag_name}"
@@ -432,7 +437,6 @@ def get_xml_tokens(text):
 
 
 def semantic_xml_replace(original_text, search_text, replace_text):
-    """Finds the search block using XML syntactic meaning."""
     target_tokens = get_xml_tokens(original_text)
     search_tokens = get_xml_tokens(search_text)
 
@@ -459,12 +463,7 @@ def semantic_xml_replace(original_text, search_text, replace_text):
             line_start = original_text.rfind("\n", 0, start_idx) + 1
             indentation = original_text[line_start:start_idx]
 
-            replace_lines = replace_text.strip("\n").split("\n")
-            indented_replace = replace_lines[0]
-            if len(replace_lines) > 1:
-                for line in replace_lines[1:]:
-                    indented_replace += "\n" + indentation + line.lstrip(" \t")
-
+            indented_replace = process_indented_replacement(replace_text, indentation)
             return (
                 original_text[:start_idx] + indented_replace + original_text[end_idx:]
             )
@@ -473,7 +472,6 @@ def semantic_xml_replace(original_text, search_text, replace_text):
 
 
 def whitespace_agnostic_replace(original_text, search_text, replace_text):
-    """Finds search block ignoring spaces/newlines ensuring drift safety."""
     search_stripped = "".join(search_text.split())
     if not search_stripped:
         return original_text
@@ -493,16 +491,15 @@ def whitespace_agnostic_replace(original_text, search_text, replace_text):
     start_idx = indices[idx]
     end_idx = indices[idx + len(search_stripped) - 1]
 
-    # Prevent double-indentation. original_text[:start_idx] includes the
-    # original leading whitespace. Strip leading spaces/tabs from the
-    # replacement so it docks perfectly onto the original indentation.
-    replace_text = replace_text.lstrip(" \t")
+    line_start = original_text.rfind("\n", 0, start_idx) + 1
+    indentation = original_text[line_start:start_idx]
 
-    return original_text[:start_idx] + replace_text + original_text[end_idx + 1 :]
+    indented_replace = process_indented_replacement(replace_text, indentation)
+
+    return original_text[:start_idx] + indented_replace + original_text[end_idx + 1 :]
 
 
 def ast_fallback_replace(original_text, search_text, replace_text):
-    """If exact string matching fails in Python, replace the AST node."""
     try:
         search_tree = ast.parse(search_text)
         target_name = None
@@ -537,8 +534,6 @@ def ast_fallback_replace(original_text, search_text, replace_text):
 
 def extract_parcel(raw_text):
     lines = raw_text.splitlines()
-
-    # Find the absolute first boundary string and ignore everything else
     boundary = None
     for line_item in lines:
         stripped = line_item.strip()
@@ -555,7 +550,6 @@ def extract_parcel(raw_text):
     if terminator not in raw_text:
         print("❌ [WARN] Parcel terminator missing. Attempting extract...\n")
 
-    # Split strictly on the detected boundary
     pattern = rf"^{re.escape(boundary)}$"
     parts = re.split(pattern, raw_text, flags=re.MULTILINE)
 
@@ -565,7 +559,6 @@ def extract_parcel(raw_text):
         if not part.strip() or part.strip().startswith("--"):
             continue
 
-        # Strip leading whitespace for header parsing, keep trailing
         part = part.lstrip()
         if "\n\n" not in part:
             continue
@@ -622,7 +615,6 @@ def extract_parcel(raw_text):
         ]
         mode_str = mode_lines[0].replace("Mode: ", "").strip() if mode_lines else None
 
-        # Clean terminator from the payload if it's attached
         if terminator in payload:
             payload = payload.split(terminator)[0]
 
@@ -637,7 +629,6 @@ def extract_parcel(raw_text):
             tasks_by_file.setdefault(filepath, []).append({"error": str(e)})
             continue
 
-        # Ensure payload ends with exactly one newline
         payload = payload.rstrip() + "\n"
 
         task = {
@@ -756,7 +747,8 @@ def extract_parcel(raw_text):
                             f"Cannot search-and-replace missing file: {filepath}"
                         )
 
-                    pattern = r"^<<<< SEARCH\n(.*?)\n^====\n(.*?)\n^>>>> REPLACE"
+                    # Robust regex that tolerates trailing spaces generated by LLMs
+                    pattern = r"^<<<< SEARCH[ \t]*\n(.*?)\n^====[ \t]*\n(.*?)\n^>>>> REPLACE[ \t]*(?:\n|$)"
                     search_blocks = list(
                         re.finditer(pattern, payload, re.DOTALL | re.MULTILINE)
                     )
@@ -805,24 +797,12 @@ def extract_parcel(raw_text):
                             )
 
                         if new_text is None:
-                            if filepath.endswith(".py"):
-                                raise ValueError(
-                                    "Semantic token, AST, and whitespace fallback failed for search block."
-                                )
-                            elif filepath.endswith(".md"):
-                                raise ValueError(
-                                    "Semantic token and whitespace fallback failed for Markdown search block."
-                                )
-                            elif filepath.endswith(".xml"):
-                                raise ValueError(
-                                    "Semantic token and whitespace fallback failed for XML search block."
-                                )
-                            else:
-                                raise ValueError("Search block not found.")
+                            raise ValueError(
+                                "Semantic token, AST, and whitespace fallback failed for search block."
+                            )
                         current_text = new_text
                     file_mutated = True
 
-            # In-Memory Validation Shield: Prevent bad patches from corrupting the disk
             if file_mutated:
                 validate_syntax_in_memory(filepath, current_text)
 
@@ -833,7 +813,6 @@ def extract_parcel(raw_text):
             _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
             continue
 
-        # Commit Phase
         try:
             if file_deleted:
                 if os.path.exists(filepath):
@@ -854,7 +833,6 @@ def extract_parcel(raw_text):
                 continue
 
             if file_mutated:
-                # Automatically strip trailing whitespace from common code files to prevent linter/QWeb issues
                 if filepath.endswith((".py", ".xml", ".md", ".js", ".html")):
                     current_text = re.sub(
                         r"[ \t]+$", "", current_text, flags=re.MULTILINE
@@ -862,7 +840,6 @@ def extract_parcel(raw_text):
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
 
-                # Convergence Principle: Auto-format mutated Python files
                 if filepath.endswith(".py"):
                     try:
                         subprocess.run(
@@ -913,7 +890,6 @@ if __name__ == "__main__":
             print(f"❌ Error: File '{sys.argv[1]}' not found.\n")
             sys.exit(1)
     else:
-        # Running entirely silent on stdin prevents terminal noise
         input_data = sys.stdin.read()
 
     extract_parcel(input_data)

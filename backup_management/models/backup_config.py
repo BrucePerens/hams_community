@@ -3,11 +3,6 @@ import subprocess
 import os
 import datetime
 import shutil
-import platform
-import urllib.request
-import tarfile
-import tempfile
-import odoo
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 

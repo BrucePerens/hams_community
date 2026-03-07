@@ -31,9 +31,7 @@ class BinaryManifest(models.Model):
         string="Extract Member", help="Specific file to extract from the archive."
     )
 
-    _sql_constraints = [
-        ("name_uniq", "UNIQUE(name)", "The binary name must be unique!")
-    ]
+    _name_uniq = models.Constraint("UNIQUE(name)", "The binary name must be unique!")
 
     @api.model
     def ensure_executable(self, cmd_name):
@@ -41,7 +39,9 @@ class BinaryManifest(models.Model):
         if path:
             return path
 
-        manifest_record = self.search([("name", "=", cmd_name)], limit=1)
+        manifest_record = self.env["binary.manifest"].search(
+            [("name", "=", cmd_name)], limit=1
+        )
         if not manifest_record:
             raise UserError(
                 _(

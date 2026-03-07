@@ -339,10 +339,12 @@ class PagerCheck(models.Model):
 
         log_files = (
             self.env["pager.log.file"]
-            .search([("active", "=", True)])
+            .search([("active", "=", True)], limit=1000)
             .mapped("filepath")
         )
-        log_patterns = self.env["pager.log.pattern"].search([("active", "=", True)])
+        log_patterns = self.env["pager.log.pattern"].search(
+            [("active", "=", True)], limit=1000
+        )
 
         yaml_dict["log_analyzer"] = {
             "files": log_files,

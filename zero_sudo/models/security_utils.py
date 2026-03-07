@@ -2,14 +2,8 @@
 # -*- coding: utf-8 -*-
 import hashlib
 import os
-import platform
-import shutil
-import stat
 import subprocess
 import sys
-import tarfile
-import tempfile
-import urllib.request
 from odoo import models, api, tools, _
 from odoo.exceptions import AccessError, UserError
 
@@ -47,6 +41,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @tools.ormcache("xml_id")
     def _get_service_uid(self, xml_id):
         # [%ANCHOR: get_service_uid]
+        # Verified by [%ANCHOR: test_get_service_uid]
         uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
         if not uid:
             raise AccessError(
@@ -61,6 +56,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
         # [%ANCHOR: coherent_cache_signal]
+        # Verified by [%ANCHOR: test_coherent_cache_signal]
         if isinstance(key_value, (list, set, tuple)):
             payloads = [f"{model_name}:{kv}" for kv in set(key_value) if kv]
             if payloads:
@@ -102,9 +98,3 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return True
         except subprocess.CalledProcessError as e:
             raise UserError(_("VENV update failed:\n%s") % e.stderr)
-
-    @api.model
-    def _ensure_executable(self, cmd_name):
-        # Forward-compatible proxy stub. The logic has been securely
-        # migrated to the dedicated binary_downloader module.
-        return self.env["binary.manifest"].ensure_executable(cmd_name)

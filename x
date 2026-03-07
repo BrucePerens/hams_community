@@ -1,73 +1,56 @@
-@@BOUNDARY_PROMO_README_V4@@
-Path: README.md
+@@BOUNDARY_DOCS_UPDATE@@
+Path: docs/LLM_LINTER_GUIDE.md
+Operation: search-and-replace
+
+<<<< SEARCH
+| Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
+| Test Commit | `# burn-ignore-test-commit` | Exclusively for `RealTransactionCase` where real DB commits are required to test ORM caches. |
+
+---
+
+## 7. ⚓ Semantic Anchors & UI Tour Mandate
+====
+| Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
+| Test Commit | `# burn-ignore-test-commit` | Exclusively for `RealTransactionCase` where real DB commits are required to test ORM caches. |
+
+### 🚨 Critical Formatting & Placement Rules for Bypasses
+1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines (like dictionaries, lists, or long method signatures) and detach your inline linter comments, causing the AST linter to fail. **Whenever you apply an `# audit-ignore-*` or `# burn-ignore` comment to a multi-line structure, you MUST append `  # fmt: skip` to the exact same line.** This mathematically locks the bypass tag to the correct AST node.
+2. **The Dual XML Anchor Placement:** To satisfy both the XML architecture linter (`check_burn_list.py`) and the bidirectional traceability linter (`verify_anchors.py`) simultaneously, you MUST use the following dual-comment structure:
+   * The traceability anchor `` MUST be placed immediately **above** the `<record>` or `<template>` tag.
+   * The burn list bypass `` MUST be placed immediately **inside** the `<record>` or `<template>` tag (on the exact same line as the opening bracket).
+
+---
+
+## 7. ⚓ Semantic Anchors & UI Tour Mandate
+>>>> REPLACE
+
+@@BOUNDARY_DOCS_UPDATE@@
+Path: docs/LLM_EXPERIENCE.md
 Operation: overwrite
 
-# 🚀 Unleash Enterprise Power: The Unified SRE & DevSecOps Platform for Odoo 19
+# LLM Experience & Hard-Learned Lessons
 
-Stop paying enterprise fees for enterprise features. Welcome to a completely open-source, mathematically proven, and highly secure ecosystem designed for **Odoo 19 Community** .
-
-Whether you are scaling horizontally, defending against malicious bots, or building decentralized user communities, this comprehensive suite of modules provides unparalleled performance, security, and developer ergonomics .
+*This document serves as a persistent memory bank for the Large Language Model (LLM) across sessions. It is a place to record critical experiences, edge-cases, and hard-learned lessons that the LLM should not forget between sessions. The LLM is free to choose what to append and document here.*
 
 ---
 
-## 🤖 The Future of Engineering: Deterministic AI Management
+## 1. The Web UI Markdown Renderer Trap (XML Data Loss)
+**The Trap:** The conversational Web UI aggressively parses and strips out HTML/XML comments (``) from plaintext markdown blocks *before* the Python extraction script (`parcel_extract.py`) ever receives the payload. This leads to silent data loss, specifically destroying mandatory `[%ANCHOR: ...]` and `audit-ignore-*` tags in XML files.
+**The Solution:** When patching or overwriting XML files, the LLM **MUST ALWAYS** use `Encoding: url-encoded` in the Parcel header and percent-encode the angle brackets (`<` becomes `%3C`, `>` becomes `%3E`) and percent signs (`%` becomes `%25`).
 
-We don't just use AI; we *manage* it. Our platform is built on a revolutionary framework designed to seamlessly integrate Large Language Models (LLMs) into a rigorous, exact-execution DevSecOps pipeline .
+## 2. The Python Formatter (Black) vs. AST Linter Trap
+**The Trap:** The project uses the Black code formatter. When returning dictionaries, lists, or multi-line structures in Python (like JSON-RPC responses), Black will reformat them across multiple lines. This detaches inline `# audit-ignore-*` or `# burn-ignore` comments from the specific AST node they were meant to protect, causing CI/CD pipeline failures.
+**The Solution:** Whenever applying a linter bypass comment to a multi-line Python structure, the LLM **MUST** append `  # fmt: skip` to the end of the comment (e.g., `return {"error": "..."}  # audit-ignore-i18n: Tested by [%ANCHOR: test_name]  # fmt: skip`).
 
-* **[Isolated Task Workspaces](tools/create_task_workspace.py):** We surgically partition tasks to prevent LLM cognitive overload and context drift, maximizing AI focus and reasoning capacity .
-* **[The MIME-Like Parcel Transport](docs/LLM_GENERAL_REQUIREMENTS.md):** Code modifications are delivered with absolute precision using a secure, multi-block transport schema that ensures flawless extraction .
-* **[Semantic Token Matching](tools/parcel_extract.py):** Our patching engine ignores superficial formatting and whitespace, ensuring that AI-generated search-and-replace blocks dock perfectly with your source code .
-* **[Unforgiving AST Burn List Linters](docs/LLM_LINTER_GUIDE.md):** We enforce architectural purity with Deep AST (Abstract Syntax Tree) Verification, programmatically preventing AI agents from utilizing lazy workarounds, deprecated syntax, or insecure anti-patterns .
-
----
-
-## 🛡️ Fort Knox Security & Edge Defense
-
-Security isn't an afterthought; it is mathematically enforced at the lowest levels of the architecture .
-
-* **[Zero-Sudo Security Core](zero_sudo/README.md) (`zero_sudo`):** We have entirely eliminated Odoo's dangerous `.sudo()` method, replacing it with a centralized, hyper-secure Micro-Service Account pattern that guarantees least-privilege execution .
-* **[Binary Downloader](binary_downloader/data/documentation.html) (`binary_downloader`):** Protect your OS from Arbitrary File Write vulnerabilities. This database-backed module provisions static executables dynamically, validating strict SHA-256 cryptographic checksums before execution .
-* **[Cloudflare Edge Orchestration](cloudflare/README.md) (`cloudflare`):** Control your CDN directly from Odoo. Instantly deploy Web Application Firewall (WAF) bans, orchestrate Zero Trust Tunnels, and implement invisible Turnstile CAPTCHA to stop scrapers before they ever reach your server .
-
----
-
-## ⚡ Blistering Performance & Scale
-
-Built to handle massive real-time data velocities without breaking a sweat .
-
-* **[Caching PWA](caching/README.md) (`caching`):** Transform your frontend into a client-side CDN. Our zero-config Service Worker intercepts network requests, delivering 0ms latency for returning visitors . A dynamic mathematical safety valve ensures browser storage limits are never breached .
-* **[Distributed Redis Cache](distributed_redis_cache/README.md) (`distributed_redis_cache`):** Horizontally scale with confidence. This module introduces a Redis-backed pub/sub bus to ensure fine-grained phase coherence and instant cache invalidation across all your Odoo WSGI worker nodes .
-* **[Database Management & APM](docs/modules/database_management.md) (`database_management`):** An enterprise DBA toolkit right in your GUI. Track table bloat, terminate hanging backend sessions, and utilize our automated wizards to generate highly available (HA) configurations for Patroni and PgBouncer .
-
----
-
-## 🚨 Unbreakable Site Reliability Engineering (SRE)
-
-Why rely on external services when your ERP can monitor itself asynchronously? * **[Pager Duty](pager_duty/PROMO.md) (`pager_duty`):** A completely isolated, Datadog-level Python daemon that runs outside of Odoo's web workers. It features Airgapped SMTP fallbacks, un-cached DNS root lookups, cascading failure suppression, and intelligent routing directly tied to the Odoo Calendar .
-* **[Backup & Disaster Recovery](backup_management/README.md) (`backup_management`):** A centralized GUI orchestrating `Kopia` and `pgBackRest` . It doesn't just take backups; it executes automated "Restore Drills" to mathematically prove the integrity of your snapshots, and alerts your on-call SRE if backups run stale or anomaly sizes are detected .
-
----
-
-## 🌐 Decentralized Community & Content
-
-Empower your users while maintaining absolute legal compliance and moderation .
-
-* **[User Websites](user_websites/README.md) (`user_websites` & `user_websites_seo`):** Users can build stunning personal or group websites and blogs safely . We utilize a brilliant Proxy Ownership pattern and a shared blog container to give users their own space without bloating your database . It includes an automated Three-Strike suspension system for flawless moderation .
-* **[Manual Library](manual_library/README.md) (`manual_library`):** A 100% clean-room, open-source drop-in replacement for Odoo Enterprise's Knowledge app . Build hierarchical, nested instruction manuals with a dynamic Table of Contents .
-* **[Global Compliance](compliance/README.md) (`compliance`):** We handle the legal headaches for you. Automatically provisions non-destructive Privacy, Cookie, and Terms of Service pages, and natively enforces Odoo's Cookie Consent bar across the entire ecosystem .
-
----
-
-## 🧪 Developer First: True Environment Parity
-
-* **[Real Transaction Testing Facility](test_real_transaction/README.md) (`test_real_transaction`):** Say goodbye to false-negative test environments. This module bypasses Odoo's test cursor wrapper, allowing developers to write tests with *true* database commits, complete with automated ORM cleanup and an unforgiving SQL Leak Detector to guarantee your database remains pristine .
-
----
-
-## 🚀 Ready to Deploy?
-
-Experience the ultimate open-source ERP environment. Use our interactive bare-metal wizard or the provided Docker Compose stack to get started instantly :
-```bash
-python3 tools/deploy_wizard.py
+## 3. The Dual XML Anchor Strictness
+**The Trap:** The platform utilizes two separate linters with conflicting structural requirements for XML records. `verify_anchors.py` requires traceability anchors to be easily found, while `check_burn_list.py` requires the bypass tag to be embedded directly within the node's AST.
+**The Solution:** XML records and templates require a specific dual-comment structure:
+```xml
+<record id="my_id" model="ir.ui.view"> ...
+</record>
 ```
-@@BOUNDARY_PROMO_README_V4@@
+
+## 4. Extraction Engine Resiliency
+**Experience:** The `parcel_extract.py` script was upgraded to catch `IndentationError` and `SyntaxError` from the Python `tokenize` engine. It now gracefully degrades to a whitespace-agnostic replacement algorithm that perfectly preserves relative indentation. Partial, unbalanced Python snippets can now be safely used in `search-and-replace` blocks without crashing the tokenizer.
+
+@@BOUNDARY_DOCS_UPDATE@@--
