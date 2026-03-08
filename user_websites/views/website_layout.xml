@@ -10,13 +10,13 @@
         <xpath expr="//footer" position="before"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
             <t t-set="is_user_content" t-value="False"/>
             <t t-set="is_owner" t-value="False"/>
-            
+
             <t t-if="profile_user or profile_group">
                 <t t-set="is_user_content" t-value="True"/>
                 <t t-if="profile_user and profile_user.id == uid">
                     <t t-set="is_owner" t-value="True"/>
                 </t>
-                <t t-elif="profile_group and uid in profile_group.sudo().odoo_group_id.user_ids.ids">
+                <t t-elif="profile_group and uid in profile_group.odoo_group_id.user_ids.ids">
                     <t t-set="is_owner" t-value="True"/>
                 </t>
             </t>

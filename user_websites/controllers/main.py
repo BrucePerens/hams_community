@@ -235,8 +235,15 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_websites_home]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
-        user = request.env["res.users"].browse(user_id) if user_id else None
+        user = (
+            request.env["res.users"].with_user(svc_uid).browse(user_id)
+            if user_id
+            else None
+        )
 
         group = None
         if not user:
@@ -244,7 +251,7 @@ class UserWebsitesController(http.Controller):
                 slug_lower
             )
             group = (
-                request.env["user.websites.group"].browse(group_id)
+                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
                 if group_id
                 else None
             )
@@ -260,7 +267,11 @@ class UserWebsitesController(http.Controller):
             page_id = request.env["website.page"]._get_page_id_by_url(
                 f"/{user.website_slug}/home", website_id
             )
-            page = request.env["website.page"].browse(page_id) if page_id else None
+            page = (
+                request.env["website.page"].with_user(svc_uid).browse(page_id)
+                if page_id
+                else None
+            )
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get("test_enable"):
@@ -323,18 +334,19 @@ class UserWebsitesController(http.Controller):
             page_id = request.env["website.page"]._get_page_id_by_url(
                 f"/{group.website_slug}/home", website_id
             )
-            page = request.env["website.page"].browse(page_id) if page_id else None
+            page = (
+                request.env["website.page"].with_user(svc_uid).browse(page_id)
+                if page_id
+                else None
+            )
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get("test_enable"):
                     _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
-                    svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
-                    )
-                    page.with_user(svc_uid).write({"view_count": page.view_count + 1})
+                    page.write({"view_count": page.view_count + 1})
 
-                is_member = request.env.user in group.odoo_group_id.user_ids
+                is_member = request.env.user.id in group.odoo_group_id.user_ids.ids
                 response = request.render(
                     page.view_id.id,
                     {
@@ -361,7 +373,7 @@ class UserWebsitesController(http.Controller):
                 {
                     "profile_user": None,
                     "profile_group": group,
-                    "is_owner": request.env.user in group.odoo_group_id.user_ids,
+                    "is_owner": request.env.user.id in group.odoo_group_id.user_ids.ids,
                     "page_type": "home",
                     "resolved_slug": group.website_slug,
                 },
@@ -381,8 +393,15 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_site]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
-        user = request.env["res.users"].browse(user_id) if user_id else None
+        user = (
+            request.env["res.users"].with_user(svc_uid).browse(user_id)
+            if user_id
+            else None
+        )
 
         group = None
         if not user:
@@ -390,7 +409,7 @@ class UserWebsitesController(http.Controller):
                 slug_lower
             )
             group = (
-                request.env["user.websites.group"].browse(group_id)
+                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
                 if group_id
                 else None
             )
@@ -410,7 +429,7 @@ class UserWebsitesController(http.Controller):
 
             resolved_slug = request.env.user.website_slug
         elif group:
-            if request.env.user not in group.odoo_group_id.user_ids:
+            if request.env.user.id not in group.odoo_group_id.user_ids.ids:
                 raise werkzeug.exceptions.Forbidden(
                     description=_("You do not have permission to create this site.")
                 )
@@ -485,8 +504,15 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_blog_index]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
-        user = request.env["res.users"].browse(user_id) if user_id else None
+        user = (
+            request.env["res.users"].with_user(svc_uid).browse(user_id)
+            if user_id
+            else None
+        )
 
         group = None
         if not user:
@@ -494,7 +520,7 @@ class UserWebsitesController(http.Controller):
                 slug_lower
             )
             group = (
-                request.env["user.websites.group"].browse(group_id)
+                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
                 if group_id
                 else None
             )
@@ -518,11 +544,11 @@ class UserWebsitesController(http.Controller):
             if getattr(user, "is_suspended_from_websites", False):
                 raise werkzeug.exceptions.NotFound()
             domain.append(("owner_user_id", "=", user.id))
-            main_object = request.env["res.users"]
+            main_object = user
             meta_title = f"{user.name}'s Blog"
         else:
             domain.append(("user_websites_group_id", "=", group.id))
-            main_object = request.env["user.websites.group"]
+            main_object = group
             meta_title = f"{group.name}'s Blog"
 
         page_num = int(page)
@@ -536,7 +562,10 @@ class UserWebsitesController(http.Controller):
                     "profile_user": user,
                     "profile_group": group,
                     "is_owner": (user and request.env.user.id == user.id)
-                    or (group and request.env.user in group.odoo_group_id.user_ids),
+                    or (
+                        group
+                        and request.env.user.id in group.odoo_group_id.user_ids.ids
+                    ),
                     "page_type": "blog",
                     "resolved_slug": resolved_slug,
                 },
@@ -619,8 +648,15 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_blog_post]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
-        user = request.env["res.users"].browse(user_id) if user_id else None
+        user = (
+            request.env["res.users"].with_user(svc_uid).browse(user_id)
+            if user_id
+            else None
+        )
 
         group = None
         if not user:
@@ -628,7 +664,7 @@ class UserWebsitesController(http.Controller):
                 slug_lower
             )
             group = (
-                request.env["user.websites.group"].browse(group_id)
+                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
                 if group_id
                 else None
             )
@@ -647,7 +683,7 @@ class UserWebsitesController(http.Controller):
 
             resolved_slug = request.env.user.website_slug
         elif group:
-            if request.env.user not in group.odoo_group_id.user_ids:
+            if request.env.user.id not in group.odoo_group_id.user_ids.ids:
                 raise werkzeug.exceptions.Forbidden(
                     description=_(
                         "You do not have permission to create posts for this group."
@@ -771,8 +807,15 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_subscribe_to_site]
         # Verified by [%ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
-        user = request.env["res.users"].browse(user_id) if user_id else None
+        user = (
+            request.env["res.users"].with_user(svc_uid).browse(user_id)
+            if user_id
+            else None
+        )
 
         group = None
         if not user:
@@ -780,7 +823,7 @@ class UserWebsitesController(http.Controller):
                 slug_lower
             )
             group = (
-                request.env["user.websites.group"].browse(group_id)
+                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
                 if group_id
                 else None
             )

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
+
     <template id="user_navbar" name="User Websites Navbar"> <!-- Verified by [%ANCHOR: test_tour_community_directory] -->
         <nav t-if="resolved_slug" class="navbar navbar-expand-lg navbar-light bg-light border-bottom user-websites-navbar">
             <div class="container">
                 <a class="navbar-brand" t-attf-href="/#{resolved_slug}/home">
                     <t t-if="profile_user">
-                        <img t-attf-src="/web/image/res.users/#{profile_user.id}/avatar_128?unique=#{profile_user.sudo().write_date and int(profile_user.sudo().write_date.timestamp()) or 0}" width="30" height="30" class="d-inline-block align-top rounded-circle me-2" alt=""/>
-                        <t t-out="profile_user.sudo().name"/>
+                        <img t-attf-src="/web/image/res.users/#{profile_user.id}/avatar_128?unique=#{profile_user.write_date and int(profile_user.write_date.timestamp()) or 0}" width="30" height="30" class="d-inline-block align-top rounded-circle me-2" alt=""/>
+                        <t t-out="profile_user.name"/>
                     </t>
                     <t t-elif="profile_group">
-                        <i class="fa fa-users me-2" aria-hidden="true"/> <t t-out="profile_group.sudo().name"/>
+                        <i class="fa fa-users me-2" aria-hidden="true"/> <t t-out="profile_group.name"/>
                     </t>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbarNav" aria-label="Toggle navigation">
@@ -56,9 +56,9 @@
                         <h4 class="alert-heading fw-bold"><i class="fa fa-ban me-2"/> Account Suspended</h4>
                         <p>We suspended your website and blog features because of community guideline violations. We also unpublished your content.</p>
                         <hr/>
-                        
+
                         <t t-set="existing_appeal" t-value="user_id.appeal_ids.filtered(lambda a: a.state == 'new')"/>
-                        
+
                         <t t-if="existing_appeal">
                             <p class="mb-0 text-dark fw-bold"><i class="fa fa-clock-o me-1"/> We are currently reviewing your appeal.</p>
                         </t>
@@ -76,7 +76,7 @@
                 </t>
             </div>
         </xpath>
-        
+
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_templates] -->
             <div class="o_portal_doc_spinner col-12 col-md-6 col-lg-4 mb-4">
                 <a href="/my/privacy" class="text-decoration-none d-flex flex-column h-100 p-3 border rounded shadow-sm bg-white">
@@ -111,7 +111,7 @@
                                 </form>
                             </div>
                         </div>
-                        
+
                         <div class="card shadow-sm border-0 border-danger border border-1">
                             <div class="card-body">
                                 <h4 class="card-title fw-bold text-danger"><i class="fa fa-trash text-danger me-2"/> Right to Erasure</h4>
@@ -133,10 +133,10 @@
         <t t-call="website.layout">
             <!-- Global User Website Header / Monetization Dropzone -->
             <div id="user_websites_master_header"/>
-            
+
             <!-- Yields to the individual user's page content -->
             <t t-out="0"/>
-            
+
             <!-- Global User Website Footer / Monetization Dropzone -->
             <div id="user_websites_master_footer"/>
         </t>
@@ -157,9 +157,9 @@
                             <div class="card h-100 shadow-sm border-0">
                                 <div class="card-body text-center">
                                     <div class="mb-3">
-                                        <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128?unique=#{user.sudo().write_date and int(user.sudo().write_date.timestamp()) or 0}" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
+                                        <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128?unique=#{user.write_date and int(user.write_date.timestamp()) or 0}" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
                                     </div>
-                                    <h5 class="card-title fw-bold" t-out="user.sudo().name"/>
+                                    <h5 class="card-title fw-bold" t-out="user.name"/>
                                     <a t-attf-href="/{{ user.website_slug }}/home" class="btn btn-outline-primary w-100 mt-2">
                                         Visit Website
                                     </a>
@@ -185,13 +185,13 @@
                     <form action="/website/report_violation" method="post">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="url" t-att-value="request.httprequest.url"/>
-                        
+
                         <div class="modal-header">
                             <h5 class="modal-title fw-bold" id="reportViolationModalLabel">Report Content Violation</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            
+
                             <div class="mb-3 d-none" aria-hidden="true">
                                 <label for="website_honeypot">Leave this field empty if you are human:</label>
                                 <input type="text" class="form-control" name="website_honeypot" id="website_honeypot" tabindex="-1" autocomplete="off"/>
@@ -235,7 +235,7 @@
                         <i class="fa fa-check-circle text-success" style="font-size: 4rem;"/>
                         <h2 class="mt-4 fw-bold">Unsubscribed Successfully</h2>
                         <p class="lead text-muted mt-3">
-                            We successfully removed you from the mailing list for <strong t-out="record_name"/>. 
+                            We successfully removed you from the mailing list for <strong t-out="record_name"/>.
                             You will no longer receive weekly digests for this site.
                         </p>
                         <a href="/" class="btn btn-primary mt-4">Return to Homepage</a>
@@ -278,7 +278,7 @@
                             <form t-attf-action="/#{entity_slug}/create_#{'site' if page_type == 'home' else 'blog'}" method="post">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <button type="submit" class="btn btn-primary btn-lg">
-                                    <i t-attf-class="fa #{'fa-paint-brush' if page_type == 'home' else 'fa-pencil'} me-2" aria-hidden="true"/> 
+                                    <i t-attf-class="fa #{'fa-paint-brush' if page_type == 'home' else 'fa-pencil'} me-2" aria-hidden="true"/>
                                     Create Your <span style="text-transform: capitalize;"><t t-out="page_type"/></span>
                                 </button>
                             </form>
