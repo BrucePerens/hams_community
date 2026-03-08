@@ -25,7 +25,7 @@ Context bundling tools (e.g., `tools/simple_create.py`) MUST NOT be run against 
 
 ### 4. The Patch Protocol & Output Minimization
 Heavy output generation degrades an LLM's attention span for the remainder of the session.
-* For files exceeding 100 lines, the LLM MUST utilize targeted `search-and-replace` blocks via the MIME-like Parcel transport schema.
+* For files exceeding 100 lines, the LLM MUST utilize targeted `search-and-replace` blocks via the MIME-like Parcel transport schema. If the file is small or the patch is almost as large as the file itself, use `overwrite`.
 * **Granular Patching (The 15-Line Rule):** `search` blocks MUST be microscopic (maximum of 10-15 lines per block). If changing distant areas of a file, generate multiple small `search-and-replace` blocks rather than one giant block.
 * Regenerating unabridged files using `overwrite` is strictly reserved for initial creation or sweeping structural refactors.
 

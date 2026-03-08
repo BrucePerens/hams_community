@@ -15,3 +15,10 @@ def post_init_hook(env):
         env["manual.article"].create({"name": "Pager Duty & SRE", "body": content})
     elif "knowledge.article" in env:
         env["knowledge.article"].create({"name": "Pager Duty & SRE", "body": content})
+
+    # Trigger autodiscovery if the system is completely empty
+    if "pager.check" in env and not env["pager.check"].search_count([]):
+        try:
+            env["pager.check"]._run_autodiscovery()
+        except Exception:
+            pass

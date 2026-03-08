@@ -30,6 +30,7 @@ This document defines the strict operational parameters for the Large Language M
 
 ### The Exactness Guarantee (Patch Protocol)
 * **Absolute Completeness:** When executing full file overwrites, you MUST provide complete, unabridged file contents.
+* **Small File Exception:** If a file is small (under ~100 lines) or if the required search-and-replace block is comparable in size to the entire file, you MUST use the `overwrite` operation with the full file content to prevent extraction failures.
 * **Search and Replace:** For targeted modifications, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is.
 * **Meta-Tooling Exception:** When modifying `tools/parcel_extract.py`, you MUST use the `overwrite` operation to provide the complete, unabridged file content. You are forbidden from using `search-and-replace` on the extractor itself.
 * **The Black Formatter Trap:** When searching for Python code to replace, remember that the formatter actively collapses or expands lists, dictionaries, and decorators based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature or use an overwrite operation.

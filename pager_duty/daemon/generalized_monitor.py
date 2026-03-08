@@ -964,6 +964,37 @@ def execute_check(check, client=None):
         except Exception as e:
             return False, f"SMART spool read error: {e}"
 
+    elif ctype in ("playwright", "bash", "executable"):
+        spool_file = "/var/log/pager_synthetic_spool.json"
+        if not os.path.exists(spool_file):
+            return (
+                False,
+                "Synthetic spool file missing. Is pager-synthetic-spooler.service running?",
+            )
+
+        mtime = os.path.getmtime(spool_file)
+        if time.time() - mtime > int(check.get("interval", 60)) * 3 + 300:
+            return (
+                False,
+                "Synthetic spool file is stale. Spooler daemon may have crashed.",
+            )
+
+        try:
+            with open(spool_file, "r") as f:
+                data = json.load(f)
+
+            name = check.get("name")
+            if name not in data:
+                return False, f"Check '{name}' not found in synthetic spool."
+
+            res = data[name]
+            if not res.get("success"):
+                err = str(res.get("error", "Unknown error"))
+                return False, f"Execution Failed: {err[:200]}"
+            return True, "OK"
+        except Exception as e:
+            return False, f"Synthetic spool read error: {e}"
+
     elif ctype == "file_absent":
         if not target:
             return False, "Target required"
@@ -973,20 +1004,64 @@ def execute_check(check, client=None):
 
     elif ctype == "systemd":
         if not target:
-            return False, "Systemd check requires service name in target"
+            return (
+                False,
+                "Systemd check requires target (use '*' for all failed services)",
+            )
         exe, err = ensure_executable("systemctl")
         if not exe:
             return False, err
         try:
-            res = subprocess.run(
-                [exe, "is-active", target], capture_output=True, text=True, timeout=10
-            )
-            if res.returncode != 0 or res.stdout.strip() != "active":
-                return (
-                    False,
-                    f"Systemd service {target} is not active: {res.stdout.strip()}",
+            ignored = [
+                s.strip()
+                for s in parse_env(check.get("ignored_services", "")).split(",")
+                if s.strip()
+            ]
+            if target == "*":
+                res = subprocess.run(
+                    [exe, "list-units", "--state=failed", "--no-legend", "--plain"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
-            return True, "OK"
+                if res.returncode != 0:
+                    return False, f"Systemctl list-units failed: {res.stderr.strip()}"
+
+                failed_svcs = []
+                for line in res.stdout.strip().split("\n"):
+                    if not line.strip():
+                        continue
+                    parts = line.split()
+                    if parts:
+                        svc_name = parts[0]
+                        if svc_name not in ignored:
+                            failed_svcs.append(svc_name)
+
+                if failed_svcs:
+                    return (
+                        False,
+                        f"Failed systemd services detected: {', '.join(failed_svcs)}",
+                    )
+                return True, "OK (0 failed services)"
+            else:
+                svcs = [s.strip() for s in target.split(",") if s.strip()]
+                failed_svcs = []
+                for svc in svcs:
+                    res = subprocess.run(
+                        [exe, "is-active", svc],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if res.returncode != 0 or res.stdout.strip() != "active":
+                        failed_svcs.append(f"{svc} ({res.stdout.strip()})")
+
+                if failed_svcs:
+                    return (
+                        False,
+                        f"Systemd services not active: {', '.join(failed_svcs)}",
+                    )
+                return True, "OK"
         except Exception as e:
             return False, f"Systemd execution error: {e}"
 

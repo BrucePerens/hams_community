@@ -23,20 +23,25 @@
         <li><strong>Pre-Flight &amp; Dry-Runs:</strong> Safely simulates critical infrastructure maintenance including <code>certbot --dry-run</code>, <code>pg_dump -s</code>, <code>nginx -t</code>, and outbound <code>SMTP</code> authentications.</li>
         <li><strong>ICMP Ping:</strong> Basic network reachability testing for remote gateways and routers.</li>
         <li><strong>Docker Container Health:</strong> Monitors the native execution state of background Docker containers.</li>
-        <li><strong>Systemd Services:</strong> Validates that critical host OS services remain active.</li>
+        <li><strong>Systemd Services:</strong> Validates that critical host OS services remain active. Using the wildcard (<code>*</code>) target tracks all services globally and alerts on any that enter a failed state, with support for specific service exclusions.</li>
         <li><strong>SMART Disk Health:</strong> Integrates with <code>smartctl</code> via an airgapped JSON spool to predict impending SSD/HDD drive failures securely.</li>
+        <li><strong>Playwright Synthetic Journeys:</strong> Executes headless Python Playwright scripts via an airgapped spooler daemon.</li>
+        <li><strong>Sandboxed Bash &amp; Executables:</strong> Executes arbitrary scripts and downloaded binaries inside a strict Bubblewrap (<code>bwrap</code>) sandbox, physically severing network and file system access unless explicitly toggled. Supports cryptographic SHA-256 verification of downloaded payloads before execution.</li>
         <li><strong>Memcached Server:</strong> Raw TCP socket handshakes to ensure the cache is responding to statistic inquiries.</li>
         <li><strong>SSH Handshake:</strong> Validates raw port accessibility and protocol compliance for remote access.</li>
     </ul>
 
-    <h2>4. Intelligent Calendar Routing</h2>
+    <h2>4. Autodiscovery Wizard</h2>
+    <p>When deployed on a new node, the module features a one-click <strong>Autodiscovery</strong> engine. It actively scans the host operating system's process tree (Systemd) and physical mount points to automatically provision optimal baseline monitoring for PostgreSQL, Redis, RabbitMQ, Docker, local HTTP routing, and Disk Space usage.</p>
+
+    <h2>5. Intelligent Calendar Routing</h2>
     <p>The module natively ties into the Odoo Calendar. By checking the "Is Pager Duty Shift" box on an event, the system automatically knows exactly who is on-call at any given minute. It fully supports complex recurrence rules (like "the first Tuesday of the month") and manages shift-handoffs seamlessly without requiring manual configuration files.</p>
 
-    <h2>5. Fail-Safes &amp; Self-Healing</h2>
+    <h2>6. Fail-Safes &amp; Self-Healing</h2>
     <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
     <p>Furthermore, the daemon features a self-healing dependency scanner. For example, if it is instructed to test a Zero Trust tunnel but the <code>cloudflared</code> binary is missing from the system, it will automatically download the static binary from GitHub and continue execution without requiring manual intervention.</p>
 
-    <h2>6. Advanced SRE Capabilities</h2>
+    <h2>7. Advanced SRE Capabilities</h2>
     <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
 
     <h2>6. Advanced SRE Capabilities</h2>

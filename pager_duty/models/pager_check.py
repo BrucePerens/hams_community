@@ -57,6 +57,9 @@ class PagerCheck(models.Model):
             ("icmp", "ICMP Ping"),
             ("heartbeat", "Heartbeat (Push Monitor)"),
             ("docker", "Docker Container Health"),
+            ("playwright", "Playwright Synthetic Journey"),
+            ("bash", "Sandboxed Bash Script"),
+            ("executable", "Sandboxed Arbitrary Executable"),
             ("smart", "SMART Disk Health"),
             ("file_absent", "File Must Not Exist (e.g. reboot-required)"),
             ("memcached", "Memcached Server (Ping)"),
@@ -81,6 +84,10 @@ class PagerCheck(models.Model):
         string="Disk Partition",
         default="/",
         help="Specific mount point to check for disk usage.",
+    )
+    ignored_services = fields.Text(
+        string="Ignored Services",
+        help="Comma-separated list of systemd services to ignore when monitoring all failures (e.g., 'fwupd-refresh.service').",
     )
     warning_threshold = fields.Integer(string="Warning Threshold %")
 
@@ -121,9 +128,31 @@ class PagerCheck(models.Model):
     )
     maintenance_start = fields.Datetime(string="Maintenance Start")
     maintenance_end = fields.Datetime(string="Maintenance End")
+
+    code_payload = fields.Text(string="Script Code (Python/Bash)")
+    executable_path = fields.Char(
+        string="Executable Path/Name", help="e.g., ./my_binary"
+    )
+    executable_args = fields.Char(
+        string="Executable Arguments", help="e.g., --check --verbose"
+    )
+    sandbox_downloads = fields.Text(
+        string="Sandbox Downloads",
+        help="One per line: URL | SHA-256 | Filename. Downloaded into the sandbox before execution.",
+    )
+    sandbox_allow_network = fields.Boolean(
+        string="Allow Network Access (Sandbox)",
+        default=False,
+        help="If checked, the script can reach the internet and internal LAN. WARNING: Opens SSRF risks.",
+    )
+
     auto_remediate_script = fields.Char(
         string="Auto-Remediation Script",
         help="Executed locally by daemon if check fails (e.g., /opt/reboot.sh)",
+    )
+    comment = fields.Text(
+        string="Comments",
+        help="Multi-line comments for documentation. This will appear natively in the YAML configuration.",
     )
 
     heartbeat_uuid = fields.Char(
@@ -244,9 +273,16 @@ class PagerCheck(models.Model):
                     "snmp_community": c.get("snmp_community", ""),
                     "snmp_oid": c.get("snmp_oid", ""),
                     "partition": c.get("partition", "/"),
+                    "ignored_services": c.get("ignored_services", ""),
                     "interval": c.get("interval", 60),
                     "grace_period": c.get("grace", 0),
                     "auto_remediate_script": c.get("remediate", ""),
+                    "comment": c.get("comment", ""),
+                    "code_payload": c.get("code_payload", ""),
+                    "executable_path": c.get("executable_path", ""),
+                    "executable_args": c.get("executable_args", ""),
+                    "sandbox_downloads": c.get("sandbox_downloads", ""),
+                    "sandbox_allow_network": c.get("sandbox_allow_network", False),
                 }
             )
 
@@ -322,6 +358,8 @@ class PagerCheck(models.Model):
                 d["snmp_oid"] = c.snmp_oid
             if c.partition and c.partition != "/":
                 d["partition"] = c.partition
+            if c.ignored_services:
+                d["ignored_services"] = c.ignored_services
             if c.grace_period:
                 d["grace"] = c.grace_period
             if c.parent_check_id:
@@ -332,8 +370,20 @@ class PagerCheck(models.Model):
                 d["maint_end"] = c.maintenance_end.strftime("%Y-%m-%d %H:%M:%S")
             if c.auto_remediate_script:
                 d["remediate"] = c.auto_remediate_script
+            if c.comment:
+                d["comment"] = c.comment
             if c.check_type == "heartbeat":
                 d["uuid"] = c.heartbeat_uuid
+            if c.code_payload:
+                d["code_payload"] = c.code_payload
+            if c.executable_path:
+                d["executable_path"] = c.executable_path
+            if c.executable_args:
+                d["executable_args"] = c.executable_args
+            if c.sandbox_downloads:
+                d["sandbox_downloads"] = c.sandbox_downloads
+            if c.sandbox_allow_network:
+                d["sandbox_allow_network"] = c.sandbox_allow_network
             check_list.append(d)
 
         yaml_dict = {"checks": check_list}
@@ -367,6 +417,195 @@ class PagerCheck(models.Model):
             "params": {
                 "title": _("Export Successful"),
                 "message": _("Checks exported to YAML daemon configuration."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    @api.model
+    def _run_autodiscovery(self):
+        """Scans the host OS and systemd to build an optimal monitoring baseline."""
+        checks = []
+
+        # 1. Base System Resources & DNS
+        checks.extend(
+            [
+                {
+                    "name": "System Memory",
+                    "check_type": "system",
+                    "target": "memory",
+                    "critical_threshold": 90,
+                    "interval": 60,
+                    "comment": "Autodiscovered RAM monitor",
+                },
+                {
+                    "name": "System CPU",
+                    "check_type": "system",
+                    "target": "cpu",
+                    "critical_threshold": 90,
+                    "interval": 60,
+                    "comment": "Autodiscovered CPU monitor",
+                },
+                {
+                    "name": "System Load",
+                    "check_type": "load",
+                    "critical_threshold": 10,
+                    "interval": 60,
+                    "comment": "Autodiscovered system load monitor",
+                },
+                {
+                    "name": "Systemd Failed Services Tracker",
+                    "check_type": "systemd",
+                    "target": "*",
+                    "ignored_services": "fwupd-refresh.service, NetworkManager-wait-online.service",
+                    "interval": 300,
+                    "comment": "Autodiscovered global systemd failure tracker",
+                },
+                {
+                    "name": "IPv4 Root DNS Reachability",
+                    "check_type": "synthetic",
+                    "script": "dig -4 +time=3 +tries=1 @198.41.0.4 . NS",
+                    "interval": 300,
+                    "comment": "Verifies IPv4 network routing to root DNS servers",
+                },
+                {
+                    "name": "IPv6 Root DNS Reachability",
+                    "check_type": "synthetic",
+                    "script": "dig -6 +time=3 +tries=1 @2001:503:ba3e::2:30 . NS",
+                    "interval": 300,
+                    "comment": "Verifies IPv6 network routing to root DNS servers",
+                },
+            ]
+        )
+
+        # 2. Physical Disks
+        try:
+            import psutil
+
+            for p in psutil.disk_partitions(all=False):
+                if p.fstype in ("ext4", "xfs", "btrfs", "zfs", "vfat"):
+                    checks.append(
+                        {
+                            "name": f"Disk Space ({p.mountpoint})",
+                            "check_type": "system",
+                            "target": "disk",
+                            "partition": p.mountpoint,
+                            "critical_threshold": 90,
+                            "interval": 300,
+                            "comment": f"Autodiscovered disk space monitor for {p.mountpoint}",
+                        }
+                    )
+        except Exception:
+            pass
+
+        # 3. Common Services
+        try:
+            import subprocess
+
+            res = subprocess.run(
+                [
+                    "systemctl",
+                    "list-units",
+                    "--type=service",
+                    "--state=active",
+                    "--no-legend",
+                    "--plain",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            active_services = res.stdout
+
+            if "postgresql.service" in active_services:
+                checks.append(
+                    {
+                        "name": "PostgreSQL DB (Ping)",
+                        "check_type": "postgres",
+                        "target": "127.0.0.1",
+                        "port": 5432,
+                        "dbname": "postgres",
+                        "dbuser": "postgres",
+                        "interval": 60,
+                        "comment": "Autodiscovered PostgreSQL instance",
+                    }
+                )
+            if (
+                "redis-server.service" in active_services
+                or "redis.service" in active_services
+            ):
+                checks.append(
+                    {
+                        "name": "Redis Ping",
+                        "check_type": "redis",
+                        "target": "127.0.0.1",
+                        "port": 6379,
+                        "interval": 60,
+                        "comment": "Autodiscovered Redis instance",
+                    }
+                )
+            if "rabbitmq-server.service" in active_services:
+                checks.append(
+                    {
+                        "name": "RabbitMQ AMQP",
+                        "check_type": "rabbitmq",
+                        "target": "127.0.0.1",
+                        "port": 5672,
+                        "interval": 60,
+                        "comment": "Autodiscovered RabbitMQ instance",
+                    }
+                )
+            if "nginx.service" in active_services:
+                checks.append(
+                    {
+                        "name": "Nginx Config Readiness",
+                        "check_type": "nginx",
+                        "interval": 3600,
+                        "comment": "Autodiscovered Nginx syntax check",
+                    }
+                )
+            if "docker.service" in active_services:
+                checks.append(
+                    {
+                        "name": "Docker Daemon",
+                        "check_type": "systemd",
+                        "target": "docker.service",
+                        "interval": 60,
+                        "comment": "Autodiscovered Docker daemon monitor",
+                    }
+                )
+        except Exception:
+            pass
+
+        # 4. Odoo Web Server
+        checks.append(
+            {
+                "name": "WSGI HTTP Ping",
+                "check_type": "http",
+                "target": "http://127.0.0.1:8069/api/v1/pager/ping",
+                "payload_expect": '{"status": "ok"}',
+                "interval": 60,
+                "grace_period": 120,
+                "comment": "Autodiscovered local Odoo WSGI loopback ping",
+            }
+        )
+
+        existing_names = self.search([]).mapped("name")
+        new_checks = [c for c in checks if c["name"] not in existing_names]
+
+        if new_checks:
+            self.create(new_checks)
+            self.action_push_to_yaml()
+
+    def action_autodiscover(self):
+        self._run_autodiscovery()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Autodiscovery Complete"),
+                "message": _(
+                    "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
+                ),
                 "type": "success",
                 "sticky": False,
             },

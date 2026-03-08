@@ -54,7 +54,12 @@ class TestMonitorExhaustive(unittest.TestCase):
         # Disk
         mock_psutil.disk_usage.return_value.percent = 95
         success, msg = generalized_monitor.execute_check(
-            {"type": "system", "target": "disk", "critical": 90, "partition": "/dev/sda1"}
+            {
+                "type": "system",
+                "target": "disk",
+                "critical": 90,
+                "partition": "/dev/sda1",
+            }
         )
         self.assertFalse(success)
         self.assertIn("Disk space", msg)
@@ -443,6 +448,18 @@ class TestMonitorExhaustive(unittest.TestCase):
         )
         self.assertTrue(success)
 
+        # Systemd Wildcard (Failed Services)
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = (
+            "bad.service loaded failed failed\nignored.service loaded failed failed\n"
+        )
+        success, msg = generalized_monitor.execute_check(
+            {"type": "systemd", "target": "*", "ignored_services": "ignored.service"}
+        )
+        self.assertFalse(success)
+        self.assertIn("bad.service", msg)
+        self.assertNotIn("ignored.service", msg)
+
         # Memcached
         mock_sock = MagicMock()
         mock_conn.return_value.__enter__.return_value = mock_sock
@@ -475,18 +492,24 @@ class TestMonitorExhaustive(unittest.TestCase):
     def test_14_nagios_checks(self, mock_load):
         """Verify Nagios-style checks: load, ftp, imap, pop3, mysql, snmp."""
         # Load
-        success, msg = generalized_monitor.execute_check({"type": "load", "critical": 1})
+        success, msg = generalized_monitor.execute_check(
+            {"type": "load", "critical": 1}
+        )
         self.assertFalse(success)
         self.assertIn("exceeds", msg)
 
-        success, msg = generalized_monitor.execute_check({"type": "load", "critical": 5})
+        success, msg = generalized_monitor.execute_check(
+            {"type": "load", "critical": 5}
+        )
         self.assertTrue(success)
 
         # FTP
         with patch("generalized_monitor.ftplib.FTP") as mock_ftp:
             mock_inst = MagicMock()
             mock_ftp.return_value.__enter__.return_value = mock_inst
-            success, msg = generalized_monitor.execute_check({"type": "ftp", "target": "127.0.0.1"})
+            success, msg = generalized_monitor.execute_check(
+                {"type": "ftp", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
             mock_inst.login.assert_called()
 
@@ -494,7 +517,9 @@ class TestMonitorExhaustive(unittest.TestCase):
         with patch("generalized_monitor.imaplib.IMAP4") as mock_imap:
             mock_inst = MagicMock()
             mock_imap.return_value = mock_inst
-            success, msg = generalized_monitor.execute_check({"type": "imap", "target": "127.0.0.1"})
+            success, msg = generalized_monitor.execute_check(
+                {"type": "imap", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
             mock_inst.logout.assert_called()
 
@@ -502,33 +527,45 @@ class TestMonitorExhaustive(unittest.TestCase):
         with patch("generalized_monitor.poplib.POP3") as mock_pop3:
             mock_inst = MagicMock()
             mock_pop3.return_value = mock_inst
-            success, msg = generalized_monitor.execute_check({"type": "pop3", "target": "127.0.0.1"})
+            success, msg = generalized_monitor.execute_check(
+                {"type": "pop3", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
             mock_inst.quit.assert_called()
 
         # MySQL / MariaDB
-        with patch.dict('sys.modules', {'pymysql': MagicMock()}):
+        with patch.dict("sys.modules", {"pymysql": MagicMock()}):
             import pymysql
+
             mock_conn = MagicMock()
             pymysql.connect.return_value = mock_conn
             mock_cur = MagicMock()
             mock_conn.cursor.return_value.__enter__.return_value = mock_cur
             mock_cur.fetchone.return_value = [1]
-            success, msg = generalized_monitor.execute_check({"type": "mysql", "target": "127.0.0.1"})
+            success, msg = generalized_monitor.execute_check(
+                {"type": "mysql", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
             mock_cur.execute.assert_called_with("SELECT 1;")
 
         # LDAP (Fallback)
         with patch("generalized_monitor.socket.create_connection") as mock_conn:
-            success, msg = generalized_monitor.execute_check({"type": "ldap", "target": "127.0.0.1"})
+            success, msg = generalized_monitor.execute_check(
+                {"type": "ldap", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
 
         # NTP (Fallback)
         with patch("generalized_monitor.socket.socket") as mock_socket:
             mock_sock_inst = MagicMock()
             mock_socket.return_value.__enter__.return_value = mock_sock_inst
-            mock_sock_inst.recvfrom.return_value = (b"\x1c" + 47 * b"\0", ("127.0.0.1", 123))
-            success, msg = generalized_monitor.execute_check({"type": "ntp", "target": "127.0.0.1"})
+            mock_sock_inst.recvfrom.return_value = (
+                b"\x1c" + 47 * b"\0",
+                ("127.0.0.1", 123),
+            )
+            success, msg = generalized_monitor.execute_check(
+                {"type": "ntp", "target": "127.0.0.1"}
+            )
             self.assertTrue(success)
 
         # SNMP
@@ -536,12 +573,65 @@ class TestMonitorExhaustive(unittest.TestCase):
             with patch("generalized_monitor.subprocess.run") as mock_run:
                 mock_run.return_value.returncode = 0
                 mock_run.return_value.stdout = "Timeout"
-                success, msg = generalized_monitor.execute_check({"type": "snmp", "target": "127.0.0.1", "snmp_oid": "1.3.6", "expect": "OK"})
+                success, msg = generalized_monitor.execute_check(
+                    {
+                        "type": "snmp",
+                        "target": "127.0.0.1",
+                        "snmp_oid": "1.3.6",
+                        "expect": "OK",
+                    }
+                )
                 self.assertFalse(success)
 
                 mock_run.return_value.stdout = "OK"
-                success, msg = generalized_monitor.execute_check({"type": "snmp", "target": "127.0.0.1", "snmp_oid": "1.3.6", "expect": "OK"})
+                success, msg = generalized_monitor.execute_check(
+                    {
+                        "type": "snmp",
+                        "target": "127.0.0.1",
+                        "snmp_oid": "1.3.6",
+                        "expect": "OK",
+                    }
+                )
                 self.assertTrue(success)
+
+    @patch("generalized_monitor.os.path.exists")
+    @patch("generalized_monitor.os.path.getmtime")
+    @patch("builtins.open", new_callable=MagicMock)
+    def test_15_synthetic_spool_reads(self, mock_open, mock_mtime, mock_exists):
+        """Verify generalized_monitor correctly reads the airgapped synthetic spool JSON."""
+        import json
+        import time
+
+        mock_exists.return_value = True
+        mock_mtime.return_value = time.time() - 10  # Fresh
+
+        mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(
+            {
+                "My Playwright": {"success": True, "error": ""},
+                "My Bash": {"success": False, "error": "Segfault"},
+            }
+        )
+
+        # Success Match
+        success, msg = generalized_monitor.execute_check(
+            {"type": "playwright", "name": "My Playwright", "interval": 60}
+        )
+        self.assertTrue(success)
+
+        # Failure Match
+        success, msg = generalized_monitor.execute_check(
+            {"type": "bash", "name": "My Bash", "interval": 60}
+        )
+        self.assertFalse(success)
+        self.assertIn("Segfault", msg)
+
+        # Stale Spool File
+        mock_mtime.return_value = time.time() - 1000  # Stale
+        success, msg = generalized_monitor.execute_check(
+            {"type": "executable", "name": "My Bash", "interval": 60}
+        )
+        self.assertFalse(success)
+        self.assertIn("stale", msg)
 
 
 if __name__ == "__main__":

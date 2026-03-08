@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 
 
 @tagged("post_install", "-at_install")
@@ -18,6 +18,13 @@ checks:
     parent: 'Parent Check'
     maint_start: '2026-03-01 00:00:00'
     maint_end: '2026-03-02 00:00:00'
+  - name: 'Test Sandboxed Bash'
+    type: bash
+    code_payload: 'echo test'
+    sandbox_allow_network: true
+    sandbox_downloads: 'http://example.com/file | hash | file.bin'
+    comment: 'This is a test comment.'
+    ignored_services: 'ignored.service'
         """
 
     def test_01_bdd_yaml_parsing_and_db_sync(self):
@@ -46,7 +53,33 @@ checks:
         self.assertTrue(check.maintenance_start)
         self.assertTrue(check.maintenance_end)
 
-    def test_02_views_render(self):
+        bash_check = self.env["pager.check"].search(
+            [("name", "=", "Test Sandboxed Bash")]
+        )
+        self.assertTrue(bash_check.exists())
+        self.assertEqual(bash_check.code_payload, "echo test")
+        self.assertTrue(bash_check.sandbox_allow_network)
+        self.assertIn("file.bin", bash_check.sandbox_downloads)
+        self.assertEqual(bash_check.comment, "This is a test comment.")
+        self.assertEqual(bash_check.ignored_services, "ignored.service")
+
+    @patch("odoo.addons.pager_duty.models.pager_check.PagerCheck.action_push_to_yaml")
+    @patch("odoo.addons.pager_duty.models.pager_check.subprocess.run")
+    def test_02_autodiscovery(self, mock_run, mock_push):
+        """Verify the autodiscover action builds checks safely without crashing."""
+        mock_res = MagicMock()
+        mock_res.stdout = "postgresql.service\nnginx.service"
+        mock_run.return_value = mock_res
+
+        self.env["pager.check"].with_user(self.admin).action_autodiscover()
+
+        checks = self.env["pager.check"].search([])
+        self.assertTrue(
+            len(checks) > 0, "Autodiscovery should generate multiple baseline checks."
+        )
+        mock_push.assert_called()
+
+    def test_03_views_render(self):
         """Verify the new graphical configuration views render successfully."""
         # Tests [%ANCHOR: test_pager_view]
         self.env["pager.check"].get_view(view_type="form")
