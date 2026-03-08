@@ -40,7 +40,7 @@ dropdb --if-exists "$DB_NAME" || true
 LOG_FILE="/tmp/odoo_test_run_$$.log"
 # Install the modules and run tests in a single pass on the clean database
 /usr/bin/odoo \
-  --addons-path="$ADDONS_PATH" \
+--addons-path="$ADDONS_PATH" \
   --dev=all -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   --test-enable \
@@ -50,13 +50,13 @@ LOG_FILE="/tmp/odoo_test_run_$$.log"
 ODOO_EXIT=${PIPESTATUS[0]}
 
 if grep -q " 0 failed, 0 error(s) of 0 tests" "$LOG_FILE"; then
-    echo "\n\ud83d\uded1 Halting: 0 tests were executed. This indicates a dependency loop or syntax error preventing the module from loading."
+    echo -e "\n\ud83d\uded1 Halting: 0 tests were executed. This indicates a dependency loop or syntax error preventing the module from loading."
     rm -f "$LOG_FILE"
     exit 1
 fi
 
 if grep -q "ERROR .* Some modules are not loaded" "$LOG_FILE"; then
-    echo "\n\ud83d\uded1 Halting: Modules failed to load (Dependency Loop detected)."
+    echo -e "\n\ud83d\uded1 Halting: Modules failed to load (Dependency Loop detected)."
     rm -f "$LOG_FILE"
     exit 1
 fi

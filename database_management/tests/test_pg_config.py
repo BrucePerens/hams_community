@@ -1,3 +1,9 @@
+
+import shutil
+import os
+if not hasattr(shutil, '_orig_which'):
+    shutil._orig_which = shutil.which
+    shutil.which = lambda cmd, mode=os.F_OK, path=None: None if cmd in ('kopia', 'etcd') else shutil._orig_which(cmd, mode, path)
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch
 
