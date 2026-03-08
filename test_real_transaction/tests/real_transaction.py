@@ -3,7 +3,7 @@
 import collections
 import logging
 import odoo
-from odoo.tests.common import BaseCase, get_db_name
+from odoo.tests.common import HttpCase, get_db_name
 from odoo.modules.registry import Registry
 from psycopg2 import sql
 
@@ -13,25 +13,41 @@ _logger = logging.getLogger(__name__)
 _original_create = odoo.models.BaseModel.create
 
 
-class RealTransactionCase(BaseCase):
+class RealTransactionCase(HttpCase):
     """
     A testing facility that bypasses Odoo's test cursor wrapping (TransactionCase).
     It provides a real, committable PostgreSQL cursor allowing tests to behave
     exactly like a live production environment.
-
-    Features:
-    1. Auto-Cleanup: Instruments the ORM to track and auto-delete created records.
-    2. Leak Detection: Takes a SQL snapshot of all database tables before and after the
-       test. If any records leak (e.g., via raw SQL inserts), it raises an AssertionError.
     """
 
     def setUp(self):
         super().setUp()
+
+        # HttpCase creates a TestCursor which acquires Odoo's global test lock.
+        # We stash it so super().tearDown() can cleanly dispose of it later.
+        self._test_cursor = self.cr
+        self._test_env = self.env
+
         self.registry = Registry(get_db_name())
+
+        # 1. Safely hijack the Mock object injected by Odoo's test framework.
+        # By changing the side_effect rather than deleting the attribute, we prevent
+        # Werkzeug deadlocks without crashing unittest.mock during tearDown.
+        def _real_cursor_factory(readonly=False):
+            return odoo.sql_db.db_connect(self.registry.db_name).cursor()
+
+        if hasattr(self.registry.cursor, "side_effect"):
+            self._original_side_effect = self.registry.cursor.side_effect
+            self.registry.cursor.side_effect = _real_cursor_factory
+        else:
+            self._original_side_effect = None
+            self.registry.cursor = _real_cursor_factory
+
+        # Provision a true PostgreSQL cursor for the test thread
         self.cr = self.registry.cursor()
         self.env = odoo.api.Environment(self.cr, odoo.SUPERUSER_ID, {})
 
-        # 1. Snapshot exact table counts
+        # 2. Snapshot exact table counts
         self.cr.execute(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
         )
@@ -45,9 +61,8 @@ class RealTransactionCase(BaseCase):
 
         self._tracked_records = collections.defaultdict(set)
 
-        # 2. Instrument ORM Creation
+        # 3. Instrument ORM Creation
         def tracking_create(model_self, *args, **kwargs):
-            # Execute via module-level reference to prevent binding issues
             records = _original_create(model_self, *args, **kwargs)
             if records:
                 self._tracked_records[model_self._name].update(records.ids)
@@ -59,19 +74,24 @@ class RealTransactionCase(BaseCase):
         # 1. Restore standard ORM behavior
         odoo.models.BaseModel.create = _original_create
 
+        # Commit any lingering test state to drop REPEATABLE READ snapshot locks
+        # preventing "concurrent update" deadlocks with background HTTP workers.
+        try:
+            self.env.cr.commit()
+        except Exception:
+            self.env.cr.rollback()
+
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
         from odoo.tools import mute_logger
 
-        for _ in range(3):
+        for attempt in range(3):
             pending_deletes = False
             for model_name, ids in list(self._tracked_records.items()):
                 if model_name in self.env and ids:
                     try:
-                        # Silence Odoo's SQL logger so expected constraint violations don't pollute the test output
                         with self.env.cr.savepoint(), mute_logger(
                             "odoo.sql_db"
                         ), mute_logger("odoo.models.unlink"):
-                            # Env is already initialized as SUPERUSER_ID, no .sudo() needed
                             records = (
                                 self.env[model_name]
                                 .with_context(active_test=False)
@@ -80,9 +100,17 @@ class RealTransactionCase(BaseCase):
                             )
                             if records:
                                 records.unlink()
-                                self._tracked_records[model_name] = set()
-                    except Exception:
+                        # If we reach here, the unlink was successful
+                        self._tracked_records[model_name] = set()
+                    except Exception as e:
                         pending_deletes = True
+                        if attempt == 2:
+                            _logger.debug(
+                                "Auto-cleanup deferred for %s %s: %s",
+                                model_name,
+                                ids,
+                                e,
+                            )
             if not pending_deletes:
                 break
 
@@ -103,12 +131,12 @@ class RealTransactionCase(BaseCase):
             "res_groups_users_rel",
             "res_company_users_rel",
             "res_users_log",
+            "http_session",
         }
 
         for t in self._tables:
             if t in noisy_tables:
                 continue
-            # Securely construct table identifiers using psycopg2.sql
             query = sql.SQL("SELECT count(1) FROM {}").format(sql.Identifier(t))
             self.cr.execute(query)
             final_count = self.cr.fetchone()[0]
@@ -117,9 +145,16 @@ class RealTransactionCase(BaseCase):
             if diff != 0:
                 leaks.append(f"{t} ({diff:+d})")
 
-        # 4. Close DB Connection
+        # 4. Close OUR real DB connection
         self.cr.rollback()
         self.cr.close()
+
+        # 5. Hand off teardown to Odoo framework
+        if hasattr(self.registry.cursor, "side_effect"):
+            self.registry.cursor.side_effect = self._original_side_effect
+
+        self.cr = self._test_cursor
+        self.env = self._test_env
         super().tearDown()
 
         if leaks:

@@ -5,7 +5,9 @@
 ## 1. Overview
 In standard Odoo testing, `TransactionCase` wraps the entire test execution inside an uncommitted PostgreSQL `SAVEPOINT`. While this makes tests extremely fast and prevents database pollution, it creates an artificial environment. This environment fundamentally breaks the ORM's local memory cache for inverse relational fields (like `One2many` relationships). In production, these fields populate seamlessly because transactions actually commit; in `TransactionCase` tests, they evaluate as empty, leading to false negatives and architectural confusion.
 
-The `test_real_transaction` module solves this by providing a drop-in replacement: **`RealTransactionCase`**. It completely bypasses Odoo's test cursor wrapper, provisioning a real, committable PostgreSQL database connection that perfectly mirrors production behavior.
+The `test_real_transaction` module solves this by providing a drop-in replacement: **`RealTransactionCase`**.
+**Because it inherits from Odoo's `HttpCase`, it natively supports full Werkzeug HTTP routing and testing utilities like `self.authenticate()` and `self.make_jsonrpc_request()`.**
+It completely bypasses Odoo's test cursor wrapper, provisioning a real, committable PostgreSQL database connection that perfectly mirrors production behavior..
 
 ## 2. Key Features
 
