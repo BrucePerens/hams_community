@@ -36,4 +36,8 @@ This directory contains the Architecture Decision Records (ADRs) that define the
 * [ADR 0065: Headless API Translation Ban](0065_headless_api_translation_ban.md)
   Bans the use of the `_()` translation wrapper around string literals in headless API JSON responses to prevent context crashes.
 * [ADR 0066: Secure Cached Resolver Pattern](0066_secure_cached_resolver_pattern.md)
-  Requires high-frequency cached lookups to accept an `override_svc_uid` parameter to execute database queries safely under the caller's specific micro-service context.
+Requires high-frequency cached lookups to accept an `override_svc_uid` parameter to execute database queries safely under the caller's specific micro-service context.
+* [ADR 0070: OS-Level Daemon Restriction & Airgapped Hardware Spooling](0070_os_level_daemon_restriction.md)
+Mandates strict chrooted privilege de-escalation, systemd sandboxing for network daemons, and airgapped JSON spooling for hardware telemetry to prevent RCE escalation.
+* [ADR 0070: OS-Level Daemon Restriction & Airgapped Hardware Spooling](0070_os_level_daemon_restriction.md)
+Mandates strict chrooted privilege de-escalation, systemd sandboxing for network daemons, and airgapped JSON spooling for hardware telemetry to prevent RCE escalation.
