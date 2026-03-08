@@ -140,10 +140,14 @@ class PagerCheck(models.Model):
         string="Sandbox Downloads",
         help="One per line: URL | SHA-256 | Filename. Downloaded into the sandbox before execution.",
     )
-    sandbox_allow_network = fields.Boolean(
-        string="Allow Network Access (Sandbox)",
-        default=False,
-        help="If checked, the script can reach the internet and internal LAN. WARNING: Opens SSRF risks.",
+    sandbox_network_access = fields.Selection(
+        [
+            ("loopback", "Loop-back network only (more secure)"),
+            ("full", "Full network access"),
+        ],
+        string="Network Access",
+        default="loopback",
+        help="Full network access allows reaching the internet and LAN (SSRF risk). Loop-back restricts the sandbox to local interfaces.",
     )
 
     auto_remediate_script = fields.Char(
@@ -282,7 +286,9 @@ class PagerCheck(models.Model):
                     "executable_path": c.get("executable_path", ""),
                     "executable_args": c.get("executable_args", ""),
                     "sandbox_downloads": c.get("sandbox_downloads", ""),
-                    "sandbox_allow_network": c.get("sandbox_allow_network", False),
+                    "sandbox_network_access": c.get(
+                        "sandbox_network_access", "loopback"
+                    ),
                 }
             )
 
@@ -382,8 +388,8 @@ class PagerCheck(models.Model):
                 d["executable_args"] = c.executable_args
             if c.sandbox_downloads:
                 d["sandbox_downloads"] = c.sandbox_downloads
-            if c.sandbox_allow_network:
-                d["sandbox_allow_network"] = c.sandbox_allow_network
+            if c.sandbox_network_access:
+                d["sandbox_network_access"] = c.sandbox_network_access
             check_list.append(d)
 
         yaml_dict = {"checks": check_list}
@@ -589,11 +595,11 @@ class PagerCheck(models.Model):
             }
         )
 
-        existing_names = self.search([]).mapped("name")
+        existing_names = self.env["pager.check"].search([], limit=5000).mapped("name")
         new_checks = [c for c in checks if c["name"] not in existing_names]
 
         if new_checks:
-            self.create(new_checks)
+            self.env["pager.check"].create(new_checks)
             self.action_push_to_yaml()
 
     def action_autodiscover(self):

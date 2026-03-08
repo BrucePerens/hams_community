@@ -840,14 +840,6 @@ def extract_parcel(raw_text):
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
 
-                if filepath.endswith(".py"):
-                    try:
-                        subprocess.run(
-                            [sys.executable, "-m", "black", "-q", filepath], check=True
-                        )
-                    except Exception as e:
-                        warnings.append(f"[WARN] Black formatting failed: {e}")
-
             if mode_int is not None:
                 os.chmod(filepath, mode_int)
 

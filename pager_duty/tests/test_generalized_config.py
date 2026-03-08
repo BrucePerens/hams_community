@@ -21,7 +21,7 @@ checks:
   - name: 'Test Sandboxed Bash'
     type: bash
     code_payload: 'echo test'
-    sandbox_allow_network: true
+    sandbox_network_access: 'full'
     sandbox_downloads: 'http://example.com/file | hash | file.bin'
     comment: 'This is a test comment.'
     ignored_services: 'ignored.service'
@@ -58,7 +58,7 @@ checks:
         )
         self.assertTrue(bash_check.exists())
         self.assertEqual(bash_check.code_payload, "echo test")
-        self.assertTrue(bash_check.sandbox_allow_network)
+        self.assertEqual(bash_check.sandbox_network_access, "full")
         self.assertIn("file.bin", bash_check.sandbox_downloads)
         self.assertEqual(bash_check.comment, "This is a test comment.")
         self.assertEqual(bash_check.ignored_services, "ignored.service")

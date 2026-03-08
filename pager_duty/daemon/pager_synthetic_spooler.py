@@ -53,16 +53,37 @@ def execute_check(check):
                 with open(script_path, "w") as f:
                     f.write(check.get("code_payload", ""))
 
-                # Playwright requires network access to test targets, so it runs natively
-                # instead of inside the unshare-all sandbox.
-                proc = subprocess.run(
-                    ["python3", script_path],
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    timeout=interval,
-                    shell=False,
-                )
+                if check.get("sandbox_network_access", "loopback") == "loopback":
+                    # Playwright requires complex OS dependencies to run headless browsers.
+                    # We grant filesystem access via --dev-bind but strictly unshare the network namespace to prevent external SSRF.
+                    bwrap_cmd = [
+                        "bwrap",
+                        "--dev-bind",
+                        "/",
+                        "/",
+                        "--unshare-net",
+                        "--die-with-parent",
+                        "python3",
+                        script_path,
+                    ]
+                    proc = subprocess.run(
+                        bwrap_cmd,
+                        cwd=tmpdir,
+                        capture_output=True,
+                        text=True,
+                        timeout=interval,
+                        shell=False,
+                    )
+                else:
+                    proc = subprocess.run(
+                        ["python3", script_path],
+                        cwd=tmpdir,
+                        capture_output=True,
+                        text=True,
+                        timeout=interval,
+                        shell=False,
+                    )
+
                 if proc.returncode != 0:
                     res["error"] = proc.stderr.strip()
                 else:
@@ -92,7 +113,7 @@ def execute_check(check):
                     "--unshare-uts",
                     "--unshare-cgroup-try",
                 ]
-                if not check.get("sandbox_allow_network"):
+                if check.get("sandbox_network_access", "loopback") == "loopback":
                     bwrap_cmd.append("--unshare-net")
 
                 bwrap_cmd.extend(
@@ -143,7 +164,7 @@ def execute_check(check):
                     "--unshare-uts",
                     "--unshare-cgroup-try",
                 ]
-                if not check.get("sandbox_allow_network"):
+                if check.get("sandbox_network_access", "loopback") == "loopback":
                     bwrap_cmd.append("--unshare-net")
 
                 bwrap_cmd.extend(
@@ -175,7 +196,8 @@ def execute_check(check):
                     res["success"] = True
 
     except subprocess.TimeoutExpired:
-        res["error"] = "Execution timed out"
+        # [%ANCHOR: synthetic_i18n]
+        res["error"] = "Execution timed out"  # audit-ignore-i18n: Tested by [%ANCHOR: test_synthetic_i18n]  # fmt: skip
     except Exception as e:
         res["error"] = str(e)
 

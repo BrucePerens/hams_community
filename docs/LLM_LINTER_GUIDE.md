@@ -129,6 +129,7 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 2. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document.
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: `<!-- Verified by [%ANCHOR: example_name] -->`.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
+5. **Example Anchors (Documentation):** Any anchor name starting with `example_` (e.g., `[%ANCHOR: example_my_feature]`) is automatically ignored by the CI/CD verification linters. You MUST use this prefix when providing anchor examples in markdown documentation to prevent false-positive missing anchor failures.
 
 ---
 

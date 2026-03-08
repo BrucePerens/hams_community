@@ -73,15 +73,18 @@
                         </page>
                         <page string="Synthetic &amp; Sandbox" invisible="check_type not in ('playwright', 'bash', 'executable')">
                             <div class="alert alert-info" role="alert">
-                                <strong>Playwright:</strong> Enter Python Playwright code. <strong>Bash:</strong> Enter Bash script. <strong>Executable:</strong> Specify path to downloaded binary.
+                                <strong>Playwright:</strong> Enter Python Playwright code. <strong>Bash:</strong> Enter Bash script. <strong>Executable:</strong> Specify path to downloaded binary.<br/>
                                 Bash and Executables are strictly airgapped and chrooted via Bubblewrap (bwrap).
+                            </div>
+                            <div class="alert alert-warning" role="alert" invisible="check_type != 'playwright' or sandbox_network_access != 'loopback'">
+                                <i class="fa fa-info-circle me-1"/> <strong>Loop-back only mode:</strong> only URLs with host address 127.0.0.1 or [::1] will work. Turn on full network mode if other host-names or addresses are necessary.
                             </div>
                             <group>
                                 <field name="code_payload" widget="text" invisible="check_type not in ('playwright', 'bash')"/>
                                 <field name="executable_path" invisible="check_type != 'executable'"/>
                                     <field name="executable_args" invisible="check_type != 'executable'"/>
                                     <field name="sandbox_downloads" widget="text" invisible="check_type not in ('bash', 'executable')" placeholder="https://example.com/bin | e3b0c44... | my_binary"/>
-                                    <field name="sandbox_allow_network" invisible="check_type not in ('bash', 'executable')" widget="boolean_toggle"/>
+                                    <field name="sandbox_network_access" widget="radio" invisible="check_type not in ('playwright', 'bash', 'executable')"/>
                                 </group>
                         </page>
                         <page string="Heartbeat Info" invisible="check_type != 'heartbeat'">
