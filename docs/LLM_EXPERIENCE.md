@@ -10,14 +10,14 @@
 
 ## 2. The Python Formatter (Black) vs. AST Linter Trap
 **The Trap:** The project uses the Black code formatter. When returning dictionaries, lists, or multi-line structures in Python (like JSON-RPC responses), Black will reformat them across multiple lines. This detaches inline `# audit-ignore-*` or `# burn-ignore` comments from the specific AST node they were meant to protect, causing CI/CD pipeline failures.
-**The Solution:** Whenever applying a linter bypass comment to a multi-line Python structure, the LLM **MUST** append `  # fmt: skip` to the end of the comment (e.g., `return {"error": "..."}  # audit-ignore-i18n: Tested by [%ANCHOR: test_name]  # fmt: skip`).
+**The Solution:** Whenever applying a linter bypass comment to a multi-line Python structure, the LLM **MUST** append `  # fmt: skip` to the end of the comment (e.g., `return {"error": "..."}  # audit-ignore-i18n: Tested by [%ANCHOR: example_test_name]  # fmt: skip`).
 
 ## 3. The Dual XML Anchor Strictness
 **The Trap:** The platform utilizes two separate linters with conflicting structural requirements for XML records. `verify_anchors.py` requires traceability anchors to be easily found, while `check_burn_list.py` requires the bypass tag to be embedded directly within the node's AST.
 **The Solution:** XML records and templates require a specific dual-comment structure:
 ```xml
-<!-- Verified by [%ANCHOR: test_name] -->
-<record id="my_id" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_name] -->
+<!-- Verified by [%ANCHOR: example_test_name] -->
+<record id="my_id" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: example_test_name] -->
     ...
 </record>
 ```
