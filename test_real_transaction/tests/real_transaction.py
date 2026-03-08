@@ -87,7 +87,7 @@ class RealTransactionCase(BaseCase):
                 break
 
         # Commit the automated cleanup to disk
-        self.env.cr.commit() # burn-ignore-test-commit  # fmt: skip
+        self.env.cr.commit()
 
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
         leaks = []

@@ -7,6 +7,11 @@
 ## 1. Overview
 Provides the `RealTransactionCase` class. It completely bypasses Odoo's test cursor wrapping, allowing tests to perform actual `env.cr.commit()` operations to correctly test cross-worker caches and daemons.
 
-## 2. Features
-* **Auto-Cleanup:** Instruments `BaseModel.create()` to track created records and unlinks them across multiple cascade passes in `tearDown()`.
-* **Leak Detection:** Takes a SQL snapshot of all tables before and after the test to guarantee pristine state.
+## ## 2. Features
+## * **Auto-Cleanup:** Instruments `BaseModel.create()` to track created records and unlinks them across multiple cascade passes in `tearDown()`.
+## * **Leak Detection:** Takes a SQL snapshot of all tables before and after the test to guarantee pristine state.
+
+## ## 3. Usage & Import Path
+## To use this facility, you MUST import it using the exact following path:
+## `from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase`
+## Do not assume the class is in a file named `test_real_transaction.py` or inside `ham_testing`..

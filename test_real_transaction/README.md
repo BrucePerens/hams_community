@@ -31,14 +31,13 @@ class MyAdvancedTest(RealTransactionCase):
     def test_01_real_commit_behavior(self):
         # 1. Create a record normally. The facility secretly tracks its ID.
         user = self.env['res.users'].create({'name': 'Test User'})
-        
-        # 2. Force a physical database write to populate ORM caches.
-        # (Note: Use the bypass tag if the Burn List linter is active).
-        self.env.cr.commit() # burn-ignore-test-commit
-        
-        # 3. The ORM will now evaluate complex inverse relationships accurately.
+
+        # # 2. Force a physical database write to populate ORM caches.
+        # self.env.cr.commit()
+
+        # # 3. The ORM will now evaluate complex inverse relationships accurately..
         self.assertEqual(len(user.some_one2many_ids), 0)
-        
-        # 4. No manual cleanup is required! The tearDown() method 
+
+        # 4. No manual cleanup is required! The tearDown() method
         # will auto-unlink the user and verify no tables leaked.
 ```

@@ -13,7 +13,7 @@ class TestRealTransactionFacility(RealTransactionCase):
         user = self.env["res.users"].create(
             {"name": "Cleanup Target", "login": "cleanup_target"}
         )
-        self.env.cr.commit() # burn-ignore-test-commit  # fmt: skip
+        self.env.cr.commit()
 
         # Verify the record is physically in the DB and tracked
         self.assertTrue(user.exists())
@@ -30,7 +30,7 @@ class TestRealTransactionFacility(RealTransactionCase):
             "INSERT INTO ir_module_category (name) VALUES ('\"SQL Leak Test\"') RETURNING id"
         )
         leaked_id = self.cr.fetchone()[0]
-        self.env.cr.commit() # burn-ignore-test-commit  # fmt: skip
+        self.env.cr.commit()
 
         # Temporarily mock the tearDown leak detector to ensure it would raise
         leaks = []
@@ -42,7 +42,7 @@ class TestRealTransactionFacility(RealTransactionCase):
 
         # Clean up the raw SQL insertion so the REAL tearDown doesn't crash the test suite
         self.cr.execute("DELETE FROM ir_module_category WHERE id = %s", (leaked_id,))
-        self.env.cr.commit() # burn-ignore-test-commit  # fmt: skip
+        self.env.cr.commit()
 
         self.assertIn(
             "ir_module_category",
@@ -63,7 +63,7 @@ class TestRealTransactionFacility(RealTransactionCase):
                 "company_ids": [(4, company.id)],
             }
         )
-        self.env.cr.commit() # burn-ignore-test-commit  # fmt: skip
+        self.env.cr.commit()
 
         self.assertTrue(company.exists())
         self.assertTrue(user.exists())
