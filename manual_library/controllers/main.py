@@ -145,20 +145,16 @@ class ManualLibraryController(http.Controller):
             # Fetch without sudo() first to ensure the user actually has Read access to the article
             article = request.env["knowledge.article"].browse(int(article_id))
             if article.exists():
-                # Escalate to Service Account ONLY for the write operation since guests lack write permissions
-                svc_uid = request.env.ref(
-                    "manual_library.user_manual_library_service_account"
-                ).id
-                svc_article = (
-                    request.env["knowledge.article"]
-                    .with_user(svc_uid)
-                    .browse(article.id)
-                )
+                # Utilize raw SQL to ensure absolute atomic increments and prevent 'Lost Update' race conditions
                 if is_helpful == "1":
-                    svc_article.write({"helpful_count": svc_article.helpful_count + 1})
+                    request.env.cr.execute(
+                        "UPDATE knowledge_article SET helpful_count = COALESCE(helpful_count, 0) + 1 WHERE id = %s",
+                        (article.id,),
+                    )
                 else:
-                    svc_article.write(
-                        {"unhelpful_count": svc_article.unhelpful_count + 1}
+                    request.env.cr.execute(
+                        "UPDATE knowledge_article SET unhelpful_count = COALESCE(unhelpful_count, 0) + 1 WHERE id = %s",
+                        (article.id,),
                     )
         except Exception:
             # Silently fail on bad input to prevent brute-force discovery

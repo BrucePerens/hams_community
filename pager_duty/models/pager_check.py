@@ -57,6 +57,7 @@ class PagerCheck(models.Model):
             ("icmp", "ICMP Ping"),
             ("heartbeat", "Heartbeat (Push Monitor)"),
             ("docker", "Docker Container Health"),
+            ("smart", "SMART Disk Health"),
             ("file_absent", "File Must Not Exist (e.g. reboot-required)"),
             ("memcached", "Memcached Server (Ping)"),
             ("ssh", "SSH Handshake"),

@@ -9,12 +9,12 @@ The OS monitoring daemon requires specific system packages to perform full-chain
 ### Ubuntu/Debian:
 ```bash
 sudo apt-get update
-sudo apt-get install -y dnsutils libpq-dev python3-dev
+sudo apt-get install -y dnsutils libpq-dev python3-dev smartmontools
 ```
 
 ### CentOS/RHEL/AlmaLinux:
 ```bash
-sudo dnf install -y bind-utils postgresql-devel python3-devel
+sudo dnf install -y bind-utils postgresql-devel python3-devel smartmontools
 ```
 
 ### Python Dependencies (PEP-668 Virtual Environment):
@@ -51,8 +51,10 @@ sudo cp daemons/pager_duty/pager-log-monitor.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable pager-os-monitor.service
 sudo systemctl enable pager-log-monitor.service
+sudo systemctl enable pager-smart-spooler.timer
 sudo systemctl start pager-os-monitor.service
 sudo systemctl start pager-log-monitor.service
+sudo systemctl start pager-smart-spooler.timer
 ```
 4. Verify they are running smoothly:
 ```bash

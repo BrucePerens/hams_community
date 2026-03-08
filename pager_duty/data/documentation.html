@@ -2,13 +2,13 @@
     <h1>Pager Duty &amp; Generalized Monitoring</h1>
     <hr/>
     <p class="text-muted small"><em>Patents Pending. Copyright &copy; Bruce Perens K6BP. All Rights Reserved.</em></p>
-    
+
     <h2>1. Architecture Overview (CQRS)</h2>
     <p>The Pager Duty module operates on a Command Query Responsibility Segregation (CQRS) model. Odoo acts as the control plane to manage configurations, while an isolated, standalone Python daemon (<code>generalized_monitor.py</code>) executes the actual polling and health checks outside of Odoo's web workers.</p>
-    
+
     <h2>2. Configuration Wizard</h2>
     <p>Administrators can configure all monitoring endpoints graphically. Navigate to <strong>Admin &gt; System Health &gt; Monitoring Checks</strong>. Click <em>Edit YAML Config File</em> to synchronize the database records with the daemon's physical <code>pager_config.yaml</code> file.</p>
-    
+
     <h2>3. Supported Check Types</h2>
     <ul>
         <li><strong>System Resource:</strong> Monitors Disk, Memory, CPU, IO Wait, and Hypervisor Steal percent limits.</li>
@@ -24,10 +24,11 @@
         <li><strong>ICMP Ping:</strong> Basic network reachability testing for remote gateways and routers.</li>
         <li><strong>Docker Container Health:</strong> Monitors the native execution state of background Docker containers.</li>
         <li><strong>Systemd Services:</strong> Validates that critical host OS services remain active.</li>
+        <li><strong>SMART Disk Health:</strong> Integrates with <code>smartctl</code> via an airgapped JSON spool to predict impending SSD/HDD drive failures securely.</li>
         <li><strong>Memcached Server:</strong> Raw TCP socket handshakes to ensure the cache is responding to statistic inquiries.</li>
         <li><strong>SSH Handshake:</strong> Validates raw port accessibility and protocol compliance for remote access.</li>
     </ul>
-    
+
     <h2>4. Intelligent Calendar Routing</h2>
     <p>The module natively ties into the Odoo Calendar. By checking the "Is Pager Duty Shift" box on an event, the system automatically knows exactly who is on-call at any given minute. It fully supports complex recurrence rules (like "the first Tuesday of the month") and manages shift-handoffs seamlessly without requiring manual configuration files.</p>
 
@@ -37,7 +38,7 @@
 
     <h2>6. Advanced SRE Capabilities</h2>
     <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
-    
+
     <h2>6. Advanced SRE Capabilities</h2>
     <ul>
         <li><strong>Cascading Failure Suppression:</strong> Link checks together via "Parent Check" dependencies. If the master database goes offline, downstream HTTP checks will be automatically silenced to prevent alarm fatigue.</li>

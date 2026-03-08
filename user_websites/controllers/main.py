@@ -26,8 +26,12 @@ BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 redis_pool = redis.ConnectionPool(
-    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True,
-    socket_timeout=1.0, socket_connect_timeout=1.0
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=0,
+    decode_responses=True,
+    socket_timeout=1.0,
+    socket_connect_timeout=1.0,
 )
 redis_client = redis.Redis(connection_pool=redis_pool)
 
@@ -116,14 +120,18 @@ class UserWebsitesController(http.Controller):
                 pass
 
         if total_users is None:
-            total_users = request.env["user_websites.public.directory.view"].search_count(domain)
+            total_users = request.env[
+                "user_websites.public.directory.view"
+            ].search_count(domain)
             if not odoo.tools.config.get("test_enable"):
                 try:
                     redis_client.setex(cache_key, 300, total_users)
                 except Exception:
                     pass
 
-        users = request.env["user_websites.public.directory.view"].search(domain, limit=step, offset=(page - 1) * step)
+        users = request.env["user_websites.public.directory.view"].search(
+            domain, limit=step, offset=(page - 1) * step
+        )
 
         pager = request.website.pager(
             url="/community",
@@ -189,7 +197,9 @@ class UserWebsitesController(http.Controller):
         content_owner_id = False
         content_group_id = False
 
-        route = request.env["user_websites.content.routing.view"].search([("target_url", "=", url)], limit=1)
+        route = request.env["user_websites.content.routing.view"].search(
+            [("target_url", "=", url)], limit=1
+        )
         if route:
             if route.content_owner_id:
                 content_owner_id = route.content_owner_id.id
@@ -225,24 +235,16 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_websites_home]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        user_id = request.env["res.users"]._get_user_id_by_slug(
-            slug_lower, override_svc_uid=svc_uid
-        )
-        user = (
-            request.env["res.users"].with_user(svc_uid).browse(user_id)
-            if user_id
-            else None
-        )
+        user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
+        user = request.env["res.users"].browse(user_id) if user_id else None
+
         group = None
         if not user:
             group_id = request.env["user.websites.group"]._get_group_id_by_slug(
-                slug_lower, override_svc_uid=svc_uid
+                slug_lower
             )
             group = (
-                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
+                request.env["user.websites.group"].browse(group_id)
                 if group_id
                 else None
             )
@@ -256,13 +258,9 @@ class UserWebsitesController(http.Controller):
                 else False
             )
             page_id = request.env["website.page"]._get_page_id_by_url(
-                f"/{user.website_slug}/home", website_id, override_svc_uid=svc_uid
+                f"/{user.website_slug}/home", website_id
             )
-            page = (
-                request.env["website.page"].with_user(svc_uid).browse(page_id)
-                if page_id
-                else None
-            )
+            page = request.env["website.page"].browse(page_id) if page_id else None
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get("test_enable"):
@@ -270,6 +268,9 @@ class UserWebsitesController(http.Controller):
                     # Redis INCR is O(1) and executes in microseconds, making async offloading dangerous and unnecessary here.
                     _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
+                    svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                        "user_websites.user_user_websites_service_account"
+                    )
                     page.with_user(svc_uid).write({"view_count": page.view_count + 1})
 
                 # Retrieve avatar for OpenGraph og:image if available
@@ -279,8 +280,8 @@ class UserWebsitesController(http.Controller):
                 response = request.render(
                     page.view_id.id,
                     {
-                        "main_object": page.with_user(request.env.user),
-                        "profile_user": user.with_user(request.env.user),
+                        "main_object": page,
+                        "profile_user": user,
                         "is_owner": request.env.user.id == user.id,
                         "default_title": f"{user.name}'s Homepage",
                         "default_description": f"Welcome to the personal site of {user.name}.",
@@ -320,26 +321,25 @@ class UserWebsitesController(http.Controller):
                 else False
             )
             page_id = request.env["website.page"]._get_page_id_by_url(
-                f"/{group.website_slug}/home", website_id, override_svc_uid=svc_uid
+                f"/{group.website_slug}/home", website_id
             )
-            page = (
-                request.env["website.page"].with_user(svc_uid).browse(page_id)
-                if page_id
-                else None
-            )
+            page = request.env["website.page"].browse(page_id) if page_id else None
 
             if page and page.exists() and page.website_published:
                 if not odoo.tools.config.get("test_enable"):
                     _async_redis_incr(request.env.cr.dbname, page.id)
                 else:
+                    svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                        "user_websites.user_user_websites_service_account"
+                    )
                     page.with_user(svc_uid).write({"view_count": page.view_count + 1})
 
                 is_member = request.env.user in group.odoo_group_id.user_ids
                 response = request.render(
                     page.view_id.id,
                     {
-                        "main_object": page.with_user(request.env.user),
-                        "profile_group": group.with_user(request.env.user),
+                        "main_object": page,
+                        "profile_group": group,
                         "is_owner": is_member,
                         "default_title": f"{group.name} Homepage",
                         "default_description": f"Welcome to the official page of {group.name}.",
@@ -381,24 +381,16 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_site]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        user_id = request.env["res.users"]._get_user_id_by_slug(
-            slug_lower, override_svc_uid=svc_uid
-        )
-        user = (
-            request.env["res.users"].with_user(svc_uid).browse(user_id)
-            if user_id
-            else None
-        )
+        user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
+        user = request.env["res.users"].browse(user_id) if user_id else None
+
         group = None
         if not user:
             group_id = request.env["user.websites.group"]._get_group_id_by_slug(
-                slug_lower, override_svc_uid=svc_uid
+                slug_lower
             )
             group = (
-                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
+                request.env["user.websites.group"].browse(group_id)
                 if group_id
                 else None
             )
@@ -434,10 +426,9 @@ class UserWebsitesController(http.Controller):
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
         # Make sure we don't accidentally create duplicate pages if the user clicks twice
-        existing_page = (
-            request.env["website.page"]
-            .with_user(svc_uid)
-            .search_count([("url", "=", f"/{resolved_slug}/home")])
+        # Make sure we don't accidentally create duplicate pages if the user clicks twice
+        existing_page = request.env["website.page"].search_count(
+            [("url", "=", f"/{resolved_slug}/home")]
         )
         if existing_page > 0:
             return request.redirect(f"/{resolved_slug}/home")
@@ -447,6 +438,9 @@ class UserWebsitesController(http.Controller):
 
         template_view = request.env.ref(view_xml_id)
 
+        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
         page_vals = {
             "url": f"/{resolved_slug}/home",
             "name": f"{user.name if user else group.name} Home",
@@ -491,24 +485,16 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_user_blog_index]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        user_id = request.env["res.users"]._get_user_id_by_slug(
-            slug_lower, override_svc_uid=svc_uid
-        )
-        user = (
-            request.env["res.users"].with_user(svc_uid).browse(user_id)
-            if user_id
-            else None
-        )
+        user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
+        user = request.env["res.users"].browse(user_id) if user_id else None
+
         group = None
         if not user:
             group_id = request.env["user.websites.group"]._get_group_id_by_slug(
-                slug_lower, override_svc_uid=svc_uid
+                slug_lower
             )
             group = (
-                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
+                request.env["user.websites.group"].browse(group_id)
                 if group_id
                 else None
             )
@@ -541,7 +527,7 @@ class UserWebsitesController(http.Controller):
 
         page_num = int(page)
         step = 10
-        total_posts = request.env["blog.post"].with_user(svc_uid).search_count(domain)
+        total_posts = request.env["blog.post"].search_count(domain)
 
         if total_posts == 0:
             return request.render(
@@ -556,24 +542,18 @@ class UserWebsitesController(http.Controller):
                 },
             )
 
-        posts = (
-            request.env["blog.post"]
-            .with_user(svc_uid)
-            .search(domain, limit=step, offset=(page_num - 1) * step)
+        posts = request.env["blog.post"].search(
+            domain, limit=step, offset=(page_num - 1) * step
         )
 
-        blogs = (
-            request.env["blog.blog"]
-            .with_user(svc_uid)
-            .search(
-                [
-                    ("name", "=", "Community Blog"),
-                    "|",
-                    ("website_id", "=", False),
-                    ("website_id", "=", request.website.id),
-                ],
-                limit=1,
-            )
+        blogs = request.env["blog.blog"].search(
+            [
+                ("name", "=", "Community Blog"),
+                "|",
+                ("website_id", "=", False),
+                ("website_id", "=", request.website.id),
+            ],
+            limit=1,
         )
 
         def blog_url(tag=None, date_begin=None, date_end=None, search=None):
@@ -600,18 +580,16 @@ class UserWebsitesController(http.Controller):
         response = request.render(
             "website_blog.blog_post_short",
             {
-                "posts": posts.with_user(request.env.user),
+                "posts": posts,
                 "blog": (
-                    (posts[0].blog_id if posts else blogs[0]).with_user(
-                        request.env.user
-                    )
+                    (posts[0].blog_id if posts else blogs[0])
                     if (posts or blogs)
                     else False
                 ),
-                "blogs": blogs.with_user(request.env.user),
+                "blogs": blogs,
                 "main_object": main_object,
-                "profile_user": user.with_user(request.env.user) if user else None,
-                "profile_group": group.with_user(request.env.user) if group else None,
+                "profile_user": user,
+                "profile_group": group,
                 "blog_url": blog_url,
                 "tag": tag,
                 "search": search,
@@ -641,24 +619,16 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_create_blog_post]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        user_id = request.env["res.users"]._get_user_id_by_slug(
-            slug_lower, override_svc_uid=svc_uid
-        )
-        user = (
-            request.env["res.users"].with_user(svc_uid).browse(user_id)
-            if user_id
-            else None
-        )
+        user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
+        user = request.env["res.users"].browse(user_id) if user_id else None
+
         group = None
         if not user:
             group_id = request.env["user.websites.group"]._get_group_id_by_slug(
-                slug_lower, override_svc_uid=svc_uid
+                slug_lower
             )
             group = (
-                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
+                request.env["user.websites.group"].browse(group_id)
                 if group_id
                 else None
             )
@@ -694,21 +664,20 @@ class UserWebsitesController(http.Controller):
         )
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
-        blog = (
-            request.env["blog.blog"]
-            .with_user(svc_uid)
-            .search(
-                [
-                    ("name", "=", "Community Blog"),
-                    "|",
-                    ("website_id", "=", False),
-                    ("website_id", "=", request.website.id),
-                ],
-                limit=1,
-            )
+        blog = request.env["blog.blog"].search(
+            [
+                ("name", "=", "Community Blog"),
+                "|",
+                ("website_id", "=", False),
+                ("website_id", "=", request.website.id),
+            ],
+            limit=1,
         )
 
         if not blog:
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
             blog = (
                 request.env["blog.blog"]
                 .with_user(svc_uid)
@@ -722,7 +691,7 @@ class UserWebsitesController(http.Controller):
         elif group:
             domain.append(("user_websites_group_id", "=", group.id))
 
-        existing_post = request.env["blog.post"].with_user(svc_uid).search_count(domain)
+        existing_post = request.env["blog.post"].search_count(domain)
         if existing_post > 0:
             return request.redirect(f"/{resolved_slug}/blog")
 
@@ -802,30 +771,25 @@ class UserWebsitesController(http.Controller):
         # [%ANCHOR: controller_subscribe_to_site]
         # Verified by [%ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        user_id = request.env["res.users"]._get_user_id_by_slug(
-            slug_lower, override_svc_uid=svc_uid
-        )
-        user = (
-            request.env["res.users"].with_user(svc_uid).browse(user_id)
-            if user_id
-            else None
-        )
+        user_id = request.env["res.users"]._get_user_id_by_slug(slug_lower)
+        user = request.env["res.users"].browse(user_id) if user_id else None
+
         group = None
         if not user:
             group_id = request.env["user.websites.group"]._get_group_id_by_slug(
-                slug_lower, override_svc_uid=svc_uid
+                slug_lower
             )
             group = (
-                request.env["user.websites.group"].with_user(svc_uid).browse(group_id)
+                request.env["user.websites.group"].browse(group_id)
                 if group_id
                 else None
             )
 
         target_record = user.partner_id if user else group
         if target_record:
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
             target_record.with_user(svc_uid).message_subscribe(
                 partner_ids=[request.env.user.partner_id.id]
             )
@@ -894,13 +858,8 @@ class UserWebsitesController(http.Controller):
                 json.dumps({"count": 0}), headers=[("Content-Type", "application/json")]
             )
 
-        svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
-        )
-        count = (
-            request.env["content.violation.report"]
-            .with_user(svc_uid)
-            .search_count([("state", "=", "new")])
+        count = request.env["content.violation.report"].search_count(
+            [("state", "=", "new")]
         )
         return request.make_response(
             json.dumps({"count": count}), headers=[("Content-Type", "application/json")]

@@ -61,6 +61,7 @@ The daemon natively understands and monitors the following layers of your infras
 * **Memcached:** Direct TCP socket handshakes requesting cache `stats`.
 * **SSH Handshakes:** Validates port reachability and protocol compliance.
 * **Systemd Services:** Queries `systemctl is-active` to ensure host OS processes are healthy.
+* **SMART Disk Health:** Anticipates hardware failures by reading from an airgapped JSON spool populated by a highly privileged root sidecar, allowing the main monitoring daemon to safely evaluate NVMe/SSD/HDD telemetry without violating its systemd sandbox.
 
 **File Formats & Log Analysis:**
 * **Log Tailing:** Spawns isolated threads to continuously tail system files (e.g., `/var/log/syslog` or Odoo application logs).

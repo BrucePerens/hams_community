@@ -1,0 +1,10 @@
+[Unit]
+Description=Hams.com SMART Disk Health Spooler
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/home/bruce/hams_private/daemons/pager_duty
+ExecStart=/usr/bin/env python3 pager_smart_spooler.py

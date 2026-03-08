@@ -34,7 +34,6 @@ except ImportError:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from hams_config import get_odoo_client  # noqa: E402
 
-
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s"
 )
@@ -66,7 +65,7 @@ def verify_and_install_dependencies(client, checks):
         "icmp": "ping",
         "docker": "docker",
         "systemd": "systemctl",
-        "cloudflared": "cloudflared"
+        "cloudflared": "cloudflared",
     }
 
     required_cmds = set()
@@ -87,7 +86,9 @@ def verify_and_install_dependencies(client, checks):
                         logger.info(f"Provisioned {cmd} at {bin_path}")
                         bin_dir = os.path.dirname(bin_path)
                         if bin_dir not in os.environ["PATH"]:
-                            os.environ["PATH"] = bin_dir + os.pathsep + os.environ["PATH"]
+                            os.environ["PATH"] = (
+                                bin_dir + os.pathsep + os.environ["PATH"]
+                            )
                         success = True
                         break
                     else:
@@ -250,6 +251,7 @@ def execute_check(check, client=None):
 
     elif ctype == "ftp":
         import ftplib
+
         port = int(parse_env(check.get("port", 21)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -266,6 +268,7 @@ def execute_check(check, client=None):
 
     elif ctype == "imap":
         import imaplib
+
         port = int(parse_env(check.get("port", 143)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -283,6 +286,7 @@ def execute_check(check, client=None):
 
     elif ctype == "pop3":
         import poplib
+
         port = int(parse_env(check.get("port", 110)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -306,8 +310,14 @@ def execute_check(check, client=None):
         dbname = parse_env(check.get("dbname", ""))
         try:
             import pymysql
+
             conn = pymysql.connect(
-                host=target, port=port, user=user, password=password, database=dbname, connect_timeout=5
+                host=target,
+                port=port,
+                user=user,
+                password=password,
+                database=dbname,
+                connect_timeout=5,
             )
             try:
                 with conn.cursor() as cur:
@@ -332,7 +342,10 @@ def execute_check(check, client=None):
         port = int(parse_env(check.get("port", 389)))
         try:
             import ldap3
-            server = ldap3.Server(target, port=port, get_info=ldap3.ALL, connect_timeout=5)
+
+            server = ldap3.Server(
+                target, port=port, get_info=ldap3.ALL, connect_timeout=5
+            )
             conn = ldap3.Connection(server, auto_bind=True, receive_timeout=5)
             conn.unbind()
             return True, "OK"
@@ -350,12 +363,13 @@ def execute_check(check, client=None):
         port = int(parse_env(check.get("port", 123)))
         try:
             import ntplib
+
             client_ntp = ntplib.NTPClient()
             response = client_ntp.request(target, version=3, timeout=5)
             return True, f"OK (Offset: {response.offset:.4f}s)"
         except ImportError:
             # SNTP v4 client request packet
-            req = b'\x1b' + 47 * b'\0'
+            req = b"\x1b" + 47 * b"\0"
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                     s.settimeout(5)
@@ -383,7 +397,10 @@ def execute_check(check, client=None):
                 timeout=5,
             )
             if res.returncode != 0:
-                return False, f"SNMP failed: {res.stderr.strip() or res.stdout.strip()[:100]}"
+                return (
+                    False,
+                    f"SNMP failed: {res.stderr.strip() or res.stdout.strip()[:100]}",
+                )
             expect = parse_env(check.get("expect"))
             if expect and expect not in res.stdout:
                 return False, "SNMP payload mismatch"
@@ -908,6 +925,45 @@ def execute_check(check, client=None):
         except Exception as e:
             return False, f"Heartbeat check failed: {e}"
 
+    elif ctype == "smart":
+        if not target:
+            return False, "SMART check requires target device (e.g. /dev/sda)"
+
+        spool_file = "/var/log/pager_smart_spool.json"
+        if not os.path.exists(spool_file):
+            return (
+                False,
+                "SMART spool file not found. Is the pager-smart-spooler.timer running?",
+            )
+
+        mtime = os.path.getmtime(spool_file)
+        if time.time() - mtime > 1800:
+            return (
+                False,
+                "SMART spool file is stale (>30 mins old). Root spooler daemon may have crashed.",
+            )
+
+        try:
+            with open(spool_file, "r") as f:
+                smart_data = json.load(f)
+
+            if target not in smart_data:
+                return False, f"Device {target} not found in SMART spool data."
+
+            dev_data = smart_data[target]
+            smart_status = dev_data.get("smart_status", {})
+            passed = smart_status.get("passed", False)
+
+            if not passed:
+                return (
+                    False,
+                    f"SMART health check FAILED for {target}. Impending disk failure.",
+                )
+
+            return True, "OK"
+        except Exception as e:
+            return False, f"SMART spool read error: {e}"
+
     elif ctype == "file_absent":
         if not target:
             return False, "Target required"
@@ -1077,18 +1133,31 @@ if __name__ == "__main__":
 
     verify_and_install_dependencies(client, checks)
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(checks) + 1))
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=max(1, len(checks) + 1)
+    )
     futures = []
 
     def log_anomaly_proxy(cl):
         import redis as redis_lib
-        r = redis_lib.Redis(host=os.getenv("REDIS_HOST", "127.0.0.1"), port=int(os.getenv("REDIS_PORT", "6379")), db=0, decode_responses=True)
+
+        r = redis_lib.Redis(
+            host=os.getenv("REDIS_HOST", "127.0.0.1"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            db=0,
+            decode_responses=True,
+        )
         while True:
             try:
                 _, data = r.blpop("pager_log_anomalies", timeout=5)
                 if data:
                     payload = json.loads(data)
-                    report(cl, payload["source"], payload["description"], payload["severity"])
+                    report(
+                        cl,
+                        payload["source"],
+                        payload["description"],
+                        payload["severity"],
+                    )
             except Exception:
                 time.sleep(1)  # audit-ignore-sleep
 
