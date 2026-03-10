@@ -6,9 +6,9 @@ Requires=redis-server.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/bruce/hams_private/daemons/pager_duty
+WorkingDirectory=/opt/odoo/addons/pager_duty/daemon
 EnvironmentFile=/etc/hams_daemons.env
-ExecStart=/usr/bin/env bash /home/bruce/hams_private/daemons/run_daemon.sh /home/bruce/hams_private/daemons/pager_duty pager_log_analyzer.py
+ExecStart=/usr/bin/env python3 pager_log_analyzer.py
 Restart=always
 RestartSec=10
 StandardOutput=journal

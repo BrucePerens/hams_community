@@ -19,7 +19,7 @@ class TestUserWebsitesGDPRBase(TransactionCase):
     def test_01_base_gdpr_dictionary_schema(self):
         """
         Verify the structural integrity of the root GDPR export dictionary.
-        Downstream modules (ham_*) rely on this base dictionary existing.
+        Downstream modules (custom_*) rely on this base dictionary existing.
         """
         data = self.user._get_gdpr_export_data()
 

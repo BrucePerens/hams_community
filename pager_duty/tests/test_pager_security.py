@@ -28,7 +28,7 @@ class TestPagerSecurity(TransactionCase):
         )
 
         ham_grp = self.env.ref(
-            "ham_onboarding.group_ham_system_operator", raise_if_not_found=False
+            "base.group_portal", raise_if_not_found=False
         )
         groups_ham = [self.env.ref("base.group_portal").id] + (
             [ham_grp.id] if ham_grp else []
@@ -38,7 +38,7 @@ class TestPagerSecurity(TransactionCase):
         )
 
         swl_grp = self.env.ref(
-            "ham_onboarding.group_ham_system_swl", raise_if_not_found=False
+            "base.group_portal", raise_if_not_found=False
         )
         groups_swl = [self.env.ref("base.group_portal").id] + (
             [swl_grp.id] if swl_grp else []

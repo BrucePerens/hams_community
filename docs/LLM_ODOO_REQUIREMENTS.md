@@ -2,7 +2,7 @@
 
 ## ## Metadata
 
-## * *Copyright © Bruce Perens K6BP. All Rights Reserved. This software is proprietary and confidential.*
+## * *## * *Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*.*
 
 ## * *Inheritance:* This document extends `LLM_GENERAL_REQUIREMENTS.md`. All global operational mandates (Completeness, Refusal Protocol, Pre-Flight Checks, and WCAG Compliance) apply here.
 ## * *Context:* These standards apply specifically to Odoo 19+ module development.

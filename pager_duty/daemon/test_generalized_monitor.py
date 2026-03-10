@@ -485,7 +485,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         )
         self.assertTrue(success)
         mock_client.execute.assert_called_with(
-            "ham.pager.check", "check_heartbeat_rpc", "1234", 60
+            "pager.check", "check_heartbeat_rpc", "1234", 60
         )
 
     @patch("generalized_monitor.os.getloadavg", return_value=(1.5, 1.0, 0.5))

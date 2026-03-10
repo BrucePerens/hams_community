@@ -4,9 +4,9 @@
 Accepted
 
 ## Context
-We frequently need to expose a subset of table data to unauthenticated public routes (e.g., Community Maps, Repeater Directories) or cross-domain background daemons. 
+We frequently need to expose a subset of table data to unauthenticated public routes (e.g., Community Maps, Directories) or cross-domain background daemons.
 
-Historically, developers would grant `base.group_public` read access to the root table (e.g., `ham.callbook` or `ham.repeater`) and rely on the QWeb template to only render the "safe" fields. This is a severe security vulnerability. An attacker can bypass the website entirely, connect to the Odoo XML-RPC port as a public guest, and execute a `search_read` to dump the entire table—exposing hidden columns like `webrtc_gateway_uri` (which could be attacked), exact street addresses, or private emails.
+Historically, developers would grant `base.group_public` read access to the root table (e.g., `business.directory` or `user.location` in an external repository) and rely on the QWeb template to only render the "safe" fields. This is a severe security vulnerability. An attacker can bypass the website entirely, connect to the Odoo XML-RPC port as a public guest, and execute a `search_read` to dump the entire table—exposing hidden columns like `internal_api_key` (which could be attacked), exact street addresses, or private emails..
 
 Furthermore, resolving nested relationships (like checking a user's privacy preference to determine if an address should be masked) inside Python loops before returning API data causes massive N+1 performance bottlenecks.
 

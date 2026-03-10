@@ -16,11 +16,11 @@ Communication with third-party networks, local hardware, and headless logging so
 * Short-lived access grants (like 1-click unsubscribe links) MUST use stateless, cryptographically signed parameters in the URL including a Unix timestamp, eliminating the need to store and garbage-collect token rows in PostgreSQL.
 
 ### 3. Ethical Crawling & Delta Checksums (0026)
-* Daemons polling massive external databases (like FCC/BNetzA) MUST respect external servers by evaluating `ETag` and `Last-Modified` headers via `HEAD` requests prior to downloading.
+* Daemons polling massive external databases (like Government Identity Providers) MUST respect external servers by evaluating `ETag` and `Last-Modified` headers via `HEAD` requests prior to downloading.
 * Downloaded payloads MUST be cryptographically hashed (SHA-256) and verified against the previous state before processing to save CPU cycles.
 
 ### 4. At-Rest Encryption for Secrets (0028)
-* User credentials for third-party platforms (like LoTW or eQSL) MUST be symmetrically encrypted in PostgreSQL using the system's Fernet `HAMS_CRYPTO_KEY`.
+* User credentials for third-party platforms (like External Auth Providers) MUST be symmetrically encrypted in PostgreSQL using the system's Fernet `HAMS_CRYPTO_KEY`.
 
-### 5. Hardware-to-Web Airgap Bridge (0029)
-* Web browsers block local network requests. Connecting the Web Shack to a physical transceiver requires the `hams_local_relay` daemon. To eliminate onboarding friction, this relay MUST be packaged into native, 1-click OS installers that configure the background service automatically.
+### ### 5. Web-to-Local Airgap Bridge (0029)
+### * Web browsers block local network requests. Connecting the Web UI to external or local agents requires a specialized relay daemon (e.g., `local_agent_relay`). To eliminate onboarding friction, these relays MUST be packaged into native, 1-click OS installers that configure the background service automatically..

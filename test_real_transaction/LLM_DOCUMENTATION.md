@@ -16,4 +16,4 @@
 ## ## 3. Usage & Import Path
 ## To use this facility, you MUST import it using the exact following path:
 ## `from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase`
-## Do not assume the class is in a file named `test_real_transaction.py` or inside `ham_testing`..
+## Do not assume the class is in a file named `test_real_transaction.py` or inside `custom_testing`..

@@ -8,17 +8,17 @@ The platform must balance strict international privacy laws (GDPR/CCPA) with the
 
 ## Decisions & Mandates
 
-### 1. Immutable Public RF Records & Infinite Retention
-Amateur Radio contacts (QSOs) occur over public spectrum. They are legally classified as public matters of record.
-* `ham.qso` records are strictly exempt from cascading data destruction.
-* Relational links MUST use `ondelete='set null'` or `ondelete='restrict'`.
-* Infinite growth of the `ham.qso` table is a platform feature, maintaining historical contest scores and mathematical integrity for the community.
+### ### ### 1. Immutable Public Records & Infinite Retention
+### ### Custom modules or downstream platforms may manage public ledgers or verifiable public records (e.g., scientific telemetry, public forum posts) that are legally or structurally classified as matters of record..
+### * In these cases, the immutable records (e.g., `public.ledger.entry`) are strictly exempt from cascading data destruction.
+### * Relational links MUST use `ondelete='set null'` or `ondelete='restrict'`.
+### * Infinite growth of such tables is a platform feature, maintaining historical data and mathematical integrity for the community..
 
 ### 2. GDPR Erasure Separation of Privilege
 When executing a GDPR Right to Erasure request, the system must cascade and hard-delete all standard user data (Websites, Blogs, test progress). To comply with the Zero-Sudo architecture, this operation MUST NOT use `.sudo().unlink()`. Instead, the erasure hook MUST impersonate the `gdpr_service_internal` micro-service account, which possesses the exact granular ACLs required to cascade unlinks across the restricted tables safely.
 
-### 3. Location Data Precision & Geographic Fuzzing
-Location data (Maidenhead Grid Squares) MUST be stored at maximum precision but presented conditionally:
-* **Public RF Records:** Location data derived from DX spots or QSO logs is public and MUST be shown at full resolution.
-* **Third-Party Directory Views:** When viewing a user's `ham.callbook` profile via public API or map, the ORM MUST mathematically truncate their grid to 4 characters and snap the map pin to the center of a regional bounding box, unless the user explicitly opts into `exact` privacy.
+### ### ### 3. Location Data Precision & Geographic Fuzzing
+### ### If a custom module manages location data, it MUST be stored at maximum precision but presented conditionally::
+### * **Public Ledgers:** Location data explicitly derived from public records MUST be shown at full resolution if the rules of that system require it.
+### * **Third-Party Directory Views:** When viewing a user's general profile (e.g., `community.profile`) via public API or map, the ORM MUST mathematically truncate their location and snap the map pin to the center of a regional bounding box, unless the user explicitly opts into `exact` privacy..
 * **Private Dashboards:** Dashboards presented strictly to the authenticated user (e.g., Propagation Maps) MUST use precise, un-fuzzed data.

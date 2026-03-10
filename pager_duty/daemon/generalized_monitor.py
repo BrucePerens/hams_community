@@ -185,7 +185,7 @@ def report(client, source, msg, severity="high"):
 
     try:
         payload = {"source": source, "description": msg, "severity": severity}
-        client.execute("ham.pager.incident", "report_incident", payload)
+        client.execute("pager.incident", "report_incident", payload)
         logger.error(f"Incident reported [{source}]: {msg}")
     except Exception as e:
         logger.error(
@@ -196,7 +196,7 @@ def report(client, source, msg, severity="high"):
 
 def auto_resolve(client, source):
     try:
-        client.execute("ham.pager.incident", "auto_resolve_incidents", source)
+        client.execute("pager.incident", "auto_resolve_incidents", source)
         logger.info(f"[{source}] System stable. Auto-resolved open incidents.")
     except Exception as e:
         logger.error(f"Failed to auto-resolve incidents for {source}: {e}")
@@ -908,7 +908,7 @@ def execute_check(check, client=None):
             return False, "Client not provided for heartbeat"
         try:
             res = client.execute(
-                "ham.pager.check",
+                "pager.check",
                 "check_heartbeat_rpc",
                 chk_uuid,
                 int(check.get("interval", 60)),

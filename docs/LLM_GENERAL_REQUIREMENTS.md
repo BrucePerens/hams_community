@@ -1,6 +1,6 @@
 # LLM OPERATIONAL MANDATES & DEVELOPMENT STANDARDS
 
-*Copyright © Bruce Perens K6BP. All Rights Reserved. This software is proprietary and confidential.*
+**Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*.*
 
 This document defines the strict operational parameters for the Large Language Model (LLM) and the universal development standards for **any software project** created in this environment.
 

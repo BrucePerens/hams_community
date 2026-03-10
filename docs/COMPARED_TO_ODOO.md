@@ -52,8 +52,7 @@ The code in this repository represents a "Hardened" Odoo. While standard Odoo co
 
 It's important to note that this rigor cost us nothing: the AI
 has written and maintains the entire code-base and formal framework,
-in response to the human prompts given to it, completing all modules, 10
-additional proprietary modules specialized for ham radio,
-and this framework, all in less than 10 days work by one person. While human
+in response to the human prompts given to it, completing all modules, these open source community modules, and this framework,
+in response to the human prompts given to it, completing all modules, all in less than 10 days work by one person.. While human
 developers might disdain the rigor of our formal framework, it was absolutely
 necessary to discipline the AI into fitness for use in this development.

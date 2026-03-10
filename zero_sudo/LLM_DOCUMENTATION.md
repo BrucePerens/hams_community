@@ -1,6 +1,6 @@
 # 🛡️ Zero-Sudo Security Core (`zero_sudo`)
 
-**Context:** Technical documentation strictly for LLMs and Integrators developing proprietary (`hams_private`) or Open Source modules.
+******Context:** Technical documentation strictly for LLMs and Integrators developing custom downstream modules or Open Source apps...
 
 This module acts as the foundational security layer for the entire ecosystem. It implements the platform's strict **Zero-Sudo Architecture** (ADR-0002) and **Service Account Web Isolation** (ADR-0005).
 

@@ -3,13 +3,8 @@
 # Centralized linter execution script. Silent on success.
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
-PRIVATE_DIR="$(cd "$DIR/../hams_private" && pwd 2>/dev/null || echo "$DIR/../hams_private")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$PRIVATE_DIR"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
 VENV_PYTHON="$DIR/.venv/bin/python"
-
-if [ ! -f "$VENV_PYTHON" ] && [ -f "$PRIVATE_DIR/.venv/bin/python" ]; then
-VENV_PYTHON="$PRIVATE_DIR/.venv/bin/python"
-fi
 
 LINTERS_FAILED=0
 

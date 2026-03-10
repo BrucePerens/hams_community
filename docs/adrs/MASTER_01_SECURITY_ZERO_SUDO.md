@@ -4,13 +4,13 @@
 Accepted (Consolidates ADRs 0002, 0005, 0013, 0039, 0062)
 
 ## Context & Philosophy
-Odoo's native `.sudo()` method grants absolute database rights, bypassing Access Control Lists (ACLs) and Record Rules. This is a dangerous anti-pattern that frequently leads to privilege escalation vulnerabilities. The Hams.com platform strictly enforces a Zero-Sudo architecture to ensure least-privilege execution across all boundaries.
+Odoo's native `.sudo()` method grants absolute database rights, bypassing Access Control Lists (ACLs) and Record Rules. This is a dangerous anti-pattern that frequently leads to privilege escalation vulnerabilities. The platform strictly enforces a Zero-Sudo architecture to ensure least-privilege execution across all boundaries.
 
 ## Decisions & Mandates
 
 ### 1. The Service Account Pattern
 When elevated privileges are required, the system MUST NOT use `.sudo()`. Instead:
-1. Identify or create a specifically crafted Service Account (e.g., `user_dns_api_service`).
+1. Identify or create a specifically crafted Service Account (e.g., `cloudflare.user_cloudflare_service`).
 2. Retrieve its UID securely using the centralized security utility.
 3. Execute the operation using the `with_user(svc_uid)` impersonation idiom.
 
@@ -30,9 +30,9 @@ All allowed privilege escalations (such as resolving XML IDs or fetching configu
 * `_get_system_param(key)`: Fetches parameters against a strict `frozenset` whitelist. Cryptographic keys are explicitly excluded to prevent QWeb extraction (SSTI).
 
 ### 4. Persona Capability Limit & View Abstraction (ADR-0068, ADR-0069)
-We do not increase privilege beyond the capability of the persona requesting the data, unless there is absolutely no other way. 
+We do not increase privilege beyond the capability of the persona requesting the data, unless there is absolutely no other way.
 
-To present restricted, masked, or aggregated data to an unprivileged user (e.g., public directories, maps, or statistics), you MUST NOT use a Service Account to fetch the raw records and mask them in Python. 
+To present restricted, masked, or aggregated data to an unprivileged user (e.g., public directories, maps, or statistics), you MUST NOT use a Service Account to fetch the raw records and mask them in Python.
 
 Instead, create a PostgreSQL View (`_auto = False`) that strictly selects only the safe columns or applies SQL-level masking. Grant the public/portal persona read access exclusively to the View via `ir.model.access.csv`, and execute the read natively without privilege escalation. Sensitive data must never enter the WSGI worker's memory during an unprivileged request.
 
@@ -46,7 +46,7 @@ The `# burn-ignore-sudo` directive is strictly confined to a single operation:
 
 **Audit Bypass Tags:**
 To silence false-positive architectural warnings, developers and AI agents may use specific `audit-ignore` tags, provided they have manually verified the underlying logic AND provided the mandatory test anchor:
-* ``: Allowed on `ir.cron` XML records ONLY if the test proves the Python method utilizes `_trigger()` loop batching.
+* `# audit-ignore-cron: Tested by [%ANCHOR: example_unique_name]`: Allowed on `ir.cron` XML records ONLY if the test proves the Python method utilizes `_trigger()` loop batching.
 * `# audit-ignore-mail: Tested by [%ANCHOR: example_unique_name]`: Allowed on `send_mail()` calls ONLY if the test proves the target template's `model_id` matches.
 * `# audit-ignore-search: Tested by [%ANCHOR: example_unique_name]`: Allowed on `.search()` calls ONLY if the test proves the search does not introduce an OOM vector or bypass a required uniqueness check.
 Inventing or using unauthorized bypass tags, or omitting the test anchor, constitutes a critical security violation.
