@@ -132,6 +132,11 @@ class RealTransactionCase(HttpCase):
             "res_company_users_rel",
             "res_users_log",
             "http_session",
+            "database_pg_setting",
+            "database_table_stat",
+            "database_query_stat",
+            "database_activity",
+            "database_index_stat",
         }
 
         for t in self._tables:
@@ -158,8 +163,6 @@ class RealTransactionCase(HttpCase):
         super().tearDown()
 
         if leaks:
-            leaks = [l for l in leaks if "database_activity" not in l]
-            if leaks:
-                raise AssertionError(
-                    f"Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: {', '.join(leaks)}"
-                )
+            raise AssertionError(
+                f"Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: {', '.join(leaks)}"
+            )

@@ -37,6 +37,7 @@ redis_client = None
 
 
 async def broadcast_to_redis(payload):
+    # [%ANCHOR: cache_manager_redis_publish]
     """
     Pushes the invalidation payload to the central Redis bus
     for all active Odoo WSGI workers to intercept.

@@ -13,6 +13,9 @@ The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) 
 * **Zero-Sudo RPC:** The daemon pushes incidents to Odoo using the `pager_service_internal` micro-account.
 * **Watchdog Threading:** The daemon wraps every check in an isolated thread. The main thread acts as a watchdog, forcibly terminating and restarting the daemon if a thread hangs beyond its timeout threshold.
 * **Airgapped SMTP & Webhooks:** If the Odoo XML-RPC interface crashes (500 Error / Connection Refused), the daemon catches the exception and connects directly to the external `SMTP_HOST` or posts to `PAGER_WEBHOOK_URL` to fire the alert.
+* **Airgapped Hardware & Synthetic Spooling:** Hardware telemetry (like SMART disk health) and complex script executions (Playwright, Sandboxed Bash, Executables) are executed via separate lightweight systemd timers that drop JSON files into `/var/log/`. The network-facing daemon reads these files, preserving strict systemd namespace sandboxing (`PrivateDevices=true`).
+* **Bubblewrap (bwrap) Sandboxing:** The `pager_synthetic_spooler.py` sidecar executes Bash and arbitrary binaries inside an isolated namespace. Using `--unshare-all` (or discrete unshare flags), it physically severs the script from the network and root filesystem, preventing Server-Side Request Forgery (SSRF) and lateral movement.
+* **Autodiscovery:** A `_run_autodiscovery` model method scans host resources to build the `pager_config.yaml` automatically.
 * **Self-Healing Dependencies:** The daemon gracefully verifies system dependencies (e.g., `docker`, `pg_dump`, `nginx`) via `shutil.which`. For Zero Trust edge integration, if the `cloudflared` binary is missing, it dynamically downloads and executes the static GitHub release without requiring administrative intervention.
 * **Stochastic Jitter:** Check loops offset their start times randomly to prevent resource "thundering herds".
 * **Intelligent Calendar Routing:** Natively extends Odoo's `calendar.event` model (`is_pager_duty=True`). When an incident fires, the ORM queries the calendar for the active shift and routes the internal message/email precisely to the user currently on call.
@@ -30,7 +33,7 @@ The daemon parses this YAML file on boot. The `ENV:` prefix securely dynamically
 checks:
   - name: "WSGI HTTP Ping"
     type: http
-    target: http://127.0.0.1:8069/api/v1/pager/ping
+    target: [http://127.0.0.1:8069/api/v1/pager/ping](http://127.0.0.1:8069/api/v1/pager/ping)
     expect: '{"status": "ok"}'
     interval: 60
     grace: 120  # Startup grace period suppression
@@ -43,7 +46,7 @@ checks:
     interval: 86400
   - name: "Odoo XML-RPC Handshake"
     type: xmlrpc
-    target: http://127.0.0.1:8069/xmlrpc/2/common
+    target: [http://127.0.0.1:8069/xmlrpc/2/common](http://127.0.0.1:8069/xmlrpc/2/common)
     rpc_method: version
     expect: "server_version"
     interval: 60
@@ -57,7 +60,7 @@ To extend the daemon with a new capability (e.g., a `docker` API health check), 
 1. **Database Schema (`pager_check.py`):**
    Add your new type to the `check_type` Selection field. Add any new specific parameter fields (e.g., `docker_container_name`).
 2. **Configuration Synchronization (`pager_check.py`):**
-Update `action_push_to_json()` to pull your new field from the DB and write it to the dict. Update `action_pull_from_json()` to parse the field back from the JSON dict into the DB model..
+   Update `action_push_to_json()` to pull your new field from the DB and write it to the dict. Update `action_pull_from_json()` to parse the field back from the JSON dict into the DB model.
 3. **User Interface (`pager_check_views.xml`):**
    Inject your new fields into the notebook pages, using `invisible="check_type != 'your_type'"`.
 4. **Daemon Execution (`generalized_monitor.py`):**
@@ -75,3 +78,14 @@ Update `action_push_to_json()` to pull your new field from the DB and write it t
 If you create a new plugin, you **MUST** update `daemons/pager_duty/test_generalized_monitor.py` with an isolated, aggressively mocked test verifying its successful parsing and failure states.
 
 ---
+
+## 6. Semantic Anchors
+* `[%ANCHOR: doc_inject_pager_duty]`: Injects module documentation.
+* `[%ANCHOR: test_pager_escalation]`: Tests automatic 15-minute escalation logic.
+* `[%ANCHOR: report_incident_rate_limit]`: Implements Redis TTL to prevent alert spam.
+* `[%ANCHOR: auto_resolve_incidents]`: Automatically resolves alerts when systems recover.
+* `[%ANCHOR: action_acknowledge_incident]`: Marks an incident as acknowledged and computes MTTA.
+* `[%ANCHOR: pager_board_data]`: Aggregates active and resolved incidents for the NOC dashboard.
+* `[%ANCHOR: generalized_pager_config]`: Exports Odoo DB checks to the `pager_config.json` daemon format.
+* `[%ANCHOR: synthetic_i18n]`: Ignored i18n translation for headless APIs.
+* `[%ANCHOR: test_pager_notification]` / `[%ANCHOR: test_pager_view]` / `[%ANCHOR: test_pager_board_url]`: Automated test verifications.

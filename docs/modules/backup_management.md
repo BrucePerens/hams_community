@@ -17,14 +17,13 @@ Implements the Best-in-Class Hybrid Architecture proposed for unified backup man
 ---
 
 ## Semantic Anchors
-* `[%ANCHOR: backup_restore_command]`
-* `[%ANCHOR: backup_trigger_execution]`
-* `[%ANCHOR: backup_apply_policies]`
-* `[%ANCHOR: backup_pager_synergy]`
-* `[%ANCHOR: backup_board_data]`
-* `[%ANCHOR: backup_sync_kopia]`
-* `[%ANCHOR: backup_sync_pgbackrest]`
-* `[%ANCHOR: cron_sync_all_backups]`
-* `[%ANCHOR: test_backup_cron]`
-* `[%ANCHOR: test_backup_view]`
-* `[%ANCHOR: test_backup_orchestration]`
+* `[%ANCHOR: doc_inject_backup]`: Documentation injection hook.
+* `[%ANCHOR: backup_restore_command]`: Computes the exact CLI restore command for the UI.
+* `[%ANCHOR: backup_trigger_execution]`: Manually triggers Kopia or pgBackRest via subprocess.
+* `[%ANCHOR: backup_apply_policies]`: Applies Kopia retention and exclude policies.
+* `[%ANCHOR: backup_pager_synergy]`: Triggers a Pager Duty incident on backup failure.
+* `[%ANCHOR: backup_board_data]`: Fetches state for the React/OWL dashboard.
+* `[%ANCHOR: backup_sync_kopia]`: Parses Kopia JSON snapshots.
+* `[%ANCHOR: backup_sync_pgbackrest]`: Parses pgBackRest JSON snapshots.
+* `[%ANCHOR: cron_sync_all_backups]`: Automated hourly sync of all configurations.
+* `[%ANCHOR: test_backup_cron]` / `[%ANCHOR: test_backup_view]` / `[%ANCHOR: test_backup_orchestration]`: Automated test verifications.

@@ -10,6 +10,7 @@ class TestDistributedCache(TransactionCase):
     @patch("odoo.addons.distributed_redis_cache.models.ir_http.redis")
     @patch("odoo.addons.base.models.ir_http.IrHttp._authenticate", return_value=True)
     def test_01_redis_cache_interceptor(self, mock_super_auth, mock_redis):
+        # Tests [%ANCHOR: redis_cache_interceptor]
         """
         BDD: Given a distributed environment utilizing Redis
         When a cache invalidation signal is detected on the pubsub bus
@@ -30,12 +31,17 @@ class TestDistributedCache(TransactionCase):
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
 
-        from odoo.addons.distributed_redis_cache.models.ir_http import _invalidation_queue, _listener_lock
+        from odoo.addons.distributed_redis_cache.models.ir_http import (
+            _invalidation_queue,
+            _listener_lock,
+        )
+
         with _listener_lock:
             _invalidation_queue.add("res.users")
 
         with patch(
-            "odoo.addons.distributed_redis_cache.models.ir_http.request", new_callable=MagicMock
+            "odoo.addons.distributed_redis_cache.models.ir_http.request",
+            new_callable=MagicMock,
         ) as mock_request, patch(
             "odoo.addons.distributed_redis_cache.models.ir_http.invalidate_model_cache"
         ) as mock_invalidate:
@@ -47,7 +53,10 @@ class TestDistributedCache(TransactionCase):
 
     @patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock())
     @patch("odoo.addons.distributed_redis_cache.models.ir_http.redis")
-    @patch("odoo.addons.distributed_redis_cache.models.ir_http.request", new_callable=MagicMock)
+    @patch(
+        "odoo.addons.distributed_redis_cache.models.ir_http.request",
+        new_callable=MagicMock,
+    )
     def test_02_redis_interceptor_fails_open(self, mock_request, mock_redis):
         """
         Verify that if the Redis connection dies during polling, the middleware
