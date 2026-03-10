@@ -23,12 +23,6 @@ try:
 except ImportError:
     psycopg2 = None
 
-try:
-    import yaml
-except ImportError:
-    print("[!] PyYAML required for generalized monitor.")
-    sys.exit(1)
-
 # Ensure the system path is updated after all standard imports but before
 # internal project imports, complying with Flake8 E402.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -1194,14 +1188,22 @@ def log_tail_thread(client, check):
 
 if __name__ == "__main__":
     client = get_odoo_client(logger)
-    config_path = os.path.join(os.path.dirname(__file__), "pager_config.yaml")
+    config_path = os.path.join(os.path.dirname(__file__), "pager_config.json")
 
     if not os.path.exists(config_path):
-        logger.critical(f"Configuration file not found at {config_path}. Halting.")
+        msg = f"Configuration file not found at {config_path}. Halting."
+        logger.critical(msg)
+        fallback_notify("Daemon Boot", msg, "critical")
         sys.exit(1)
 
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception as e:
+        msg = f"FATAL: Failed to parse {config_path} as valid JSON: {e}"
+        logger.critical(msg)
+        fallback_notify("Daemon Boot", msg, "critical")
+        sys.exit(1)
 
     checks = config.get("checks", [])
     logger.info(f"Loaded {len(checks)} checks from configuration.")

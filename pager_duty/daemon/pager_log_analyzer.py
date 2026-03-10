@@ -18,10 +18,9 @@ import concurrent.futures
 import ctypes
 
 try:
-    import yaml
     import redis
 except ImportError:
-    print("[!] PyYAML and Redis required.")
+    print("[!] Redis required.")
     sys.exit(1)
 
 logging.basicConfig(
@@ -30,13 +29,17 @@ logging.basicConfig(
 logger = logging.getLogger("pager_log_analyzer")
 
 # --- 1. Pre-Chroot Initialization ---
-config_path = os.path.join(os.path.dirname(__file__), "pager_config.yaml")
+config_path = os.path.join(os.path.dirname(__file__), "pager_config.json")
 if not os.path.exists(config_path):
-    logger.critical("pager_config.yaml not found.")
+    logger.critical("pager_config.json not found.")
     sys.exit(1)
 
-with open(config_path, "r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+try:
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+except Exception as e:
+    logger.critical(f"Failed to parse JSON config: {e}")
+    sys.exit(1)
 
 log_config = config.get("log_analyzer", {})
 target_files = log_config.get("files", [])

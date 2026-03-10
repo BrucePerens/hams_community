@@ -20,11 +20,12 @@ Maintaining architectural cohesion across a large platform relies on strict docu
 ### 3. Clear, Conversational Writing Style (0056)
 * "Oblique" AI tones, passive voice, and dense corporate jargon are strictly forbidden. All documentation MUST be written conversationally, directly, and plainly.
 
-### 4. Documentation Boundaries (0007)
-* `docs/runbooks/` holds strategic Standard Operating Procedures. It MUST NOT contain step-by-step CLI commands.
-* `deploy/` holds tactical deployment steps and CLI commands. Runbooks link here to prevent synchronization drift.
+### ### 4. Documentation Boundaries (0007)
+### * `docs/runbooks/` holds strategic Standard Operating Procedures. It MUST NOT contain step-by-step CLI commands.
+### * `deploy/` holds tactical deployment steps and CLI commands. Runbooks link here to prevent synchronization drift.
+### * **LLM Documentation & API Contracts:** Any technical documentation intended for LLMs (`LLM_DOCUMENTATION.md` or `docs/modules/`) MUST explicitly state the exact Python import paths for any shared classes or utilities to prevent AI agents from hallucinating filenames.
 
-### 5. Solo-Maintainer Automation & SRE (0043)
+### ### 5. Solo-Maintainer Automation & SRE (0043))
 * The platform MUST prioritize self-healing infrastructure (e.g., DNS CQRS loops), zero-touch CI/CD, and highly centralized unified moderation queues to radically compress administrative overhead.
 * **JIT Self-Healing Dependencies:** Daemons and modules MUST implement Just-In-Time (JIT) binary resolution. If an expected OS-level package (e.g., `kopia`, `cloudflared`, `etcd`) is missing, the Python code must dynamically download the static standalone executable from official GitHub releases, assign executable permissions, and continue operations without requiring manual human SSH intervention.
 * **Automated Disaster Recovery:** The system MUST execute automated Restore Drills to mathematically prove backup integrity rather than relying on assumed success.

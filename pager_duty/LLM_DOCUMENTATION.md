@@ -59,8 +59,8 @@ To extend the daemon with a new capability (e.g., a `docker` API health check), 
 
 1. **Database Schema (`pager_check.py`):**
    Add your new type to the `check_type` Selection field. Add any new specific parameter fields (e.g., `docker_container_name`).
-2. **Configuration Wizard (`pager_config_wizard.py`):**
-   Update `action_generate_yaml()` to pull your new field from the DB and write it to the dict. Update `action_save_to_file_and_db()` to parse the field back from the YAML dict into the DB model.
+2. **Configuration Synchronization (`pager_check.py`):**
+Update `action_push_to_json()` to pull your new field from the DB and write it to the dict. Update `action_pull_from_json()` to parse the field back from the JSON dict into the DB model..
 3. **User Interface (`pager_check_views.xml`):**
    Inject your new fields into the notebook pages, using `invisible="check_type != 'your_type'"`.
 4. **Daemon Execution (`generalized_monitor.py`):**

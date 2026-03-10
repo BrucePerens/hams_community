@@ -37,7 +37,9 @@ This directory contains the Architecture Decision Records (ADRs) that define the
   Bans the use of the `_()` translation wrapper around string literals in headless API JSON responses to prevent context crashes.
 * [ADR 0066: Secure Cached Resolver Pattern](0066_secure_cached_resolver_pattern.md)
 Requires high-frequency cached lookups to accept an `override_svc_uid` parameter to execute database queries safely under the caller's specific micro-service context.
-* [ADR 0070: OS-Level Daemon Restriction & Airgapped Hardware Spooling](0070_os_level_daemon_restriction.md)
-Mandates strict chrooted privilege de-escalation, systemd sandboxing for network daemons, and airgapped JSON spooling for hardware telemetry to prevent RCE escalation.
-* [ADR 0070: OS-Level Daemon Restriction & Airgapped Hardware Spooling](0070_os_level_daemon_restriction.md)
-Mandates strict chrooted privilege de-escalation, systemd sandboxing for network daemons, and airgapped JSON spooling for hardware telemetry to prevent RCE escalation.
+* [* [ADR 0070: OS-Level Daemon Restriction & Airgapped Hardware Spooling](0070_os_level_daemon_restriction.md)
+* [Mandates strict chrooted privilege de-escalation, systemd sandboxing for network daemons, and airgapped JSON spooling for hardware telemetry to prevent RCE escalation.
+* [* [ADR 0071: Asynchronous Bastion Pattern for External I/O](0071_asynchronous_bastion_pattern.md)
+* [Mandates that high-I/O daemons use transactional message queue dispatches with XML-RPC callbacks to prevent Odoo WSGI workers from hanging.
+* [* [ADR 0072: LLM Instruction & Prompt Engineering Standards](0072_llm_instruction_and_prompt_engineering.md)
+* [Codifies prompt engineering techniques (SYSTEM OVERRIDE, Positive Constraints, Recency Bias) to securely override the LLM's generic base instructions..

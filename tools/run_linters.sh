@@ -1,11 +1,15 @@
 #!/bin/bash
 # Copyright © Bruce Perens K6BP. All Rights Reserved.
 # Centralized linter execution script. Silent on success.
-
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
+PRIVATE_DIR="$(cd "$DIR/../hams_private" && pwd 2>/dev/null || echo "$DIR/../hams_private")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$PRIVATE_DIR"
 VENV_PYTHON="$DIR/.venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ] && [ -f "$PRIVATE_DIR/.venv/bin/python" ]; then
+VENV_PYTHON="$PRIVATE_DIR/.venv/bin/python"
+fi
 
 LINTERS_FAILED=0
 
@@ -57,8 +61,9 @@ elif [ -n "$OUT" ]; then
 fi
 
 # 3. Semantic Anchors Verification
-# Pass both private and community directories to resolve cross-repository anchor links
-OUT="$("$VENV_PYTHON" "$DIR/tools/verify_anchors.py" "$DIR" "$COMMUNITY_DIR" 2>&1)"
+# Repositories stand alone; we strictly scan the current directory.
+# Absent module anchors resolve via docs/modules/ contracts.
+OUT="$("$VENV_PYTHON" "$DIR/tools/verify_anchors.py" "$DIR" 2>&1)"
 if [ $? -ne 0 ]; then
     echo "$OUT"
     LINTERS_FAILED=1

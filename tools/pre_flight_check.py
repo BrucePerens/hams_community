@@ -12,8 +12,17 @@ import ast
 import argparse
 
 
+def is_reduced_workspace():
+    """
+    Detects if the script is running inside a temporary LLM Task Workspace
+    by checking for the absence of the .git repository folder.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(script_dir, ".."))
+    return not os.path.exists(os.path.join(root_dir, ".git"))
+
+
 def parse_manifest(manifest_path):
-    """Safely parse the Odoo manifest dictionary."""
     if not os.path.exists(manifest_path):
         print(f"❌ Error: Manifest file not found at '{manifest_path}'.")
         sys.exit(1)
@@ -21,7 +30,6 @@ def parse_manifest(manifest_path):
     try:
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest_content = f.read()
-            # ast.literal_eval safely evaluates Python dictionaries without executing arbitrary code
             return ast.literal_eval(manifest_content)
     except Exception as e:
         print(f"❌ Error parsing manifest at '{manifest_path}': {e}")
@@ -36,7 +44,7 @@ def main():
         "-m",
         "--module",
         required=True,
-        help="Path to the target module directory (e.g., ./user_websites)",
+        help="Path to the target module directory",
     )
     parser.add_argument(
         "--addons-path", required=True, help="Comma-separated list of addons paths"
@@ -47,11 +55,9 @@ def main():
     module_path = os.path.abspath(args.module)
     manifest_path = os.path.join(module_path, "__manifest__.py")
 
-    # 1. Parse the target module's manifest
     manifest = parse_manifest(manifest_path)
     dependencies = manifest.get("depends", [])
 
-    # Strict Tier Isolation (Topological Enforcement)
     tier_config_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tier_config.json"
     )
@@ -65,11 +71,11 @@ def main():
 
     def get_tier(mod_name):
         if not TIERS:
-            return 99  # Skip enforcement if no config exists
+            return 99
         for tier, mods in TIERS.items():
             if mod_name in mods:
                 return tier
-        return 99  # Unknown custom modules are placed at the top tier
+        return 99
 
     module_name = os.path.basename(module_path)
     module_tier = get_tier(module_name)
@@ -94,8 +100,8 @@ def main():
             sys.exit(1)
         sys.exit(0)
 
-    # 2. Parse Addons Paths
     addons_paths = [p.strip() for p in args.addons_path.split(",") if p.strip()]
+    reduced = is_reduced_workspace()
 
     missing_dependencies = []
     CORE_MODULES = {
@@ -113,7 +119,6 @@ def main():
         "auth_signup",
     }
 
-    # 3. Verify each dependency
     for dep in dependencies:
         if dep in CORE_MODULES:
             continue
@@ -129,17 +134,26 @@ def main():
         if not found:
             missing_dependencies.append(dep)
 
-    # 4. Report Results
     if missing_dependencies:
-        print(f"\n\u274c PRE-FLIGHT CHECK FAILED for '{os.path.basename(module_path)}'")
         missing_formatted = [f"`{dep}`" for dep in missing_dependencies]
         paths_formatted = [f"`{p}`" for p in addons_paths]
-        print(
-            "   The following dependencies are missing from the provided addons paths:\n   - "
-            + "\n   - ".join(missing_formatted)
-        )
-        print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
-        has_errors = True
+
+        if reduced:
+            print(
+                f"\n⚠️ PRE-FLIGHT CHECK WARNING for '{os.path.basename(module_path)}'"
+            )
+            print(
+                "   The following dependencies are missing, but ignored because this is a Reduced Task Workspace:\n   - "
+                + "\n   - ".join(missing_formatted)
+            )
+        else:
+            print(f"\n❌ PRE-FLIGHT CHECK FAILED for '{os.path.basename(module_path)}'")
+            print(
+                "   The following dependencies are missing from the provided addons paths:\n   - "
+                + "\n   - ".join(missing_formatted)
+            )
+            print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
+            has_errors = True
 
     if has_errors:
         sys.exit(1)

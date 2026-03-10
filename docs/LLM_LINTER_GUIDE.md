@@ -101,35 +101,34 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 | Audit Target | Bypass Tag | Required AST Assertion in Test |
 | :--- | :--- | :--- |
-| `ir.cron` XML | `<!-- audit-ignore-cron: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `_trigger()` to prove batching. |
+| `ir.cron` XML | `` | The test MUST execute `_trigger()` to prove batching. |
 | `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. **CRITICAL TRAP:** The integer `res_id` passed to `send_mail(res_id)` MUST match an existing record of the exact model defined in the template's `model_id`, otherwise Odoo's rendering mixin will crash with a `MissingError`. |
 | `.search()` | `# audit-ignore-search: Tested by [%ANCHOR: example_name]` | The test MUST pass `limit=` or utilize `patch.object(self.env.cr, 'execute')` to assert caching behavior. |
 | `@tools.ormcache` | N/A (Tested implicitly by logic) | To verify a cache hit, NEVER use `self.assertQueryCount(0)`. Odoo's background GC will cause false positives. You MUST use `with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:` and assert `self.assertNotIn("target_table", query)` in `mock_execute.call_args_list`. |
 | Boolean Checks | N/A (Flake8 E712) | NEVER use `== True` or `== False`. You MUST use `is True`, `is False`, or `if cond:`. |
-| `<xpath>` | `<!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. **Note:** `get_view()` only works on `ir.ui.view` records. For testing structural `<template>` records (QWeb), you MUST use `self.env.ref('...').with_context(lang=None)._get_combined_arch()`. |
+| `<xpath>` | `` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. **Note:** `get_view()` only works on `ir.ui.view` records. For testing structural `<template>` records (QWeb), you MUST use `self.env.ref('...').with_context(lang=None)._get_combined_arch()`. |
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
-| `ir.ui.view` | `<!-- audit-ignore-view: Tested by [%ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
+| `ir.ui.view` | `` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
 | I18N Strings | `# audit-ignore-i18n: Tested by [%ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
 | Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
-| Test Commit | `# burn-ignore-test-commit` | Exclusively for `RealTransactionCase` where real DB commits are required to test ORM caches. |
 
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines (like dictionaries, lists, or long method signatures) and detach your inline linter comments, causing the AST linter to fail. **Whenever you apply an `# audit-ignore-*` or `# burn-ignore` comment to a multi-line structure, you MUST append `  # fmt: skip` to the exact same line.** This mathematically locks the bypass tag to the correct AST node.
 2. **The Dual XML Anchor Placement:** To satisfy both the XML architecture linter (`check_burn_list.py`) and the bidirectional traceability linter (`verify_anchors.py`) simultaneously, you MUST use the following dual-comment structure:
-   * The traceability anchor `<!-- Verified by [%ANCHOR: test_name] -->` MUST be placed immediately **above** the `<record>` or `<template>` tag.
-   * The burn list bypass `<!-- audit-ignore-view: Tested by [%ANCHOR: test_name] -->` MUST be placed immediately **inside** the `<record>` or `<template>` tag (on the exact same line as the opening bracket).
+   * The traceability anchor `` MUST be placed immediately **above** the `<record>` or `<template>` tag.
+   * The burn list bypass `` MUST be placed immediately **inside** the `<record>` or `<template>` tag (on the exact same line as the opening bracket).
 
 ---
 
-## 7. ⚓ Semantic Anchors & UI Tour Mandate
+## ## 7. ⚓ Semantic Anchors & UI Tour Mandate
 
-The `verify_anchors.py` script enforces strict documentation traceability:
+## The `verify_anchors.py` script enforces strict documentation traceability:
 
-1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
-2. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document.
-3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: `<!-- Verified by [%ANCHOR: example_name] -->`.
+## 1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
+## 2. **Linter Bypass Strictness:** When adding an `audit-ignore-*` tag with a "Tested by" anchor (e.g., `# audit-ignore-i18n: Tested by [%ANCHOR: example_test_my_feature]`), simply placing `# Tests [%ANCHOR: example_test_my_feature]` in the test file is insufficient. The source code must define the base anchor (`# [%ANCHOR: example_my_feature]`), the bypass must reference the test (`Tested by [%ANCHOR: example_test_my_feature]`), and the test file must reference both the source (`# Tests [%ANCHOR: example_my_feature]`) and define its own anchor (`# [%ANCHOR: example_test_my_feature]`).
+## 3. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document..
+3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: ``.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
-5. **Example Anchors (Documentation):** Any anchor name starting with `example_` (e.g., `[%ANCHOR: example_my_feature]`) is automatically ignored by the CI/CD verification linters. You MUST use this prefix when providing anchor examples in markdown documentation to prevent false-positive missing anchor failures.
 
 ---
 
@@ -140,9 +139,9 @@ To protect the codebase from LLM-specific failure modes (like hallucination, laz
 **Meta-Tooling Exception:** Because the `parcel_extract.py` script powers these defenses, you MUST modify it exclusively using full-file `overwrite` operations. You are forbidden from using `search-and-replace` to patch `parcel_extract.py` to prevent self-referential AST corruption and indentation errors.
 
 * **Anti-Corruption Guard (Laziness Traps):** The extractor actively scans payloads for laziness placeholders. If it detects `# ... rest of`, `// Code unchanged`, or HTML comments containing existing code placeholders, it instantly aborts the file write to prevent deleting valid code.
-* **Semantic Token Matchers (Python, XML, Markdown):** The extraction engine uses semantic tokenization for `.py`, `.xml`, and `.md` files. For Python, it ignores non-semantic whitespace, comments, and quote types. For Markdown, it strips punctuation drift and normalizes list/header markers. For XML, it alphabetically sorts attributes and ignores tag whitespace spacing. This immunizes the patch against LLM formatting drift.
+* **Semantic Token Matchers (Python, XML, Markdown):** The extraction engine uses semantic tokenization for `.py`, `.xml`, and `.md` files. For Python, it ignores non-semantic whitespace and quote types (but matches comments to preserve anchors). For Markdown, it strips punctuation drift and normalizes list/header markers. For XML, it alphabetically sorts attributes and ignores tag whitespace spacing. This immunizes the patch against LLM formatting drift.
 * **The Convergence Principle:** Patched Python files are automatically routed through the `black` formatter before saving, ensuring subsequent reads match the LLM's canonical style expectations.
-* **Fuzzy & AST Fallbacks:** If token matching fails, the extractor falls back to stripping all whitespace. For Python, it also employs an Abstract Syntax Tree (AST) parser to identify and surgically replace target `FunctionDef` or `ClassDef` nodes by name.
+* *** **Fuzzy Line-Matching & AST Fallbacks:** If token matching fails, the extractor utilizes an Abstract Syntax Tree (AST) parser to surgically replace target `FunctionDef` or `ClassDef` nodes. If the provided snippet is a syntactically incomplete fragment (breaking the AST parser), it seamlessly degrades to a Fuzzy Line-Matching algorithm (`difflib.SequenceMatcher`). This line-by-line fallback absorbs LLM formatting drift and safely anchors to the exact prefix whitespace of the first matched line..
 * **Markdown Balance Checking:** For `.md` files, the extractor validates that all fenced and inline code blocks are perfectly balanced. Unclosed blocks will abort the write to prevent rendering corruption.
 * **Strict URL-Encoding Mandate for XML Comments:** Web UI Markdown renderers will silently delete HTML/XML comments before the extraction script ever sees them. To prevent this data loss, LLMs MUST use the `Encoding: url-encoded` header in their Parcel block and percent-encode the angle brackets for any comments.
 * **Automated Linting Hooks:** The extractor automatically pipes generated files through `flake8` (Python), `xml.etree` (XML), `json.load` (JSON), and the custom `check_burn_list.py` before committing the write, surfacing architectural failures immediately.

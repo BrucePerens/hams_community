@@ -8,6 +8,7 @@ import json
 import ast
 import tokenize
 import io
+import difflib
 
 
 def verify_python(filepath):
@@ -75,83 +76,78 @@ def run_burn_list_linter(filepath):
 
 def mask_markdown_and_check_balance(payload):
     """
-    Masks out content inside inline and fenced code blocks in Markdown.
-    Raises ValueError if blocks do not balance.
+    Accurate line-by-line parser to check Markdown code block balance.
+    Respects CommonMark rules for fenced blocks, inline spans, and backslash escapes.
     """
-    masked = []
-    i = 0
-    n = len(payload)
     in_fenced = False
-    fence_str = ""
+    fence_char = ""
+    fence_len = 0
+
     in_inline = False
-    inline_str = ""
+    inline_len = 0
 
-    while i < n:
+    lines = payload.split("\n")
+
+    for line in lines:
+        stripped = line.lstrip(" \t")
+
+        # 1. Handle Fenced Code Blocks (which ignore all internal markdown)
         if not in_fenced and not in_inline:
-            fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})", payload[i:])
-            if fence_match and (i == 0 or payload[i - 1] == "\n"):
-                in_fenced = True
-                fence_str = fence_match.group(2)
-                advance = len(fence_match.group(0))
-                masked.append(payload[i : i + advance])
-                i += advance
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                char = stripped[0]
+                count = 0
+                for c in stripped:
+                    if c == char:
+                        count += 1
+                    else:
+                        break
+                if count >= 3:
+                    in_fenced = True
+                    fence_char = char
+                    fence_len = count
+                    continue
+
+        if in_fenced:
+            if stripped.startswith(fence_char):
+                count = 0
+                for c in stripped:
+                    if c == fence_char:
+                        count += 1
+                    else:
+                        break
+                if count >= fence_len:
+                    in_fenced = False
+            continue
+
+        # 2. Handle Inline Code Spans (and escapes)
+        i = 0
+        n = len(line)
+        while i < n:
+            # Backslash escapes are valid outside inline blocks
+            if not in_inline and line[i] == "\\":
+                i += 2
                 continue
 
-            inline_match = re.match(r"^`+", payload[i:])
-            if inline_match:
-                in_inline = True
-                inline_str = inline_match.group(0)
-                advance = len(inline_match.group(0))
-                masked.append(payload[i : i + advance])
-                i += advance
-                continue
+            if line[i] == "`":
+                start_idx = i
+                while i < n and line[i] == "`":
+                    i += 1
+                count = i - start_idx
 
-            masked.append(payload[i])
-            i += 1
-
-        elif in_fenced:
-            fence_match = re.match(r"^( {0,3})(`{3,}|~{3,})[ \t]*(\n|$)", payload[i:])
-            if (
-                fence_match
-                and (i == 0 or payload[i - 1] == "\n")
-                and fence_match.group(2)[0] == fence_str[0]
-                and len(fence_match.group(2)) >= len(fence_str)
-            ):
-                in_fenced = False
-                advance = len(fence_match.group(0))
-                if payload[i : i + advance].endswith("\n"):
-                    advance -= 1
-                masked.append(payload[i : i + advance])
-                i += advance
-                continue
-
-            masked.append(" ")
-            i += 1
-
-        elif in_inline:
-            inline_match = re.match(r"^`+", payload[i:])
-            if inline_match:
-                if inline_match.group(0) == inline_str:
+                if not in_inline:
+                    in_inline = True
+                    inline_len = count
+                elif count == inline_len:
                     in_inline = False
-                    advance = len(inline_str)
-                    masked.append(payload[i : i + advance])
-                    i += advance
-                else:
-                    advance = len(inline_match.group(0))
-                    for _ in range(advance):
-                        masked.append(" ")
-                    i += advance
-                continue
-
-            masked.append(" ")
-            i += 1
+            else:
+                i += 1
 
     if in_fenced:
         raise ValueError("Markdown Error: Unclosed fenced code block.")
     if in_inline:
         raise ValueError("Markdown Error: Unclosed inline code snippet.")
 
-    return "".join(masked)
+    return payload
 
 
 def check_ai_foibles(payload, filepath=""):
@@ -167,7 +163,10 @@ def check_ai_foibles(payload, filepath=""):
 
     text_to_check = payload
     if filepath.endswith(".md"):
-        text_to_check = mask_markdown_and_check_balance(payload)
+        try:
+            mask_markdown_and_check_balance(payload)
+        except ValueError:
+            pass  # We pass it through here, but the verifier will warn the user
 
     foibles = [
         r"#" + r"\s*\.\.\.\s*rest of",
@@ -183,6 +182,14 @@ def check_ai_foibles(payload, filepath=""):
                 f"AI Laziness Foible: Found placeholder matching {f}. "
                 "Payload rejected to prevent file corruption."
             )
+
+    # UI Data Loss Guardrail: Detect stripped HTML comments leaving behind empty backticks
+    if filepath.endswith(".md") and re.search(r"(?<!`)``(?!`)", text_to_check):
+        raise ValueError(
+            "UI Data Loss Detected: Found empty inline code block (``). "
+            "The conversational UI likely stripped an HTML/XML comment before reaching the extractor. "
+            "You MUST use 'Encoding: url-encoded' and percent-encode the tags to bypass the UI."
+        )
 
     return payload
 
@@ -212,7 +219,7 @@ def validate_syntax_in_memory(filepath, content):
 def get_semantic_tokens(source_text):
     """
     Converts source code into a list of meaningful tokens, stripping
-    formatting, comments, and line breaks.
+    formatting and line breaks (but retaining comments for anchor accuracy).
     """
     lines = source_text.splitlines(keepends=True)
     line_offsets = [0]
@@ -225,7 +232,6 @@ def get_semantic_tokens(source_text):
     try:
         for tok in tokenize.tokenize(reader):
             if tok.type in (
-                tokenize.COMMENT,
                 tokenize.NL,
                 tokenize.NEWLINE,
                 tokenize.INDENT,
@@ -281,6 +287,54 @@ def process_indented_replacement(replace_text, indentation):
     return indented_replace
 
 
+def fuzzy_line_replace(original_text, search_text, replace_text):
+    """
+    Fallback algorithm that evaluates lines using difflib to absorb LLM
+    formatting drift or syntactically incomplete AST fragments.
+    """
+    orig_lines = original_text.split("\n")
+    search_lines = search_text.strip("\n").split("\n")
+
+    if not orig_lines or not search_lines:
+        return None
+
+    search_len = len(search_lines)
+    target_len = len(orig_lines)
+
+    if search_len == 0 or search_len > target_len:
+        return None
+
+    # Normalize search lines to ignore trailing whitespace drift
+    norm_search = [line_item.strip() for line_item in search_lines]
+
+    best_ratio = 0
+    best_idx = -1
+
+    # Sliding window comparison
+    for i in range(target_len - search_len + 1):
+        window = [line_item.strip() for line_item in orig_lines[i : i + search_len]]
+        ratio = difflib.SequenceMatcher(None, window, norm_search).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_idx = i
+
+    if best_ratio >= 0.85:  # High confidence threshold
+        first_line = orig_lines[best_idx]
+        indentation = first_line[: len(first_line) - len(first_line.lstrip(" \t"))]
+
+        indented_replace = process_indented_replacement(replace_text, indentation)
+
+        # Reconstruct the file with the replaced lines
+        new_lines = (
+            orig_lines[:best_idx]
+            + indented_replace.split("\n")
+            + orig_lines[best_idx + search_len :]
+        )
+        return "\n".join(new_lines)
+
+    return None
+
+
 def semantic_token_replace(original_text, search_text, replace_text):
     target_tokens = get_semantic_tokens(original_text)
     search_tokens = get_semantic_tokens(search_text)
@@ -318,30 +372,13 @@ def semantic_token_replace(original_text, search_text, replace_text):
 
 def get_markdown_tokens(text):
     tokens = []
-    strip_chars = "*_~`.!?,;:()[]{}\"'<>"
-    for match in re.finditer(r"\S+", text):
-        raw = match.group()
-        norm = raw.strip(strip_chars)
-
-        if not norm:
-            if set(raw).issubset({"*", "-", "+"}):
-                norm = "BULLET"
-            elif set(raw).issubset({"#"}):
-                norm = "HEADER"
-            elif set(raw).issubset({"`"}):
-                norm = "FENCE"
-            elif set(raw).issubset({"="}) or set(raw).issubset({"-"}):
-                norm = "HR"
-            else:
-                norm = raw
-        else:
-            if norm.startswith("#"):
-                norm = norm.lstrip("#")
-
+    # Aggressive Alphanumeric Normalization:
+    # Completely strips formatting symbols, punctuation, and bullets.
+    for match in re.finditer(r"[a-zA-Z0-9]+", text):
         tokens.append(
             {
-                "raw": raw,
-                "norm": norm.lower(),
+                "raw": match.group(),
+                "norm": match.group().lower(),
                 "start": match.start(),
                 "end": match.end(),
             }
@@ -380,6 +417,86 @@ def semantic_markdown_replace(original_text, search_text, replace_text):
             return (
                 original_text[:start_idx] + indented_replace + original_text[end_idx:]
             )
+
+    return None
+
+
+def boundary_markdown_replace(original_text, search_text, replace_text):
+    target_tokens = get_markdown_tokens(original_text)
+    search_tokens = get_markdown_tokens(search_text)
+
+    if not target_tokens or len(search_tokens) < 10:
+        return None
+
+    # Take first 5 and last 5 alphanumeric words
+    prefix = [t["norm"] for t in search_tokens[:5]]
+    suffix = [t["norm"] for t in search_tokens[-5:]]
+
+    target_words = [t["norm"] for t in target_tokens]
+
+    best_start_token_idx = -1
+    for i in range(len(target_words) - 4):
+        if target_words[i : i + 5] == prefix:
+            best_start_token_idx = i
+            break
+
+    if best_start_token_idx == -1:
+        return None
+
+    best_end_token_idx = -1
+    for i in range(best_start_token_idx, len(target_words) - 4):
+        if target_words[i : i + 5] == suffix:
+            best_end_token_idx = i + 4
+            break
+
+    if best_end_token_idx == -1:
+        return None
+
+    start_idx = target_tokens[best_start_token_idx]["start"]
+    end_idx = target_tokens[best_end_token_idx]["end"]
+
+    line_start = original_text.rfind("\n", 0, start_idx) + 1
+    indentation = original_text[line_start:start_idx]
+
+    indented_replace = process_indented_replacement(replace_text, indentation)
+    return original_text[:start_idx] + indented_replace + original_text[end_idx:]
+
+
+def fuzzy_markdown_replace(original_text, search_text, replace_text):
+    target_tokens = get_markdown_tokens(original_text)
+    search_tokens = get_markdown_tokens(search_text)
+
+    if not target_tokens or not search_tokens:
+        return None
+
+    search_len = len(search_tokens)
+    target_len = len(target_tokens)
+
+    if search_len == 0 or search_len > target_len:
+        return None
+
+    search_words = [t["norm"] for t in search_tokens]
+    target_words = [t["norm"] for t in target_tokens]
+
+    best_ratio = 0
+    best_idx = -1
+
+    for i in range(target_len - search_len + 1):
+        window = target_words[i : i + search_len]
+        ratio = difflib.SequenceMatcher(None, window, search_words).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_idx = i
+
+    if best_ratio > 0.90:  # 90% word similarity
+        start_idx = target_tokens[best_idx]["start"]
+        end_idx = target_tokens[best_idx + search_len - 1]["end"]
+
+        line_start = original_text.rfind("\n", 0, start_idx) + 1
+        indentation = original_text[line_start:start_idx]
+
+        indented_replace = process_indented_replacement(replace_text, indentation)
+        return original_text[:start_idx] + indented_replace + original_text[end_idx:]
 
     return None
 
@@ -741,6 +858,14 @@ def extract_parcel(raw_text):
                         warnings.append("[WARN] Extracted payload is empty.")
                     file_mutated = True
 
+                elif op == "append":
+                    if current_text and not current_text.endswith("\n"):
+                        current_text += "\n"
+                    current_text += payload
+                    if not payload.strip():
+                        warnings.append("[WARN] Extracted payload is empty.")
+                    file_mutated = True
+
                 elif op == "search-and-replace":
                     if not os.path.exists(filepath) and not file_mutated:
                         raise FileNotFoundError(
@@ -772,6 +897,10 @@ def extract_parcel(raw_text):
                                     current_text, search_text, replace_text
                                 )
                             if new_text is None:
+                                new_text = fuzzy_line_replace(
+                                    current_text, search_text, replace_text
+                                )
+                            if new_text is None:
                                 new_text = whitespace_agnostic_replace(
                                     current_text, search_text, replace_text
                                 )
@@ -779,6 +908,14 @@ def extract_parcel(raw_text):
                             new_text = semantic_markdown_replace(
                                 current_text, search_text, replace_text
                             )
+                            if new_text is None:
+                                new_text = boundary_markdown_replace(
+                                    current_text, search_text, replace_text
+                                )
+                            if new_text is None:
+                                new_text = fuzzy_markdown_replace(
+                                    current_text, search_text, replace_text
+                                )
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(
                                     current_text, search_text, replace_text
@@ -798,7 +935,7 @@ def extract_parcel(raw_text):
 
                         if new_text is None:
                             raise ValueError(
-                                "Semantic token, AST, and whitespace fallback failed for search block."
+                                "Semantic token, AST, fuzzy line, and whitespace fallback all failed for search block."
                             )
                         current_text = new_text
                     file_mutated = True
@@ -839,6 +976,14 @@ def extract_parcel(raw_text):
                     )
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
+
+                if filepath.endswith(".py"):
+                    try:
+                        subprocess.run(
+                            [sys.executable, "-m", "black", "-q", filepath], check=True
+                        )
+                    except Exception as e:
+                        warnings.append(f"[WARN] Black formatting failed: {e}")
 
             if mode_int is not None:
                 os.chmod(filepath, mode_int)

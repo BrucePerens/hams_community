@@ -161,8 +161,9 @@ class DebianDeployer:
             )
 
         pkgs = [
-            "postgresql",
+            "postgresql-16",
             "postgresql-client",
+            "postgresql-16-pgvector",
             "nginx",
             "redis-server",
             "rabbitmq-server",

@@ -41,9 +41,9 @@ To guarantee the stability and security of the platform without a massive QA dep
 * The corresponding `.js` Tour file MUST contain the anchor and MUST explicitly include `trigger:` selectors to prove DOM element validation.
 * In cases where a view is purely structural and tested via a Python `HttpCase` (e.g., `url_open` / `get_view`), the `audit-ignore-view` AST bypass may be used.
 
-### 8. Transaction Boundaries & Test Realism (0061)
-* The standard `TransactionCase` MUST be used for 95% of tests to maintain pipeline speed.
-* The `test_real_transaction.RealTransactionCase` facility MUST be utilized exclusively as a surgical tool for tests requiring physical database commits (e.g., Redis Pub/Sub, external daemons, MRO `One2many` cache anomalies). Its usage incurs a massive performance penalty due to physical disk I/O and leak-detection table scans.
+### ### 8. Transaction Boundaries & Test Realism (0061)
+### * **Anti-Mocking:** The `test_real_transaction.RealTransactionCase` facility MUST be used in favor of mocking to solve cross-thread or cross-transaction isolation issues (e.g., HTTP Controllers, Redis Pub/Sub, external daemons, MRO `One2many` cache anomalies).
+### * **Performance Threshold:** If a full test run of a repository isn't going to be an entire minute slower from the incorporation of `test_real_transaction`, its use is permitted in general..
 
 ### 9. Human Time vs. Machine Time
 * **Exhaustive Coverage Mandate:** Developers MUST write exhaustive standard tests for all CRUD operations, state transitions, and business logic. Machine time is cheap; human time spent manually diagnosing UI bugs is expensive. Offload all possible verification to the automated test suite.

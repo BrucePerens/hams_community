@@ -9,11 +9,6 @@ import urllib.request
 import tempfile
 import concurrent.futures
 
-try:
-    import yaml
-except ImportError:
-    sys.exit(1)
-
 SPOOL_FILE = "/var/log/pager_synthetic_spool.json"
 
 
@@ -205,12 +200,15 @@ def execute_check(check):
 
 
 def main():
-    config_path = os.path.join(os.path.dirname(__file__), "pager_config.yaml")
+    config_path = os.path.join(os.path.dirname(__file__), "pager_config.json")
     if not os.path.exists(config_path):
         sys.exit(1)
 
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception:
+        sys.exit(1)
 
     checks = [
         c

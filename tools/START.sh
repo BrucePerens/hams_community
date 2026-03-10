@@ -3,7 +3,8 @@
 # Resolve project root dynamically based on script location
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
+PRIVATE_DIR="$(cd "$DIR/../hams_private" && pwd 2>/dev/null || echo "$DIR/../hams_private")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$PRIVATE_DIR"
 
 # Allow passing a target module to test, with defaults.
 if [ -z "$1" ]; then
@@ -24,8 +25,13 @@ export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
 
 VENV_PYTHON="$DIR/.venv/bin/python"
 if [ ! -f "$VENV_PYTHON" ]; then
-    echo "[*] Common virtual environment not found. Building it now..."
-    bash "$DIR/tools/setup_venv.sh"
+# In a reduced workspace, fall back to the main repo's venv to avoid requirements.txt errors
+if [ -f "$PRIVATE_DIR/.venv/bin/python" ]; then
+VENV_PYTHON="$PRIVATE_DIR/.venv/bin/python"
+else
+echo "[*] Common virtual environment not found. Building it now..."
+bash "$DIR/tools/setup_venv.sh"
+fi
 fi
 
 bash "$DIR/tools/run_linters.sh" "$TARGET_MODULE"
@@ -40,7 +46,7 @@ dropdb --if-exists "$DB_NAME" || true
 LOG_FILE="/tmp/odoo_test_run_$$.log"
 # Install the modules and run tests in a single pass on the clean database
 /usr/bin/odoo \
---addons-path="$ADDONS_PATH" \
+  --addons-path="$ADDONS_PATH" \
   --dev=all -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   --test-enable \
@@ -50,13 +56,13 @@ LOG_FILE="/tmp/odoo_test_run_$$.log"
 ODOO_EXIT=${PIPESTATUS[0]}
 
 if grep -q " 0 failed, 0 error(s) of 0 tests" "$LOG_FILE"; then
-    echo -e "\n\ud83d\uded1 Halting: 0 tests were executed. This indicates a dependency loop or syntax error preventing the module from loading."
+    echo "\n\ud83d\uded1 Halting: 0 tests were executed. This indicates a dependency loop or syntax error preventing the module from loading."
     rm -f "$LOG_FILE"
     exit 1
 fi
 
 if grep -q "ERROR .* Some modules are not loaded" "$LOG_FILE"; then
-    echo -e "\n\ud83d\uded1 Halting: Modules failed to load (Dependency Loop detected)."
+    echo "\n\ud83d\uded1 Halting: Modules failed to load (Dependency Loop detected)."
     rm -f "$LOG_FILE"
     exit 1
 fi

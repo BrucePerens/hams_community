@@ -126,11 +126,6 @@ ERROR_RULES = [
         "CRITICAL DEPRECATION: survey.survey 'state' field was removed in Odoo 19. Use 'active' (Boolean).",
     ),
     (
-        r"test_.*\.py$",
-        re.compile(r"\b(?:self\.)?env\.cr\.(?:commit|rollback)\(\)"),
-        "TEST CURSOR CORRUPTION: Calling commit() or rollback() inside tests breaks the Odoo 19 test cursor.",
-    ),
-    (
         r"\.py$",
         re.compile(r"['\"]detailed_type['\"]\s*:"),
         "CRITICAL DEPRECATION: 'detailed_type' on product.template was reverted to 'type' in Odoo 19.",
@@ -161,6 +156,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.assignments = {}
             self.loop_depth = 0
             self.in_http_controller = False
+            self.in_real_transaction_case = False
             self.filename = filename
             self.lines = lines
             self._assignment_stack = set()
@@ -312,6 +308,17 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.generic_visit(node)
             if not is_chunking_loop:
                 self.loop_depth -= 1
+
+        def visit_ClassDef(self, node):
+            is_real_txn = any(
+                getattr(base, "id", "") == "RealTransactionCase"
+                or getattr(base, "attr", "") == "RealTransactionCase"
+                for base in node.bases
+            )
+            old_val = self.in_real_transaction_case
+            self.in_real_transaction_case = is_real_txn
+            self.generic_visit(node)
+            self.in_real_transaction_case = old_val
 
         def _check_test_empty(self, node):
             if self.filename.startswith("test_") and node.name.startswith("test_"):
@@ -771,6 +778,20 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 if isinstance(node.func, ast.Attribute)
                 else ""
             )
+
+            if attr in ("commit", "rollback") and self.filename.startswith("test_"):
+                val = getattr(node.func, "value", None)
+                if isinstance(val, ast.Attribute) and val.attr == "cr":
+                    if (
+                        getattr(val.value, "id", "") == "env"
+                        or getattr(val.value, "attr", "") == "env"
+                    ):
+                        if not self.in_real_transaction_case:
+                            self.add_error(
+                                node.lineno,
+                                "TEST CURSOR CORRUPTION: Calling commit() or rollback() inside tests breaks the test cursor. Use RealTransactionCase.",
+                            )
+
             if attr:
                 is_cr_execute = self._check_forbidden_attributes(node, attr)
 
@@ -1020,7 +1041,6 @@ def scan_file(filepath):
             allowed in line
             for allowed in [
                 "database.secret",
-                "burn-ignore-test-commit",
                 ".sudo().unlink()",
             ]
         ):

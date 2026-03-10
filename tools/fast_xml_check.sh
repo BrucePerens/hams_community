@@ -27,7 +27,7 @@ for MOD in "${MODULES[@]}"; do
         echo -e "\n[*] Checking XML views in: $MOD"
         # Run the update command, capture stderr, stop after init, no tests
         /usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -i "$MOD" -u "$MOD" --stop-after-init --log-level=error
-
+        
         if [ $? -ne 0 ]; then
             echo "❌ ERROR: XML compilation failed in $MOD!"
             FAILED_MODULES+=("$MOD")

@@ -28,10 +28,9 @@ This document defines the strict operational parameters for the Large Language M
 ### Automated Refactoring & The Substring Trap
 * **Word Boundaries Required:** If you write a Python or Bash script to perform repository-wide string replacements (e.g., updating a variable name or security group), you MUST NEVER use blunt string replacement. You MUST use regular expressions with word boundaries to prevent corrupting larger strings that contain the target as a substring.
 
-### The Exactness Guarantee (Patch Protocol)
-* **Absolute Completeness:** When executing full file overwrites, you MUST provide complete, unabridged file contents.
-* **Small File Exception:** If a file is small (under ~100 lines) or if the required search-and-replace block is comparable in size to the entire file, you MUST use the `overwrite` operation with the full file content to prevent extraction failures.
-* **Search and Replace:** For targeted modifications, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is.
+### ### The Exactness Guarantee (Patch Protocol)
+### * **Absolute Completeness:** For files under 500 lines, you MUST aggressively utilize the `overwrite` operation to bypass diffing friction. When executing full file overwrites, you MUST provide complete, unabridged file contents.
+### * **Search and Replace:** For targeted modifications in files exceeding 500 lines, you MUST utilize the search-and-replace feature. Your replace blocks MUST be syntactically whole and executable as-is..
 * **Meta-Tooling Exception:** When modifying `tools/parcel_extract.py`, you MUST use the `overwrite` operation to provide the complete, unabridged file content. You are forbidden from using `search-and-replace` on the extractor itself.
 * **The Black Formatter Trap:** When searching for Python code to replace, remember that the formatter actively collapses or expands lists, dictionaries, and decorators based on line length. If your search block spans multiple lines of formatted data, it may fail to match. When in doubt, target the method signature or use an overwrite operation.
 * **No Placeholders:** You MUST explicitly type every single character, variable, and line of the code you are modifying. Truncation placeholders are strictly forbidden and will trigger an Anti-Corruption Guard abort during extraction.
@@ -64,8 +63,9 @@ You MUST internally perform a strict compliance check before opening the final P
 
 ## 3. UNIVERSAL TECHNICAL STANDARDS
 
-### Python Code Quality, Black Formatter & Clean Code
-* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters.
+### ### Python Code Quality, Black Formatter & Clean Code
+### * **Ambiguous Variables (E741):** Never use `l`, `O`, or `I` as single-letter variables (especially in list/generator comprehensions). They trigger strict `flake8` E741 violations and will instantly fail the CI/CD pipeline. Use descriptive names like `line_item`, `chunk`, or `rec`.
+### * **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters..
 * **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line. You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This is critically important to prevent the Black formatter from wrapping long lines and detaching inline linter comments.
 * **Strict String Formatting (The 40-Character Rule):** To prevent line-length violations, strings longer than 40 characters MUST NOT be written inline as arguments. You MUST extract them into descriptive variables or module-level constants using multi-line blocks.
 * **Extract Complex Logic (Regex):** Complex, dense, or long regular expressions MUST NOT be written inline. They MUST be assigned to meaningfully named variables.
@@ -102,9 +102,10 @@ You MUST internally perform a strict compliance check before opening the final P
 
 To permanently prevent context loss and feature amnesia, the following Agile and DevSecOps artifacts MUST be maintained synchronously with all code generation:
 
-* **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
-* **Documentation Boundaries:** Ensure strict separation of concerns between tactical deploy steps and strategic runbooks.
-* **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality.
+* *** **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
+* *** **Documentation Boundaries:** Ensure strict separation of concerns between tactical deploy steps and strategic runbooks.
+* *** **Explicit API Import Paths:** Any technical documentation (`LLM_DOCUMENTATION.md` or `docs/modules/`) MUST explicitly provide the exact Python import path for any exposed classes or utilities to mathematically prevent LLMs from guessing internal module filenames.
+* *** **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality..
 * **Behavior-Driven Development (BDD):** User Stories MUST explicitly include Given/When/Then acceptance criteria.
 * **Fast-Fail Testing:** Test runners MUST front-load all static analysis and linters to instantly abort on errors.
 * **Threat Modeling (STRIDE):** Any new module introducing a security boundary MUST have a corresponding threat profile.
@@ -137,10 +138,11 @@ When generating or modifying code, you MUST output your response using the MIME-
 1. **THE WRAPPER (FOUR BACKTICKS - ABSOLUTELY CRITICAL):** The ENTIRE Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You **MUST** use AT LEAST FOUR BACKTICKS (````plaintext ... ````) for the starting and ending boundaries. If you use only three backticks, nested code blocks within the payload will prematurely terminate the markdown parser, completely corrupting the extraction process. This is a strict, non-negotiable failure condition.
 2. **The Boundary:** Generate a highly unique boundary string for the session. It must start with "@@BOUNDARY_" and end with "@@". This exact string acts as the separator between files within the single block.
 3. **The Header:** Every file must begin with the boundary string on its own line, followed immediately on the next line by "Path: destination_filepath".
-4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.
-5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
+4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, append, delete, remove, rename, chmod, copy.
+* *Note on Append:* Use `Operation: append` to safely add content to the end of a file (e.g., updating `docs/LLM_EXPERIENCE.md` with new lessons) without wasting your output token bandwidth on rewriting unmodified content.
+5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".>".
 6. **Mode (Optional):** To change or set file permissions (e.g., for bash scripts), include "Mode: 0755" in the headers.
-7. **Encoding:** If your payload (including `<<<< SEARCH` and `====` replace blocks) contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include Encoding: url-encoded in the header. This applies even if you are patching non-XML files, like Markdown docs containing HTML examples. To safely bypass the renderer, you must percent-encode angle brackets (< to %3C, > to %3E) and literal percent signs (% to %25). You MUST NOT URL-encode newlines or carriage returns (\n, \r); leave them as literal line breaks to prevent the payload from collapsing into a single line and triggering truncation limits.
+7. **Encoding:** If your payload contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include Encoding: url-encoded in the header. To safely bypass the renderer, you must percent-encode angle brackets (< to %3C, > to %3E) and literal percent signs (% to %25). You MUST NOT URL-encode newlines or carriage returns (\n, \r); leave them as literal line breaks to prevent the payload from collapsing into a single line and triggering truncation limits.
 8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.
 9. **The Content:** Output the file payload exactly as it should be written to disk.
 10. **The Terminator:** End the entire archive by appending "--" to your final boundary string.
@@ -155,9 +157,9 @@ When "Operation: search-and-replace" is used, the payload MUST consist of one or
 >>>> REPLACE
 ```
 
-* **Semantic Token Matcher (Python, XML, Markdown):** For Python files, the engine ignores non-semantic elements (whitespace, newlines, comments, quote styles). For Markdown files, it ignores line-wrapping, punctuation drift, and list-marker styles. For XML files, it ignores attribute ordering (alphabetically sorting them prior to match) and whitespace inside tags. This ensures patches succeed even if your formatting drifts from the original.
+* **Semantic Token Matcher (Python, XML, Markdown):** For Python files, the engine ignores non-semantic elements (whitespace, newlines, quote styles). For Markdown files, it ignores line-wrapping, punctuation drift, and list-marker styles. For XML files, it ignores attribute ordering (alphabetically sorting them prior to match) and whitespace inside tags. This ensures patches succeed even if your formatting drifts from the original.
 * **The Convergence Principle (Black Formatter):** Successfully patched Python files are immediately piped through the `black` formatter before being written to disk, ensuring the file continuously converges to your expected canonical style.
-* **Fuzzy & AST Fallbacks:** For other files, it strips whitespace for comparison. For Python, if token matching fails, it falls back to AST parsing to replace specific functions or classes by name.
+* *** **Fuzzy Line-Matching & AST Fallbacks:** For Python, if token matching fails, it falls back to AST parsing. If the snippet is syntactically incomplete, it degrades to a Fuzzy Line-Matching algorithm (`difflib.SequenceMatcher`) to absorb formatting drift and guarantee flawless relative indentation. For other files, it strips whitespace for comparison..
 
 ### Anti-Laziness Guardrails
 The extraction script will instantly ABORT the entire parcel if it detects laziness placeholders in your generated payload (e.g., comments implying code is unchanged or skipped). You MUST output the full replacement block or the unabridged file.

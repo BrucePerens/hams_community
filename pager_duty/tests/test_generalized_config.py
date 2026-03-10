@@ -9,43 +9,50 @@ class TestGeneralizedConfig(TransactionCase):
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")
-        self.yaml_payload = """
-checks:
-  - name: 'Test DNS Check'
-    type: dns
-    target: 'hams.com'
-    interval: 60
-    parent: 'Parent Check'
-    maint_start: '2026-03-01 00:00:00'
-    maint_end: '2026-03-02 00:00:00'
-  - name: 'Test Sandboxed Bash'
-    type: bash
-    code_payload: 'echo test'
-    sandbox_network_access: 'full'
-    sandbox_downloads: 'http://example.com/file | hash | file.bin'
-    comment: 'This is a test comment.'
-    ignored_services: 'ignored.service'
+        self.json_payload = """
+        {
+          "checks": [
+            {
+              "name": "Test DNS Check",
+              "type": "dns",
+              "target": "hams.com",
+              "interval": 60,
+              "parent": "Parent Check",
+              "maint_start": "2026-03-01 00:00:00",
+              "maint_end": "2026-03-02 00:00:00"
+            },
+            {
+              "name": "Test Sandboxed Bash",
+              "type": "bash",
+              "code_payload": "echo test",
+              "sandbox_network_access": "full",
+              "sandbox_downloads": "http://example.com/file | hash | file.bin",
+              "comment": "This is a test comment.",
+              "ignored_services": "ignored.service"
+            }
+          ]
+        }
         """
 
-    def test_01_bdd_yaml_parsing_and_db_sync(self):
+    def test_01_bdd_json_parsing_and_db_sync(self):
         """
         BDD: Given the Generalized Pager Config Wizard (ADR-0051)
-        When a valid YAML string is submitted via action_save_to_file_and_db
-        Then it MUST successfully parse the YAML and create the corresponding pager.check records.
+        When a valid JSON string is submitted via action_pull_from_json
+        Then it MUST successfully parse the JSON and create the corresponding pager.check records.
         """
         # Tests [%ANCHOR: generalized_pager_config]
         check_model = self.env["pager.check"].with_user(self.admin)
 
-        # Mock the file read to supply our YAML payload
-        m_open = mock_open(read_data=self.yaml_payload)
+        # Mock the file read to supply our JSON payload
+        m_open = mock_open(read_data=self.json_payload)
         with patch("builtins.open", m_open), patch("os.path.exists", return_value=True):
-            check_model.action_pull_from_yaml()
+            check_model.action_pull_from_json()
 
         m_open.assert_called_once()
 
         check = self.env["pager.check"].search([("name", "=", "Test DNS Check")])
         self.assertTrue(
-            check.exists(), "The YAML must be successfully parsed into DB records."
+            check.exists(), "The JSON must be successfully parsed into DB records."
         )
         self.assertEqual(check.check_type, "dns")
         self.assertEqual(check.target, "hams.com")
@@ -63,7 +70,7 @@ checks:
         self.assertEqual(bash_check.comment, "This is a test comment.")
         self.assertEqual(bash_check.ignored_services, "ignored.service")
 
-    @patch("odoo.addons.pager_duty.models.pager_check.PagerCheck.action_push_to_yaml")
+    @patch("odoo.addons.pager_duty.models.pager_check.PagerCheck.action_push_to_json")
     @patch("odoo.addons.pager_duty.models.pager_check.subprocess.run")
     def test_02_autodiscovery(self, mock_run, mock_push):
         """Verify the autodiscover action builds checks safely without crashing."""

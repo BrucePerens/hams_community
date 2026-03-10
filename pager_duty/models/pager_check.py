@@ -8,11 +8,6 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
     invalidate_model_cache,
 )
 
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
 
 class PagerCheck(models.Model):
     _name = "pager.check"
@@ -156,7 +151,7 @@ class PagerCheck(models.Model):
     )
     comment = fields.Text(
         string="Comments",
-        help="Multi-line comments for documentation. This will appear natively in the YAML configuration.",
+        help="Multi-line comments for documentation. This will appear natively in the JSON configuration.",
     )
 
     heartbeat_uuid = fields.Char(
@@ -220,19 +215,17 @@ class PagerCheck(models.Model):
         base_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "daemon")
         )
-        return os.path.join(base_dir, "pager_config.yaml")
+        return os.path.join(base_dir, "pager_config.json")
 
-    def action_pull_from_yaml(self):
-        if not yaml:
-            raise UserError(_("PyYAML is not installed."))
+    def action_pull_from_json(self):
         path = self._get_config_path()
         if not os.path.exists(path):
-            raise UserError(_("No YAML configuration found at %s") % path)
+            raise UserError(_("No JSON configuration found at %s") % path)
         try:
             with open(path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+                data = json.load(f)
         except Exception as e:
-            raise UserError(_("Invalid YAML Format: %s") % str(e))
+            raise UserError(_("Invalid JSON Format: %s") % str(e))
 
         self.env["pager.check"].search([], limit=1000).unlink()
 
@@ -311,16 +304,14 @@ class PagerCheck(models.Model):
             "tag": "display_notification",
             "params": {
                 "title": _("Import Successful"),
-                "message": _("Database checks updated from YAML file."),
+                "message": _("Database checks updated from JSON file."),
                 "type": "success",
                 "sticky": False,
             },
         }
 
-    def action_push_to_yaml(self):
+    def action_push_to_json(self):
         # [%ANCHOR: generalized_pager_config]
-        if not yaml:
-            raise UserError(_("PyYAML is not installed."))
         checks = self.env["pager.check"].search([("active", "=", True)], limit=1000)
         check_list = []
         for c in checks:
@@ -392,7 +383,7 @@ class PagerCheck(models.Model):
                 d["sandbox_network_access"] = c.sandbox_network_access
             check_list.append(d)
 
-        yaml_dict = {"checks": check_list}
+        json_dict = {"checks": check_list}
 
         log_files = (
             self.env["pager.log.file"]
@@ -403,7 +394,7 @@ class PagerCheck(models.Model):
             [("active", "=", True)], limit=1000
         )
 
-        yaml_dict["log_analyzer"] = {
+        json_dict["log_analyzer"] = {
             "files": log_files,
             "patterns": [
                 {"name": p.name, "regex": p.regex, "severity": p.severity}
@@ -411,18 +402,18 @@ class PagerCheck(models.Model):
             ],
         }
 
-        yaml_content = yaml.safe_dump(yaml_dict, sort_keys=False)
+        json_content = json.dumps(json_dict, indent=2)
         path = self._get_config_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
-            f.write(yaml_content)
+            f.write(json_content)
 
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
                 "title": _("Export Successful"),
-                "message": _("Checks exported to YAML daemon configuration."),
+                "message": _("Checks exported to JSON daemon configuration."),
                 "type": "success",
                 "sticky": False,
             },
@@ -600,7 +591,7 @@ class PagerCheck(models.Model):
 
         if new_checks:
             self.env["pager.check"].create(new_checks)
-            self.action_push_to_yaml()
+            self.action_push_to_json()
 
     def action_autodiscover(self):
         self._run_autodiscovery()
