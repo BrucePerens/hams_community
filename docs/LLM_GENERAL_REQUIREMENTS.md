@@ -105,7 +105,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 * *** **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
 * *** **Documentation Boundaries:** Ensure strict separation of concerns between tactical deploy steps and strategic runbooks.
 * *** **Explicit API Import Paths:** Any technical documentation (`LLM_DOCUMENTATION.md` or `docs/modules/`) MUST explicitly provide the exact Python import path for any exposed classes or utilities to mathematically prevent LLMs from guessing internal module filenames.
-* *** **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality..
+* *** *** **Semantic Anchors:** Code MUST be permanently mapped to module-specific documentation (e.g., `docs/modules/*.md` or `LLM_DOCUMENTATION.md`) using explicit anchors. Anchors MUST NOT be placed in Architecture Decision Records (ADRs). In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality...
 * **Behavior-Driven Development (BDD):** User Stories MUST explicitly include Given/When/Then acceptance criteria.
 * **Fast-Fail Testing:** Test runners MUST front-load all static analysis and linters to instantly abort on errors.
 * **Threat Modeling (STRIDE):** Any new module introducing a security boundary MUST have a corresponding threat profile.

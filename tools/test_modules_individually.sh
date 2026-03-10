@@ -2,9 +2,9 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ -f "$DIR/default_modules.txt" ]; then
-    IFS=',' read -r -a MODULES <<< "$(cat "$DIR/default_modules.txt)"
+IFS=',' read -r -a MODULES <<< "$(cat "$DIR/default_modules.txt")"
 else
-    MODULES=($(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}'))
+MODULES=($(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}'))
 fi
 
 echo "========================================================"

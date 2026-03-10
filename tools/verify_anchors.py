@@ -18,7 +18,10 @@ def find_anchors_in_docs(docs_dir, root_dir):
     contract_anchors = set()
     pattern = re.compile(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
 
-    for root, _, files in os.walk(docs_dir):
+    for root, dirs, files in os.walk(docs_dir):
+        # Exclude ADRs from anchor scanning per the new rule
+        dirs[:] = [d for d in dirs if d != "adrs"]
+
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
