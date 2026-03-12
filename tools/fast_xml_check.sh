@@ -13,7 +13,7 @@ if [ ! -f "$VENV_PYTHON" ]; then
     bash "$DIR/tools/setup_venv.sh"
 fi
 
-DB_NAME="${1:-hams_prod}"
+DB_NAME="${1:-hams_test}"
 
 if [ -f "$DIR/default_modules.txt" ]; then
     IFS=',' read -r -a MODULES <<< "$(cat "$DIR/default_modules.txt")"

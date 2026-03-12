@@ -116,6 +116,16 @@
       "sandbox_network_access": "loopback"
     },
     {
+      "name": "Systemd Failed Services Tracker",
+      "type": "systemd",
+      "target": "*",
+      "interval": 300,
+      "snmp_community": "public",
+      "ignored_services": "fwupd-refresh.service, NetworkManager-wait-online.service",
+      "comment": "Autodiscovered global systemd failure tracker",
+      "sandbox_network_access": "loopback"
+    },
+    {
       "name": "System Load",
       "type": "load",
       "target": false,
@@ -133,16 +143,6 @@
       "critical": 90,
       "snmp_community": "public",
       "comment": "Autodiscovered RAM monitor",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Systemd Failed Services Tracker",
-      "type": "systemd",
-      "target": "*",
-      "interval": 300,
-      "snmp_community": "public",
-      "ignored_services": "fwupd-refresh.service, NetworkManager-wait-online.service",
-      "comment": "Autodiscovered global systemd failure tracker",
       "sandbox_network_access": "loopback"
     },
     {
