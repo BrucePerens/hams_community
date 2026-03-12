@@ -9,7 +9,7 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT_DIR"
 
 echo "[*] Initializing root Python virtual environment at $ROOT_DIR/.venv..."
-python3 -m venv .venv
+python3 -m venv --system-site-packages .venv
 
 echo "[*] Upgrading pip..."
 .venv/bin/python -m pip install --upgrade pip

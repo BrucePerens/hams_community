@@ -27,9 +27,9 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 
 ---
 
-## ## 3. Output Format & Transport (CRITICAL)
+## 3. Output Format & Transport (CRITICAL)
 
-## When generating or modifying code, you **MUST** output your response using the **Parcel** schema..
+When generating or modifying code, you **MUST** output your response using the **Parcel** schema..
 
 ### Core Directives for Parcel Generation
 1. **THE WRAPPER (FOUR BACKTICKS - ABSOLUTELY CRITICAL):** The ENTIRE Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You **MUST** use AT LEAST FOUR BACKTICKS (````plaintext ... ````) for the starting and ending boundaries. If you use only three backticks, nested code blocks within the payload will prematurely terminate the markdown parser and completely corrupt the file extraction. This is a strict systemic failure condition.
@@ -38,7 +38,7 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.
 5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
 6. **Mode (Optional):** To change or set file permissions, include "Mode: 0755" in the headers.
-7. **Encoding:** If your payload contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include `Encoding: url-encoded` in the header. To safely bypass the renderer, you must percent-encode angle brackets (`<` to `%3C`, `>` to `%3E`) and literal percent signs (`%` to `%25`). You MUST NOT URL-encode newlines or carriage returns (`\n`, `\r`).
+7. **Encoding (THE UI CANVAS TRAP - CRITICAL):** The web UI's markdown renderer actively attacks and destroys HTML/XML comments (`<!-- ... -->`) and frequently breaks into "Canvas" mode, ruining extraction. If your payload modifies an `.xml` or `.html` file, or contains *any* HTML comments, you **ABSOLUTELY MUST** include `Encoding: url-encoded` in the header. You must percent-encode angle brackets (`<` to `%3C`, `>` to `%3E`) and percent signs (`%` to `%25`). Failure to do this will cause silent data loss and CI/CD pipeline failure. You MUST NOT URL-encode newlines or carriage returns (`\n`, `\r`).
 8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.
 9. **The Content:** Output the file payload exactly as it should be written to disk.
 10. **The Terminator:** End the entire archive by appending "--" to your final boundary string.

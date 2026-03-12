@@ -115,14 +115,16 @@ The AST parser physically reads your test files to verify the assertions exist.
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines and detach your inline linter comments, causing the AST linter to fail. **Whenever you apply an `# audit-ignore-*` or `# burn-ignore` comment to a multi-line structure, you MUST append `  # fmt: skip` to the exact same line.**
 2. **The Internal XML Child-Node Anchor Placement:** To satisfy both the XML architecture linter and the bidirectional traceability linter simultaneously without falling victim to line-wrapping fragility, you MUST place both the traceability anchor and the burn list bypass **INSIDE** the `<record>` or `<template>` tags as direct child nodes.
-* Do NOT place them above the tag or inline on the same line as the opening bracket. Auto-formatters and long attributes (like `model` or `inherit_id`) will wrap the line and break the AST parser's line-number correlation.
-* **Required Structure:**
-```xml
-<record id="my_view" model="ir.ui.view">
-<!-- [%ANCHOR: test_my_view] -->
-<!-- audit-ignore-view: Tested by [%ANCHOR: test_my_view] -->
-<field name="name">...</field>
-```).
+   * Do NOT place them above the tag or inline on the same line as the opening bracket. Auto-formatters and long attributes (like `model` or `inherit_id`) will wrap the line and break the AST parser's line-number correlation.
+   * **Required Structure:**
+     ```xml
+     <record id="my_view" model="ir.ui.view">
+         <!-- [%ANCHOR: example_source_anchor] (Only if a base anchor is needed) -->
+         <!-- audit-ignore-view: Tested by [%ANCHOR: test_my_view] -->
+         <field name="name">...</field>
+     </record>
+     ```
+3. **The Web UI Destruction Trap (XML URL-Encoding Mandate):** When writing the XML comments shown in Rule 2, the Web UI will silently intercept and delete them from your output before they are saved to disk. To survive the UI parser, any Parcel payload touching XML/HTML MUST use `Encoding: url-encoded` in the header and strictly percent-encode the payload (`<` to `%3C`, `>` to `%3E`, `%` to `%25`).
 
 ---
 

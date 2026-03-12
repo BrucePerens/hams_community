@@ -43,11 +43,13 @@ fi
 # Use --if-exists to prevent halting if the database was previously deleted manually
 dropdb --if-exists "$DB_NAME" || true
 
+export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
+
 LOG_FILE="/tmp/odoo_test_run_$$.log"
 # Install the modules and run tests in a single pass on the clean database
-/usr/bin/odoo \
-  --addons-path="$ADDONS_PATH" \
-  --dev=all -d "$DB_NAME" \
+"$VENV_PYTHON" /usr/bin/odoo \
+--addons-path="$ADDONS_PATH" \
+--dev=all -d "$DB_NAME" \
   -i "$TARGET_MODULE" \
   --test-enable \
   --test-tags "/${TARGET_MODULE//,/,/},-simulation" \

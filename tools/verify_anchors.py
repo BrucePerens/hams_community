@@ -16,7 +16,6 @@ def find_anchors_in_docs(docs_dir, root_dir):
                 full_path = os.path.join(root, file)
                 is_contract = False
 
-                # If this doc is an API contract, classify its anchors appropriately
                 if "modules" in root.split(os.sep) and (
                     file.endswith(".md") or file.endswith(".py")
                 ):
@@ -63,7 +62,7 @@ def _process_file_for_anchors(
                 if (
                     anchor in anchor_locations
                     and not anchor.startswith("example_")
-                    and anchor not in ("unique_name", "name")
+                    and anchor not in ("unique_name", "name", "feature_name")
                 ):
                     duplicates.append(
                         f"'{anchor}' in {full_path} and {anchor_locations[anchor]}"
@@ -88,8 +87,6 @@ def find_anchors_in_code(root_dir):
             if file == "LLM_LINTER_GUIDE.md":
                 continue
 
-            # Explicitly exempt user manuals from being classified as code.
-            # They are parsed separately for UX_ anchor verification.
             if file == "documentation.html":
                 continue
 
@@ -138,7 +135,11 @@ def _report_duplicates(duplicates):
 def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors):
     missing_cross_refs = set()
     for anchor in cross_references - code_anchors - contract_anchors:
-        if not anchor.startswith("example_") and anchor not in ("unique_name", "name"):
+        if not anchor.startswith("example_") and anchor not in (
+            "unique_name",
+            "name",
+            "feature_name",
+        ):
             missing_cross_refs.add(anchor)
 
     if missing_cross_refs:
@@ -159,7 +160,7 @@ def _report_missing_tests(tests_links, code_anchors, contract_anchors):
                 link not in code_anchors
                 and link not in contract_anchors
                 and not link.startswith("example_")
-                and link not in ("unique_name", "name")
+                and link not in ("unique_name", "name", "feature_name")
             ):
                 missing_tested.add(link)
 
@@ -183,7 +184,7 @@ def _report_bidirectional_orphans(
         if not a.startswith("test_")
         and not a.startswith("example_")
         and not a.startswith("UX_")
-        and a not in ("unique_name", "name")
+        and a not in ("unique_name", "name", "feature_name")
     }
 
     orphaned_source = source_anchors - tests_links_set - contract_anchors
@@ -214,7 +215,8 @@ def _report_documentation_gaps(
     missing_in_code = {
         a
         for a in (docs_anchors - code_anchors - contract_anchors)
-        if not a.startswith("example_") and a not in ("unique_name", "name")
+        if not a.startswith("example_")
+        and a not in ("unique_name", "name", "feature_name")
     }
 
     has_errors = False
@@ -297,7 +299,6 @@ def main():
         cross_references.update(c_refs)
         duplicates.extend(dups)
 
-        # Parse User Manuals (documentation.html) for data-trace UX_ anchors
         for root, dirs, files in os.walk(target_dir):
             if "documentation.html" in files:
                 try:

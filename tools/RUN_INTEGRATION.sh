@@ -40,15 +40,17 @@ echo "[*] Dropping and Rebuilding Database Schema ($DB_NAME)..."
 dropdb --if-exists "$DB_NAME" || true
 createdb "$DB_NAME"
 
+export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
+
 # 3. Initialize the DB so the daemons have tables to query and authenticate against
-/usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -i "$TARGET_MODULE" --stop-after-init > /dev/null 2>&1
+"$VENV_PYTHON" /usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -i "$TARGET_MODULE" --stop-after-init > /dev/null 2>&1
 
 echo "[*] Starting Background Daemons..."
 # (Background daemons would be started here if needed for integration)
 
 echo "[*] Executing Test Suite in Integration Mode..."
 # Run tests natively. The Python tests will see HAMS_INTEGRATION_MODE=1 and bypass MagicMocks.
-/usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -u "$TARGET_MODULE" --test-enable --stop-after-init
+"$VENV_PYTHON" /usr/bin/odoo --addons-path="$ADDONS_PATH" -d "$DB_NAME" -u "$TARGET_MODULE" --test-enable --stop-after-init
 TEST_EXIT=$?
 
 echo "[*] Tearing down Daemons..."

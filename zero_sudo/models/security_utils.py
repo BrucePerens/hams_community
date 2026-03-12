@@ -7,18 +7,6 @@ import sys
 from odoo import models, api, tools, _
 from odoo.exceptions import AccessError, UserError
 
-PARAM_WHITELIST = frozenset(
-    [
-        "web.base.url",
-        "cloudflare.last_static_mtime",
-        "user_websites.last_digest_key",
-        "user_websites.last_digest_id",
-        "user_websites.global_website_page_limit",
-        "user_websites.company_abuse_email",
-        "cloudflare.turnstile_secret",
-    ]
-)
-
 
 class ZeroSudoSecurityUtils(models.AbstractModel):
     _name = "zero_sudo.security.utils"
@@ -64,6 +52,25 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % xml_id
             )
 
+        # THE MECHANICAL GOD-MODE BLOCK: Ensure the service account does not possess global administrative privileges.
+        # This mathematically forces downstream modules to utilize the Micro-Service Account CSV pattern.
+        self.env.cr.execute(
+            """
+            SELECT 1 FROM res_groups_users_rel rel
+            JOIN ir_model_data imd ON imd.res_id = rel.gid AND imd.model = 'res.groups'
+            WHERE rel.uid = %s AND imd.module = 'base' AND imd.name IN ('group_system', 'group_erp_manager')
+        """,
+            (uid,),
+        )
+
+        if self.env.cr.fetchone():
+            raise AccessError(
+                _(
+                    "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
+                )
+                % xml_id
+            )
+
         return uid
 
     @api.model
@@ -85,9 +92,25 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _get_system_param(self, key, default=None):
-        if key not in PARAM_WHITELIST:
+        # THE MECHANICAL SECRET BLOCK
+        # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys
+        # without requiring a centralized whitelist.
+        banned_substrings = [
+            "secret",
+            "key",
+            "password",
+            "token",
+            "auth",
+            "crypt",
+            "cert",
+        ]
+        lower_key = key.lower()
+
+        if any(banned in lower_key for banned in banned_substrings):
             raise AccessError(
-                _("Security Alert: Parameter '%s' is not whitelisted for extraction.")
+                _(
+                    "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
+                )
                 % key
             )
         return self.env["ir.config_parameter"].sudo().get_param(key, default)

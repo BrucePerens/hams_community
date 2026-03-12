@@ -18,6 +18,8 @@ When elevated privileges are required, the system MUST NOT use `.sudo()`. Instea
 
 **The Framework ACL Tax (Micro-Service Caveat):** By deliberately removing the monolithic `base.group_user` from Service Accounts to secure them, you will expose hidden core framework dependencies. If your service account interacts with `res.users`, the ORM will silently attempt to cascade reads to underlying tables. You MUST explicitly grant your Service Account microscopic read/write ACLs in your `ir.model.access.csv` to prevent `AccessError` transaction crashes. For interactions requiring deep ERP facilities (like `mail.thread`), you must explicitly assume the special `odoo_facility_service_internal` account.
 
+**The Mechanical God-Mode Block:** To ensure downstream Open Source compatibility without relying on centralized whitelists, the `_get_service_uid` method mathematically bans any Service Account from possessing `base.group_system` or `base.group_erp_manager`. Any module across any repository layer can define a Service Account, but they are strictly forced to explicitly map their Micro-Privileges in their `ir.model.access.csv`, fulfilling the Zero-Sudo mandate transparently.
+
 ### 2. Service Account Web Isolation
 To prevent leaked daemon credentials from being used interactively:
 * All Service Accounts MUST be flagged with `is_service_account=True`.
@@ -26,7 +28,7 @@ To prevent leaked daemon credentials from being used interactively:
 ### 3. Centralized Security Utility
 All allowed privilege escalations (such as resolving XML IDs or fetching configuration parameters) MUST route through `zero_sudo.security.utils`:
 * `_get_service_uid(xml_id)`: Safely resolves Service Account IDs.
-* `_get_system_param(key)`: Fetches parameters against a strict `frozenset` whitelist. Cryptographic keys are explicitly excluded to prevent QWeb extraction (SSTI).
+* `_get_system_param(key)`: Fetches configuration parameters safely. Implements a **Mechanical Secret Block** that violently rejects any key containing restricted cryptographic substrings (`secret`, `key`, `password`, `token`, `auth`, `crypt`, `cert`) to mathematically prevent Server-Side Template Injection (SSTI) data exfiltration without impeding Open Source decentralization.
 
 ### 4. Persona Capability Limit & View Abstraction
 We do not increase privilege beyond the capability of the persona requesting the data, unless there is absolutely no other way. Views (`_auto = False`) must be used preferentially rather than increasing privilege, when a view will work.
