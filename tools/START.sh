@@ -2,8 +2,9 @@
 
 # Resolve project root dynamically based on script location
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
+COMMUNITY_DIR="$(cd "$DIR/../hams_community" 2>/dev/null && pwd || echo "$DIR/../hams_community")"
+MAIN_REPO_DIR="$(cd "$DIR/../hams_private_primary" 2>/dev/null && pwd || echo "$DIR/../hams_private_primary")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$MAIN_REPO_DIR"
 
 # Allow passing a target module to test, with defaults.
 if [ -z "$1" ]; then
@@ -24,8 +25,13 @@ export ODOO_SERVICE_PASSWORD=$(openssl rand -hex 24)
 
 VENV_PYTHON="$DIR/.venv/bin/python"
 if [ ! -f "$VENV_PYTHON" ]; then
+# In a reduced workspace, fall back to the main repo's venv to avoid requirements.txt errors
+if [ -f "$MAIN_REPO_DIR/.venv/bin/python" ]; then
+VENV_PYTHON="$MAIN_REPO_DIR/.venv/bin/python"
+else
 echo "[*] Common virtual environment not found. Building it now..."
 bash "$DIR/tools/setup_venv.sh"
+fi
 fi
 
 bash "$DIR/tools/run_linters.sh" "$TARGET_MODULE"

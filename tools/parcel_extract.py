@@ -858,14 +858,6 @@ def extract_parcel(raw_text):
                         warnings.append("[WARN] Extracted payload is empty.")
                     file_mutated = True
 
-                elif op == "append":
-                    if current_text and not current_text.endswith("\n"):
-                        current_text += "\n"
-                    current_text += payload
-                    if not payload.strip():
-                        warnings.append("[WARN] Extracted payload is empty.")
-                    file_mutated = True
-
                 elif op == "search-and-replace":
                     if not os.path.exists(filepath) and not file_mutated:
                         raise FileNotFoundError(

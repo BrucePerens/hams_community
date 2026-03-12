@@ -13,11 +13,11 @@ echo "=========================================================="
 export HAMS_INTEGRATION_MODE=1
 
 if [ -z "$1" ]; then
-if [ -f "$DIR/default_modules.txt" ]; then
-TARGET_MODULE=$(cat "$DIR/default_modules.txt")
-else
-TARGET_MODULE=$(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}' | paste -sd "," -)
-fi
+    if [ -f "$DIR/default_modules.txt" ]; then
+        TARGET_MODULE=$(cat "$DIR/default_modules.txt)
+    else
+        TARGET_MODULE=$(find "$DIR" -maxdepth 2 -name "__manifest__.py" -exec dirname {} \; | awk -F/ '{print $NF}' | paste -sd "," -)
+    fi
 else
     TARGET_MODULE="$1"
 fi

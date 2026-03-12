@@ -21,7 +21,7 @@ The AST linter recursively tracks assignments and function calls to block absolu
 * **Obfuscation is Caught:** The linter tracks `getattr(..., 'sudo')` and intermediate variable assignments (e.g., `AdminEnv = env.sudo()`). Do not attempt to evade the AST.
 * **Shell Injection:** `subprocess.run` MUST explicitly use `shell=False` and pass arguments as lists.
 * **Code Execution:** `eval()`, `exec()`, `pickle.loads/dumps`, and `yaml.load` are strictly banned. Use `ast.literal_eval()`, `odoo.tools.safe_eval()`, or `json`.
-* **Service Account Base Groups:** Internal Service Accounts (`is_service_account=True`) must explicitly be granted `base.group_user` in XML. Without it, they cannot access standard ERP features like `mail.thread` (chatter) or basic employee fields, leading to `AccessError` during proxy execution.
+* *** **Service Account Base Groups:** You MUST NOT grant `base.group_user` to domain-specific Service Accounts. This is a clear violation of the micro-service requirement. Only a *special* user (`odoo_facility_service_internal`) may possess `base.group_user`, and it MUST only be assumed via `with_user()` when strictly necessary to perform an operation on a native Odoo facility (like posting to `mail.thread`). For read-only data presentation, you MUST use a PostgreSQL View (`_auto = False`) rather than increasing privilege..
 * **Weak Cryptography:** `md5`, `sha1`, and the `random` module are banned for security tokens. Use `hashlib.sha256` and the `secrets` module.
 
 ---
@@ -120,13 +120,12 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 ---
 
-## ## 7. ⚓ Semantic Anchors & UI Tour Mandate
+## 7. ⚓ Semantic Anchors & UI Tour Mandate
 
-## The `verify_anchors.py` script enforces strict documentation traceability:
+The `verify_anchors.py` script enforces strict documentation traceability:
 
-## 1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
-## 2. **Linter Bypass Strictness:** When adding an `audit-ignore-*` tag with a "Tested by" anchor (e.g., `# audit-ignore-i18n: Tested by [%ANCHOR: example_test_my_feature]`), simply placing `# Tests [%ANCHOR: example_test_my_feature]` in the test file is insufficient. The source code must define the base anchor (`# [%ANCHOR: example_my_feature]`), the bypass must reference the test (`Tested by [%ANCHOR: example_test_my_feature]`), and the test file must reference both the source (`# Tests [%ANCHOR: example_my_feature]`) and define its own anchor (`# [%ANCHOR: example_test_my_feature]`).
-## 3. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document..
+1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`. (CRITICAL: The test file anchor MUST be prefixed exactly with `# Tests ` or the CI script will misinterpret it as a source anchor definition and fail).
+2. **Documentation Mandate:** Any anchor embedded in source code (excluding tests) MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text, rather than grouped in a standalone list at the end of the document.
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link: ``.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
 

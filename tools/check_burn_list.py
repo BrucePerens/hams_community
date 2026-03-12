@@ -661,11 +661,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 and node.args[0].value == "base.group_user"
             ):
                 if not (
-                    "mail_service" in self.filename or "user_manager" in self.filename
+                    "odoo_facility_service" in self.filename
                 ):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Use base.group_portal.",
+                        "[AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Only odoo_facility_service_internal may hold this.",
                     )
             elif (
                 attr in ("loads", "dumps")

@@ -1,9 +1,9 @@
 # MASTER 14: LLM Context & Cognitive Load Management
 
-## ## Status
-## Accepted (Consolidates ADR 0016, ADR 0072, Patch Protocol, API Contracts)
+## Status
+Accepted (Consolidates ADR 0016, Patch Protocol, API Contracts)
 
-## ## Context & Philosophy
+## Context & Philosophy
 The platform is governed by a massive edifice of operational rules, linters, and architectural constraints (Zero-Sudo, Burn List, Bounded Chunking). If an LLM is fed the entire repository alongside these meta-rules, its attention dilutes. This cognitive overload leads to instruction drift, hallucination, and security regressions. We must aggressively prune input and output context to preserve the LLM's reasoning capacity for complex execution logic.
 
 ## Decisions & Mandates
@@ -31,8 +31,7 @@ Context bundling tools (e.g., `tools/simple_create.py`) MUST NOT be run against 
 ### * For files exceeding 500 lines, the LLM MUST utilize targeted `search-and-replace` blocks via the MIME-like Parcel transport schema.
 ### * **Granular Patching (The 15-Line Rule):** `search` blocks MUST be microscopic (maximum of 10-15 lines per block). If changing distant areas of a file, generate multiple small `search-and-replace` blocks rather than one giant block..
 
-### ### 5. Prompt Engineering & System Overrides (0072)
-### To resolve probabilistic conflicts between the platform's rigid DevSecOps requirements and the generic base instructions of the underlying LLM environment:
-### * **SYSTEM OVERRIDE:** Any instruction contradicting the LLM's base nature MUST be prefixed with `SYSTEM OVERRIDE:`. This acts as a concentrated semantic signal to deprioritize base behaviors.
-### * **Positive Framing (Anti-Pink Elephant):** LLMs suffer from negative prompting. Instructing an LLM *not* to use a specific forbidden string highly activates those exact tokens. Prompts and guidelines MUST utilize Positive Framing, pairing restrictions with explicit deterministic paths (e.g., "Do NOT use Firebase. ALWAYS use PostgreSQL").
-### * **Recency Bias:** Output formatting protocols MUST be placed at the end of prompt structures to leverage the LLM's recency weightings.").
+### 5. Positive Prompt Framing (Anti-Pink Elephant)
+LLMs suffer from the "Pink Elephant Paradox" (negative prompting). Instructing an LLM *not* to use a specific forbidden string highly activates those exact tokens, increasing the probability it will hallucinate them when context constraints are tight.
+* Prompts, guidelines, and system instructions MUST utilize Positive Framing.
+* Describe the forbidden behavior conceptually (e.g., "comments implying code is omitted") or explicitly state what the LLM *must* do instead (e.g., "You MUST explicitly type every single character").

@@ -15,10 +15,12 @@ Provides an enterprise-grade Application Performance Monitoring (APM) and DBA su
 ---
 
 ## Semantic Anchors
-* `[%ANCHOR: vacuum_analyze]`: Subprocess execution of `vacuumdb` to clear dead tuples.
-* `[%ANCHOR: bloat_alert_synergy]`: Triggers Pager Duty incidents for high table bloat.
-* `[%ANCHOR: db_terminate_backend]`: Issues `pg_terminate_backend` to kill queries.
-* `[%ANCHOR: db_index_stats]`: Fetches index bloat and usage statistics.
-* `[%ANCHOR: pg_optimize_wizard]`: Calculates and applies dynamic `postgresql.auto.conf` settings.
-* `[%ANCHOR: pg_ha_wizard]`: Generates Patroni and PgBouncer configurations.
-* `[%ANCHOR: test_dba_cron]` / `[%ANCHOR: test_dba_view]` / `[%ANCHOR: test_pg_config_views]`: Automated test verifications.
+* `[%ANCHOR: vacuum_analyze]`
+* `[%ANCHOR: bloat_alert_synergy]`
+* `[%ANCHOR: db_terminate_backend]`
+* `[%ANCHOR: db_index_stats]`
+* `[%ANCHOR: test_dba_cron]`
+* `[%ANCHOR: test_dba_view]`
+* `[%ANCHOR: pg_optimize_wizard]`
+* `[%ANCHOR: pg_ha_wizard]`
+* `[%ANCHOR: test_pg_config_views]`

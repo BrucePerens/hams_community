@@ -2,14 +2,19 @@
 # Copyright © Bruce Perens K6BP. All Rights Reserved.
 # Centralized linter execution script. Silent on success.
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMUNITY_DIR="$(cd "$DIR/../hams_community" && pwd 2>/dev/null || echo "$DIR/../hams_community")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR"
+COMMUNITY_DIR="$(cd "$DIR/../hams_community" 2>/dev/null && pwd || echo "$DIR/../hams_community")"
+MAIN_REPO_DIR="$(cd "$DIR/../hams_private_primary" 2>/dev/null && pwd || echo "$DIR/../hams_private_primary")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$MAIN_REPO_DIR"
 VENV_PYTHON="$DIR/.venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ] && [ -f "$MAIN_REPO_DIR/.venv/bin/python" ]; then
+VENV_PYTHON="$MAIN_REPO_DIR/.venv/bin/python"
+fi
 
 LINTERS_FAILED=0
 
 if [ ! -f "$VENV_PYTHON" ]; then
-    bash "$DIR/tools/setup_venv.sh" > /dev/null 2>&1
+bash "$DIR/tools/setup_venv.sh" > /dev/null 2>&1
 fi
 
 # 0. Pre-Flight Dependency Checks

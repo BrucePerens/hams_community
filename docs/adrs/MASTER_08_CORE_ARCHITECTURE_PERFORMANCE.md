@@ -9,14 +9,14 @@ The platform handles massive real-time data ingestion, external polling, and Web
 ## Decisions & Mandates
 
 ### 1. Hybrid Monolith-Daemon Architecture (0001)
-* * High-CPU and high-I/O tasks MUST be offloaded to standalone Python daemons..
+* High-CPU, high-I/O, and concurrent WebSocket tasks MUST be offloaded to standalone Python daemons.
 * Odoo acts strictly as the database authority, ORM layer, and primary UI.
 
 ### 2. Scalability & Coherent Distributed Caching (0047, 0048)
 * The Odoo web tier MUST remain entirely stateless to allow horizontal scaling behind a load balancer. Session data must reside in Redis.
 * High-frequency lookups (like resolving slugs) MUST use `@tools.ormcache`.
 * **Secure Cached Resolver Pattern (0066):** All cached lookup methods MUST accept an `override_svc_uid=None` parameter so external caller modules can execute the underlying database cache-miss queries securely under their own Micro-Service Account context.
-* To keep distributed ORM caches in sync across multiple nodes, the ORM MUST emit a PostgreSQL `NOTIFY` upon data mutation. An external daemon listens to this and broadcasts a cache invalidation via Redis to all
+* To keep distributed ORM caches in sync across multiple nodes, the ORM MUST emit a PostgreSQL `NOTIFY` upon data mutation. An external daemon listens to this and broadcasts a cache invalidation via Redis to all 
 workers.
 
 ### 3. Asynchronous WSGI Offloading & Connection Pooling (0023, 0024)

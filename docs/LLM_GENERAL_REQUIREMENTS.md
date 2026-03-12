@@ -1,6 +1,6 @@
 # LLM OPERATIONAL MANDATES & DEVELOPMENT STANDARDS
 
-**Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*.*
+*Copyright © Bruce Perens K6BP. All Rights Reserved. This software is proprietary and confidential.*
 
 This document defines the strict operational parameters for the Large Language Model (LLM) and the universal development standards for **any software project** created in this environment.
 
@@ -63,9 +63,8 @@ You MUST internally perform a strict compliance check before opening the final P
 
 ## 3. UNIVERSAL TECHNICAL STANDARDS
 
-### ### Python Code Quality, Black Formatter & Clean Code
-### * **Ambiguous Variables (E741):** Never use `l`, `O`, or `I` as single-letter variables (especially in list/generator comprehensions). They trigger strict `flake8` E741 violations and will instantly fail the CI/CD pipeline. Use descriptive names like `line_item`, `chunk`, or `rec`.
-### * **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters..
+### Python Code Quality, Black Formatter & Clean Code
+* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Because LLMs generate text in tokens rather than characters, your internal generative target for maximum line length is 70 characters.
 * **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line. You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This is critically important to prevent the Black formatter from wrapping long lines and detaching inline linter comments.
 * **Strict String Formatting (The 40-Character Rule):** To prevent line-length violations, strings longer than 40 characters MUST NOT be written inline as arguments. You MUST extract them into descriptive variables or module-level constants using multi-line blocks.
 * **Extract Complex Logic (Regex):** Complex, dense, or long regular expressions MUST NOT be written inline. They MUST be assigned to meaningfully named variables.
@@ -105,7 +104,7 @@ To permanently prevent context loss and feature amnesia, the following Agile and
 * *** **Architecture Decision Records (ADRs):** Any new major structural or paradigm choice MUST be formally documented.
 * *** **Documentation Boundaries:** Ensure strict separation of concerns between tactical deploy steps and strategic runbooks.
 * *** **Explicit API Import Paths:** Any technical documentation (`LLM_DOCUMENTATION.md` or `docs/modules/`) MUST explicitly provide the exact Python import path for any exposed classes or utilities to mathematically prevent LLMs from guessing internal module filenames.
-* *** *** **Semantic Anchors:** Code MUST be permanently mapped to module-specific documentation (e.g., `docs/modules/*.md` or `LLM_DOCUMENTATION.md`) using explicit anchors. Anchors MUST NOT be placed in Architecture Decision Records (ADRs). In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality...
+* *** **Semantic Anchors:** Code MUST be permanently mapped to documentation using explicit anchors. In documentation files, anchors MUST be placed inline, immediately adjacent to the specific paragraph describing the functionality..
 * **Behavior-Driven Development (BDD):** User Stories MUST explicitly include Given/When/Then acceptance criteria.
 * **Fast-Fail Testing:** Test runners MUST front-load all static analysis and linters to instantly abort on errors.
 * **Threat Modeling (STRIDE):** Any new module introducing a security boundary MUST have a corresponding threat profile.
@@ -138,9 +137,8 @@ When generating or modifying code, you MUST output your response using the MIME-
 1. **THE WRAPPER (FOUR BACKTICKS - ABSOLUTELY CRITICAL):** The ENTIRE Parcel archive MUST be enclosed inside ONE SINGLE markdown code block of type "plaintext". You **MUST** use AT LEAST FOUR BACKTICKS (````plaintext ... ````) for the starting and ending boundaries. If you use only three backticks, nested code blocks within the payload will prematurely terminate the markdown parser, completely corrupting the extraction process. This is a strict, non-negotiable failure condition.
 2. **The Boundary:** Generate a highly unique boundary string for the session. It must start with "@@BOUNDARY_" and end with "@@". This exact string acts as the separator between files within the single block.
 3. **The Header:** Every file must begin with the boundary string on its own line, followed immediately on the next line by "Path: destination_filepath".
-4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, append, delete, remove, rename, chmod, copy.
-* *Note on Append:* Use `Operation: append` to safely add content to the end of a file (e.g., updating `docs/LLM_EXPERIENCE.md` with new lessons) without wasting your output token bandwidth on rewriting unmodified content.
-5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".>".
+4. **Operations (Optional):** Declare "Operation: <type>". Defaults to "overwrite". Supported types: overwrite, search-and-replace, delete, remove, rename, chmod, copy.
+5. **New-Path:** Required if using rename or copy. Specify using "New-Path: <filepath>".
 6. **Mode (Optional):** To change or set file permissions (e.g., for bash scripts), include "Mode: 0755" in the headers.
 7. **Encoding:** If your payload contains XML/HTML comments (which UI Markdown renderers silently strip), you MUST include Encoding: url-encoded in the header. To safely bypass the renderer, you must percent-encode angle brackets (< to %3C, > to %3E) and literal percent signs (% to %25). You MUST NOT URL-encode newlines or carriage returns (\n, \r); leave them as literal line breaks to prevent the payload from collapsing into a single line and triggering truncation limits.
 8. **The Separation:** You must leave exactly ONE blank line between the header declarations and the start of the file content.

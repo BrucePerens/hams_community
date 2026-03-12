@@ -58,27 +58,12 @@
 **The Trap:** The linter (`check_burn_list.py`) was structurally updated to natively allow `self.env.cr.commit()` and `self.env.cr.rollback()` exclusively within tests that inherit from `RealTransactionCase`. Because of this native AST awareness, the legacy `# burn-ignore-test-commit` bypass tag is now obsolete. If left in the code, the linter will strictly fail the build with an "UNAUTHORIZED BYPASS" error.
 **The Solution:** When porting or updating older repositories or tests that use `test_real_transaction`, you MUST remove any instances of `# burn-ignore-test-commit  # fmt: skip` attached to commits. Simply use `self.env.cr.commit()`.
 
-## ## 11. The E741 Ambiguous Variable Trap & Extractor Partial Updates
+## 11. The E741 Ambiguous Variable Trap & Extractor Partial Updates
 
-## **The Trap:** Using single-letter variables like `l`, `O`, or `I` (especially in list comprehensions) triggers a strict `flake8` E741 violation because they are visually indistinguishable from numbers or other letters in many fonts. This instantly fails the fast-fail CI/CD pipeline. Additionally, attempting to patch the `tools/parcel_extract.py` file with `search-and-replace` often leaves orphaned variables and broken logic due to the Meta-Tooling Exception.
-## **The Solution:** Never use `l`, `O`, or `I` as variables; always use descriptive names like `line_item`, `chunk`, or `rec`. Furthermore, always respect the Meta-Tooling Exception and use the `overwrite` operation when updating `parcel_extract.py` to prevent catastrophic script corruption.
+**The Trap:** Using single-letter variables like `l`, `O`, or `I` (especially in list comprehensions) triggers a strict `flake8` E741 violation because they are visually indistinguishable from numbers or other letters in many fonts. This instantly fails the fast-fail CI/CD pipeline. Additionally, attempting to patch the `tools/parcel_extract.py` file with `search-and-replace` often leaves orphaned variables and broken logic due to the Meta-Tooling Exception.
+**The Solution:** Never use `l`, `O`, or `I` as variables; always use descriptive names like `line_item`, `chunk`, or `rec`. Furthermore, always respect the Meta-Tooling Exception and use the `overwrite` operation when updating `parcel_extract.py` to prevent catastrophic script corruption.
 
-## ## 12. The Conversational Canvas Trigger (Nuanced Length Rules)
-
-## **The Trap:** The system instructions possess competing directives regarding response length. One explicitly mandates routing *anything* over 3 lines (especially analyses and explanations) into the Canvas/Document workflow. Conversely, another instruction expects standard conversational chat for Q&A, explanations, and clarifications. Sticking too rigidly to the "3-line rule" for conversational explanations forces the UI to parse plain text into a document with bizarre, auto-generated filenames, breaking the user experience.
-## **The Solution:** The LLM MUST balance the 3-line rule with contextual intent. For formal reports, code files, or structured documentation meant to be exported or edited, ALWAYS use the file generation workflow (Parcel). For interactive Q&A, clarifications, or confirming system rules with the developer, respond conversationally directly in the chat window, even if it slightly exceeds 3 lines, to prevent triggering an unwanted Canvas window.
-
-## ## 13. The Markdown Panel / Canvas Copy-Paste Trap
+## 13. The Markdown Panel / Canvas Copy-Paste Trap
 
 **The Trap:** System prompts might instruct the LLM to use UI panels, "Canvas", or standard markdown code blocks to generate `.md` files. However, the web UI's "copy contents" function for Markdown panels often fails to copy the raw, unformatted markdown correctly (stripping characters or improperly rendering them), breaking the `parcel_extract.py` workflow if the user attempts to copy it to their local machine.
 **The Solution:** The LLM MUST NEVER use standard UI panels or Canvas features to output Markdown files. All Markdown file modifications and generations MUST be delivered exclusively via the MIME-like Parcel transport schema (`@@BOUNDARY_...@@` inside a 4-backtick `plaintext` block), using the `Encoding: url-encoded` header if HTML/XML comments or problematic angle brackets are present.
-
-## 14. Markdown Search-and-Replace Fragility
-
-**The Trap:** When using `search-and-replace` to make extensive structural edits to Markdown files (such as removing multiple bullet points from a Changelog or ADR index), the semantic token matcher or regex fallbacks frequently fail. This results in extraction errors like "Malformed search-and-replace block" or "Markdown Error: Unclosed inline code snippet" because the extraction engine misinterprets LLM formatting drift, trailing whitespace, or backticks across large text spans.
-**The Solution:** When performing structural modifications or extensive deletions within heavily formatted Markdown files (like `CHANGELOG.md` or ADRs), strictly use the `overwrite` operation to completely replace the file. This entirely bypasses the brittle diffing and balance-checking constraints of the extraction engine and guarantees success.
-
-## 15. The Proprietary Data Leak Trap (Open-Source Porting)
-
-**The Trap:** When porting proprietary code to an open-source or community repository, relying solely on automated regex scripts (e.g., `port_to_community.py`) to rename namespaces is insufficient. Proprietary domain concepts, internal module names, and business logic frequently "leak" into Architecture Decision Records (ADRs), LLM API contracts (`LLM_DOCUMENTATION.md`), testing security files, and even the cleanup scripts themselves, exposing private intellectual property.
-**The Solution:** When executing a community port, you MUST perform a comprehensive global search across all file types (including `.md` documentation) for proprietary keywords. ADRs and LLM instructions must be manually reviewed and generalized to use domain-agnostic examples. Furthermore, ensure that any scripts used for the porting or cleanup process are explicitly deleted from the community repository prior to release.

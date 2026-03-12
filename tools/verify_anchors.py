@@ -6,11 +6,16 @@ import re
 def is_reduced_workspace():
     """
     Detects if the script is running inside a temporary LLM Task Workspace
-    by checking for the absence of the .git repository folder.
+    or a partial repository split by checking for the absence of the .git
+    repository folder or core modules.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.abspath(os.path.join(script_dir, ".."))
-    return not os.path.exists(os.path.join(root_dir, ".git"))
+    if not os.path.exists(os.path.join(root_dir, ".git")):
+        return True
+    if not os.path.exists(os.path.join(root_dir, "ham_logbook")):
+        return True
+    return False
 
 
 def find_anchors_in_docs(docs_dir, root_dir):
@@ -18,10 +23,7 @@ def find_anchors_in_docs(docs_dir, root_dir):
     contract_anchors = set()
     pattern = re.compile(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
 
-    for root, dirs, files in os.walk(docs_dir):
-        # Exclude ADRs from anchor scanning per the new rule
-        dirs[:] = [d for d in dirs if d != "adrs"]
-
+    for root, _, files in os.walk(docs_dir):
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
@@ -165,7 +167,10 @@ def _report_missing_cross_refs(
     return False
 
 
-def _report_missing_tests(tests_links, code_anchors, contract_anchors):
+def _report_missing_tests(tests_links, code_anchors, contract_anchors, reduced):
+    if reduced:
+        return False
+
     missing_tested = set()
     for links in tests_links.values():
         for link in links:
@@ -188,7 +193,7 @@ def _report_missing_tests(tests_links, code_anchors, contract_anchors):
 
 
 def _report_bidirectional_orphans(
-    code_anchors, tests_links_set, verified_by_links, contract_anchors
+    code_anchors, tests_links_set, verified_by_links, contract_anchors, reduced
 ):
     test_anchors = {a for a in code_anchors if a.startswith("test_")}
     source_anchors = {
@@ -198,6 +203,9 @@ def _report_bidirectional_orphans(
         and not a.startswith("example_")
         and a not in ("unique_name", "name")
     }
+
+    if reduced:
+        return False, source_anchors
 
     orphaned_source = source_anchors - tests_links_set - contract_anchors
     orphaned_tests = test_anchors - verified_by_links - contract_anchors
@@ -264,7 +272,7 @@ def main():
     reduced = is_reduced_workspace()
     if reduced:
         print(
-            "    [!] Reduced Workspace Detected (.git missing): Suppressing missing-codebase alerts for global documentation."
+            "    [!] Reduced Workspace Detected: Suppressing missing-codebase alerts for cross-module global dependencies."
         )
 
     docs_anchors = set()
@@ -311,11 +319,11 @@ def main():
         _report_missing_cross_refs(
             cross_references, code_anchors, contract_anchors, reduced
         ),
-        _report_missing_tests(tests_links, code_anchors, contract_anchors),
+        _report_missing_tests(tests_links, code_anchors, contract_anchors, reduced),
     ]
 
     bidi_err, source_anchors = _report_bidirectional_orphans(
-        code_anchors, tests_links_set, verified_by_links, contract_anchors
+        code_anchors, tests_links_set, verified_by_links, contract_anchors, reduced
     )
     errs.append(bidi_err)
     errs.append(
