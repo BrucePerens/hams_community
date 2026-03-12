@@ -35,7 +35,10 @@ class ContentViolationAppeal(models.Model):
         for appeal in self:
             appeal.state = "approved"
             appeal.user_id.action_pardon_user_websites()
-            appeal.message_post(
+            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.mail_service_internal"
+            )
+            appeal.with_user(mail_svc).message_post(
                 body=_(
                     "Appeal approved. You pardoned the user and lifted their suspension."
                 ),
@@ -46,7 +49,10 @@ class ContentViolationAppeal(models.Model):
         """Rejects the appeal."""
         for appeal in self:
             appeal.state = "rejected"
-            appeal.message_post(
+            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.mail_service_internal"
+            )
+            appeal.with_user(mail_svc).message_post(
                 body=_("Appeal rejected. The user remains suspended."),
                 subtype_xmlid="mail.mt_note",
             )

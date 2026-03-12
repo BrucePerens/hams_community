@@ -10,8 +10,12 @@ try:
     redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
     redis_port = int(os.getenv("REDIS_PORT", "6379"))
     redis_pool = redis.ConnectionPool(
-        host=redis_host, port=redis_port, db=0, decode_responses=True,
-        socket_timeout=1.0, socket_connect_timeout=1.0
+        host=redis_host,
+        port=redis_port,
+        db=0,
+        decode_responses=True,
+        socket_timeout=1.0,
+        socket_connect_timeout=1.0,
     )
 except ImportError:
     redis = None
@@ -91,7 +95,7 @@ class PagerIncident(models.Model):
         if not incidents:
             return
         mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "pager_duty.user_pager_service_internal"
+            "zero_sudo.mail_service_internal"
         )
         pager_admin_group = self.env.ref("pager_duty.group_pager_admin")
         partners = pager_admin_group.user_ids.mapped("partner_id")
@@ -137,9 +141,9 @@ class PagerIncident(models.Model):
         on_duty_user = self.env["calendar.event"].get_current_on_duty_admin()
         if on_duty_user:
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "pager_duty.user_pager_service_internal"
+                "zero_sudo.mail_service_internal"
             )
-            msg_body = _('New Incident Created')
+            msg_body = _("New Incident Created")
             partner_ids = [on_duty_user.partner_id.id]
             incident.with_user(mail_svc).message_post(body=msg_body, partner_ids=partner_ids)  # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
         return incident.id
@@ -160,9 +164,9 @@ class PagerIncident(models.Model):
         if open_incidents:
             open_incidents.write({"status": "resolved"})
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "pager_duty.user_pager_service_internal"
+                "zero_sudo.mail_service_internal"
             )
-            msg_body = _('Auto-resolved by NOC monitor recovery sequence.')
+            msg_body = _("Auto-resolved by NOC monitor recovery sequence.")
             for incident in open_incidents:
                 incident.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_pager_notification]  # fmt: skip
         return True

@@ -83,7 +83,8 @@ You MUST utilize one of the following native Odoo idioms:
   * **Mandate:**
       1. Create an isolated `res.groups` with no human members.
       2. Create a dedicated internal `res.users` (the Service Account) belonging *only* to that group.
-      3. **Separation of Privilege & Explicit Scoping:** Ensure the account is a *Micro-Service Account* dedicated to a single domain action. Service accounts must be explicitly granted the security groups of the external models they interact with, not just `base.group_user`. Do not bundle disparate permissions or fall back to `base.user_admin`.
+      3. **Separation of Privilege & Explicit Scoping:** Ensure the account is a *Micro-Service Account* dedicated to a single domain action. Service accounts must be explicitly granted the security groups of the external models they interact with, but only a special user may have base.group_user, which is necessary for
+changing Odoo facilities, and that may only be used momentarily via with_user(), and only for the privileged operation. Do not bundle disparate permissions or fall back to `base.user_admin`.
       4. Flag the user with `is_service_account="True"` in the XML to permanently block interactive web logins (See ADR-0005).
       5. Grant that specific group the exact ACLs and Record Rules required for the task.
       6. In the controller or method, fetch the Service Account's ID securely and execute the logic using `.with_user(svc_uid)`.

@@ -202,23 +202,34 @@ class BlogPost(models.Model):
             "user_websites.user_user_websites_service_account"
         )
 
-        last_processed_id = int(self.env["zero_sudo.security.utils"]._get_system_param(
-            "user_websites.last_digest_id", "0"
-        ) or "0")
+        last_processed_id = int(
+            self.env["zero_sudo.security.utils"]._get_system_param(
+                "user_websites.last_digest_id", "0"
+            )
+            or "0"
+        )
 
-        digests = self.env["user_websites.weekly.digest.view"].with_user(svc_uid).search(
-            [("id", ">", last_processed_id)], order="id asc", limit=50
+        digests = (
+            self.env["user_websites.weekly.digest.view"]
+            .with_user(svc_uid)
+            .search([("id", ">", last_processed_id)], order="id asc", limit=50)
         )
 
         if not digests:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", "0")
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
+                "user_websites.last_digest_id", "0"
+            )
             return
 
-        template = self.env.ref("user_websites.email_template_weekly_digest", raise_if_not_found=False)
+        template = self.env.ref(
+            "user_websites.email_template_weekly_digest", raise_if_not_found=False
+        )
         if not template:
             return
 
-        base_url = self.env["zero_sudo.security.utils"]._get_system_param("web.base.url")
+        base_url = self.env["zero_sudo.security.utils"]._get_system_param(
+            "web.base.url"
+        )
         db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]  # fmt: skip
 
         for digest in digests:
@@ -227,8 +238,12 @@ class BlogPost(models.Model):
                 continue
 
             timestamp = int(time.time())
-            message = f"{digest.owner_model}-{digest.owner_record_id}-{partner.id}-{timestamp}".encode("utf-8")
-            token = hmac.new(db_secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+            message = f"{digest.owner_model}-{digest.owner_record_id}-{partner.id}-{timestamp}".encode(
+                "utf-8"
+            )
+            token = hmac.new(
+                db_secret.encode("utf-8"), message, hashlib.sha256
+            ).hexdigest()
             unsub_url = f"{base_url}/website/unsubscribe/{digest.owner_model}/{digest.owner_record_id}/{partner.id}/{timestamp}/{token}"
 
             headers = {
@@ -236,9 +251,12 @@ class BlogPost(models.Model):
                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             }
 
-            post_ids = [int(pid) for pid in digest.post_ids_string.split(',') if pid]
-            posts = self.env['blog.post'].with_user(svc_uid).browse(post_ids)
-            post_links_html = "".join(f"<li><a href='{base_url}{p.website_url}'>{p.name}</a></li>" for p in posts)
+            post_ids = [int(pid) for pid in digest.post_ids_string.split(",") if pid]
+            posts = self.env["blog.post"].with_user(svc_uid).browse(post_ids)
+            post_links_html = "".join(
+                f"<li><a href='{base_url}{p.website_url}'>{p.name}</a></li>"
+                for p in posts
+            )
 
             ctx = {
                 "author_name": digest.author_name,
@@ -251,10 +269,17 @@ class BlogPost(models.Model):
                 "recipient_ids": [(4, partner.id)],
                 "email_to": partner.email,
             }
-            template.with_user(svc_uid).with_context(**ctx).send_mail(digest.first_post_id, force_send=False, email_values=email_vals) # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.mail_service_internal"
+            )
+            template.with_user(mail_svc).with_context(**ctx).send_mail(digest.first_post_id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
         if len(digests) == 50:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", str(digests[-1].id))
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
+                "user_websites.last_digest_id", str(digests[-1].id)
+            )
             self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
         else:
-            self.env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.last_digest_id", "0")
+            self.env["ir.config_parameter"].with_user(svc_uid).set_param(
+                "user_websites.last_digest_id", "0"
+            )

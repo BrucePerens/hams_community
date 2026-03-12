@@ -3,7 +3,10 @@ import odoo
 from odoo import models, fields, api, _
 from .res_users import _async_unpublish_content
 import json
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import (
+    distributed_cache,
+    invalidate_model_cache,
+)
 
 
 class ResUsersModeration(models.Model):
@@ -66,7 +69,10 @@ class ResUsersModeration(models.Model):
                 )
                 invalidate_model_cache(self.env, self._name)
                 payload = json.dumps({"model": self._name})
-                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+                self.env.cr.execute(
+                    "SELECT pg_notify(%s, %s)",
+                    ("distributed_cache_invalidation", payload),
+                )
 
         res = super(ResUsersModeration, self).write(vals)
 
@@ -77,7 +83,9 @@ class ResUsersModeration(models.Model):
             )
             invalidate_model_cache(self.env, self._name)
             payload = json.dumps({"model": self._name})
-            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+            self.env.cr.execute(
+                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+            )
 
         return res
 
@@ -91,7 +99,9 @@ class ResUsersModeration(models.Model):
             )
             invalidate_model_cache(self.env, self._name)
             payload = json.dumps({"model": self._name})
-            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+            self.env.cr.execute(
+                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+            )
 
         return super(ResUsersModeration, self).unlink()
 
@@ -148,7 +158,10 @@ class ResUsersModeration(models.Model):
             user.is_suspended_from_websites = True
 
             # Note: We use Odoo's mail.thread on the underlying partner to log the suspension
-            user.partner_id.message_post(
+            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.mail_service_internal"
+            )
+            user.partner_id.with_user(mail_svc).message_post(
                 body=_(
                     "🚨 **AUTOMATED ACTION:** The system suspended this user for accumulating 3 or more violation strikes and unpublished their personal content."
                 ),
@@ -160,7 +173,10 @@ class ResUsersModeration(models.Model):
         for user in self:
             user.violation_strike_count = 0
             user.is_suspended_from_websites = False
-            user.partner_id.message_post(
+            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.mail_service_internal"
+            )
+            user.partner_id.with_user(mail_svc).message_post(
                 body=_(
                     "✅ **MODERATION ACTION:** You pardoned this user. The system lifted their suspension and reset their strike count to 0. (Note: Previously unpublished content remains unpublished until manually restored)."
                 ),

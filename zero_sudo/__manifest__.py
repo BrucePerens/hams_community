@@ -5,8 +5,9 @@
     "category": "Security",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base", "web"],
+    "depends": ["base", "web", "mail"],
     "data": [
+        "data/security_data.xml",
         "security/ir.model.access.csv",
     ],
     "installable": True,

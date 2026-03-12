@@ -64,7 +64,10 @@ class ContentViolationReport(models.Model):
                     abuse_email = self.env.company.email or "admin@example.com"
 
                 email_vals = {"email_to": abuse_email}
-                template.with_user(svc_uid).with_context(pending_count=count).send_mail(self.env.company.id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip
+                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "zero_sudo.mail_service_internal"
+                )
+                template.with_user(mail_svc).with_context(pending_count=count).send_mail(self.env.company.id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip
 
     # --- Moderation Action Methods ---
     def action_mark_under_review(self):
@@ -107,7 +110,10 @@ class ContentViolationReport(models.Model):
                 ):
                     owner.action_suspend_user_websites()
 
-                report.message_post(
+                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "zero_sudo.mail_service_internal"
+                )
+                report.with_user(mail_svc).message_post(
                     body=_(
                         "You applied a strike to the owner. Current strike count: %s"
                     )
@@ -136,7 +142,10 @@ class ContentViolationReport(models.Model):
                             and not member.is_suspended_from_websites
                         ):
                             member.action_suspend_user_websites()
-                report.message_post(
+                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "zero_sudo.mail_service_internal"
+                )
+                report.with_user(mail_svc).message_post(
                     body=_("You applied a strike to all members of the group."),
                     subtype_xmlid="mail.mt_note",
                 )

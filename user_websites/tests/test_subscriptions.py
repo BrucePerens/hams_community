@@ -100,13 +100,13 @@ class TestSubscriptionsAndDigest(HttpCase):
         )
 
         # Assert Service Account Role Execution
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
+        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.mail_service_internal"
         )
         self.assertEqual(
             mail.create_uid.id,
-            svc_uid,
-            "Email generation MUST execute strictly under the User Websites Service Account.",
+            mail_svc,
+            "Email generation MUST execute strictly under the Mail Service Account.",
         )
 
         # Extract headers (FIXED: Replaced dangerous eval() with safe ast.literal_eval)

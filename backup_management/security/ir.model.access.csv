@@ -1,4 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_backup_config_mail_svc,backup.config mail svc,model_backup_config,zero_sudo.group_mail_service,1,1,0,0
 access_backup_config_admin,backup.config admin,model_backup_config,group_backup_admin,1,1,1,1
 access_backup_snapshot_admin,backup.snapshot admin,model_backup_snapshot,group_backup_admin,1,1,1,1
 access_backup_config_system,backup.config system,model_backup_config,base.group_system,1,1,1,1

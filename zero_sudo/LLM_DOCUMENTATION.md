@@ -39,6 +39,26 @@ If you need to fetch a configuration parameter securely:
 
 ---
 
-## 3. 🔗 Semantic Anchors
+## ---
+
+## ## 3. Centralized Shared Service Accounts (The ERP Bridge)
+
+## In accordance with ADR-0064 and the Micro-Privilege Mandate, domain-specific service accounts (like those in `pager_duty` or `backup_management`) MUST NOT be granted `base.group_user` (Internal User). Doing so exposes the entire ERP backend to external daemons.
+
+## When a daemon or unprivileged user strictly requires native ERP framework interactions that mandate `base.group_user`, they MUST temporarily drop their context and assume one of the two centralized proxy accounts provided by `zero_sudo`:
+
+## ### A. Central Mail Service Account
+## * **XML ID:** `zero_sudo.mail_service_internal`
+## * **Privileges:** Holds `base.group_user`. Granted explicit `1,1,1,0` ACLs to `mail.message`, `mail.mail`, `mail.followers`, `mail.template`, and `res.partner`.
+## * **Use Case:** You MUST use this account exclusively when your code needs to execute `message_post()`, `send_mail()`, or interact with the `mail.thread` chatter.
+
+## ### B. Odoo Facility Service Account
+## * **XML ID:** `zero_sudo.odoo_facility_service_internal`
+## * **Privileges:** Holds `base.group_user`.
+## * **Use Case:** You MUST use this account exclusively when an Odoo framework cascade deeply assumes internal user rights (e.g., complex ORM object creations that trigger deep backend evaluations) and the operation cannot be satisfied by the Mail Service Account or a local micro-service ACL.
+
+## ---
+
+## ## 4. 🔗 Semantic Anchors
 * `[%ANCHOR: get_service_uid]` / `[%ANCHOR: test_get_service_uid]`: Service account resolution and cache.
 * `[%ANCHOR: coherent_cache_signal]` / `[%ANCHOR: test_coherent_cache_signal]`: Global Postgres NOTIFY bus trigger.
