@@ -12,15 +12,16 @@
 **The Trap:** The project uses the Black code formatter. When returning dictionaries, lists, or multi-line structures in Python (like JSON-RPC responses), Black will reformat them across multiple lines. This detaches inline `# audit-ignore-*` or `# burn-ignore` comments from the specific AST node they were meant to protect, causing CI/CD pipeline failures.
 **The Solution:** Whenever applying a linter bypass comment to a multi-line Python structure, the LLM **MUST** append `  # fmt: skip` to the end of the comment (e.g., `return {"error": "..."}  # audit-ignore-i18n: Tested by [%ANCHOR: example_test_name]  # fmt: skip`).
 
-## 3. The Dual XML Anchor Strictness
+## 3. The XML Line-Wrapping AST Trap (Nested Anchors)
 
-**The Trap:** The platform utilizes two separate linters with conflicting structural requirements for XML records. `verify_anchors.py` requires traceability anchors to be easily found, while `check_burn_list.py` requires the bypass tag to be embedded directly within the node's AST.
-**The Solution:** XML records and templates require a specific dual-comment structure:
+**The Trap:** The platform utilizes two separate linters (`verify_anchors.py` and `check_burn_list.py`). Previously, instructions dictated placing the anchor above the tag and the bypass inline on the same line as `<record>`. However, long XML tags wrap frequently. If the comment sits outside the tag or gets bumped to a new line, the AST line-number tracking loses correlation and fails the CI/CD build.
+**The Solution:** You must **always nest both comments** directly inside the `<record>` or `<template>` tag as child nodes. Because the AST linter recursively walks the *entire bounds* of the node (from open to close), this mathematically guarantees detection regardless of formatting drift.
 
 ```xml
-<!-- Verified by [%ANCHOR: example_test_name] -->
-<record id="my_id" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: example_test_name] -->
-    ...
+<record id="my_id" model="ir.ui.view">
+    <!-- [%ANCHOR: example_test_name] -->
+    <!-- audit-ignore-view: Tested by [%ANCHOR: example_test_name] -->
+    <field name="name">...</field>
 </record>
 ```
 
@@ -63,7 +64,7 @@
 **The Trap:** Using single-letter variables like `l`, `O`, or `I` (especially in list comprehensions) triggers a strict `flake8` E741 violation because they are visually indistinguishable from numbers or other letters in many fonts. This instantly fails the fast-fail CI/CD pipeline. Additionally, attempting to patch the `tools/parcel_extract.py` file with `search-and-replace` often leaves orphaned variables and broken logic due to the Meta-Tooling Exception.
 **The Solution:** Never use `l`, `O`, or `I` as variables; always use descriptive names like `line_item`, `chunk`, or `rec`. Furthermore, always respect the Meta-Tooling Exception and use the `overwrite` operation when updating `parcel_extract.py` to prevent catastrophic script corruption.
 
-## 13. The Markdown Panel / Canvas Copy-Paste Trap
+## 12. The Markdown Panel / Canvas Copy-Paste Trap
 
 **The Trap:** System prompts might instruct the LLM to use UI panels, "Canvas", or standard markdown code blocks to generate `.md` files. However, the web UI's "copy contents" function for Markdown panels often fails to copy the raw, unformatted markdown correctly (stripping characters or improperly rendering them), breaking the `parcel_extract.py` workflow if the user attempts to copy it to their local machine.
 **The Solution:** The LLM MUST NEVER use standard UI panels or Canvas features to output Markdown files. All Markdown file modifications and generations MUST be delivered exclusively via the MIME-like Parcel transport schema (`@@BOUNDARY_...@@` inside a 4-backtick `plaintext` block), using the `Encoding: url-encoded` header if HTML/XML comments or problematic angle brackets are present.

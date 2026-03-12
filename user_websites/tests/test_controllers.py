@@ -47,7 +47,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         )
 
     def test_01_community_directory_rendering(self):
-        # Tests [%ANCHOR: controller_user_blog_index_seo_override]
+        # Tests [%ANCHOR: UX_COMMUNITY_DIRECTORY]
         """
         Ensure the /community route only lists users who have opted in.
         """
@@ -72,7 +72,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         self.assertEqual(response_blog.status_code, 404)
 
     def test_03_report_violation_maps_content_owner(self):
-        # Tests [%ANCHOR: controller_submit_violation_report]
+        # Tests [%ANCHOR: UX_REPORT_VIOLATION]
         """
         Ensure submitting a violation report correctly maps the content_owner_id
         if the URL matches a private page.

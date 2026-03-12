@@ -98,7 +98,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def community_directory(self, page=1, **kwargs):
-        # [%ANCHOR: controller_community_directory]
+        # [%ANCHOR: UX_COMMUNITY_DIRECTORY]
         # Verified by [%ANCHOR: test_tour_community_directory]
         domain = []
         step = 24
@@ -157,7 +157,7 @@ class UserWebsitesController(http.Controller):
     def submit_violation_report(
         self, url="", description="", email="", website_honeypot="", **kwargs
     ):
-        # [%ANCHOR: controller_submit_violation_report]
+        # [%ANCHOR: UX_REPORT_VIOLATION]
         # Verified by [%ANCHOR: test_tour_violation_report]
         url = url.strip()[:2000]
         description = description.strip()[:5000]
@@ -386,7 +386,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def create_site(self, website_slug, **kwargs):
-        # [%ANCHOR: controller_create_site]
+        # [%ANCHOR: UX_CREATE_SITE]
         # Verified by [%ANCHOR: test_tour_create_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
@@ -641,7 +641,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def create_blog_post(self, website_slug, **kwargs):
-        # [%ANCHOR: controller_create_blog_post]
+        # [%ANCHOR: UX_CREATE_BLOG_POST]
         # Verified by [%ANCHOR: test_tour_create_blog]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
@@ -767,7 +767,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def submit_appeal(self, reason="", **kwargs):
-        # [%ANCHOR: controller_submit_appeal]
+        # [%ANCHOR: UX_SUBMIT_APPEAL]
         # Verified by [%ANCHOR: test_tour_moderation_appeal]
         reason = reason.strip()[:5000]
         user = request.env.user
@@ -800,7 +800,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def subscribe_to_site(self, website_slug, **kwargs):
-        # [%ANCHOR: controller_subscribe_to_site]
+        # [%ANCHOR: UX_SUBSCRIBE]
         # Verified by [%ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
@@ -916,7 +916,7 @@ class UserWebsitesController(http.Controller):
 
     @http.route(["/my/privacy/export"], type="http", auth="user", website=True)
     def export_user_data(self, **kwargs):
-        # [%ANCHOR: controller_export_user_data]
+        # [%ANCHOR: UX_GDPR_EXPORT]
         # Verified by [%ANCHOR: test_tour_gdpr_privacy]
         """
         Compiles user generated content into a machine-readable JSON format for data portability.
@@ -969,7 +969,7 @@ class UserWebsitesController(http.Controller):
         website=True,
     )
     def delete_user_content(self, **kwargs):
-        # [%ANCHOR: controller_delete_user_content]
+        # [%ANCHOR: UX_GDPR_ERASURE]
         # Verified by [%ANCHOR: test_tour_gdpr_privacy]
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
         user_id = request.env.user.id

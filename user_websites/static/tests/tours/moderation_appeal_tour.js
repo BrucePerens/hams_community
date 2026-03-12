@@ -2,7 +2,7 @@
 import { registry } from "@web/core/registry";
 
 // [%ANCHOR: test_tour_moderation_appeal]
-// Tests [%ANCHOR: controller_submit_appeal]
+// Tests [%ANCHOR: UX_SUBMIT_APPEAL]
 registry.category("web_tour.tours").add("moderation_appeal_tour", {
     test: true,
     url: "/my/home",

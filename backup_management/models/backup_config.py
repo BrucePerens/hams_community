@@ -143,10 +143,10 @@ class BackupConfig(models.Model):
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.mail_service_internal"
             )
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_kopia_auto_download]  # fmt: skip
             bin_path = self.env["binary.manifest"].ensure_executable("kopia")
             msg_body = _("Kopia successfully installed to %s") % bin_path
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_kopia_auto_download]  # fmt: skip
             return bin_path
 
         raise UserError(_("Unknown engine: %s") % engine)
@@ -243,7 +243,7 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering Kopia: {e}")
@@ -264,7 +264,7 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering pgBackRest: {e}")
@@ -303,7 +303,7 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_orchestration]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_apply_policies]  # fmt: skip
         except Exception as e:
             self._report_backup_failure(f"Error applying Kopia policy: {e}")
 

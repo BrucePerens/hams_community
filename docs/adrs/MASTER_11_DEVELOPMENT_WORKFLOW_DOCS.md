@@ -25,11 +25,12 @@ Maintaining architectural cohesion across a large platform relies on strict docu
 ### * `deploy/` holds tactical deployment steps and CLI commands. Runbooks link here to prevent synchronization drift.
 ### * **LLM Documentation & API Contracts:** Any technical documentation intended for LLMs (`LLM_DOCUMENTATION.md` or `docs/modules/`) MUST explicitly state the exact Python import paths for any shared classes or utilities to prevent AI agents from hallucinating filenames.
 
-### ### 5. Solo-Maintainer Automation & SRE (0043))
-* The platform MUST prioritize self-healing infrastructure (e.g., DNS CQRS loops), zero-touch CI/CD, and highly centralized unified moderation queues to radically compress administrative overhead.
-* **JIT Self-Healing Dependencies:** Daemons and modules MUST implement Just-In-Time (JIT) binary resolution. If an expected OS-level package (e.g., `kopia`, `cloudflared`, `etcd`) is missing, the Python code must dynamically download the static standalone executable from official GitHub releases, assign executable permissions, and continue operations without requiring manual human SSH intervention.
-* **Automated Disaster Recovery:** The system MUST execute automated Restore Drills to mathematically prove backup integrity rather than relying on assumed success.
-* **Auto-Remediation:** SRE monitors MUST support executing local shell scripts to automatically remediate known infrastructure failures (e.g., restarting Docker or rebooting the host via OS-level file flags).
+### ### ### 5. Solo-Maintainer Automation & SRE (0043, 0073)
+### ### * The platform MUST prioritize self-healing infrastructure (e.g., DNS CQRS loops), zero-touch CI/CD, and highly centralized unified moderation queues to radically compress administrative overhead.
+### ### * **Fail-Fast Dependency Resolution (0073):** All external Python libraries (e.g., `pika`, `redis`) MUST be declared in the `external_dependencies` dictionary of a module's `__manifest__.py`. This forces Odoo to instantly halt at startup if the environment is broken, preventing unpredictable runtime `ImportError` crashes.
+### ### * **JIT Self-Healing Dependencies:** Daemons and modules MUST implement Just-In-Time (JIT) binary resolution. If an expected OS-level package (e.g., `kopia`, `cloudflared`, `etcd`) is missing, the Python code must dynamically download the static standalone executable from official GitHub releases, assign executable permissions, and continue operations without requiring manual human SSH intervention.
+### ### * **Automated Disaster Recovery:** The system MUST execute automated Restore Drills to mathematically prove backup integrity rather than relying on assumed success.
+### ### * **Auto-Remediation:** SRE monitors MUST support executing local shell scripts to automatically remediate known infrastructure failures (e.g., restarting Docker or rebooting the host via OS-level file flags).).
 
 ### 6. No Cybercrud Policy (Log Hygiene)
 * Repetitive, non-actionable warnings (like missing soft-dependencies or unreachable cache servers during every web request) create "cybercrud" that buries actual critical system issues.

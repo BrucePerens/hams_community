@@ -3,21 +3,6 @@ import os
 import re
 
 
-def is_reduced_workspace():
-    """
-    Detects if the script is running inside a temporary LLM Task Workspace
-    or a partial repository split by checking for the absence of the .git
-    repository folder or core modules.
-    """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(script_dir, ".."))
-    if not os.path.exists(os.path.join(root_dir, ".git")):
-        return True
-    if not os.path.exists(os.path.join(root_dir, "ham_logbook")):
-        return True
-    return False
-
-
 def find_anchors_in_docs(docs_dir, root_dir):
     doc_anchors = set()
     contract_anchors = set()
@@ -27,17 +12,15 @@ def find_anchors_in_docs(docs_dir, root_dir):
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
-            if file.endswith(".md") or file.endswith(".html"):
+            if file.endswith(".md") or file.endswith(".html") or file.endswith(".py"):
                 full_path = os.path.join(root, file)
                 is_contract = False
 
-                # If this doc is an API contract, check if the module directory exists
-                if "modules" in root.split(os.sep) and file.endswith(".md"):
-                    module_name = file[:-3]
-                    # Check if the source code directory is present in the workspace
-                    module_present = os.path.isdir(os.path.join(root_dir, module_name))
-                    if not module_present:
-                        is_contract = True
+                # If this doc is an API contract, classify its anchors appropriately
+                if "modules" in root.split(os.sep) and (
+                    file.endswith(".md") or file.endswith(".py")
+                ):
+                    is_contract = True
 
                 try:
                     with open(full_path, "r", encoding="utf-8") as f:
@@ -104,6 +87,12 @@ def find_anchors_in_code(root_dir):
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
+
+            # Explicitly exempt user manuals from being classified as code.
+            # They are parsed separately for UX_ anchor verification.
+            if file == "documentation.html":
+                continue
+
             is_code = file.endswith((".py", ".js", ".xml", ".html"))
             is_readme = file.lower() == "readme.md"
 
@@ -146,12 +135,7 @@ def _report_duplicates(duplicates):
     return False
 
 
-def _report_missing_cross_refs(
-    cross_references, code_anchors, contract_anchors, reduced
-):
-    if reduced:
-        return False
-
+def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors):
     missing_cross_refs = set()
     for anchor in cross_references - code_anchors - contract_anchors:
         if not anchor.startswith("example_") and anchor not in ("unique_name", "name"):
@@ -167,10 +151,7 @@ def _report_missing_cross_refs(
     return False
 
 
-def _report_missing_tests(tests_links, code_anchors, contract_anchors, reduced):
-    if reduced:
-        return False
-
+def _report_missing_tests(tests_links, code_anchors, contract_anchors):
     missing_tested = set()
     for links in tests_links.values():
         for link in links:
@@ -193,7 +174,7 @@ def _report_missing_tests(tests_links, code_anchors, contract_anchors, reduced):
 
 
 def _report_bidirectional_orphans(
-    code_anchors, tests_links_set, verified_by_links, contract_anchors, reduced
+    code_anchors, tests_links_set, verified_by_links, contract_anchors
 ):
     test_anchors = {a for a in code_anchors if a.startswith("test_")}
     source_anchors = {
@@ -201,11 +182,9 @@ def _report_bidirectional_orphans(
         for a in code_anchors
         if not a.startswith("test_")
         and not a.startswith("example_")
+        and not a.startswith("UX_")
         and a not in ("unique_name", "name")
     }
-
-    if reduced:
-        return False, source_anchors
 
     orphaned_source = source_anchors - tests_links_set - contract_anchors
     orphaned_tests = test_anchors - verified_by_links - contract_anchors
@@ -229,7 +208,7 @@ def _report_bidirectional_orphans(
 
 
 def _report_documentation_gaps(
-    source_anchors, docs_anchors, code_anchors, contract_anchors, reduced
+    source_anchors, docs_anchors, code_anchors, contract_anchors
 ):
     undocumented = source_anchors - docs_anchors - contract_anchors
     missing_in_code = {
@@ -237,11 +216,6 @@ def _report_documentation_gaps(
         for a in (docs_anchors - code_anchors - contract_anchors)
         if not a.startswith("example_") and a not in ("unique_name", "name")
     }
-
-    # If operating in a reduced task workspace, suppress errors for anchors
-    # that exist in the global documentation but aren't in this specific module.
-    if reduced:
-        missing_in_code = set()
 
     has_errors = False
     if undocumented:
@@ -261,6 +235,20 @@ def _report_documentation_gaps(
     return has_errors
 
 
+def _report_missing_ux_docs(code_anchors, user_manual_anchors):
+    ux_code_anchors = {a for a in code_anchors if a.startswith("UX_")}
+    missing = ux_code_anchors - user_manual_anchors
+
+    if missing:
+        print(
+            "\n[!] CI/CD FAILURE: The following user-facing features (UX_*) are missing from data/documentation.html:"
+        )
+        for m in missing:
+            print(f"    - `{m}`")
+        return True
+    return False
+
+
 def main():
     print("[*] Scanning documentation and codebase for Semantic Anchors...")
     import sys
@@ -269,15 +257,10 @@ def main():
     if not args:
         args = ["."]
 
-    reduced = is_reduced_workspace()
-    if reduced:
-        print(
-            "    [!] Reduced Workspace Detected: Suppressing missing-codebase alerts for cross-module global dependencies."
-        )
-
     docs_anchors = set()
     contract_anchors = set()
     code_anchors = set()
+    user_manual_anchors = set()
     anchor_locations = {}
     tests_links = {}
     tests_links_set = set()
@@ -314,21 +297,34 @@ def main():
         cross_references.update(c_refs)
         duplicates.extend(dups)
 
+        # Parse User Manuals (documentation.html) for data-trace UX_ anchors
+        for root, dirs, files in os.walk(target_dir):
+            if "documentation.html" in files:
+                try:
+                    with open(
+                        os.path.join(root, "documentation.html"), "r", encoding="utf-8"
+                    ) as f:
+                        for match in re.finditer(
+                            r"\[%ANCHOR:\s*(UX_[a-zA-Z0-9_]+)\s*\]", f.read()
+                        ):
+                            user_manual_anchors.add(match.group(1))
+                except Exception:
+                    pass
+
     errs = [
         _report_duplicates(duplicates),
-        _report_missing_cross_refs(
-            cross_references, code_anchors, contract_anchors, reduced
-        ),
-        _report_missing_tests(tests_links, code_anchors, contract_anchors, reduced),
+        _report_missing_cross_refs(cross_references, code_anchors, contract_anchors),
+        _report_missing_tests(tests_links, code_anchors, contract_anchors),
+        _report_missing_ux_docs(code_anchors, user_manual_anchors),
     ]
 
     bidi_err, source_anchors = _report_bidirectional_orphans(
-        code_anchors, tests_links_set, verified_by_links, contract_anchors, reduced
+        code_anchors, tests_links_set, verified_by_links, contract_anchors
     )
     errs.append(bidi_err)
     errs.append(
         _report_documentation_gaps(
-            source_anchors, docs_anchors, code_anchors, contract_anchors, reduced
+            source_anchors, docs_anchors, code_anchors, contract_anchors
         )
     )
 

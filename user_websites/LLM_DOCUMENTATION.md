@@ -71,20 +71,20 @@ If your dependent module (e.g., `cloudflare`, `advanced_routing`) needs to progr
 
 ## 5. 🔗 Semantic Anchors
 
-### Controllers & Routes
-* `[%ANCHOR: controller_community_directory]`: Renders the public community directory with pagination.
-* `[%ANCHOR: controller_submit_violation_report]`: Handles abuse reporting with honeypot anti-spam protection.
-* `[%ANCHOR: controller_user_websites_home]`: Renders a user's or group's personal homepage.
-* `[%ANCHOR: controller_create_site]`: Lazy JIT provisioning of a new user website.
-* `[%ANCHOR: controller_user_blog_index]`: Renders the shared blog container filtered by user/group.
-* `[%ANCHOR: controller_create_blog_post]`: Lazy JIT provisioning of a user's first blog post.
-* `[%ANCHOR: controller_user_websites_documentation]`: Renders the module's documentation page.
-* `[%ANCHOR: controller_submit_appeal]`: Handles suspension appeals from users.
-* `[%ANCHOR: controller_subscribe_to_site]`: Manages email digest subscriptions.
-* `[%ANCHOR: controller_unsubscribe_digest]`: Handles secure, tokenized digest unsubscriptions.
-* `[%ANCHOR: controller_my_privacy_dashboard]`: Renders the GDPR compliance portal.
-* `[%ANCHOR: controller_export_user_data]`: Streams JSON exports of user data.
-* `[%ANCHOR: controller_delete_user_content]`: Triggers the background right-to-erasure cascade.
+### ### Controllers & Routes
+### * `[%ANCHOR: UX_COMMUNITY_DIRECTORY]`: Renders the public community directory with pagination.
+### * `[%ANCHOR: UX_REPORT_VIOLATION]`: Handles abuse reporting with honeypot anti-spam protection.
+### * `[%ANCHOR: controller_user_websites_home]`: Renders a user's or group's personal homepage.
+### * `[%ANCHOR: UX_CREATE_SITE]`: Lazy JIT provisioning of a new user website.
+### * `[%ANCHOR: controller_user_blog_index]`: Renders the shared blog container filtered by user/group.
+### * `[%ANCHOR: UX_CREATE_BLOG_POST]`: Lazy JIT provisioning of a user's first blog post.
+### * `[%ANCHOR: controller_user_websites_documentation]`: Renders the module's documentation page.
+### * `[%ANCHOR: UX_SUBMIT_APPEAL]`: Handles suspension appeals from users.
+### * `[%ANCHOR: UX_SUBSCRIBE]`: Manages email digest subscriptions.
+### * `[%ANCHOR: controller_unsubscribe_digest]`: Handles secure, tokenized digest unsubscriptions.
+### * `[%ANCHOR: controller_my_privacy_dashboard]`: Renders the GDPR compliance portal.
+### * `[%ANCHOR: UX_GDPR_EXPORT]`: Streams JSON exports of user data.
+### * `[%ANCHOR: UX_GDPR_ERASURE]`: Triggers the background right-to-erasure cascade..
 * `[%ANCHOR: api_pending_reports]`: JSON-RPC endpoint returning unhandled violation counts.
 * `[%ANCHOR: test_admin_violation_toast_rpc]`: Tests the pending reports API.
 

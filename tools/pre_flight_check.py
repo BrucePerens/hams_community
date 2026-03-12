@@ -12,16 +12,6 @@ import ast
 import argparse
 
 
-def is_reduced_workspace():
-    """
-    Detects if the script is running inside a temporary LLM Task Workspace
-    by checking for the absence of the .git repository folder.
-    """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(script_dir, ".."))
-    return not os.path.exists(os.path.join(root_dir, ".git"))
-
-
 def parse_manifest(manifest_path):
     if not os.path.exists(manifest_path):
         print(f"❌ Error: Manifest file not found at '{manifest_path}'.")
@@ -101,7 +91,6 @@ def main():
         sys.exit(0)
 
     addons_paths = [p.strip() for p in args.addons_path.split(",") if p.strip()]
-    reduced = is_reduced_workspace()
 
     missing_dependencies = []
     CORE_MODULES = {
@@ -138,22 +127,13 @@ def main():
         missing_formatted = [f"`{dep}`" for dep in missing_dependencies]
         paths_formatted = [f"`{p}`" for p in addons_paths]
 
-        if reduced:
-            print(
-                f"\n⚠️ PRE-FLIGHT CHECK WARNING for '{os.path.basename(module_path)}'"
-            )
-            print(
-                "   The following dependencies are missing, but ignored because this is a Reduced Task Workspace:\n   - "
-                + "\n   - ".join(missing_formatted)
-            )
-        else:
-            print(f"\n❌ PRE-FLIGHT CHECK FAILED for '{os.path.basename(module_path)}'")
-            print(
-                "   The following dependencies are missing from the provided addons paths:\n   - "
-                + "\n   - ".join(missing_formatted)
-            )
-            print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
-            has_errors = True
+        print(f"\n❌ PRE-FLIGHT CHECK FAILED for '{os.path.basename(module_path)}'")
+        print(
+            "   The following dependencies are missing from the provided addons paths:\n   - "
+            + "\n   - ".join(missing_formatted)
+        )
+        print("\n   Searched Paths:\n   - " + "\n   - ".join(paths_formatted))
+        has_errors = True
 
     if has_errors:
         sys.exit(1)

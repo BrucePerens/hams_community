@@ -152,6 +152,7 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_08_apply_policies(self, mock_run, mock_which):
+        # [%ANCHOR: test_apply_policies]
         # Tests [%ANCHOR: backup_apply_policies]
         mock_res = MagicMock()
         mock_res.returncode = 0
@@ -209,6 +210,7 @@ class TestBackupManagement(RealTransactionCase):
         "odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable"
     )
     def test_08d_kopia_auto_download(self, mock_ensure):
+        # [%ANCHOR: test_kopia_auto_download]
         mock_ensure.return_value = "/bin/kopia"
         with patch.object(type(self.config_kopia), "message_post"):
             exe_path = self.config_kopia._get_executable("kopia")
@@ -235,3 +237,25 @@ class TestBackupManagement(RealTransactionCase):
         # [%ANCHOR: test_backup_view]
         v1 = self.env["backup.config"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])
+
+        v2 = self.env["backup.job"].get_view(view_type="form")
+        self.assertIn("output_log", v2["arch"])
+
+        v3 = self.env["backup.job"].get_view(view_type="list")
+        self.assertIn("state", v3["arch"])
+
+    @patch(
+        "odoo.addons.backup_management.models.backup_config.shutil.which",
+        return_value="/bin/mock",
+    )
+    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
+    def test_11_trigger_kopia_and_pgbackrest(self, mock_run, mock_which):
+        # [%ANCHOR: test_trigger_kopia_and_pgbackrest]
+        mock_res = MagicMock()
+        mock_res.returncode = 0
+        mock_run.return_value = mock_res
+        with patch.object(type(self.config_kopia), "message_post") as mock_msg:
+            with patch.object(type(self.config_kopia), "action_sync_snapshots"):
+                self.config_kopia._trigger_kopia_backup()
+                self.config_pg._trigger_pgbackrest_backup()
+                self.assertEqual(mock_msg.call_count, 2)

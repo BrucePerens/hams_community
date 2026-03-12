@@ -25,7 +25,7 @@ This directory contains the Architecture Decision Records (ADRs) that define the
 * [MASTER 10: Core Identity & Access Control](MASTER_10_IDENTITY_ACCESS_CONTROL.md)
   Outlines the Proxy Ownership pattern, domain sandbox mandates, and secure admin password management.
 * [MASTER 11: Agile Development & Documentation Workflow](MASTER_11_DEVELOPMENT_WORKFLOW_DOCS.md)
-  Requires Semantic Anchor traceability, conversational documentation, Just-In-Time (JIT) dependencies, and strict log hygiene.
+  Requires Semantic Anchor traceability, conversational documentation, fail-fast and Just-In-Time (JIT) dependencies, and strict log hygiene.
 * [MASTER 12: QA & Automated Testing Mandates](MASTER_12_QA_TESTING_MANDATES.md)
   Enforces fast-fail CI/CD pipelines, deep AST test verification, strict syntactic parsing, and real-transaction testing methodologies.
 * [MASTER 13: Frontend UX & Accessibility](MASTER_13_FRONTEND_UX.md)
@@ -34,3 +34,8 @@ This directory contains the Architecture Decision Records (ADRs) that define the
   Establishes rules for AI agents, including prompt engineering, task workspaces, API contracts, and patching protocols.
 * [MASTER 15: Domain Identity & Verification](MASTER_15_DOMAIN_IDENTITY.md)
   Defines identity verification fallbacks and the Shadow Profile indexing pattern.
+
+## Standard ADRs
+
+* [ADR 0073: Fail-Fast Dependency Resolution](0073_fail_fast_dependency_resolution.md)
+  Mandates that all external Python dependencies must be declared in module manifests to trigger immediate startup halts instead of silent runtime failures.

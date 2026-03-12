@@ -198,16 +198,17 @@ class TestSubscriptionsAndDigest(HttpCase):
             "The follower must not be removed if the token is invalid.",
         )
 
-    def test_03_subscribe_to_site(self):
-        # [%ANCHOR: test_subscribe_to_site]
-        # Tests [%ANCHOR: controller_subscribe_to_site]
-        """
-        Verify that users can subscribe to a site.
-        """
-        self.authenticate(self.follower.login, self.follower.login)
-        response = self.url_open(
-            f"/{self.creator.website_slug}/subscribe",
-            data={"csrf_token": odoo.http.Request.csrf_token(self)},
-            method="POST",
-        )
-        self.assertEqual(response.status_code, 200)
+
+def test_03_subscribe_to_site(self):
+    # [%ANCHOR: test_subscribe_to_site]
+    # Tests [%ANCHOR: UX_SUBSCRIBE]
+    """
+    Verify that users can subscribe to a site.
+    """
+    self.authenticate(self.follower.login, self.follower.login)
+    response = self.url_open(
+        f"/{self.creator.website_slug}/subscribe",
+        data={"csrf_token": odoo.http.Request.csrf_token(self)},
+        method="POST",
+    )
+    self.assertEqual(response.status_code, 200)

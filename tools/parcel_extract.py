@@ -14,8 +14,10 @@ import difflib
 def verify_python(filepath):
     """Runs flake8 to verify Python syntax and style."""
     try:
+        # Select only E9 (Syntax) and F (Logic/Name) errors to prevent cosmetic spacing
+        # issues from aborting the extraction process.
         result = subprocess.run(
-            ["flake8", "--extend-ignore=E203,E302,E501", filepath],
+            ["flake8", "--select=E9,F", filepath],
             capture_output=True,
             text=True,
         )

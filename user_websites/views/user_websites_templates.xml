@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <template id="user_navbar" name="User Websites Navbar"> <!-- Verified by [%ANCHOR: test_tour_community_directory] -->
+    <template id="user_navbar" name="User Websites Navbar"> <!-- Verified by [%ANCHOR: UX_COMMUNITY_DIRECTORY] -->
         <nav t-if="resolved_slug" class="navbar navbar-expand-lg navbar-light bg-light border-bottom user-websites-navbar">
             <div class="container">
                 <a class="navbar-brand" t-attf-href="/#{resolved_slug}/home">
@@ -53,7 +53,7 @@
             <div class="container mt-4">
                 <t t-if="user_id.is_suspended_from_websites">
                     <div class="alert alert-danger shadow-sm" role="alert">
-                        <h4 class="alert-heading fw-bold"><i class="fa fa-ban me-2"/> Account Suspended</h4>
+                        <h4 class="alert-heading fw-bold"><i class="fa fa-ban me-2"/> Account Suspended <a href="/user-websites/documentation#UX_SUBMIT_APPEAL" class="text-info fs-5 ms-1" title="Help"><i class="fa fa-question-circle"/></a></h4>
                         <p>We suspended your website and blog features because of community guideline violations. We also unpublished your content.</p>
                         <hr/>
 
@@ -103,7 +103,7 @@
 
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-body">
-                                <h4 class="card-title fw-bold"><i class="fa fa-download text-primary me-2"/> Download My Data</h4>
+                                <h4 class="card-title fw-bold"><i class="fa fa-download text-primary me-2"/> Download My Data <a href="/user-websites/documentation#UX_GDPR_EXPORT" class="text-info fs-5 ms-1" title="Help"><i class="fa fa-question-circle"/></a></h4>
                                 <p class="text-muted">Get a copy of your personal website pages and blog posts in a machine-readable JSON format for data portability purposes.</p>
                                 <form action="/my/privacy/export" method="post">
                                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
@@ -114,7 +114,7 @@
 
                         <div class="card shadow-sm border-0 border-danger border border-1">
                             <div class="card-body">
-                                <h4 class="card-title fw-bold text-danger"><i class="fa fa-trash text-danger me-2"/> Right to Erasure</h4>
+                                <h4 class="card-title fw-bold text-danger"><i class="fa fa-trash text-danger me-2"/> Right to Erasure <a href="/user-websites/documentation#UX_GDPR_ERASURE" class="text-info fs-5 ms-1" title="Help"><i class="fa fa-question-circle"/></a></h4>
                                 <p class="text-muted">Permanently delete all of your personal website pages and blog posts. This action also removes you from the public community directory. <strong>This cannot be undone.</strong></p>
                                 <form action="/my/privacy/delete_content" method="post" onsubmit="return confirm('Are you absolutely sure you want to permanently delete all your content? This cannot be undone.');">
                                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
@@ -142,12 +142,12 @@
         </t>
     </template>
 
-    <template id="community_directory" name="Community Directory"> <!-- Verified by [%ANCHOR: test_tour_community_directory] -->
+    <template id="community_directory" name="Community Directory"> <!-- Verified by [%ANCHOR: UX_COMMUNITY_DIRECTORY] -->
         <t t-call="website.layout">
             <div class="container mt-5">
                 <div class="row">
                     <div class="col-12">
-                        <h1>Community Directory</h1>
+                        <h1>Community Directory <a href="/user-websites/documentation#UX_COMMUNITY_DIRECTORY" class="text-info fs-5 ms-2" title="Help"><i class="fa fa-question-circle"/></a></h1>
                         <p>Explore websites created by our community members.</p>
                     </div>
                 </div>
@@ -187,7 +187,7 @@
                         <input type="hidden" name="url" t-att-value="request.httprequest.url"/>
 
                         <div class="modal-header">
-                            <h5 class="modal-title fw-bold" id="reportViolationModalLabel">Report Content Violation</h5>
+                            <h5 class="modal-title fw-bold" id="reportViolationModalLabel">Report Content Violation <a href="/user-websites/documentation#UX_REPORT_VIOLATION" class="text-info fs-5 ms-2" title="Help"><i class="fa fa-question-circle"/></a></h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
@@ -271,7 +271,8 @@
                     <div class="card-body p-5">
                         <i class="fa fa-globe text-muted mb-3" style="font-size: 4rem;" aria-hidden="true"/>
                         <t t-if="is_owner">
-                            <h2 class="fw-bold">Welcome, <t t-out="entity_name"/>!</h2>
+                            <t t-set="help_hash" t-value="'#UX_CREATE_SITE' if page_type == 'home' else '#UX_CREATE_BLOG_POST'"/>
+                            <h2 class="fw-bold">Welcome, <t t-out="entity_name"/>! <a t-attf-href="/user-websites/documentation#{help_hash}" class="text-info fs-5 ms-1" title="Help"><i class="fa fa-question-circle"/></a></h2>
                             <p class="text-muted mt-3 mb-4">
                                 Your <t t-out="page_type"/> has not been initialized yet. Click the button below to generate your initial layout and start editing.
                             </p>

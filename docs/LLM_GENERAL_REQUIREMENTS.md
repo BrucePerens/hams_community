@@ -51,8 +51,9 @@ You MUST internally perform a strict compliance check before opening the final P
 
 ## 3. UNIVERSAL TECHNICAL STANDARDS
 
-### Python Code Quality, Black Formatter & Clean Code
-* **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Your internal generative target for maximum line length is 70 characters.
+### ### Python Code Quality, Black Formatter & Clean Code
+### * **Black Formatter Compliance & LLM Target Length:** All Python code MUST strictly adhere to the Black Python formatter style. Your internal generative target for maximum line length is 70 characters.
+### * **Flake8 Import Spacing:** You MUST leave exactly two blank lines after the import block before the first class or function definition to satisfy Flake8..
 * **Single Statement Per Line & Line Shortening:** You MUST NOT use multiple statements on a single line. You MUST proactively shorten lines by extracting complex logic or nested method calls into intermediate variables. This prevents the Black formatter from wrapping long lines and detaching inline linter comments.
 * **Strict String Formatting (The 40-Character Rule):** Strings longer than 40 characters MUST NOT be written inline as arguments. You MUST extract them into descriptive variables or module-level constants.
 * **Extract Complex Logic (Regex):** Complex or long regular expressions MUST NOT be written inline.

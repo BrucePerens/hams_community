@@ -114,9 +114,15 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines and detach your inline linter comments, causing the AST linter to fail. **Whenever you apply an `# audit-ignore-*` or `# burn-ignore` comment to a multi-line structure, you MUST append `  # fmt: skip` to the exact same line.**
-2. **The Dual XML Anchor Placement:** To satisfy both the XML architecture linter and the bidirectional traceability linter simultaneously, you MUST use the following dual-comment structure:
-   * The traceability anchor `<!-- [%ANCHOR: example_name] -->` MUST be placed immediately **above** the `<record>` or `<template>` tag.
-   * The burn list bypass `<!-- audit-ignore-view: Tested by [%ANCHOR: example_name] -->` MUST be placed immediately **inside** the `<record>` or `<template>` tag (on the exact same line as the opening bracket).
+2. **The Internal XML Child-Node Anchor Placement:** To satisfy both the XML architecture linter and the bidirectional traceability linter simultaneously without falling victim to line-wrapping fragility, you MUST place both the traceability anchor and the burn list bypass **INSIDE** the `<record>` or `<template>` tags as direct child nodes.
+* Do NOT place them above the tag or inline on the same line as the opening bracket. Auto-formatters and long attributes (like `model` or `inherit_id`) will wrap the line and break the AST parser's line-number correlation.
+* **Required Structure:**
+```xml
+<record id="my_view" model="ir.ui.view">
+<!-- [%ANCHOR: test_my_view] -->
+<!-- audit-ignore-view: Tested by [%ANCHOR: test_my_view] -->
+<field name="name">...</field>
+```).
 
 ---
 

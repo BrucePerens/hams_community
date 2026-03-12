@@ -55,6 +55,7 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
         )
 
     def test_01_data_portability_export(self):
+        # Tests [%ANCHOR: UX_GDPR_EXPORT]
         """Verify the user can successfully download a JSON payload of their data."""
         self.authenticate(self.user_privacy.login, self.user_privacy.login)
 
@@ -110,6 +111,7 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
         # Tests [%ANCHOR: gdpr_sudo_erasure]
         # [%ANCHOR: test_gdpr_erasure_posts]
         # Tests [%ANCHOR: gdpr_sudo_erasure]
+        # Tests [%ANCHOR: UX_GDPR_ERASURE]
         response = self.url_open(
             "/my/privacy/delete_content",
             data={"csrf_token": odoo.http.Request.csrf_token(self)},
