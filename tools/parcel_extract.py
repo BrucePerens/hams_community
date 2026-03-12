@@ -775,6 +775,8 @@ def extract_parcel(raw_text):
 
     import shutil
 
+    failed_files = []
+
     for filepath, tasks in tasks_by_file.items():
         errors = []
         warnings = []
@@ -785,6 +787,7 @@ def extract_parcel(raw_text):
 
         if errors:
             _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+            failed_files.append(filepath)
             continue
 
         target_dir = os.path.dirname(filepath)
@@ -800,6 +803,7 @@ def extract_parcel(raw_text):
                 _print_summary(
                     filepath, errors, warnings, aborted=True, count=len(tasks)
                 )
+                failed_files.append(filepath)
                 continue
         else:
             current_text = ""
@@ -940,6 +944,7 @@ def extract_parcel(raw_text):
 
         if errors:
             _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+            failed_files.append(filepath)
             continue
 
         try:
@@ -1008,6 +1013,10 @@ def extract_parcel(raw_text):
         except Exception as e:
             errors.append(f"Commit failed: {e}")
             _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+            failed_files.append(filepath)
+
+    if failed_files:
+        print(f"\n❌ Failed to extract: {', '.join(failed_files)}")
 
 
 if __name__ == "__main__":

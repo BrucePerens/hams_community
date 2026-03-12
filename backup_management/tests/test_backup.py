@@ -3,9 +3,12 @@ from odoo import fields
 
 import shutil
 import os
-if not hasattr(shutil, '_orig_which'):
+
+if not hasattr(shutil, "_orig_which"):
     shutil._orig_which = shutil.which
-    shutil.which = lambda cmd, mode=os.F_OK, path=None: None if cmd in ('kopia', 'etcd') else shutil._orig_which(cmd, mode, path)
+    shutil.which = lambda cmd, mode=os.F_OK, path=None: (
+        None if cmd in ("kopia", "etcd") else shutil._orig_which(cmd, mode, path)
+    )
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
@@ -93,23 +96,32 @@ class TestBackupManagement(TransactionCase):
         mock_sync.assert_called()
         self.assertTrue(True)
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_07_orchestration_trigger(self, mock_run, mock_which):
+    @patch("pika.BlockingConnection")
+    def test_07_orchestration_trigger(self, mock_pika):
         # [%ANCHOR: test_backup_orchestration]
         # Tests [%ANCHOR: backup_trigger_execution]
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_run.return_value = mock_res
-        with patch.object(type(self.env["backup.config"]), "message_post") as mock_msg:
-            with patch.object(type(self.config_kopia), "action_sync_snapshots"):
-                self.config_kopia.action_trigger_backup()
-                self.config_pg.action_trigger_backup()
-                mock_msg.assert_called()
-        self.assertTrue(True)
+        # Validates ADR-0071 Asynchronous Bastion Pattern
+        res_kopia = self.config_kopia.action_trigger_backup()
+        res_pg = self.config_pg.action_trigger_backup()
+
+        # Execute the postcommit hooks manually since tests run in a single transaction
+        self.env.cr.postcommit.run()
+
+        self.assertEqual(res_kopia.get("res_model"), "backup.job")
+
+        job_kopia = self.env["backup.job"].search(
+            [("config_id", "=", self.config_kopia.id)], limit=1
+        )
+        self.assertTrue(job_kopia.exists())
+        self.assertEqual(job_kopia.state, "pending")
+
+        job_pg = self.env["backup.job"].search(
+            [("config_id", "=", self.config_pg.id)], limit=1
+        )
+        self.assertTrue(job_pg.exists())
+        self.assertEqual(job_pg.state, "pending")
+
+        mock_pika.assert_called()
 
     @patch(
         "odoo.addons.backup_management.models.backup_config.shutil.which",
@@ -141,11 +153,8 @@ class TestBackupManagement(TransactionCase):
         mock_res.returncode = 1
         mock_res.stderr = "Fatal disk error"
         mock_run.return_value = mock_res
-        with patch.object(
-            type(self.config_kopia), "_report_backup_failure"
-        ) as mock_report:
-            self.config_kopia.action_trigger_backup()
-            mock_report.assert_called()
+
+        # Triggering backup no longer fails synchronously; we only test the synchronous policy failure.
         with patch.object(
             type(self.config_kopia), "_report_backup_failure"
         ) as mock_report:

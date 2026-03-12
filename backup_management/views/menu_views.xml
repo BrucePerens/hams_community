@@ -18,4 +18,5 @@
     <menuitem id="menu_backup_board" name="Backup Dashboard" parent="menu_backup_root" action="action_backup_board_client" sequence="5"/>
     <menuitem id="menu_backup_config" name="Configurations" parent="menu_backup_root" action="action_backup_config" sequence="10"/>
     <menuitem id="menu_backup_snapshot" name="Snapshots" parent="menu_backup_root" action="action_backup_snapshot" sequence="20"/>
+    <menuitem id="menu_backup_job" name="Active Jobs" parent="menu_backup_root" action="action_backup_job" sequence="15"/>
 </odoo>

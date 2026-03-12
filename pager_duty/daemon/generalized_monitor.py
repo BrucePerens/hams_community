@@ -759,6 +759,7 @@ def execute_check(check, client=None):
                 text=True,
                 env=env,
                 timeout=30,
+                shell=False,
             )
             if res.returncode != 0:
                 return False, f"pg_dump pre-flight failed: {res.stderr[:100]}"

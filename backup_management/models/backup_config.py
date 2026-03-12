@@ -3,6 +3,7 @@ import subprocess
 import os
 import datetime
 import shutil
+import pika
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -152,11 +153,66 @@ class BackupConfig(models.Model):
 
     def action_trigger_backup(self):
         # [%ANCHOR: backup_trigger_execution]
+        # Implements ADR-0071: Asynchronous Bastion Pattern
+        jobs = self.env["backup.job"]
+        created_jobs = []
+
         for rec in self:
-            if rec.engine == "kopia":
-                rec._trigger_kopia_backup()
-            elif rec.engine == "pgbackrest":
-                rec._trigger_pgbackrest_backup()
+            job = jobs.create(
+                {
+                    "config_id": rec.id,
+                    "job_type": rec.engine,
+                    "state": "pending",
+                    "output_log": "Queued in RabbitMQ...",
+                }
+            )
+            created_jobs.append(job)
+
+            payload = json.dumps(
+                {
+                    "job_id": job.id,
+                    "config_id": rec.id,
+                    "engine": rec.engine,
+                    "target_path": rec.target_path,
+                }
+            )
+
+            def publish_task(msg=payload):
+                try:
+                    rmq_host = os.environ.get("RMQ_HOST", "127.0.0.1")
+                    rmq_user = os.environ.get("RMQ_USER", "guest")
+                    rmq_pass = os.environ.get("RMQ_PASS", "guest")
+                    credentials = pika.PlainCredentials(rmq_user, rmq_pass)
+                    conn_params = pika.ConnectionParameters(
+                        host=rmq_host, credentials=credentials
+                    )
+                    connection = pika.BlockingConnection(conn_params)
+                    channel = connection.channel()
+                    channel.queue_declare(queue="backup_tasks", durable=True)
+                    channel.basic_publish(
+                        exchange="",
+                        routing_key="backup_tasks",
+                        body=msg,
+                        properties=pika.BasicProperties(delivery_mode=2),
+                    )
+                    connection.close()
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).error(
+                        "Failed to publish backup task to RMQ: %s", e
+                    )
+
+            self.env.cr.postcommit.add(publish_task)
+
+        if len(created_jobs) == 1:
+            return {
+                "type": "ir.actions.act_window",
+                "res_model": "backup.job",
+                "res_id": created_jobs[0].id,
+                "view_mode": "form",
+                "target": "current",
+            }
         return True
 
     def action_apply_policies(self):
