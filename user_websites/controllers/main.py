@@ -70,12 +70,8 @@ def _async_gdpr_erasure(db_name, user_id):
             env.cr.rollback()
             _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
             try:
-                admin_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                    "base.user_admin"
-                )
-                admin = (
-                    env["res.users"].with_context(active_test=False).browse(admin_uid)
-                )
+                admin = env.ref("base.user_admin").with_context(active_test=False)
+                admin_uid = admin.id
                 error_details = traceback.format_exc()
                 admin.partner_id.activity_schedule(
                     "mail.mail_activity_data_todo",

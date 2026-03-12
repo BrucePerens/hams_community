@@ -47,10 +47,23 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             raise AccessError(
                 _("Security Alert: Service Account '%s' not found.") % xml_id
             )
-        self.env.cr.execute("SELECT active FROM res_users WHERE id = %s", (uid,))
+
+        # Verify the account is active AND is explicitly flagged as a service account
+        self.env.cr.execute(
+            "SELECT active, is_service_account FROM res_users WHERE id = %s", (uid,)
+        )
         res = self.env.cr.fetchone()
+
         if not res or not res[0]:
             raise AccessError(_("Security Alert: Service Account is disabled."))
+        if not res[1]:
+            raise AccessError(
+                _(
+                    "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
+                )
+                % xml_id
+            )
+
         return uid
 
     @api.model

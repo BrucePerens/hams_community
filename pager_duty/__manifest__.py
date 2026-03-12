@@ -15,6 +15,9 @@
         "zero_sudo",
         "distributed_redis_cache",
     ],
+    "external_dependencies": {
+        "python": ["redis", "psutil"],
+    },
     "data": [
         "data/cron.xml",
         "security/security.xml",
