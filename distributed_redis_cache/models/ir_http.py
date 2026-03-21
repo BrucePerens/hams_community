@@ -56,7 +56,7 @@ class IrHttp(models.AbstractModel):
 
     @classmethod
     def _authenticate(cls, endpoint):
-        # [%ANCHOR: redis_cache_interceptor]
+        # [@ANCHOR: redis_cache_interceptor]
         """
         Intercepts the request lifecycle to check for distributed cache invalidation signals.
         """

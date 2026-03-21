@@ -18,4 +18,4 @@ Control plane for the CDN edge. Manages Cache-Tags, WAF bans, and Turnstile CAPT
 * Scans module `static/` folders on boot and automatically invalidates the CDN edge via cache tags if file modifications are detected.
 
 ## 4. Semantic Anchors
-* `[%ANCHOR: cf_execute_ban]`, `[%ANCHOR: cf_action_lift_ban]`, `[%ANCHOR: cf_tunnel_setup]`, `[%ANCHOR: ir_cron_process_cf_purge_queue]`, `[%ANCHOR: xpath_rendering_cf_settings]`, `[%ANCHOR: enqueue_urls_base_url]`.
+* `[@ANCHOR: cf_execute_ban]`, `[@ANCHOR: cf_action_lift_ban]`, `[@ANCHOR: cf_tunnel_setup]`, `[@ANCHOR: ir_cron_process_cf_purge_queue]`, `[@ANCHOR: xpath_rendering_cf_settings]`, `[@ANCHOR: enqueue_urls_base_url]`.

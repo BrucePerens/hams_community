@@ -1,9 +1,9 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [%ANCHOR: test_tour_violation_report]
-// Tests [%ANCHOR: UX_REPORT_VIOLATION]
-// Tests [%ANCHOR: violation_report_logic]
+// [@ANCHOR: test_tour_violation_report]
+// Tests [@ANCHOR: UX_REPORT_VIOLATION]
+// Tests [@ANCHOR: violation_report_logic]
 registry.category("web_tour.tours").add("violation_report_tour", {
     test: true,
     url: "/",

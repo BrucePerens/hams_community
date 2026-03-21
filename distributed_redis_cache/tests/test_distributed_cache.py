@@ -10,7 +10,7 @@ class TestDistributedCache(TransactionCase):
     @patch("odoo.addons.distributed_redis_cache.models.ir_http.redis")
     @patch("odoo.addons.base.models.ir_http.IrHttp._authenticate", return_value=True)
     def test_01_redis_cache_interceptor(self, mock_super_auth, mock_redis):
-        # Tests [%ANCHOR: redis_cache_interceptor]
+        # Tests [@ANCHOR: redis_cache_interceptor]
         """
         BDD: Given a distributed environment utilizing Redis
         When a cache invalidation signal is detected on the pubsub bus

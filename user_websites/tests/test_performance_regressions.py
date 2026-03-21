@@ -35,8 +35,8 @@ class TestPerformanceORM(odoo.tests.common.TransactionCase):
             self.test_users.append(u)
 
     def test_01_site_creation_query_scaling(self):
-        # [%ANCHOR: test_site_creation_performance_scaling]
-        # Tests [%ANCHOR: test_site_creation_performance_scaling]
+        # [@ANCHOR: test_site_creation_performance_scaling]
+        # Tests [@ANCHOR: test_site_creation_performance_scaling]
         """
         BDD: Given the Master Wrapper Architecture (ADR-fix)
         When provisioning multiple user sites sequentially
@@ -119,8 +119,8 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             self.test_users.append(u)
 
     def test_02_acl_overhead_loop_elimination(self):
-        # [%ANCHOR: test_acl_overhead_loop_elimination]
-        # Tests [%ANCHOR: test_acl_overhead_loop_elimination]
+        # [@ANCHOR: test_acl_overhead_loop_elimination]
+        # Tests [@ANCHOR: test_acl_overhead_loop_elimination]
         """
         BDD: Given multiple user websites exist on the platform,
         When a public guest browses the site,
@@ -182,8 +182,8 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
         )
 
     def test_03_tenant_view_isolation(self):
-        # [%ANCHOR: test_tenant_view_isolation]
-        # Tests [%ANCHOR: test_tenant_view_isolation]
+        # [@ANCHOR: test_tenant_view_isolation]
+        # Tests [@ANCHOR: test_tenant_view_isolation]
         """
         BDD: Given two users have provisioned their personal sites using the detached architecture,
         When User A modifies the architecture of their site via the website builder,

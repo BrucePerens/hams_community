@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_pager_incident_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_pager_view] -->
+    <record id="view_pager_incident_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_pager_view] -->
         <field name="name">pager.incident.list</field>
         <field name="model">pager.incident</field>
         <field name="arch" type="xml">

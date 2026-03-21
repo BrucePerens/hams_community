@@ -12,7 +12,7 @@
 
 ## 3. The XML Line-Wrapping AST Trap (Nested Anchors)
 **The Trap:** Placing anchors inline with `<record>` tags causes AST tracking to fail when formatters wrap the line.
-**The Solution:** Always nest both the `[%ANCHOR]` and the `audit-ignore-view` comments directly **inside** the `<record>` or `<template>` tags as child nodes.
+**The Solution:** Always nest both the `[@ANCHOR]` and the `audit-ignore-view` comments directly **inside** the `<record>` or `<template>` tags as child nodes.
 
 ## 4. Extraction Engine Resiliency
 **Experience:** The extraction script gracefully degrades to whitespace-agnostic and fuzzy-line matching algorithms. Partial, unbalanced Python snippets can be safely used in `search-and-replace` blocks without crashing the tokenizer.
@@ -61,5 +61,5 @@
 **The Solution:** Dynamically scan the workspace for custom modules (`find . -name "__manifest__.py"`) and exclusively target those modules via the `-i` and `-u` execution flags.
 
 ## 16. The View Bypass Duplicate Anchor Trap
-**The Trap:** Injecting `<!-- [%ANCHOR: my_test] -->` into an XML view alongside `<!-- audit-ignore-view: Tested by [%ANCHOR: my_test] -->` causes the linter to throw a Duplicate Anchor error if the Python test file also defines the anchor.
+**The Trap:** Injecting `<!-- [@ANCHOR: my_test] -->` into an XML view alongside `<!-- audit-ignore-view: Tested by [@ANCHOR: my_test] -->` causes the linter to throw a Duplicate Anchor error if the Python test file also defines the anchor.
 **The Solution:** For Linter bypasses in views, ONLY include the `audit-ignore-view: Tested by ...` tag. Do not redefine the base anchor in the view unless the view itself is the primary architectural source of the feature.

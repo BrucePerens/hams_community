@@ -4,8 +4,8 @@ from odoo.addons.user_websites.utils import slugify
 
 
 class TestUtils(BaseCase):
-    # [%ANCHOR: test_utils_slugify]
-    # Tests [%ANCHOR: utils_slugify]
+    # [@ANCHOR: test_utils_slugify]
+    # Tests [@ANCHOR: utils_slugify]
     """
     Exhaustive unit tests for the custom slugify utility function to ensure
     URL safety regardless of user input.

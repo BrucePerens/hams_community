@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-To ensure platform usability, we must guarantee that every interactive feature (buttons, forms, frontend controllers) is properly documented for the end-user. The platform enforces traceability via Semantic Anchors (`[%ANCHOR: example_feature_name]`), but injecting raw anchor strings into polished user manuals (`data/documentation.html`) creates confusing "cybercrud" that violates our UX standards.
+To ensure platform usability, we must guarantee that every interactive feature (buttons, forms, frontend controllers) is properly documented for the end-user. The platform enforces traceability via Semantic Anchors (`[@ANCHOR: example_feature_name]`), but injecting raw anchor strings into polished user manuals (`data/documentation.html`) creates confusing "cybercrud" that violates our UX standards.
 
 Previously, we considered hiding these anchors inside HTML comments (``). [cite_start]However, our operational experience revealed a critical vulnerability: web-based LLM chat interfaces aggressively strip HTML comments from code blocks during generation (The Web UI Markdown Renderer Trap)[cite: 1512]. This causes silent data loss and destroys the traceability matrix when AI agents patch documentation.
 
@@ -15,11 +15,11 @@ We mandate a specialized anchor protocol for all user-facing features, utilizing
 
 ### 1. The `UX_` Prefix Convention
 Any Semantic Anchor representing a user-facing interaction (a frontend controller, a QWeb view, or an interactive button) MUST be prefixed with `UX_`. 
-* *Example:* `[%ANCHOR: UX_REPORT_VIOLATION]`
+* *Example:* `[@ANCHOR: UX_REPORT_VIOLATION]`
 
 ### 2. HTML5 Traceability (Zero UI Pollution)
 Inside the end-user manual (`data/documentation.html`), the documentation for a feature MUST be anchored using a combination of the `id` and `data-trace` attributes on the relevant HTML tag (e.g., a heading or paragraph).
-* *Example:* `<h3 id="UX_REPORT_VIOLATION" data-trace="[%ANCHOR: UX_REPORT_VIOLATION]">Reporting Content</h3>`
+* *Example:* `<h3 id="UX_REPORT_VIOLATION" data-trace="[@ANCHOR: UX_REPORT_VIOLATION]">Reporting Content</h3>`
 * [cite_start]This hides the raw syntax from the user, satisfies the `verify_anchors.py` CI/CD regex parser, and completely bypasses the LLM comment-stripping trap [cite: 1512] because standard DOM attributes are preserved during Markdown generation.
 
 ### 3. Context-Sensitive Help

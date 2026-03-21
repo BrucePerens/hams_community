@@ -36,8 +36,8 @@ class TestServiceWorker(HttpCase):
         )
 
     def test_02_xpath_rendering_layout(self):
-        # [%ANCHOR: test_xpath_rendering_caching_layout]
-        # Tests [%ANCHOR: xpath_rendering_caching_layout]
+        # [@ANCHOR: test_xpath_rendering_caching_layout]
+        # Tests [@ANCHOR: xpath_rendering_caching_layout]
         """Verify the Service Worker script injects into the layout head."""
         from lxml import etree
 

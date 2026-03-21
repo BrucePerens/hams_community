@@ -15,7 +15,7 @@ class TestPgConfig(TransactionCase):
         self.admin = self.env.ref("base.user_admin")
 
     def test_01_optimization_wizard(self):
-        # Tests [%ANCHOR: pg_optimize_wizard]
+        # Tests [@ANCHOR: pg_optimize_wizard]
         wizard = (
             self.env["pg.optimize.wizard"]
             .with_user(self.admin)
@@ -39,7 +39,7 @@ class TestPgConfig(TransactionCase):
         return_value="/bin/mock",
     )
     def test_02_ha_wizard(self, mock_exe):
-        # Tests [%ANCHOR: pg_ha_wizard]
+        # Tests [@ANCHOR: pg_ha_wizard]
         wizard = (
             self.env["pg.ha.wizard"]
             .with_user(self.admin)
@@ -107,7 +107,7 @@ class TestPgConfig(TransactionCase):
         self.assertEqual(exe_path, "/bin/etcd")
 
     def test_03_views(self):
-        # [%ANCHOR: test_pg_config_views]
+        # [@ANCHOR: test_pg_config_views]
         v1 = self.env["database.pg.setting"].get_view(view_type="list")
         self.assertIn("setting", v1["arch"])
 

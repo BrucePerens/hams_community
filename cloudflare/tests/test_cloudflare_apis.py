@@ -47,8 +47,8 @@ class TestCloudflareAPIs(TransactionCase):
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.create_cfd_tunnel")
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.get_cfd_tunnel_token")
     def test_03_tunnel_setup(self, mock_get_token, mock_create):
-        # [%ANCHOR: test_cf_tunnel_setup]
-        # Tests [%ANCHOR: cf_tunnel_setup]
+        # [@ANCHOR: test_cf_tunnel_setup]
+        # Tests [@ANCHOR: cf_tunnel_setup]
         mock_create.return_value = (True, "tunnel_id_123")
         mock_get_token.return_value = (True, "mock_token_xyz")
 

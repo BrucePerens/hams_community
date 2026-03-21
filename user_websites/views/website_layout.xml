@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="layout_inherit_report_violation" inherit_id="website.layout" name="Report Violation Global"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
-        <!-- [%ANCHOR: xpath_rendering_layout] -->
-        <!-- Verified by [%ANCHOR: test_xpath_rendering_layout] -->
-        <xpath expr="//footer" position="after"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
+    <template id="layout_inherit_report_violation" inherit_id="website.layout" name="Report Violation Global"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_xpath_rendering_layout] -->
+        <!-- [@ANCHOR: xpath_rendering_layout] -->
+        <!-- Verified by [@ANCHOR: test_xpath_rendering_layout] -->
+        <xpath expr="//footer" position="after"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_layout] -->
             <t t-call="user_websites.report_violation_modal"/>
         </xpath>
 
-        <xpath expr="//footer" position="before"> <!-- audit-ignore-xpath: Tested by [%ANCHOR: test_xpath_rendering_layout] -->
+        <xpath expr="//footer" position="before"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_layout] -->
             <t t-set="is_user_content" t-value="False"/>
             <t t-set="is_owner" t-value="False"/>
 

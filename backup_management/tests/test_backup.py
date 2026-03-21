@@ -33,7 +33,7 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_01b_sync_kopia_success(self, mock_run, mock_which):
-        # Tests [%ANCHOR: backup_sync_kopia]
+        # Tests [@ANCHOR: backup_sync_kopia]
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_res.stdout = '[{"id": "123", "startTime": "2023-01-01T10:00:00Z", "summary": {"stats": {"totalFileSize": 1000}}}]'
@@ -47,7 +47,7 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_02_sync_pgbackrest(self, mock_run, mock_which):
-        # Tests [%ANCHOR: backup_sync_pgbackrest]
+        # Tests [@ANCHOR: backup_sync_pgbackrest]
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_res.stdout = '[{"backup": [{"label": "test", "timestamp": {"start": 1672567200}, "info": {"size": 2000}}]}]'
@@ -61,7 +61,7 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_02b_sync_failures(self, mock_run, mock_which):
-        # Tests [%ANCHOR: backup_pager_synergy]
+        # Tests [@ANCHOR: backup_pager_synergy]
         mock_res = MagicMock()
         mock_res.returncode = 1
         mock_res.stderr = "Connection refused"
@@ -77,8 +77,8 @@ class TestBackupManagement(RealTransactionCase):
         "odoo.addons.backup_management.models.backup_config.BackupConfig.action_sync_snapshots"
     )
     def test_04_cron_trigger(self, mock_sync):
-        # [%ANCHOR: test_backup_cron]
-        # Tests [%ANCHOR: cron_sync_all_backups]
+        # [@ANCHOR: test_backup_cron]
+        # Tests [@ANCHOR: cron_sync_all_backups]
         self.env.ref("backup_management.cron_sync_backups")._trigger()
 
         # Inject a stale snapshot so that it triggers _report_backup_failure -> message_post
@@ -99,8 +99,8 @@ class TestBackupManagement(RealTransactionCase):
         self.assertTrue(True)
 
     def test_07_orchestration_trigger(self):
-        # [%ANCHOR: test_backup_orchestration]
-        # Tests [%ANCHOR: backup_trigger_execution]
+        # [@ANCHOR: test_backup_orchestration]
+        # Tests [@ANCHOR: backup_trigger_execution]
         # Validates ADR-0071 Asynchronous Bastion Pattern
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
@@ -152,8 +152,8 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_08_apply_policies(self, mock_run, mock_which):
-        # [%ANCHOR: test_apply_policies]
-        # Tests [%ANCHOR: backup_apply_policies]
+        # [@ANCHOR: test_apply_policies]
+        # Tests [@ANCHOR: backup_apply_policies]
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_run.return_value = mock_res
@@ -210,7 +210,7 @@ class TestBackupManagement(RealTransactionCase):
         "odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable"
     )
     def test_08d_kopia_auto_download(self, mock_ensure):
-        # [%ANCHOR: test_kopia_auto_download]
+        # [@ANCHOR: test_kopia_auto_download]
         mock_ensure.return_value = "/bin/kopia"
         with patch.object(type(self.config_kopia), "message_post"):
             exe_path = self.config_kopia._get_executable("kopia")
@@ -218,12 +218,12 @@ class TestBackupManagement(RealTransactionCase):
         self.assertEqual(exe_path, "/bin/kopia")
 
     def test_09_board_data_rpc(self):
-        # Tests [%ANCHOR: backup_board_data]
+        # Tests [@ANCHOR: backup_board_data]
         data = self.env["backup.config"].get_board_data()
         self.assertIsInstance(data, list)
 
     def test_10_restore_command_computation(self):
-        # Tests [%ANCHOR: backup_restore_command]
+        # Tests [@ANCHOR: backup_restore_command]
         snap = self.env["backup.snapshot"].create(
             {
                 "config_id": self.config_kopia.id,
@@ -234,7 +234,7 @@ class TestBackupManagement(RealTransactionCase):
         self.assertIn("kopia restore snap_123", snap.restore_command)
 
     def test_05_views(self):
-        # [%ANCHOR: test_backup_view]
+        # [@ANCHOR: test_backup_view]
         v1 = self.env["backup.config"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])
 
@@ -250,7 +250,7 @@ class TestBackupManagement(RealTransactionCase):
     )
     @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
     def test_11_trigger_kopia_and_pgbackrest(self, mock_run, mock_which):
-        # [%ANCHOR: test_trigger_kopia_and_pgbackrest]
+        # [@ANCHOR: test_trigger_kopia_and_pgbackrest]
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_run.return_value = mock_res

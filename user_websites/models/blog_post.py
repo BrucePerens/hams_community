@@ -192,9 +192,9 @@ class BlogPost(models.Model):
 
     @api.model
     def send_weekly_digest(self):
-        # [%ANCHOR: send_weekly_digest]
-        # Verified by [%ANCHOR: test_weekly_digest_secret]
-        # Verified by [%ANCHOR: test_weekly_digest_mail_template]
+        # [@ANCHOR: send_weekly_digest]
+        # Verified by [@ANCHOR: test_weekly_digest_secret]
+        # Verified by [@ANCHOR: test_weekly_digest_mail_template]
         """
         Cron job method to send a weekly email digest.
         """
@@ -230,7 +230,7 @@ class BlogPost(models.Model):
         base_url = self.env["zero_sudo.security.utils"]._get_system_param(
             "web.base.url"
         )
-        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [%ANCHOR: test_weekly_digest_secret]  # fmt: skip
+        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [@ANCHOR: test_weekly_digest_secret]  # fmt: skip
 
         for digest in digests:
             partner = digest.partner_id
@@ -272,7 +272,7 @@ class BlogPost(models.Model):
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.mail_service_internal"
             )
-            template.with_user(mail_svc).with_context(**ctx).send_mail(digest.first_post_id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            template.with_user(mail_svc).with_context(**ctx).send_mail(digest.first_post_id, force_send=False, email_values=email_vals)  # audit-ignore-mail: Tested by [@ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
         if len(digests) == 50:
             self.env["ir.config_parameter"].with_user(svc_uid).set_param(

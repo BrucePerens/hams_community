@@ -26,8 +26,8 @@ def process_file(filepath):
 
         if in_view_block:
             if (
-                "Verified by [%ANCHOR:" in line
-                or "Tested by [%ANCHOR:" in line
+                "Verified by [@ANCHOR:" in line
+                or "Tested by [@ANCHOR:" in line
                 or "audit-ignore-view" in line
             ):
                 has_anchor = True
@@ -45,7 +45,7 @@ def process_file(filepath):
                     indent += "    "
                     new_lines.insert(
                         view_start_idx + 1,
-                        f"{indent}<!-- audit-ignore-view: Tested by [%ANCHOR: pending_tour] -->",
+                        f"{indent}<!-- audit-ignore-view: Tested by [@ANCHOR: pending_tour] -->",
                     )
                 in_view_block = False
 

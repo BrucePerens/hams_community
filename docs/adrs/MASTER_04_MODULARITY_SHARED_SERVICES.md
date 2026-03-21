@@ -16,5 +16,5 @@ Any execution logic (e.g., API authentication, math utilities) duplicated across
 
 ### 3. Centralized Reverse Traceability
 Any utility or Service Account hosted in `core_base` MUST include a `CONSUMERS:` block in its docstring.
-* This block explicitly lists every active usage across the platform using Semantic Anchors (`[%ANCHOR: example_name]`).
+* This block explicitly lists every active usage across the platform using Semantic Anchors (`[@ANCHOR: example_name]`).
 * Developers modifying core utilities MUST consult this block to understand downstream impacts and prevent regression.

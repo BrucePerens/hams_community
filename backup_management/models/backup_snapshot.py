@@ -19,7 +19,7 @@ class BackupSnapshot(models.Model):
     )
 
     def _compute_restore_command(self):
-        # [%ANCHOR: backup_restore_command]
+        # [@ANCHOR: backup_restore_command]
         for rec in self:
             if rec.config_id.engine == "kopia":
                 rec.restore_command = (

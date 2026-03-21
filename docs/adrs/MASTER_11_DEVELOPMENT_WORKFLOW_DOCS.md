@@ -9,7 +9,7 @@ Maintaining architectural cohesion across a large platform relies on strict docu
 ## Decisions & Mandates
 
 ### 1. Semantic Anchor Traceability (0004, 0055)
-* Source code and Agile documentation (Stories, Runbooks) MUST be mathematically linked using Semantic Anchors (`[%ANCHOR: example_feature_name]`).
+* Source code and Agile documentation (Stories, Runbooks) MUST be mathematically linked using Semantic Anchors (`[@ANCHOR: example_feature_name]`).
 * **Inline Documentation Placement:** Within documentation files (including `LLM_DOCUMENTATION.md` and module READMEs), anchors MUST be placed directly inline/adjacent to the specific text, step, or requirement describing the functionality. They must NOT be collected in a disconnected list or standalone chapter at the end of the document. A dedicated `ANCHOR_MANIFEST.md` file is strictly forbidden.
 * When an event crosses an architectural boundary (e.g., Odoo triggers a background daemon), bidirectional anchors MUST bridge the producer and consumer.
 * The CI/CD pipeline scans for orphaned or missing anchors and fails the build if the mapping breaks.

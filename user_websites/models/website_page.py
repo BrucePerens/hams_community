@@ -167,7 +167,7 @@ class WebsitePage(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        # Verified by [%ANCHOR: test_site_creation_performance_scaling]
+        # Verified by [@ANCHOR: test_site_creation_performance_scaling]
         # 0. Sanitize arch to prevent Stored XSS
         if not (
             self.env.su
@@ -211,8 +211,8 @@ class WebsitePage(models.Model):
                     if k not in allowed:
                         del vals[k]
 
-        # [%ANCHOR: website_page_quota_check]
-        # Verified by [%ANCHOR: test_page_limits]
+        # [@ANCHOR: website_page_quota_check]
+        # Verified by [@ANCHOR: test_page_limits]
         # 2. Quota Limit Check
         owner_ids = [
             vals.get("owner_user_id") for vals in vals_list if vals.get("owner_user_id")
@@ -305,7 +305,7 @@ class WebsitePage(models.Model):
         return records
 
     def check_access_rule(self, operation):
-        # Verified by [%ANCHOR: test_acl_overhead_loop_elimination]
+        # Verified by [@ANCHOR: test_acl_overhead_loop_elimination]
         """
         Proactively catch write/unlink access violations for standard users on pages they don't own.
         This prevents Odoo's core `ir.rule` engine from generating massive amounts of INFO log spam
@@ -353,7 +353,7 @@ class WebsitePage(models.Model):
         return super(WebsitePage, self).check_access_rule(operation)
 
     def write(self, vals):
-        # Verified by [%ANCHOR: test_tenant_view_isolation]
+        # Verified by [@ANCHOR: test_tenant_view_isolation]
         self.check_access("write")
         self._check_proxy_ownership_write(vals)
 

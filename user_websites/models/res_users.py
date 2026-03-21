@@ -606,8 +606,8 @@ class ResUsers(models.Model):
         return res
 
     def _get_gdpr_export_data(self):
-        # [%ANCHOR: res_users_gdpr_export]
-        # Verified by [%ANCHOR: test_gdpr_export_hook]
+        # [@ANCHOR: res_users_gdpr_export]
+        # Verified by [@ANCHOR: test_gdpr_export_hook]
         """
         Packages all the user's data and content into a dictionary so they can download it.
         """
@@ -630,9 +630,9 @@ class ResUsers(models.Model):
             "user_websites.user_user_websites_service_account"
         )
 
-        # [%ANCHOR: gdpr_sudo_erasure]
-        # Verified by [%ANCHOR: test_gdpr_erasure_pages]
-        # Verified by [%ANCHOR: test_gdpr_erasure_posts]
+        # [@ANCHOR: gdpr_sudo_erasure]
+        # Verified by [@ANCHOR: test_gdpr_erasure_pages]
+        # Verified by [@ANCHOR: test_gdpr_erasure_posts]
         # ADR-0017: sudo() is required here to ensure cascaded data not owned by the service account is successfully purged.
         while True:
             pages = self.env["website.page"].search(
@@ -640,7 +640,7 @@ class ResUsers(models.Model):
             )
             if not pages:
                 break
-            pages.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_pages]  # fmt: skip
+            pages.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_pages]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(pages) < 5000:
@@ -654,7 +654,7 @@ class ResUsers(models.Model):
             )
             if not posts:
                 break
-            posts.sudo().unlink()  # burn-ignore-sudo: Tested by [%ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
+            posts.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(posts) < 5000:

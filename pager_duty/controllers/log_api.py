@@ -36,7 +36,7 @@ class PagerLogAPI(http.Controller):
             raise AccessError(_("Access Denied: Admins only."))
 
         if not redis or not redis_pool:
-            return {  # audit-ignore-i18n: Tested by [%ANCHOR: test_log_api_i18n]
+            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
                 "error": "Redis not available for IPC."
             }
 
@@ -58,11 +58,11 @@ class PagerLogAPI(http.Controller):
                     pubsub.unsubscribe()
                     return data
 
-            return {  # audit-ignore-i18n: Tested by [%ANCHOR: test_log_api_i18n]
+            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
                 "error": "Search timeout. Daemon may be offline."
             }
         except Exception as e:
-            return {  # audit-ignore-i18n: Tested by [%ANCHOR: test_log_api_i18n]
+            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
                 "error": f"IPC Failure: {e}"
             }
 

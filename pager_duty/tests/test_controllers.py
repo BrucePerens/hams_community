@@ -15,7 +15,7 @@ class TestPagerControllers(HttpCase):
         )
 
     def test_02_board_security_and_render(self):
-        # [%ANCHOR: test_pager_board_url]
+        # [@ANCHOR: test_pager_board_url]
         # The board should redirect to login for unauthenticated users (auth='user')
         response = self.url_open("/pager/board")
         self.assertTrue(

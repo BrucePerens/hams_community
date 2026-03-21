@@ -1,8 +1,8 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [%ANCHOR: test_tour_manual_search]
-// Tests [%ANCHOR: controller_manual_search]
+// [@ANCHOR: test_tour_manual_search]
+// Tests [@ANCHOR: controller_manual_search]
 registry.category("web_tour.tours").add("manual_search_tour", {
     test: true,
     url: "/manual",

@@ -41,7 +41,7 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
         self.start_tour("/web", "cf_waf_rule_tour", login=self.admin.login)
 
     def test_03_backend_views_rendering(self):
-        # [%ANCHOR: test_cf_backend_views_rendering]
+        # [@ANCHOR: test_cf_backend_views_rendering]
         v1 = self.env["cloudflare.config.backup"].get_view(view_type="list")
         self.assertIn("create_date", v1["arch"])
 

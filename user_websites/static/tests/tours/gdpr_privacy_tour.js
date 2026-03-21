@@ -1,10 +1,10 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [%ANCHOR: test_tour_gdpr_privacy]
-// Tests [%ANCHOR: controller_my_privacy_dashboard]
-// Tests [%ANCHOR: UX_GDPR_EXPORT]
-// Tests [%ANCHOR: UX_GDPR_ERASURE]
+// [@ANCHOR: test_tour_gdpr_privacy]
+// Tests [@ANCHOR: controller_my_privacy_dashboard]
+// Tests [@ANCHOR: UX_GDPR_EXPORT]
+// Tests [@ANCHOR: UX_GDPR_ERASURE]
 registry.category("web_tour.tours").add("gdpr_privacy_tour", {
     test: true,
     url: "/my/privacy",

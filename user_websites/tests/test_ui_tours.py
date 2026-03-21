@@ -54,7 +54,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/home", "moderation_appeal_tour")
 
     def test_05_create_site_tour(self):
-        # Tests [%ANCHOR: test_tour_create_site]
+        # Tests [@ANCHOR: test_tour_create_site]
         user_no_site = self.env["res.users"].create(
             {
                 "name": "Site Tour User",

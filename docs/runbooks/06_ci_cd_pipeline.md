@@ -16,4 +16,4 @@ To prevent "it works on my machine" discrepancies, the GitHub Actions runner spi
 The pipeline installs Odoo 19 Community and all required Python dependencies (including external daemon libraries like `ephem`, `asyncpg`, and `pika`). 
 It then executes the `odoo-bin` test runner targeting our custom modules. 
 
-**Release Gating:** A Pull Request **CANNOT** be merged unless 100% of the BDD unit tests pass. If a developer modifies a Semantic Anchor `# [%ANCHOR: ...]`, they must ensure the corresponding test suite is updated to reflect the new business logic.
+**Release Gating:** A Pull Request **CANNOT** be merged unless 100% of the BDD unit tests pass. If a developer modifies a Semantic Anchor `# [@ANCHOR: ...]`, they must ensure the corresponding test suite is updated to reflect the new business logic.

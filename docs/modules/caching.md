@@ -14,4 +14,4 @@ Implements a global, root-scoped Service Worker (`/sw.js`) that proxies and cach
 * **Dynamic Large File Prohibition:** The worker mathematically calculates an active quota limit (approx 35MB). Heavy media MUST route via `/web/image` to prevent the cache from ejecting critical UI bundles.
 
 ## 3. Semantic Anchors
-* `[%ANCHOR: xpath_rendering_caching_layout]`.
+* `[@ANCHOR: xpath_rendering_caching_layout]`.

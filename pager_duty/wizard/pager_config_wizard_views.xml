@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_pager_config_wizard" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [%ANCHOR: test_pager_view] -->
+    <record id="view_pager_config_wizard" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_pager_view] -->
         <field name="name">pager.config.wizard.form</field>
         <field name="model">pager.config.wizard</field>
         <field name="arch" type="xml">

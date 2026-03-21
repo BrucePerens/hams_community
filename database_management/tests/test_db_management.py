@@ -7,7 +7,7 @@ class TestDatabaseManagement(TransactionCase):
     @patch("shutil.which", return_value="/bin/mock")
     @patch("subprocess.run")
     def test_01_vacuum_analyze(self, mock_run, mock_which):
-        # Tests [%ANCHOR: vacuum_analyze]
+        # Tests [@ANCHOR: vacuum_analyze]
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_run.return_value = mock_res
@@ -52,12 +52,12 @@ class TestDatabaseManagement(TransactionCase):
             stat.action_vacuum_analyze()
 
     def test_02_bloat_cron(self):
-        # [%ANCHOR: test_dba_cron]
-        # Tests [%ANCHOR: bloat_alert_synergy]
+        # [@ANCHOR: test_dba_cron]
+        # Tests [@ANCHOR: bloat_alert_synergy]
         self.env.ref("database_management.cron_check_bloat")._trigger()
 
     def test_03_db_index_stats(self):
-        # Tests [%ANCHOR: db_index_stats]
+        # Tests [@ANCHOR: db_index_stats]
         from unittest.mock import patch
         with patch.object(type(self.env["database.table.stat"]), "search") as mock_search:
             mock_search.return_value = []
@@ -65,7 +65,7 @@ class TestDatabaseManagement(TransactionCase):
             mock_search.assert_called_once()
 
     def test_03_terminate_backend(self):
-        # Tests [%ANCHOR: db_terminate_backend]
+        # Tests [@ANCHOR: db_terminate_backend]
         # We test termination with a non-existent dummy PID to prevent killing the test runner
         # pg_terminate_backend(pid) returns False if the pid doesn't exist, safely proving execution.
         self.env.cr.execute("SELECT pg_terminate_backend(999999)")
@@ -78,8 +78,8 @@ class TestDatabaseManagement(TransactionCase):
         self.assertTrue(True)
 
     def test_04_views(self):
-        # [%ANCHOR: test_dba_view]
-        # Tests [%ANCHOR: db_index_stats]
+        # [@ANCHOR: test_dba_view]
+        # Tests [@ANCHOR: db_index_stats]
         v1 = self.env["database.table.stat"].get_view(view_type="list")
         self.assertIn("table_name", v1["arch"])
 

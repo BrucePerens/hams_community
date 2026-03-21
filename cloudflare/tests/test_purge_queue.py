@@ -17,8 +17,8 @@ class TestPurgeQueue(TransactionCase):
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     @patch("time.sleep")
     def test_01_bdd_queue_batching_and_rate_limiting(self, mock_sleep, mock_post):
-        # [%ANCHOR: test_queue_batching_and_rate_limiting]
-        # Tests [%ANCHOR: ir_cron_process_cf_purge_queue]
+        # [@ANCHOR: test_queue_batching_and_rate_limiting]
+        # Tests [@ANCHOR: ir_cron_process_cf_purge_queue]
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_post.return_value = mock_response
@@ -59,8 +59,8 @@ class TestPurgeQueue(TransactionCase):
         cron._trigger()
 
     def test_03_purge_queue_website_acl(self):
-        # [%ANCHOR: test_purge_queue_base_url_sudo]
-        # Tests [%ANCHOR: enqueue_urls_base_url]
+        # [@ANCHOR: test_purge_queue_base_url_sudo]
+        # Tests [@ANCHOR: enqueue_urls_base_url]
         """
         Verify that the purge queue service account can successfully read
         the website_id.domain field without triggering an AccessError.

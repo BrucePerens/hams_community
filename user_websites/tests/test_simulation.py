@@ -216,8 +216,8 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
             )
 
     def test_01_high_speed_full_platform_exercise(self):
-        # [%ANCHOR: simulation_environment]
-        # Tests [%ANCHOR: simulation_environment]
+        # [@ANCHOR: simulation_environment]
+        # Tests [@ANCHOR: simulation_environment]
         # Use the variable as an iteration count instead of minutes now
         iterations = int(os.environ.get("SIMULATION_DURATION_MINUTES", "60"))
 

@@ -311,7 +311,7 @@ class PagerCheck(models.Model):
         }
 
     def action_push_to_json(self):
-        # [%ANCHOR: generalized_pager_config]
+        # [@ANCHOR: generalized_pager_config]
         checks = self.env["pager.check"].search([("active", "=", True)], limit=1000)
         check_list = []
         for c in checks:

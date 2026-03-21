@@ -42,7 +42,7 @@ This document defines the universal development standards and Agile workflows fo
 You MUST internally perform a strict compliance check before opening the final Parcel block. Proceed directly to the Parcel block unless you have a novel, specific architectural warning to communicate.
 
 ### C. Anchor-Driven Regression Prevention (The Context Protocol)
-1. **Context Discovery:** Before modifying any file, actively scan for existing Semantic Anchors (`[%ANCHOR: unique_name]`).
+1. **Context Discovery:** Before modifying any file, actively scan for existing Semantic Anchors (`[@ANCHOR: unique_name]`).
 2. **Traceability Verification:** Cross-reference found anchors against `docs/stories/` or `docs/journeys/` to understand the business rule before changing it.
 3. **Anchor Preservation:** You MUST preserve all existing Semantic Anchors. If moving logic, you MUST move the anchor with it.
 4. **Anchor-Driven Development (ADD):** When implementing a new feature, generate a new Semantic Anchor and immediately map it to a new entry in the documentation within the same transaction.

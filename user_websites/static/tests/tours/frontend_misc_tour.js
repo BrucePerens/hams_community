@@ -1,7 +1,7 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [%ANCHOR: test_tour_frontend_misc]
+// [@ANCHOR: test_tour_frontend_misc]
 registry.category("web_tour.tours").add("frontend_misc_tour", {
     test: true,
     url: "/user-websites/documentation",

@@ -12,7 +12,7 @@ class TestPagerIncident(TransactionCase):
         self.integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
     def test_01_rate_limiting_blocks_spam(self):
-        # Tests [%ANCHOR: report_incident_rate_limit]
+        # Tests [@ANCHOR: report_incident_rate_limit]
         vals = {
             "source": "test_daemon",
             "severity": "high",
@@ -57,8 +57,8 @@ class TestPagerIncident(TransactionCase):
                 mock_client.get.assert_called_with("pager_rate_limit:test_daemon")
 
     def test_02_zero_sudo_impersonation_and_mail(self):
-        # Tests [%ANCHOR: auto_resolve_incidents]
-        # [%ANCHOR: test_pager_notification]
+        # Tests [@ANCHOR: auto_resolve_incidents]
+        # [@ANCHOR: test_pager_notification]
         vals = {
             "source": "test_daemon_2",
             "severity": "critical",
@@ -164,7 +164,7 @@ class TestPagerIncident(TransactionCase):
         self.assertIsInstance(incident.mttr, float)
 
     def test_06_escalation(self):
-        # Tests [%ANCHOR: test_pager_escalation]
+        # Tests [@ANCHOR: test_pager_escalation]
         incident = self.incident_model.create(
             {"source": "esc_test", "severity": "high", "description": "desc"}
         )
@@ -186,7 +186,7 @@ class TestPagerIncident(TransactionCase):
         self.assertTrue(incident.is_escalated)
 
     def test_04_views_render(self):
-        # [%ANCHOR: test_pager_view]
+        # [@ANCHOR: test_pager_view]
         if "pager.incident" in self.env:
             self.env["pager.incident"].get_view(view_type="form")
             self.env["pager.incident"].get_view(view_type="list")

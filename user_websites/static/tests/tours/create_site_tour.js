@@ -1,9 +1,9 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [%ANCHOR: test_tour_create_site]
-// Tests [%ANCHOR: controller_user_websites_home]
-// Tests [%ANCHOR: UX_CREATE_SITE]
+// [@ANCHOR: test_tour_create_site]
+// Tests [@ANCHOR: controller_user_websites_home]
+// Tests [@ANCHOR: UX_CREATE_SITE]
 registry.category("web_tour.tours").add("create_site_tour", {
     test: true,
     steps: () => [

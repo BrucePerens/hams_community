@@ -18,7 +18,7 @@ We don't rely on basic system prompts; we govern AI agents using a rigorous hier
 * **The AI's own Experience File** ([`docs/LLM_EXPERIENCE.md`](docs/LLM_EXPERIENCE.md)): ** The AI's own notes to itself, it chooses what goes in this file. Sometimes, experience will be promoted to more formal documents.
 
 ### The Semantic Anchor System
-To prevent AI "amnesia" and ensure code, tests, and documentation remain permanently synchronized, the platform utilizes a bidirectional **Semantic Anchor System** (`[%ANCHOR: unique_name]`).
+To prevent AI "amnesia" and ensure code, tests, and documentation remain permanently synchronized, the platform utilizes a bidirectional **Semantic Anchor System** (`[@ANCHOR: unique_name]`).
 * When an AI generates a business rule or UI view in the code, it drops an anchor.
 * That exact anchor must physically appear in the corresponding automated Python or JS test.
 * That exact anchor must also be referenced inline within the relevant Markdown documentation.

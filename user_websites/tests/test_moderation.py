@@ -53,8 +53,8 @@ class TestModeration(HttpCase):
         )
 
     def test_01_three_strikes_suspension(self):
-        # [%ANCHOR: test_moderation_suspension]
-        # Tests [%ANCHOR: action_take_action_and_strike]
+        # [@ANCHOR: test_moderation_suspension]
+        # Tests [@ANCHOR: action_take_action_and_strike]
         """
         Verify that hitting 3 strikes automatically suspends the user
         and unpublishes all their content.

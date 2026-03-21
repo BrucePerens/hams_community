@@ -4,8 +4,6 @@
 
 **Context:** Technical documentation strictly for LLMs and Integrators.
 
----
-
 ## 1. 🏗️ Overview & Architecture
 This module is a lightweight domain extension for `user_websites`. It connects our shared blog architecture with Odoo's native frontend SEO engine.
 
@@ -17,4 +15,4 @@ This module is a lightweight domain extension for `user_websites`. It connects o
 ---
 
 ## 3. 🔗 Semantic Anchors
-* `[%ANCHOR: controller_user_blog_index_seo_override]`: Blog controller override for injecting SEO context variables.
+* `[@ANCHOR: controller_user_blog_index_seo_override]`: Blog controller override for injecting SEO context variables.

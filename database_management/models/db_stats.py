@@ -53,7 +53,7 @@ class DatabaseTableStat(models.Model):
         )
 
     def action_vacuum_analyze(self):
-        # [%ANCHOR: vacuum_analyze]
+        # [@ANCHOR: vacuum_analyze]
         import subprocess
         import os
         from odoo.exceptions import UserError
@@ -85,7 +85,7 @@ class DatabaseTableStat(models.Model):
 
     @api.model
     def cron_check_bloat(self):
-        # [%ANCHOR: bloat_alert_synergy]
+        # [@ANCHOR: bloat_alert_synergy]
         high_bloat = self.env["database.table.stat"].search(
             [("dead_percent", ">", 20.0), ("dead_tuples", ">", 10000)], limit=1000
         )
@@ -173,7 +173,7 @@ class DatabaseActivity(models.Model):
         """)
 
     def action_terminate_backend(self):
-        # [%ANCHOR: db_terminate_backend]
+        # [@ANCHOR: db_terminate_backend]
         for rec in self:
             # Parameterized execution protects against SQL injection
             self.env.cr.execute("SELECT pg_terminate_backend(%s)", (rec.pid,))
@@ -181,7 +181,7 @@ class DatabaseActivity(models.Model):
 
 
 class DatabaseIndexStat(models.Model):
-    # [%ANCHOR: db_index_stats]
+    # [@ANCHOR: db_index_stats]
     _name = "database.index.stat"
     _description = "Database Index Health"
     _auto = False

@@ -47,7 +47,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         )
 
     def test_01_community_directory_rendering(self):
-        # Tests [%ANCHOR: UX_COMMUNITY_DIRECTORY]
+        # Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
         """
         Ensure the /community route only lists users who have opted in.
         """
@@ -72,7 +72,7 @@ class TestControllers(odoo.tests.common.HttpCase):
         self.assertEqual(response_blog.status_code, 404)
 
     def test_03_report_violation_maps_content_owner(self):
-        # Tests [%ANCHOR: UX_REPORT_VIOLATION]
+        # Tests [@ANCHOR: UX_REPORT_VIOLATION]
         """
         Ensure submitting a violation report correctly maps the content_owner_id
         if the URL matches a private page.
@@ -284,9 +284,9 @@ class TestControllers(odoo.tests.common.HttpCase):
         )
 
     def test_09_admin_violation_toast_rpc(self):
-        # [%ANCHOR: test_admin_violation_toast_rpc]
-        # Tests [%ANCHOR: api_pending_reports]
-        # Tests [%ANCHOR: admin_toast_logic]
+        # [@ANCHOR: test_admin_violation_toast_rpc]
+        # Tests [@ANCHOR: api_pending_reports]
+        # Tests [@ANCHOR: admin_toast_logic]
         """
         Verify the GET endpoint returns correct pending counts for admins and 0 for guests/users.
         """

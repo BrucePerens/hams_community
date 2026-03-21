@@ -29,7 +29,7 @@ class TestBoardEdgeCases(TransactionCase):
         self.env["calendar.event"].search([]).unlink()
         self.env["pager.incident"].search([]).unlink()
 
-        # Tests [%ANCHOR: pager_board_data]
+        # Tests [@ANCHOR: pager_board_data]
         data = self.env["pager.incident"].with_user(self.user).get_board_data()
         self.assertEqual(data["on_duty"], "None")
         self.assertEqual(len(data["active"]), 0)
@@ -37,7 +37,7 @@ class TestBoardEdgeCases(TransactionCase):
 
     def test_02_acknowledge_rpc(self):
         """Verify acknowledging an incident sets the user correctly via the OWL UI RPC call."""
-        # Tests [%ANCHOR: action_acknowledge_incident]
+        # Tests [@ANCHOR: action_acknowledge_incident]
         incident = self.env["pager.incident"].create(
             {"source": "test", "severity": "high", "description": "desc"}
         )

@@ -64,8 +64,8 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         )
 
     def test_02_cron_batching_resumption(self):
-        # [%ANCHOR: test_cron_batching_resumption]
-        # Tests [%ANCHOR: ir_cron_send_weekly_digest]
+        # [@ANCHOR: test_cron_batching_resumption]
+        # Tests [@ANCHOR: ir_cron_send_weekly_digest]
         """
         Verify that the weekly digest cron successfully parses the last_digest_key
         and resumes processing from the correct index.
@@ -141,9 +141,9 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             )
 
     def test_04_bdd_ormcache_query_counting_slugs(self):
-        # [%ANCHOR: test_slug_cache_invalidation]
-        # Tests [%ANCHOR: slug_cache_invalidation]
-        # Tests [%ANCHOR: slug_cache_invalidation_unlink]
+        # [@ANCHOR: test_slug_cache_invalidation]
+        # Tests [@ANCHOR: slug_cache_invalidation]
+        # Tests [@ANCHOR: slug_cache_invalidation_unlink]
         """
         BDD: Given ADR-0049 Cache Verification
         When resolving slugs repeatedly
@@ -177,9 +177,9 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         user.unlink()
 
     def test_05_bdd_ormcache_query_counting_group_slugs(self):
-        # [%ANCHOR: test_group_slug_cache_invalidation]
-        # Tests [%ANCHOR: group_slug_cache_invalidation]
-        # Tests [%ANCHOR: group_slug_cache_invalidation_unlink]
+        # [@ANCHOR: test_group_slug_cache_invalidation]
+        # Tests [@ANCHOR: group_slug_cache_invalidation]
+        # Tests [@ANCHOR: group_slug_cache_invalidation_unlink]
         """
         BDD: Given ADR-0049 Cache Verification
         When resolving group slugs repeatedly
@@ -215,8 +215,8 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         group.unlink()
 
     def test_06_cron_redis_flush_batching(self):
-        # [%ANCHOR: test_cron_redis_flush]
-        # Tests [%ANCHOR: ir_cron_flush_view_counters]
+        # [@ANCHOR: test_cron_redis_flush]
+        # Tests [@ANCHOR: ir_cron_flush_view_counters]
         """
         BDD: Given the _flush_redis_view_counters cron
         When it processes a batch of Redis view keys and the cursor is not 0
@@ -314,9 +314,9 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             )
 
     def test_08_cron_pending_reports(self):
-        # [%ANCHOR: test_cron_pending_reports]
-        # Tests [%ANCHOR: ir_cron_notify_pending_reports]
-        # Tests [%ANCHOR: cron_notify_pending_reports]
+        # [@ANCHOR: test_cron_pending_reports]
+        # Tests [@ANCHOR: ir_cron_notify_pending_reports]
+        # Tests [@ANCHOR: cron_notify_pending_reports]
         """
         Prove that the cron correctly summarizes pending reports and emails the admin,
         without crashing and using the correct template model.
@@ -357,4 +357,4 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             raise_if_not_found=False,
         )
         if template:
-            template.send_mail(self.env.company.id, force_send=False)  # audit-ignore-mail: Tested by [%ANCHOR: test_cron_pending_reports]  # fmt: skip
+            template.send_mail(self.env.company.id, force_send=False)  # audit-ignore-mail: Tested by [@ANCHOR: test_cron_pending_reports]  # fmt: skip

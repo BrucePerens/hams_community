@@ -17,14 +17,14 @@ Implements the Best-in-Class Hybrid Architecture proposed for unified backup man
 ---
 
 ## Semantic Anchors
-* `[%ANCHOR: backup_restore_command]`
-* `[%ANCHOR: backup_trigger_execution]`
-* `[%ANCHOR: backup_apply_policies]`
-* `[%ANCHOR: backup_pager_synergy]`
-* `[%ANCHOR: backup_board_data]`
-* `[%ANCHOR: backup_sync_kopia]`
-* `[%ANCHOR: backup_sync_pgbackrest]`
-* `[%ANCHOR: cron_sync_all_backups]`
-* `[%ANCHOR: test_backup_cron]`
-* `[%ANCHOR: test_backup_view]`
-* `[%ANCHOR: test_backup_orchestration]`
+* `[@ANCHOR: backup_restore_command]`
+* `[@ANCHOR: backup_trigger_execution]`
+* `[@ANCHOR: backup_apply_policies]`
+* `[@ANCHOR: backup_pager_synergy]`
+* `[@ANCHOR: backup_board_data]`
+* `[@ANCHOR: backup_sync_kopia]`
+* `[@ANCHOR: backup_sync_pgbackrest]`
+* `[@ANCHOR: cron_sync_all_backups]`
+* `[@ANCHOR: test_backup_cron]`
+* `[@ANCHOR: test_backup_view]`
+* `[@ANCHOR: test_backup_orchestration]`

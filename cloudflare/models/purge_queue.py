@@ -24,8 +24,8 @@ class CloudflarePurgeQueue(models.Model):
 
     @api.model
     def enqueue_urls(self, urls, website_id=None):
-        # [%ANCHOR: enqueue_urls_base_url]
-        # Verified by [%ANCHOR: test_purge_queue_base_url_sudo]
+        # [@ANCHOR: enqueue_urls_base_url]
+        # Verified by [@ANCHOR: test_purge_queue_base_url_sudo]
         if not website_id:
             from odoo.http import request
 

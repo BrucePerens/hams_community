@@ -32,8 +32,8 @@ class TestSecurityUtils(TransactionCase):
                 utils._get_system_param(key)
 
     def test_02_bdd_ormcache_query_counting_service_uid(self):
-        # [%ANCHOR: test_get_service_uid]
-        # Tests [%ANCHOR: get_service_uid]
+        # [@ANCHOR: test_get_service_uid]
+        # Tests [@ANCHOR: get_service_uid]
         from unittest.mock import patch
 
         utils = self.env["zero_sudo.security.utils"]
@@ -52,8 +52,8 @@ class TestSecurityUtils(TransactionCase):
                 self.assertNotIn("res_users", call[0][0])
 
     def test_03_bdd_event_bus_payload_generation(self):
-        # [%ANCHOR: test_coherent_cache_signal]
-        # Tests [%ANCHOR: coherent_cache_signal]
+        # [@ANCHOR: test_coherent_cache_signal]
+        # Tests [@ANCHOR: coherent_cache_signal]
         utils = self.env["zero_sudo.security.utils"]
         with patch.object(self.env.cr, "execute") as mock_execute:
             utils._notify_cache_invalidation("test.model", "test_key")

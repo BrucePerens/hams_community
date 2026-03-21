@@ -1,24 +1,17 @@
-# Caching Module (caching)
+# ⚡ Caching Module (`caching`)
 
-## Overview
-This module implements a global, root-scoped Service Worker (`/sw.js`) that proxies and caches frontend assets across the entire Odoo instance. It acts as a client-side CDN, resulting in near-instant load times for returning visitors.
+*Copyright © Bruce Perens K6BP. AGPL-3.0.*
 
-## Agent Integration Instructions (Zero-Config)
-If you are an AI agent or developer building another module, **you do not need to write any integration code for this module.**
+**Context:** Technical documentation strictly for LLMs and Integrators.
 
-To ensure your module's assets are cached, you must strictly follow these rules:
+## 1. Overview
+Implements a global, root-scoped Service Worker (`/sw.js`) that proxies and caches frontend assets locally in the browser to provide near-instant load times.
 
-1.  **Path Compliance:** The Service Worker automatically intercepts and caches HTTP GET requests matching the following paths:
-    * `/web/assets/...`: Odoo's compiled and hashed asset bundles.
-    * `/web/static/...`: Odoo's core static files and generic media.
-    * `/<your_module_name>/static/...`: Any static file served directly from your custom module's directory (e.g., `/user_websites/static/src/js/widget.js`).
-    As long as you place your frontend assets inside your module's standard `static/` directory, they will be cached automatically.
-2.  **No Competing Workers:** DO NOT attempt to register another Service Worker in your module. A domain can only be cleanly controlled by one root Service Worker.
-3.  **WebSocket Safety:** The Service Worker is hardcoded to ignore `ws://` and `wss://` protocols. You may safely open WebSockets (e.g., for real-time dashboards) without fear of proxy interception or caching failures.
-4.  **Dynamic Data:** Do not put dynamic, user-specific data into static JS files. Static files are aggressively cached. Pass dynamic data to your static JS via HTML `data-*` attributes or standard Odoo RPC calls.
-5.  **DYNAMIC LARGE FILE PROHIBITION (CRITICAL):** The Service Worker dynamically calculates a maximum file size threshold during boot based on the total sum of all static assets across the platform. If the total ecosystem size breaches 35MB, it automatically begins excluding the largest files from the cache to protect the browser's quota. Heavy media or user-generated data MUST be served via non-cached dynamic routes like `/web/image` or `/web/content` to avoid forcing the dynamic threshold to prematurely eject legitimate UI assets.
+## 2. Integration Rules
+* Assets placed in your module's `static/` directory are cached automatically.
+* **No Competing Workers:** DO NOT attempt to register another Service Worker.
+* **WebSockets:** `ws://` protocols are hardcoded to bypass the proxy.
+* **Dynamic Large File Prohibition:** The worker mathematically calculates an active quota limit (approx 35MB). Heavy media MUST route via `/web/image` to prevent the cache from ejecting critical UI bundles.
 
----
-
-## 🔗 Semantic Anchors
-* `[%ANCHOR: xpath_rendering_caching_layout]` / `[%ANCHOR: test_xpath_rendering_caching_layout]`: Injecting and verifying the Service Worker registration script.
+## 3. Semantic Anchors
+* `[@ANCHOR: xpath_rendering_caching_layout]`.

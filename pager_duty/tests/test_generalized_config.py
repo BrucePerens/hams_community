@@ -40,7 +40,7 @@ class TestGeneralizedConfig(TransactionCase):
         When a valid JSON string is submitted via action_pull_from_json
         Then it MUST successfully parse the JSON and create the corresponding pager.check records.
         """
-        # Tests [%ANCHOR: generalized_pager_config]
+        # Tests [@ANCHOR: generalized_pager_config]
         check_model = self.env["pager.check"].with_user(self.admin)
 
         # Mock the file read to supply our JSON payload
@@ -88,7 +88,7 @@ class TestGeneralizedConfig(TransactionCase):
 
     def test_03_views_render(self):
         """Verify the new graphical configuration views render successfully."""
-        # Tests [%ANCHOR: test_pager_view]
+        # Tests [@ANCHOR: test_pager_view]
         self.env["pager.check"].get_view(view_type="form")
         self.env["pager.check"].get_view(view_type="list")
         self.assertTrue(True)

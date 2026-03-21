@@ -15,12 +15,12 @@ Provides an enterprise-grade Application Performance Monitoring (APM) and DBA su
 ---
 
 ## Semantic Anchors
-* `[%ANCHOR: vacuum_analyze]`
-* `[%ANCHOR: bloat_alert_synergy]`
-* `[%ANCHOR: db_terminate_backend]`
-* `[%ANCHOR: db_index_stats]`
-* `[%ANCHOR: test_dba_cron]`
-* `[%ANCHOR: test_dba_view]`
-* `[%ANCHOR: pg_optimize_wizard]`
-* `[%ANCHOR: pg_ha_wizard]`
-* `[%ANCHOR: test_pg_config_views]`
+* `[@ANCHOR: vacuum_analyze]`
+* `[@ANCHOR: bloat_alert_synergy]`
+* `[@ANCHOR: db_terminate_backend]`
+* `[@ANCHOR: db_index_stats]`
+* `[@ANCHOR: test_dba_cron]`
+* `[@ANCHOR: test_dba_view]`
+* `[@ANCHOR: pg_optimize_wizard]`
+* `[@ANCHOR: pg_ha_wizard]`
+* `[@ANCHOR: test_pg_config_views]`

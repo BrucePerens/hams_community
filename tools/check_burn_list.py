@@ -856,7 +856,7 @@ def scan_file(filepath):
                 ):
                     has_tour = any(
                         [
-                            "[%ANCHOR:" in child.attrs.get("text", "")
+                            "[@ANCHOR:" in child.attrs.get("text", "")
                             for child in node.walk()
                             if child.tag == "#comment"
                         ]
@@ -869,7 +869,7 @@ def scan_file(filepath):
                         prev = node.parent.children[
                             node.parent.children.index(node) - 1
                         ]
-                        if prev.tag == "#comment" and "[%ANCHOR:" in prev.attrs.get(
+                        if prev.tag == "#comment" and "[@ANCHOR:" in prev.attrs.get(
                             "text", ""
                         ):
                             has_tour = True
@@ -881,7 +881,7 @@ def scan_file(filepath):
                                 )
                             ]
                         )
-                        if "[%ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:
+                        if "[@ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:
                             has_tour = True
                     if not has_tour:
                         errors_found.append(
@@ -1063,7 +1063,7 @@ def scan_file(filepath):
                     f"Line {line_num}: UNAUTHORIZED BYPASS.\n      Code: `{stripped}`"
                 )
             else:
-                anchor_match = re.search(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
+                anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
                 if anchor_match:
                     REQUIRE_TEST_VERIFICATION.append(
                         {
@@ -1077,7 +1077,7 @@ def scan_file(filepath):
                     )
 
         if "burn-ignore-sudo" in line:
-            anchor_match = re.search(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
+            anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
             if anchor_match:
                 REQUIRE_TEST_VERIFICATION.append(
                     {
@@ -1127,7 +1127,7 @@ def _verify_test_ast(
 
     anchor_line = -1
     for i, line_text in enumerate(target_content.splitlines(), 1):
-        if f"[%ANCHOR: {anchor}]" in line_text:
+        if f"[@ANCHOR: {anchor}]" in line_text:
             anchor_line = i
             break
 
@@ -1276,7 +1276,7 @@ def main():
             (
                 (c, f)
                 for f, c in FOUND_TEST_CONTENTS.items()
-                if f"[%ANCHOR: {anchor}]" in c
+                if f"[@ANCHOR: {anchor}]" in c
             ),
             (None, None),
         )

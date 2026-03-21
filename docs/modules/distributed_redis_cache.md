@@ -9,8 +9,8 @@ Standard Odoo `@tools.ormcache` relies on a local worker registry cache, which c
 
 **The Invalidation Pipeline:**
 1. An Odoo worker mutates a cached model and fires a PostgreSQL `NOTIFY` on the `distributed_cache_invalidation` channel.
-2. The standalone `cache_manager.py` daemon receives the `NOTIFY` and publishes the payload to the Redis `odoo_cache_invalidation_bus` pub/sub channel. [%ANCHOR: cache_manager_redis_publish]
-3. A background thread running inside every Odoo WSGI worker's `ir.http` middleware intercepts the Redis broadcast and instantly queues the model for local cache flushing before serving its next HTTP request. [%ANCHOR: redis_cache_interceptor]
+2. The standalone `cache_manager.py` daemon receives the `NOTIFY` and publishes the payload to the Redis `odoo_cache_invalidation_bus` pub/sub channel. [@ANCHOR: cache_manager_redis_publish]
+3. A background thread running inside every Odoo WSGI worker's `ir.http` middleware intercepts the Redis broadcast and instantly queues the model for local cache flushing before serving its next HTTP request. [@ANCHOR: redis_cache_interceptor]
 
 ## 2. Resilience (Fail-Open)
 If the Redis server crashes or the `redis` Python module is uninstalled, the cache gracefully falls back to a standard Python dictionary (`_local_cache`). It will continue to function without crashing the web workers, though multi-node phase coherence will be temporarily lost until Redis is restored.

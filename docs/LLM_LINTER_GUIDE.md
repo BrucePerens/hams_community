@@ -17,7 +17,7 @@ You MUST consult this guide to understand the *intent* of the rules and format y
 The AST linter recursively tracks assignments and function calls to block absolute privilege escalation. You MUST use the **Service Account Pattern** (`with_user(svc_uid)`) or the **Public User Idiom**.
 
 * **`sudo()` is Blocked:** Any use of `.sudo()` on recordsets, environments, or intermediate variables is physically blocked.
-  * *Exception:* Fetching cryptographic keys (`.sudo().get_param('database.secret')`) is permitted ONLY if tagged with `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]`.
+  * *Exception:* Fetching cryptographic keys (`.sudo().get_param('database.secret')`) is permitted ONLY if tagged with `# burn-ignore-sudo: Tested by [@ANCHOR: example_name]`.
 * **Obfuscation is Caught:** The linter tracks `getattr(..., 'sudo')` and intermediate variable assignments.
 * **Shell Injection:** `subprocess.run` MUST explicitly use `shell=False` and pass arguments as lists.
 * **Code Execution:** `eval()`, `exec()`, `pickle.loads/dumps`, and `yaml.load` are strictly banned. Use `ast.literal_eval()`, `odoo.tools.safe_eval()`, or `json`.
@@ -101,16 +101,16 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 | Audit Target | Bypass Tag | Required AST Assertion in Test |
 | :--- | :--- | :--- |
-| `ir.cron` XML | `<!-- audit-ignore-cron: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `_trigger()` to prove batching. |
-| `send_mail()` | `# audit-ignore-mail: Tested by [%ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. **CRITICAL TRAP:** The integer `res_id` passed to `send_mail(res_id)` MUST match an existing record of the exact model defined in the template's `model_id`. |
-| `.search()` | `# audit-ignore-search: Tested by [%ANCHOR: example_name]` | The test MUST pass `limit=` or utilize `patch.object(self.env.cr, 'execute')` to assert caching behavior. |
+| `ir.cron` XML | `<!-- audit-ignore-cron: Tested by [@ANCHOR: example_name] -->` | The test MUST execute `_trigger()` to prove batching. |
+| `send_mail()` | `# audit-ignore-mail: Tested by [@ANCHOR: example_name]` | The test MUST execute `send_mail` or `message_post`. **CRITICAL TRAP:** The integer `res_id` passed to `send_mail(res_id)` MUST match an existing record of the exact model defined in the template's `model_id`. |
+| `.search()` | `# audit-ignore-search: Tested by [@ANCHOR: example_name]` | The test MUST pass `limit=` or utilize `patch.object(self.env.cr, 'execute')` to assert caching behavior. |
 | `@tools.ormcache` | N/A (Tested implicitly by logic) | To verify a cache hit, NEVER use `self.assertQueryCount(0)`. You MUST use `with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:` and assert `self.assertNotIn("target_table", query)` in `mock_execute.call_args_list`. |
 | Boolean Checks | N/A (Flake8 E712) | NEVER use `== True` or `== False`. You MUST use `is True`, `is False`, or `if cond:`. |
-| `<xpath>` | `<!-- audit-ignore-xpath: Tested by [%ANCHOR: example_name] -->` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. |
+| `<xpath>` | `<!-- audit-ignore-xpath: Tested by [@ANCHOR: example_name] -->` | The test MUST execute `get_view`, `url_open`, or `_get_combined_arch` to prove DOM injection. |
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
-| `ir.ui.view` | `<!-- audit-ignore-view: Tested by [%ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
-| I18N Strings | `# audit-ignore-i18n: Tested by [%ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
-| Sudo Override | `# burn-ignore-sudo: Tested by [%ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
+| `ir.ui.view` | `<!-- audit-ignore-view: Tested by [@ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
+| I18N Strings | `# audit-ignore-i18n: Tested by [@ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
+| Sudo Override | `# burn-ignore-sudo: Tested by [@ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
 
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines and detach your inline linter comments, causing the AST linter to fail. **Whenever you apply an `# audit-ignore-*` or `# burn-ignore` comment to a multi-line structure, you MUST append `  # fmt: skip` to the exact same line.**
@@ -119,8 +119,8 @@ The AST parser physically reads your test files to verify the assertions exist.
    * **Required Structure:**
      ```xml
      <record id="my_view" model="ir.ui.view">
-         <!-- [%ANCHOR: example_source_anchor] (Only if a base anchor is needed) -->
-         <!-- audit-ignore-view: Tested by [%ANCHOR: test_my_view] -->
+         <!-- [@ANCHOR: example_source_anchor] (Only if a base anchor is needed) -->
+         <!-- audit-ignore-view: Tested by [@ANCHOR: test_my_view] -->
          <field name="name">...</field>
      </record>
      ```
@@ -132,7 +132,7 @@ The AST parser physically reads your test files to verify the assertions exist.
 
 The `verify_anchors.py` script enforces strict documentation traceability:
 
-1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [%ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [%ANCHOR: example_name]`.
+1. **Bidirectional Verification:** Any execution logic marked with `# Verified by [@ANCHOR: example_name]` MUST possess a corresponding test file containing `# Tests [@ANCHOR: example_name]`.
 2. **Documentation Mandate:** Any anchor embedded in source code MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text.
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.

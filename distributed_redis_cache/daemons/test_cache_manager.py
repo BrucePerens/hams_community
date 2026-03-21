@@ -11,7 +11,7 @@ import cache_manager  # noqa: E402
 
 class TestCacheManager(unittest.IsolatedAsyncioTestCase):
     async def test_01_broadcast_to_redis(self):
-        # Tests [%ANCHOR: cache_manager_redis_publish]
+        # Tests [@ANCHOR: cache_manager_redis_publish]
         mock_redis = AsyncMock()
         cache_manager.redis_client = mock_redis
 

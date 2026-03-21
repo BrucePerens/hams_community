@@ -96,6 +96,16 @@
       "sandbox_network_access": "loopback"
     },
     {
+      "name": "RabbitMQ AMQP",
+      "type": "rabbitmq",
+      "target": "127.0.0.1",
+      "interval": 60,
+      "port": 5672,
+      "snmp_community": "public",
+      "comment": "Autodiscovered RabbitMQ instance",
+      "sandbox_network_access": "loopback"
+    },
+    {
       "name": "Redis Ping",
       "type": "redis",
       "target": "127.0.0.1",

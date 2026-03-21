@@ -76,12 +76,12 @@ class TestSubscriptionsAndDigest(HttpCase):
         Verify that the cron correctly generates emails, successfully injects the
         List-Unsubscribe headers, and that the unsubscribe route works.
         """
-        # [%ANCHOR: test_weekly_digest_secret]
-        # Tests [%ANCHOR: send_weekly_digest]
-        # [%ANCHOR: test_weekly_digest_mail_template]
-        # Tests [%ANCHOR: send_weekly_digest]
-        # [%ANCHOR: test_unsubscribe_secret]
-        # Tests [%ANCHOR: controller_unsubscribe_digest]
+        # [@ANCHOR: test_weekly_digest_secret]
+        # Tests [@ANCHOR: send_weekly_digest]
+        # [@ANCHOR: test_weekly_digest_mail_template]
+        # Tests [@ANCHOR: send_weekly_digest]
+        # [@ANCHOR: test_unsubscribe_secret]
+        # Tests [@ANCHOR: controller_unsubscribe_digest]
 
         # Execute the cron job method directly
         self.env["blog.post"].send_weekly_digest()
@@ -167,7 +167,7 @@ class TestSubscriptionsAndDigest(HttpCase):
             test_post = self.env["blog.post"].search(
                 [("owner_user_id", "=", self.creator.id)], limit=1
             )
-            template.send_mail(test_post.id, force_send=False)  # audit-ignore-mail: Tested by [%ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            template.send_mail(test_post.id, force_send=False)  # audit-ignore-mail: Tested by [@ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
 
     def test_02_invalid_unsubscribe_token(self):
         """
@@ -200,8 +200,8 @@ class TestSubscriptionsAndDigest(HttpCase):
 
 
 def test_03_subscribe_to_site(self):
-    # [%ANCHOR: test_subscribe_to_site]
-    # Tests [%ANCHOR: UX_SUBSCRIBE]
+    # [@ANCHOR: test_subscribe_to_site]
+    # Tests [@ANCHOR: UX_SUBSCRIBE]
     """
     Verify that users can subscribe to a site.
     """

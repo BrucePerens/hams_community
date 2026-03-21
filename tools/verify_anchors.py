@@ -6,7 +6,7 @@ import re
 def find_anchors_in_docs(docs_dir, root_dir):
     doc_anchors = set()
     contract_anchors = set()
-    pattern = re.compile(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
+    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
 
     for root, _, files in os.walk(docs_dir):
         for file in files:
@@ -77,7 +77,7 @@ def find_anchors_in_code(root_dir):
     tests_links, tests_links_set = {}, set()
     verified_by_links, cross_references = set(), set()
     duplicates = []
-    pattern = re.compile(r"\[%ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
+    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
     exclude_dirs = {"docs", ".git", "venv", "__pycache__"}
 
     for root, dirs, files in os.walk(root_dir):
@@ -193,14 +193,14 @@ def _report_bidirectional_orphans(
     has_errors = False
     if orphaned_source:
         print(
-            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Source anchors missing corresponding '# Tests [%ANCHOR: ...]' link:"
+            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Source anchors missing corresponding '# Tests [@ANCHOR: ...]' link:"
         )
         for anchor in orphaned_source:
             print(f"    - `{anchor}`")
         has_errors = True
     if orphaned_tests:
         print(
-            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Test anchors not cited by '# Verified by [%ANCHOR: ...]':"
+            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Test anchors not cited by '# Verified by [@ANCHOR: ...]':"
         )
         for anchor in orphaned_tests:
             print(f"    - `{anchor}`")
@@ -306,7 +306,7 @@ def main():
                         os.path.join(root, "documentation.html"), "r", encoding="utf-8"
                     ) as f:
                         for match in re.finditer(
-                            r"\[%ANCHOR:\s*(UX_[a-zA-Z0-9_]+)\s*\]", f.read()
+                            r"\[@ANCHOR:\s*(UX_[a-zA-Z0-9_]+)\s*\]", f.read()
                         ):
                             user_manual_anchors.add(match.group(1))
                 except Exception:

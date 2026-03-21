@@ -143,16 +143,16 @@ class BackupConfig(models.Model):
             mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.mail_service_internal"
             )
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_kopia_auto_download]  # fmt: skip
+            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
             bin_path = self.env["binary.manifest"].ensure_executable("kopia")
             msg_body = _("Kopia successfully installed to %s") % bin_path
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_kopia_auto_download]  # fmt: skip
+            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
             return bin_path
 
         raise UserError(_("Unknown engine: %s") % engine)
 
     def action_trigger_backup(self):
-        # [%ANCHOR: backup_trigger_execution]
+        # [@ANCHOR: backup_trigger_execution]
         # Implements ADR-0071: Asynchronous Bastion Pattern
         jobs = self.env["backup.job"]
         created_jobs = []
@@ -216,7 +216,7 @@ class BackupConfig(models.Model):
         return True
 
     def action_apply_policies(self):
-        # [%ANCHOR: backup_apply_policies]
+        # [@ANCHOR: backup_apply_policies]
         for rec in self:
             if rec.engine == "kopia":
                 rec._apply_kopia_policies()
@@ -243,7 +243,7 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering Kopia: {e}")
@@ -264,7 +264,7 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
                 self.action_sync_snapshots()
         except Exception as e:
             self._report_backup_failure(f"Error triggering pgBackRest: {e}")
@@ -303,12 +303,12 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_apply_policies]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_apply_policies]  # fmt: skip
         except Exception as e:
             self._report_backup_failure(f"Error applying Kopia policy: {e}")
 
     def _report_backup_failure(self, message):
-        # [%ANCHOR: backup_pager_synergy]
+        # [@ANCHOR: backup_pager_synergy]
         if "pager.incident" in self.env:
             try:
                 pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -326,11 +326,11 @@ class BackupConfig(models.Model):
         mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.mail_service_internal"
         )
-        self.with_user(mail_svc).message_post(body=message) # audit-ignore-mail: Tested by [%ANCHOR: backup_pager_synergy]  # fmt: skip
+        self.with_user(mail_svc).message_post(body=message) # audit-ignore-mail: Tested by [@ANCHOR: backup_pager_synergy]  # fmt: skip
 
     @api.model
     def get_board_data(self):
-        # [%ANCHOR: backup_board_data]
+        # [@ANCHOR: backup_board_data]
         configs = self.search_read([], ["name", "engine", "target_path"])
         now = fields.Datetime.now()
 
@@ -355,8 +355,8 @@ class BackupConfig(models.Model):
         return configs
 
     def action_sync_snapshots(self):
-        # [%ANCHOR: backup_sync_kopia]
-        # [%ANCHOR: backup_sync_pgbackrest]
+        # [@ANCHOR: backup_sync_kopia]
+        # [@ANCHOR: backup_sync_pgbackrest]
         for rec in self:
             if rec.engine == "kopia":
                 rec._sync_kopia()
@@ -463,7 +463,7 @@ class BackupConfig(models.Model):
 
     @api.model
     def cron_sync_all_backups(self):
-        # [%ANCHOR: cron_sync_all_backups]
+        # [@ANCHOR: cron_sync_all_backups]
         configs = self.env["backup.config"].search([], limit=1000)
         now = fields.Datetime.now()
         for conf in configs:
@@ -510,6 +510,6 @@ class BackupConfig(models.Model):
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [%ANCHOR: test_backup_cron]  # fmt: skip
+                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_backup_cron]  # fmt: skip
         except Exception as e:
             self._report_backup_failure(f"Error triggering Restore Drill: {e}")

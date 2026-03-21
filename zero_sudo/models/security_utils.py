@@ -28,8 +28,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @api.model
     @tools.ormcache("xml_id")
     def _get_service_uid(self, xml_id):
-        # [%ANCHOR: get_service_uid]
-        # Verified by [%ANCHOR: test_get_service_uid]
+        # [@ANCHOR: get_service_uid]
+        # Verified by [@ANCHOR: test_get_service_uid]
         uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
         if not uid:
             raise AccessError(
@@ -75,8 +75,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
-        # [%ANCHOR: coherent_cache_signal]
-        # Verified by [%ANCHOR: test_coherent_cache_signal]
+        # [@ANCHOR: coherent_cache_signal]
+        # Verified by [@ANCHOR: test_coherent_cache_signal]
         if isinstance(key_value, (list, set, tuple)):
             payloads = [f"{model_name}:{kv}" for kv in set(key_value) if kv]
             if payloads:

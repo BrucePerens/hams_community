@@ -90,7 +90,7 @@ class TestBinaryManifest(TransactionCase):
                         mock_copy.assert_called_once()
 
     def test_05_views_render(self):
-        # [%ANCHOR: test_binary_manifest_views]
+        # [@ANCHOR: test_binary_manifest_views]
         """Verify that standard backend views compile without error."""
         v1 = self.env["binary.manifest"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])

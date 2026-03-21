@@ -59,8 +59,8 @@ class ResUsersModeration(models.Model):
         return user.id if user else False
 
     def write(self, vals):
-        # [%ANCHOR: slug_cache_invalidation]
-        # Verified by [%ANCHOR: test_slug_cache_invalidation]
+        # [@ANCHOR: slug_cache_invalidation]
+        # Verified by [@ANCHOR: test_slug_cache_invalidation]
         if "website_slug" in vals or "active" in vals:
             slugs = [user.website_slug for user in self if user.website_slug]
             if slugs:
@@ -90,8 +90,8 @@ class ResUsersModeration(models.Model):
         return res
 
     def unlink(self):
-        # [%ANCHOR: slug_cache_invalidation_unlink]
-        # Verified by [%ANCHOR: test_slug_cache_invalidation]
+        # [@ANCHOR: slug_cache_invalidation_unlink]
+        # Verified by [@ANCHOR: test_slug_cache_invalidation]
         slugs = [user.website_slug for user in self if user.website_slug]
         if slugs:
             self.env["zero_sudo.security.utils"]._notify_cache_invalidation(

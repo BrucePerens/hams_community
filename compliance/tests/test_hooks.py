@@ -61,7 +61,7 @@ class TestComplianceHooks(TransactionCase):
             )
 
     def test_03_views_rendering(self):
-        # [%ANCHOR: test_compliance_views]
+        # [@ANCHOR: test_compliance_views]
         self.env.ref("compliance.compliance_privacy_policy_template").with_context(
             lang=None
         )._get_combined_arch()
