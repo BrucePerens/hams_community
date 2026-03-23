@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import urllib.error
 from email.message import EmailMessage
 
 try:
@@ -23,34 +24,60 @@ try:
 except ImportError:
     psycopg2 = None
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../core_base"))
-try:
-    from json_rpc_client import SecureJSONRPCClient
-except ImportError:
-    SecureJSONRPCClient = None
-
 
 class OdooClient:
-    def __init__(self, url, db):
-        env_path = os.environ.get(
-            "DAEMON_ENV_PATH", "/var/lib/odoo/daemon_keys/pager_duty.env"
-        )
-        if not SecureJSONRPCClient:
-            raise Exception("SecureJSONRPCClient could not be imported from core_base.")
-        self.client = SecureJSONRPCClient(env_path=env_path, base_url=url, db_name=db)
+    def __init__(self, url, db, user, password):
+        self.url = url.rstrip("/")
+        self.db = db
+        self.headers = {
+            "Authorization": f"bearer {password}",
+            "X-Odoo-Database": db,
+            "Content-Type": "application/json",
+            "User-Agent": "Hams-Daemon/1.0",
+        }
 
-    def execute(self, model, method, *args, **kwargs):
-        return self.client.call(model, method, args=list(args), kwargs=kwargs)
+    def execute(self, model, method, **kwargs):
+        req = urllib.request.Request(
+            f"{self.url}/json/2/{model}/{method}",
+            data=json.dumps(kwargs).encode("utf-8"),
+            headers=self.headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8")
+            raise Exception(f"JSON-2 API Error {e.code}: {err_body}")
 
 
 def get_odoo_client(logger, config):
-    url = os.environ.get("ODOO_URL", "[http://127.0.0.1:8069](http://127.0.0.1:8069)")
-    db = config.get("odoo_database") or os.environ.get("ODOO_DB", "hams")
+    url = os.environ.get("ODOO_URL", "http://127.0.0.1:8069").rstrip("/")
+    db = config.get("odoo_database") or os.environ.get("ODOO_DB")
+    if not db:
+        try:
+            req = urllib.request.Request(
+                f"{url}/web/database/list",
+                data=json.dumps({}).encode("utf-8"),
+                headers={"Content-Type": "application/json-rpc"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as res:
+                data = json.loads(res.read().decode("utf-8"))
+                dbs = data.get("result", [])
+                if dbs:
+                    db = dbs[0]
+        except Exception:
+            pass
+    if not db:
+        db = "odoo"
 
+    user = os.environ.get("ODOO_USER", "pager_service_internal")
+    password = os.environ.get("ODOO_PASSWORD", "")
     try:
-        return OdooClient(url, db)
+        return OdooClient(url, db, user, password)
     except Exception as e:
-        logger.error(f"Failed to connect to Odoo via JSON-RPC: {e}")
+        logger.error(f"Failed to connect to Odoo: {e}")
         return None
 
 
@@ -100,7 +127,9 @@ def verify_and_install_dependencies(client, checks):
             success = False
             for attempt in range(12):
                 try:
-                    res = client.execute("pager.check", "rpc_ensure_executable", cmd)
+                    res = client.execute(
+                        "pager.check", "rpc_ensure_executable", cmd_name=cmd
+                    )
                     if res and res.get("status") == "ok":
                         bin_path = res.get("path")
                         logger.info(f"Provisioned {cmd} at {bin_path}")
@@ -126,7 +155,7 @@ def verify_and_install_dependencies(client, checks):
                     client.execute(
                         "pager.incident",
                         "report_incident",
-                        {
+                        vals={
                             "source": "Daemon Boot",
                             "severity": "critical",
                             "description": msg,
@@ -211,7 +240,7 @@ def report(client, source, msg, severity="high"):
 
     try:
         payload = {"source": source, "description": msg, "severity": severity}
-        client.execute("pager.incident", "report_incident", payload)
+        client.execute("pager.incident", "report_incident", vals=payload)
         logger.error(f"Incident reported [{source}]: {msg}")
     except Exception as e:
         logger.error(
@@ -222,7 +251,7 @@ def report(client, source, msg, severity="high"):
 
 def auto_resolve(client, source):
     try:
-        client.execute("pager.incident", "auto_resolve_incidents", source)
+        client.execute("pager.incident", "auto_resolve_incidents", source=source)
         logger.info(f"[{source}] System stable. Auto-resolved open incidents.")
     except Exception as e:
         logger.error(f"Failed to auto-resolve incidents for {source}: {e}")
@@ -571,6 +600,7 @@ def execute_check(check, client=None):
             return False, f"RabbitMQ connection failed: {e}"
 
     elif ctype == "xmlrpc":
+        # Keep XML-RPC for external arbitrary target checks defined by users
         import xmlrpc.client
 
         method = parse_env(check.get("rpc_method", ""))
@@ -702,8 +732,7 @@ def execute_check(check, client=None):
         headers = {"User-Agent": "HamMonitor/1.0"}
         try:
             req = urllib.request.Request(
-                "[https://acme-v02.api.letsencrypt.org/directory](https://acme-v02.api.letsencrypt.org/directory)",
-                headers=headers,
+                "https://acme-v02.api.letsencrypt.org/directory", headers=headers
             )
             with urllib.request.urlopen(req, timeout=10) as response:
                 if response.status != 200:
@@ -714,9 +743,7 @@ def execute_check(check, client=None):
         domains = parse_env(check.get("target", ""))
         if domains and domains != "auto":
             try:
-                req = urllib.request.Request(
-                    "[https://api.ipify.org](https://api.ipify.org)", headers=headers
-                )
+                req = urllib.request.Request("https://api.ipify.org", headers=headers)
                 with urllib.request.urlopen(req, timeout=10) as ip_resp:
                     my_ip = ip_resp.read().decode("utf-8").strip()
 
@@ -940,8 +967,8 @@ def execute_check(check, client=None):
             res = client.execute(
                 "pager.check",
                 "check_heartbeat_rpc",
-                chk_uuid,
-                int(check.get("interval", 60)),
+                hb_uuid=chk_uuid,
+                interval=int(check.get("interval", 60)),
             )
             if res:
                 return True, "OK"
@@ -1236,7 +1263,7 @@ if __name__ == "__main__":
 
     client = get_odoo_client(logger, config)
     if not client:
-        logger.critical("Failed to connect to Odoo XML-RPC. Halting.")
+        logger.critical("Failed to connect to Odoo JSON-2. Halting.")
         sys.exit(1)
 
     checks = config.get("checks", [])

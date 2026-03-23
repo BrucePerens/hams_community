@@ -1,29 +1,46 @@
 #!/usr/bin/env python3
 import os
-import sys
 import json
 import time
 import pika
 import subprocess
+import urllib.request
+import urllib.error
 import logging
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../core_base"))
-try:
-    from json_rpc_client import SecureJSONRPCClient
-except ImportError:
-    SecureJSONRPCClient = None
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [BACKUP_WORKER] - %(message)s"
 )
 logger = logging.getLogger("backup_worker")
 
-ODOO_URL = os.environ.get("ODOO_URL", "[http://127.0.0.1:8069](http://127.0.0.1:8069)")
-ODOO_DB = os.environ.get("DB_NAME", "hams")
+ODOO_URL = os.environ.get("ODOO_URL", "http://127.0.0.1:8069").rstrip("/")
+ODOO_DB = os.environ.get("DB_NAME", "odoo")
+ODOO_USER = "backup_service_internal"
+ODOO_PASS = os.environ.get("ODOO_SERVICE_PASSWORD", "")
 
 RMQ_HOST = os.environ.get("RMQ_HOST", "127.0.0.1")
 RMQ_USER = os.environ.get("RMQ_USER", "guest")
 RMQ_PASS = os.environ.get("RMQ_PASS", "guest")
+
+
+def _json2_call(model, method_name, **kwargs):
+    headers = {
+        "Authorization": f"bearer {ODOO_PASS}",
+        "X-Odoo-Database": ODOO_DB,
+        "Content-Type": "application/json",
+    }
+    req = urllib.request.Request(
+        f"{ODOO_URL}/json/2/{model}/{method_name}",
+        data=json.dumps(kwargs).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8")
+        raise Exception(f"JSON-2 API Error {e.code}: {err_body}")
 
 
 def execute_job(ch, method, properties, body):
@@ -36,39 +53,20 @@ def execute_job(ch, method, properties, body):
 
         logger.info(f"Processing job {job_id} ({engine})")
 
-        env_path = os.environ.get(
-            "DAEMON_ENV_PATH", "/var/lib/odoo/daemon_keys/backup_worker.env"
-        )
-        if not SecureJSONRPCClient:
-            logger.error("SecureJSONRPCClient missing. Requeueing...")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-            return
-
-        try:
-            client = SecureJSONRPCClient(
-                env_path=env_path, base_url=ODOO_URL, db_name=ODOO_DB
-            )
-        except Exception as e:
-            logger.error(f"JSON-RPC authentication/key load failed: {e}. Requeueing...")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-            return
-
-        client.call(
+        _json2_call(
             "backup.job",
             "write",
-            args=[
-                [job_id],
-                {"state": "processing", "output_log": f"Starting {engine} backup...\n"},
-            ],
+            ids=[job_id],
+            vals={
+                "state": "processing",
+                "output_log": f"Starting {engine} backup...\n",
+            },
         )
 
-        config_data = client.call(
-            "backup.config",
-            "read",
-            args=[[config_id]],
-            kwargs={"fields": ["kopia_password"]},
+        config_records = _json2_call(
+            "backup.config", "read", ids=[config_id], fields=["kopia_password"]
         )
-        config = config_data[0] if config_data else {}
+        config = config_records[0] if config_records else {}
 
         env_vars = os.environ.copy()
         if engine == "kopia" and config.get("kopia_password"):
@@ -94,11 +92,12 @@ def execute_job(ch, method, properties, body):
 
         for line in iter(proc.stdout.readline, ""):
             log_buffer += line
-            if time.time() - last_update < 2.0:
-                client.call(
+            if time.time() - last_update > 2.0:
+                _json2_call(
                     "backup.job",
                     "write",
-                    args=[[job_id], {"output_log": log_buffer}],
+                    ids=[job_id],
+                    vals={"output_log": log_buffer},
                 )
                 last_update = time.time()
 
@@ -108,25 +107,22 @@ def execute_job(ch, method, properties, body):
         final_state = "done" if return_code == 0 else "failed"
         log_buffer += f"\nProcess exited with code {return_code}"
 
-        client.call(
+        _json2_call(
             "backup.job",
             "write",
-            args=[[job_id], {"state": final_state, "output_log": log_buffer}],
+            ids=[job_id],
+            vals={"state": final_state, "output_log": log_buffer},
         )
 
         if final_state == "done":
-            client.call(
-                "backup.config",
-                "action_sync_snapshots",
-                args=[[config_id]],
-            )
+            _json2_call("backup.config", "action_sync_snapshots", ids=[config_id])
         else:
-            # Trigger Pager Duty reporting via Odoo model
             error_msg = f"{engine.capitalize()} backup failed for job {job_id}."
-            client.call(
+            _json2_call(
                 "backup.config",
                 "_report_backup_failure",
-                args=[[config_id], error_msg],
+                ids=[config_id],
+                message=error_msg,
             )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)

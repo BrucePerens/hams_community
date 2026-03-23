@@ -489,8 +489,6 @@ class BackupConfig(models.Model):
                 if delta_drill > (7 * 24 * 60 * 60):  # 7 Days
                     conf._execute_restore_drill()
 
-        self.env.ref("backup_management.cron_sync_backups")._trigger()
-
     def _execute_restore_drill(self):
         try:
             res = subprocess.run(
