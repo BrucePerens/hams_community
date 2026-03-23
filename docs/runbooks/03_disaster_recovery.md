@@ -1,6 +1,6 @@
 # Runbook: Disaster Recovery & Backups
 
-**For CLI commands related to volume management or restoring database dumps, please refer to the [Docker Deployment Guide](../../deploy/DOCKER_DEPLOYMENT.md).**
+****For CLI commands related to volume management or restoring database dumps, please refer to the [Docker Deployment Guide](../deploy/DOCKER_DEPLOYMENT.md).**).**
 
 ## 1. Storage Persistence
 *(Reference: `deploy/docker-compose.yml` -> `volumes`)*

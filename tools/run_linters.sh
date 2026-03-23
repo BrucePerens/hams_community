@@ -3,12 +3,14 @@
 # Centralized linter execution script. Silent on success.
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMUNITY_DIR="$(cd "$DIR/../hams_community" 2>/dev/null && pwd || echo "$DIR/../hams_community")"
-MAIN_REPO_DIR="$(cd "$DIR/../hams_private_primary" 2>/dev/null && pwd || echo "$DIR/../hams_private_primary")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$MAIN_REPO_DIR"
+PRIMARY_DIR="$(cd "$DIR/../hams_private_primary" 2>/dev/null && pwd || echo "$DIR/../hams_private_primary")"
+SECONDARY_DIR="$(cd "$DIR/../hams_private_secondary" 2>/dev/null && pwd || echo "$DIR/../hams_private_secondary")"
+TERTIARY_DIR="$(cd "$DIR/../hams_private_tertiary" 2>/dev/null && pwd || echo "$DIR/../hams_private_tertiary")"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$PRIMARY_DIR,$SECONDARY_DIR,$TERTIARY_DIR"
 VENV_PYTHON="$DIR/.venv/bin/python"
 
-if [ ! -f "$VENV_PYTHON" ] && [ -f "$MAIN_REPO_DIR/.venv/bin/python" ]; then
-VENV_PYTHON="$MAIN_REPO_DIR/.venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ] && [ -f "$PRIMARY_DIR/.venv/bin/python" ]; then
+VENV_PYTHON="$PRIMARY_DIR/.venv/bin/python"
 fi
 
 LINTERS_FAILED=0
@@ -26,6 +28,12 @@ if [ -n "$TARGET_MODULES" ]; then
             MOD_PATH="$DIR/$MOD"
         elif [ -f "$COMMUNITY_DIR/$MOD/__manifest__.py" ]; then
             MOD_PATH="$COMMUNITY_DIR/$MOD"
+        elif [ -f "$PRIMARY_DIR/$MOD/__manifest__.py" ]; then
+            MOD_PATH="$PRIMARY_DIR/$MOD"
+        elif [ -f "$SECONDARY_DIR/$MOD/__manifest__.py" ]; then
+            MOD_PATH="$SECONDARY_DIR/$MOD"
+        elif [ -f "$TERTIARY_DIR/$MOD/__manifest__.py" ]; then
+            MOD_PATH="$TERTIARY_DIR/$MOD"
         else
             continue
         fi

@@ -38,7 +38,7 @@ def generate_plain_text_prompt(root_dir="."):
     # Optional: You can prepend a default system prompt here if you want
     print("Please review the following project files:\n")
 
-    for dirpath, dirnames, filenames in os.walk(root_path):
+    for dirpath, dirnames, filenames in os.walk(root_path, followlinks=True):
         # Prune hidden and ignored directories
         dirnames[:] = [
             d for d in dirnames if not d.startswith(".") and d not in IGNORE_DIRS

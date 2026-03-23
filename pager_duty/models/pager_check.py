@@ -401,6 +401,7 @@ class PagerCheck(models.Model):
                 for p in log_patterns
             ],
         }
+        json_dict["odoo_database"] = self.env.cr.dbname
 
         json_content = json.dumps(json_dict, indent=2)
         path = self._get_config_path()

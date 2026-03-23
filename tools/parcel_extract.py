@@ -190,7 +190,7 @@ def check_ai_foibles(payload, filepath=""):
         raise ValueError(
             "UI Data Loss Detected: Found empty inline code block (``). "
             "The conversational UI likely stripped an HTML/XML comment before reaching the extractor. "
-            "You MUST use 'Encoding: url-encoded' and percent-encode the tags to bypass the UI."
+            "You MUST percent-encode the tags (%3C, %3E) to bypass the UI."
         )
 
     return payload
@@ -244,10 +244,6 @@ def get_semantic_tokens(source_text):
                 continue
 
             val = tok.string
-            if tok.type == tokenize.STRING:
-                if val.startswith("'") and val.endswith("'"):
-                    val = '"' + val[1:-1] + '"'
-
             start_char = line_offsets[tok.start[0] - 1] + tok.start[1]
             end_char = line_offsets[tok.end[0] - 1] + tok.end[1]
 
@@ -310,17 +306,26 @@ def fuzzy_line_replace(original_text, search_text, replace_text):
     norm_search = [line_item.strip() for line_item in search_lines]
 
     best_ratio = 0
-    best_idx = -1
+    best_indices = []
 
     # Sliding window comparison
     for i in range(target_len - search_len + 1):
         window = [line_item.strip() for line_item in orig_lines[i : i + search_len]]
         ratio = difflib.SequenceMatcher(None, window, norm_search).ratio()
+
         if ratio > best_ratio:
             best_ratio = ratio
-            best_idx = i
+            best_indices = [i]
+        elif ratio == best_ratio and ratio > 0:
+            best_indices.append(i)
 
     if best_ratio >= 0.85:  # High confidence threshold
+        if len(best_indices) > 1:
+            raise ValueError(
+                "Fuzzy line match is not unique (found multiple blocks with similar logic). Please provide more context lines."
+            )
+
+        best_idx = best_indices[0]
         first_line = orig_lines[best_idx]
         indentation = first_line[: len(first_line) - len(first_line.lstrip(" \t"))]
 
@@ -350,6 +355,7 @@ def semantic_token_replace(original_text, search_text, replace_text):
     if search_len == 0 or search_len > target_len:
         return None
 
+    matches = []
     for i in range(target_len - search_len + 1):
         match = True
         for j in range(search_len):
@@ -358,16 +364,21 @@ def semantic_token_replace(original_text, search_text, replace_text):
                 break
 
         if match:
-            start_idx = target_tokens[i]["start"]
-            end_idx = target_tokens[i + search_len - 1]["end"]
+            matches.append(i)
 
-            line_start = original_text.rfind("\n", 0, start_idx) + 1
-            indentation = original_text[line_start:start_idx]
+    if len(matches) > 1:
+        raise ValueError(
+            "Semantic token match is not unique. Please provide more context lines in the SEARCH block."
+        )
+    elif len(matches) == 1:
+        start_idx = target_tokens[matches[0]]["start"]
+        end_idx = target_tokens[matches[0] + search_len - 1]["end"]
 
-            indented_replace = process_indented_replacement(replace_text, indentation)
-            return (
-                original_text[:start_idx] + indented_replace + original_text[end_idx:]
-            )
+        line_start = original_text.rfind("\n", 0, start_idx) + 1
+        indentation = original_text[line_start:start_idx]
+
+        indented_replace = process_indented_replacement(replace_text, indentation)
+        return original_text[:start_idx] + indented_replace + original_text[end_idx:]
 
     return None
 
@@ -401,6 +412,7 @@ def semantic_markdown_replace(original_text, search_text, replace_text):
     if search_len == 0 or search_len > target_len:
         return None
 
+    matches = []
     for i in range(target_len - search_len + 1):
         match = True
         for j in range(search_len):
@@ -409,16 +421,21 @@ def semantic_markdown_replace(original_text, search_text, replace_text):
                 break
 
         if match:
-            start_idx = target_tokens[i]["start"]
-            end_idx = target_tokens[i + search_len - 1]["end"]
+            matches.append(i)
 
-            line_start = original_text.rfind("\n", 0, start_idx) + 1
-            indentation = original_text[line_start:start_idx]
+    if len(matches) > 1:
+        raise ValueError(
+            "Semantic Markdown match is not unique. Please provide more context lines."
+        )
+    elif len(matches) == 1:
+        start_idx = target_tokens[matches[0]]["start"]
+        end_idx = target_tokens[matches[0] + search_len - 1]["end"]
 
-            indented_replace = process_indented_replacement(replace_text, indentation)
-            return (
-                original_text[:start_idx] + indented_replace + original_text[end_idx:]
-            )
+        line_start = original_text.rfind("\n", 0, start_idx) + 1
+        indentation = original_text[line_start:start_idx]
+
+        indented_replace = process_indented_replacement(replace_text, indentation)
+        return original_text[:start_idx] + indented_replace + original_text[end_idx:]
 
     return None
 
@@ -436,23 +453,29 @@ def boundary_markdown_replace(original_text, search_text, replace_text):
 
     target_words = [t["norm"] for t in target_tokens]
 
-    best_start_token_idx = -1
+    start_matches = []
     for i in range(len(target_words) - 4):
         if target_words[i : i + 5] == prefix:
-            best_start_token_idx = i
-            break
+            start_matches.append(i)
 
-    if best_start_token_idx == -1:
+    if len(start_matches) > 1:
+        raise ValueError("Boundary Markdown Prefix is not unique.")
+    if not start_matches:
         return None
 
-    best_end_token_idx = -1
+    best_start_token_idx = start_matches[0]
+
+    end_matches = []
     for i in range(best_start_token_idx, len(target_words) - 4):
         if target_words[i : i + 5] == suffix:
-            best_end_token_idx = i + 4
-            break
+            end_matches.append(i + 4)
 
-    if best_end_token_idx == -1:
+    if len(end_matches) > 1:
+        raise ValueError("Boundary Markdown Suffix is not unique.")
+    if not end_matches:
         return None
+
+    best_end_token_idx = end_matches[0]
 
     start_idx = target_tokens[best_start_token_idx]["start"]
     end_idx = target_tokens[best_end_token_idx]["end"]
@@ -481,16 +504,24 @@ def fuzzy_markdown_replace(original_text, search_text, replace_text):
     target_words = [t["norm"] for t in target_tokens]
 
     best_ratio = 0
-    best_idx = -1
+    best_indices = []
 
     for i in range(target_len - search_len + 1):
         window = target_words[i : i + search_len]
         ratio = difflib.SequenceMatcher(None, window, search_words).ratio()
         if ratio > best_ratio:
             best_ratio = ratio
-            best_idx = i
+            best_indices = [i]
+        elif ratio == best_ratio and ratio > 0:
+            best_indices.append(i)
 
     if best_ratio > 0.90:  # 90% word similarity
+        if len(best_indices) > 1:
+            raise ValueError(
+                "Fuzzy Markdown match is not unique. Please provide more context lines."
+            )
+
+        best_idx = best_indices[0]
         start_idx = target_tokens[best_idx]["start"]
         end_idx = target_tokens[best_idx + search_len - 1]["end"]
 
@@ -568,6 +599,7 @@ def semantic_xml_replace(original_text, search_text, replace_text):
     if search_len == 0 or search_len > target_len:
         return None
 
+    matches = []
     for i in range(target_len - search_len + 1):
         match = True
         for j in range(search_len):
@@ -576,16 +608,21 @@ def semantic_xml_replace(original_text, search_text, replace_text):
                 break
 
         if match:
-            start_idx = target_tokens[i]["start"]
-            end_idx = target_tokens[i + search_len - 1]["end"]
+            matches.append(i)
 
-            line_start = original_text.rfind("\n", 0, start_idx) + 1
-            indentation = original_text[line_start:start_idx]
+    if len(matches) > 1:
+        raise ValueError(
+            "Semantic XML match is not unique. Please provide more context lines."
+        )
+    elif len(matches) == 1:
+        start_idx = target_tokens[matches[0]]["start"]
+        end_idx = target_tokens[matches[0] + search_len - 1]["end"]
 
-            indented_replace = process_indented_replacement(replace_text, indentation)
-            return (
-                original_text[:start_idx] + indented_replace + original_text[end_idx:]
-            )
+        line_start = original_text.rfind("\n", 0, start_idx) + 1
+        indentation = original_text[line_start:start_idx]
+
+        indented_replace = process_indented_replacement(replace_text, indentation)
+        return original_text[:start_idx] + indented_replace + original_text[end_idx:]
 
     return None
 
@@ -603,71 +640,119 @@ def whitespace_agnostic_replace(original_text, search_text, replace_text):
             indices.append(i)
 
     orig_stripped = "".join(chars)
+
+    matches = []
     idx = orig_stripped.find(search_stripped)
-    if idx == -1:
-        return None
+    while idx != -1:
+        matches.append(idx)
+        idx = orig_stripped.find(search_stripped, idx + 1)
 
-    start_idx = indices[idx]
-    end_idx = indices[idx + len(search_stripped) - 1]
+    if len(matches) > 1:
+        raise ValueError(
+            "Whitespace-agnostic match is not unique. Please provide more context lines."
+        )
+    elif len(matches) == 1:
+        idx = matches[0]
+        start_idx = indices[idx]
+        end_idx = indices[idx + len(search_stripped) - 1]
 
-    line_start = original_text.rfind("\n", 0, start_idx) + 1
-    indentation = original_text[line_start:start_idx]
+        line_start = original_text.rfind("\n", 0, start_idx) + 1
+        indentation = original_text[line_start:start_idx]
 
-    indented_replace = process_indented_replacement(replace_text, indentation)
+        indented_replace = process_indented_replacement(replace_text, indentation)
+        return (
+            original_text[:start_idx] + indented_replace + original_text[end_idx + 1 :]
+        )
 
-    return original_text[:start_idx] + indented_replace + original_text[end_idx + 1 :]
+    return None
 
 
-def ast_fallback_replace(original_text, search_text, replace_text):
-    try:
-        search_tree = ast.parse(search_text)
-        target_name = None
-        valid_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-        for node in search_tree.body:
-            if isinstance(node, valid_types):
-                target_name = node.name
-                break
+def parse_search_replace_blocks(payload):
+    """
+    Safely parses SEARCH and REPLACE blocks line-by-line, enforcing
+    closure to prevent greedy regex swallowing.
+    """
+    blocks = []
+    lines = payload.split("\n")
+    state = "TEXT"  # 'TEXT', 'SEARCH', 'REPLACE'
+    current_search = []
+    current_replace = []
 
-        if not target_name:
-            return None
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith(":::: SEARCH"):
+            if state != "TEXT":
+                raise ValueError(
+                    "Malformed search block: ':::: SEARCH' found inside another block."
+                )
+            state = "SEARCH"
+            current_search = []
+            current_replace = []
+        elif stripped.startswith("===="):
+            if state != "SEARCH":
+                raise ValueError(
+                    "Malformed search block: '====' found without preceding ':::: SEARCH'."
+                )
+            state = "REPLACE"
+        elif stripped.startswith(":::: REPLACE"):
+            if state != "REPLACE":
+                raise ValueError(
+                    "Malformed search block: ':::: REPLACE' found without preceding '===='."
+                )
+            blocks.append(
+                {
+                    "search": "\n".join(current_search) + "\n",
+                    "replace": "\n".join(current_replace) + "\n",
+                }
+            )
+            state = "TEXT"
+        else:
+            if state == "SEARCH":
+                current_search.append(line)
+            elif state == "REPLACE":
+                current_replace.append(line)
 
-        orig_tree = ast.parse(original_text)
-        target_node = None
-        for node in ast.walk(orig_tree):
-            if getattr(node, "name", None) == target_name:
-                target_node = node
-                break
+    if state != "TEXT":
+        raise ValueError(
+            "Malformed search block: Unclosed ':::: SEARCH' or '====' block."
+        )
 
-        if not target_node:
-            return None
-
-        lines = original_text.splitlines()
-        start_line = target_node.lineno - 1
-        end_line = target_node.end_lineno
-
-        new_lines = lines[:start_line] + replace_text.splitlines() + lines[end_line:]
-        return "\n".join(new_lines) + "\n"
-    except SyntaxError:
-        return None
+    return blocks
 
 
 def extract_parcel(raw_text):
     lines = raw_text.splitlines()
-    boundary = None
+    boundaries_found = set()
+
+    # 1. Enforce rigorous boundary checking and matching
     for line_item in lines:
         stripped = line_item.strip()
-        if stripped.startswith("@@BOUNDARY_") and stripped.endswith("@@"):
-            boundary = stripped
-            break
+        if stripped.startswith("@@BOUNDARY_"):
+            if stripped.endswith("@@"):
+                boundaries_found.add(stripped)
+            elif stripped.endswith("@@--"):
+                boundaries_found.add(stripped[:-2])
 
-    if not boundary:
+    if not boundaries_found:
         print("❌ Error: Invalid Parcel format. Missing boundary string.\n")
         return
 
+    if len(boundaries_found) > 1:
+        print(
+            f"❌ Error: Mismatched boundaries detected in Parcel: {', '.join(boundaries_found)}. All boundaries must be identical.\n"
+        )
+        return
+
+    boundary = list(boundaries_found)[0]
     terminator = boundary + "--"
 
-    if terminator not in raw_text:
-        print("❌ [WARN] Parcel terminator missing. Attempting extract...\n")
+    # 2. Enforce explicit terminator to prevent partial payloads
+    terminator_found = any(line_item.strip() == terminator for line_item in lines)
+    if not terminator_found:
+        print(
+            f"❌ Error: Parcel terminator ({terminator}) missing. Rejecting payload to prevent partial/corrupt extraction.\n"
+        )
+        return
 
     pattern = rf"^{re.escape(boundary)}$"
     parts = re.split(pattern, raw_text, flags=re.MULTILINE)
@@ -679,10 +764,30 @@ def extract_parcel(raw_text):
             continue
 
         part = part.lstrip()
-        if "\n\n" not in part:
+        lines = part.splitlines()
+        header_lines = []
+        payload_lines = []
+        in_header = True
+        for line in lines:
+            if in_header:
+                if not line.strip():
+                    in_header = False
+                    continue
+                if line.startswith(
+                    ("Path: ", "Operation: ", "New-Path: ", "Mode: ", "Encoding: ")
+                ):
+                    header_lines.append(line)
+                else:
+                    in_header = False
+                    payload_lines.append(line)
+            else:
+                payload_lines.append(line)
+
+        if not header_lines:
             continue
 
-        header, payload = part.split("\n\n", 1)
+        header = "\n".join(header_lines)
+        payload = "\n".join(payload_lines)
 
         path_lines = [
             line_item
@@ -716,31 +821,28 @@ def extract_parcel(raw_text):
             else None
         )
 
-        encoding_lines = [
-            line_item
-            for line_item in header.splitlines()
-            if line_item.startswith("Encoding: ")
-        ]
-        encoding = (
-            encoding_lines[0].replace("Encoding: ", "").strip().lower()
-            if encoding_lines
-            else "utf-8"
-        )
-
         mode_lines = [
             line_item
             for line_item in header.splitlines()
             if line_item.startswith("Mode: ")
         ]
         mode_str = mode_lines[0].replace("Mode: ", "").strip() if mode_lines else None
-
         if terminator in payload:
             payload = payload.split(terminator)[0]
 
-        if encoding == "url-encoded":
-            import urllib.parse
+        # REJECTION GUARD: Fail instantly if the payload contains raw unencoded angle brackets or non-hex percent signs.
+        if re.search(r"<|>|%(?![0-9a-fA-F]{2})", payload):
+            tasks_by_file.setdefault(filepath, []).append(
+                {
+                    "error": "CRITICAL ENCODING ERROR: Payload contains unencoded '<', '>', or '%' characters. You MUST URL-encode these characters (%3C, %3E, %25)."
+                }
+            )
+            continue
 
-            payload = urllib.parse.unquote(payload)
+        # ALWAYS unquote, regardless of encoding header, because the new architecture enforces URL-encoding on all payloads
+        import urllib.parse
+
+        payload = urllib.parse.unquote(payload)
 
         try:
             payload = check_ai_foibles(payload, filepath)
@@ -778,6 +880,7 @@ def extract_parcel(raw_text):
     import shutil
 
     failed_files = []
+    shortened_files = []
 
     for filepath, tasks in tasks_by_file.items():
         errors = []
@@ -821,7 +924,12 @@ def extract_parcel(raw_text):
         try:
             for task in tasks:
                 op = task["operation"]
-                payload = task["payload"]
+
+                # Normalize line endings to prevent drift when exact matching strings
+                payload = task["payload"].replace("\r\n", "\n")
+                if current_text:
+                    current_text = current_text.replace("\r\n", "\n")
+
                 mode_str = task["mode_str"]
 
                 if mode_str:
@@ -866,36 +974,36 @@ def extract_parcel(raw_text):
                         warnings.append("[WARN] Extracted payload is empty.")
                     file_mutated = True
 
+                elif op == "append":
+                    if current_text and not current_text.endswith("\n"):
+                        current_text += "\n"
+                    current_text += payload
+                    if not payload.strip():
+                        warnings.append("[WARN] Appended payload is empty.")
+                    file_mutated = True
+
                 elif op == "search-and-replace":
                     if not os.path.exists(filepath) and not file_mutated:
                         raise FileNotFoundError(
                             f"Cannot search-and-replace missing file: {filepath}"
                         )
 
-                    # Robust regex that tolerates trailing spaces generated by LLMs
-                    pattern = r"^<<<< SEARCH[ \t]*\n(.*?)\n^====[ \t]*\n(.*?)\n^>>>> REPLACE[ \t]*(?:\n|$)"
-                    search_blocks = list(
-                        re.finditer(pattern, payload, re.DOTALL | re.MULTILINE)
-                    )
+                    search_blocks = parse_search_replace_blocks(payload)
 
                     if not search_blocks:
                         raise ValueError(
                             "Malformed search-and-replace block. Missing markers."
                         )
 
-                    for match in search_blocks:
-                        search_text = match.group(1)
-                        replace_text = match.group(2)
+                    for block in search_blocks:
+                        search_text = block["search"]
+                        replace_text = block["replace"]
 
                         new_text = None
                         if filepath.endswith(".py"):
                             new_text = semantic_token_replace(
                                 current_text, search_text, replace_text
                             )
-                            if new_text is None:
-                                new_text = ast_fallback_replace(
-                                    current_text, search_text, replace_text
-                                )
                             if new_text is None:
                                 new_text = fuzzy_line_replace(
                                     current_text, search_text, replace_text
@@ -935,7 +1043,7 @@ def extract_parcel(raw_text):
 
                         if new_text is None:
                             raise ValueError(
-                                "Semantic token, AST, fuzzy line, and whitespace fallback all failed for search block."
+                                "Semantic token, fuzzy line, and whitespace fallback all failed for search block."
                             )
                         current_text = new_text
                     file_mutated = True
@@ -975,6 +1083,15 @@ def extract_parcel(raw_text):
                     current_text = re.sub(
                         r"[ \t]+$", "", current_text, flags=re.MULTILINE
                     )
+
+                if original_text is not None:
+                    orig_lines = len(original_text.splitlines())
+                    new_lines = len(current_text.splitlines())
+                    if new_lines < orig_lines:
+                        shortened_files.append(
+                            f"{filepath} ({orig_lines} -> {new_lines} lines)"
+                        )
+
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
 
@@ -1053,6 +1170,14 @@ def extract_parcel(raw_text):
 
     if failed_files:
         print(f"\n❌ Failed to extract: {', '.join(failed_files)}")
+
+    if shortened_files:
+        print("\n" + "!" * 80)
+        print("WARNING: THE FOLLOWING FILES BECAME SHORTER!")
+        print("VERIFY THAT NO ACCIDENTAL TRUNCATION OR LAZINESS OCCURRED.")
+        for sf in shortened_files:
+            print(f"  - {sf}")
+        print("!" * 80 + "\n")
 
 
 if __name__ == "__main__":

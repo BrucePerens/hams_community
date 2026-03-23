@@ -1,23 +1,74 @@
 # 🛡️ Zero-Sudo Security Core (`zero_sudo`)
 
-*Copyright © Bruce Perens K6BP. AGPL-3.0.*
+<system_role>
+**Context:** Technical documentation strictly for LLMs and Integrators developing custom downstream modules or Open Source apps...
 
-**Context:** Technical documentation strictly for LLMs and Integrators.
+This module acts as the foundational security layer for the entire ecosystem. It implements the platform's strict **Zero-Sudo Architecture** (ADR-0002) and **Service Account Web Isolation** (ADR-0005).
+</system_role>
 
-## 1. The Zero-Sudo Mandate
-This module eliminates the dangerous native `.sudo()` ORM method. It implements the Service Account pattern.
+---
 
-## 2. Usage & Utilities
-1. Create a `res.users` proxy account in XML with `is_service_account=True` (which permanently blocks web login).
-2. Fetch its ID: `svc_uid = env['zero_sudo.security.utils']._get_service_uid('module.user_xml_id')`. This securely resolves the Service Account ID. [@ANCHOR: get_service_uid]
-3. Execute: `env['model'].with_user(svc_uid).write(...)`.
+<migration_instructions>
+## 🚨 MIGRATION INSTRUCTIONS FOR DEPENDENT MODULES
 
-**Parameter Safety:** `env['zero_sudo.security.utils']._get_system_param('key')` fetches parameters against a strict `frozenset` whitelist, protecting cryptographic keys from Server-Side Template Injection.
+If you are an AI or developer working on downstream modules, you **MUST** perform the following migrations to integrate with this core:
 
-**Coherent Caching:** The utility provides `_notify_cache_invalidation` which emits a PostgreSQL `NOTIFY` event to synchronize distributed caches across workers. [@ANCHOR: coherent_cache_signal]
+1. **Change Dependencies:** Add `'zero_sudo'` to the `depends` array in your `__manifest__.py`.
+2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules. The `zero_sudo` module now centrally natively intercepts interactive web logins and blocks access for accounts where `is_service_account=True`. Redundant interceptors will cause routing conflicts. *(Note: This lock only applies to the HTML web interface; XML-RPC and JSON-RPC interfaces remain open for your external background daemons).*
+3. **Update Security Utility Calls:** Globally find-and-replace your utility calls to use the new centralized namespace:
+   * **Change:** `self.env['custom.security.utils']._get_service_uid(...)`
+   * **To:** `self.env['zero_sudo.security.utils']._get_service_uid(...)`
+4. **Service Account XML Provisioning:** You may safely continue to use `<field name="is_service_account" eval="True"/>` in your XML data files without crashing, as the structural field is natively defined by this module.
+</migration_instructions>
 
+---
+
+<service_account_pattern>
+## 1. The Service Account Pattern
+
+You are strictly FORBIDDEN from using `.sudo()` inline. To escalate privileges:
+1. Define your service account in your module's XML data and set `<field name="is_service_account" eval="True"/>`.
+2. Retrieve its UID securely:
+   `svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('your_module.user_xml_id')`
+3. Execute using the impersonation idiom:
+   `self.env['target.model'].with_user(svc_uid).create(vals)`
+</service_account_pattern>
+
+---
+
+<system_parameters>
+## 2. System Parameter Whitelisting
+
+If you need to fetch a configuration parameter securely:
+`value = self.env['zero_sudo.security.utils']._get_system_param('my.key')`
+
+**CRITICAL:** The key MUST be explicitly added to the `PARAM_WHITELIST` array in `zero_sudo/models/security_utils.py`. Cryptographic keys (like `database.secret`) are permanently banned from this whitelist to prevent Server-Side Template Injection (SSTI) exposure.
+</system_parameters>
+
+---
+
+<shared_service_accounts>
 ## 3. Centralized Shared Service Accounts (The ERP Bridge)
-To comply with the Micro-Privilege Mandate, domain-specific service accounts MUST NOT hold `base.group_user` (Internal User). When native ERP interaction is required, code MUST proxy through one of these two centralized accounts:
 
-* **Central Mail Service Account (`zero_sudo.mail_service_internal`):** Holds `base.group_user` and explicit ACLs for `mail.*` models. Use this exclusively for `message_post()` and `send_mail()` calls.
-* **Odoo Facility Service Account (`zero_sudo.odoo_facility_service_internal`):** Holds `base.group_user`. Use this for deep framework cascades that cannot be satisfied by the mail proxy or a local micro-service ACL.
+In accordance with ADR-0064 and the Micro-Privilege Mandate, domain-specific service accounts (like those in `pager_duty` or `backup_management`) MUST NOT be granted `base.group_user` (Internal User). Doing so exposes the entire ERP backend to external daemons.
+
+When a daemon or unprivileged user strictly requires native ERP framework interactions that mandate `base.group_user`, they MUST temporarily drop their context and assume one of the two centralized proxy accounts provided by `zero_sudo`:
+
+### A. Central Mail Service Account
+* **XML ID:** `zero_sudo.mail_service_internal`
+* **Privileges:** Holds `base.group_user`. Granted explicit `1,1,1,0` ACLs to `mail.message`, `mail.mail`, `mail.template`, and `res.partner`. It is also granted `1,1,1,1` (unlink) to `mail.followers`, and read-only (`1,0,0,0`) to `res.users`, `res.company`, and `mail.alias.domain`.
+* **Use Case:** You MUST use this account exclusively when your code needs to execute `message_post()`, `send_mail()`, or interact with the `mail.thread` chatter.
+
+### B. Odoo Facility Service Account
+* **XML ID:** `zero_sudo.odoo_facility_service_internal`
+* **Privileges:** Holds `base.group_user`.
+* **Use Case:** You MUST use this account exclusively when an Odoo framework cascade deeply assumes internal user rights (e.g., complex ORM object creations that trigger deep backend evaluations) and the operation cannot be satisfied by the Mail Service Account or a local micro-service ACL.
+</shared_service_accounts>
+
+---
+
+<semantic_anchors>
+## 4. 🔗 Semantic Anchors
+* `[@ANCHOR: get_service_uid]` / `[@ANCHOR: test_get_service_uid]`: Service account resolution and cache.
+* `[@ANCHOR: coherent_cache_signal]` / `[@ANCHOR: test_coherent_cache_signal]`: Global Postgres NOTIFY bus trigger.
+</semantic_anchors>

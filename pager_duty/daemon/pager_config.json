@@ -33,6 +33,17 @@
       "sandbox_network_access": "loopback"
     },
     {
+      "name": "Disk Space (/opt/hams/spool)",
+      "type": "system",
+      "target": "disk",
+      "interval": 300,
+      "critical": 90,
+      "snmp_community": "public",
+      "partition": "/opt/hams/spool",
+      "comment": "Autodiscovered disk space monitor for /opt/hams/spool",
+      "sandbox_network_access": "loopback"
+    },
+    {
       "name": "Disk Space (/tmp)",
       "type": "system",
       "target": "disk",
@@ -81,6 +92,15 @@
       "script": "dig -6 +time=3 +tries=1 @2001:503:ba3e::2:30 . NS",
       "snmp_community": "public",
       "comment": "Verifies IPv6 network routing to root DNS servers",
+      "sandbox_network_access": "loopback"
+    },
+    {
+      "name": "Nginx Config Readiness",
+      "type": "nginx",
+      "target": false,
+      "interval": 3600,
+      "snmp_community": "public",
+      "comment": "Autodiscovered Nginx syntax check",
       "sandbox_network_access": "loopback"
     },
     {

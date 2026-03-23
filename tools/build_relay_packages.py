@@ -14,7 +14,8 @@ import tempfile
 import shutil
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DOWNLOADS_DIR = os.path.join(BASE_DIR, "ham_shack", "static", "downloads")
+TERTIARY_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "hams_private_tertiary"))
+DOWNLOADS_DIR = os.path.join(TERTIARY_DIR, "ham_shack", "static", "downloads")
 MAC_BIN_DIR = os.path.join(BASE_DIR, "tools", "hamlib_binaries", "macos")
 LINUX_BIN_DIR = os.path.join(BASE_DIR, "tools", "hamlib_binaries", "linux")
 
@@ -26,6 +27,14 @@ RELAY_SOURCE_PATH = os.path.join(
 with open(RELAY_SOURCE_PATH, "r", encoding="utf-8") as f:
     RELAY_PY = f.read()
 
+
+def get_user_agent():
+    return os.environ.get(
+        "SYSTEM_USER_AGENT",
+        "Hams.com Bruce Perens K6BP <bruce@perens.com> +1 510-394-5627",
+    )
+
+
 INSTALL_WINDOWS = r"""@echo off
 echo =========================================
 echo Hams.com Hardware Relay Permanent Installer
@@ -35,13 +44,13 @@ echo [*] Installing to %TARGET_DIR%
 if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
 
 echo [*] Copying files...
-xcopy /Y /E /I ".\*" "%TARGET_DIR%\" >nul
+xcopy /Y /E /I ".\*" "%TARGET_DIR%\" >ul
 
 echo [*] Setting up Python Virtual Environment...
 cd /d "%TARGET_DIR%"
 python -m venv venv
 call venv\Scripts\activate.bat
-pip install flask flask-cors pyserial >nul 2>&1
+pip install flask flask-cors pyserial >ul 2>&1
 deactivate
 
 echo [*] Creating silent background launcher...
@@ -51,7 +60,7 @@ echo WshShell.Run chr(34) ^& "%TARGET_DIR%\venv\Scripts\pythonw.exe" ^& chr(34) 
 
 echo [*] Registering Windows Startup Hook...
 set STARTUP_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
-copy /Y "%TARGET_DIR%\launcher.vbs" "%STARTUP_DIR%\HamsRelay.vbs" >nul
+copy /Y "%TARGET_DIR%\launcher.vbs" "%STARTUP_DIR%\HamsRelay.vbs" >ul
 
 echo [*] Starting daemons now...
 cscript //nologo "%STARTUP_DIR%\HamsRelay.vbs"
@@ -196,9 +205,7 @@ def fetch_latest_hamlib_windows():
     print("[*] Querying GitHub API for latest Hamlib Windows release...")
     api_url = "https://api.github.com/repos/Hamlib/Hamlib/releases/latest"
     try:
-        req = urllib.request.Request(
-            api_url, headers={"User-Agent": "Hams-Build-Script"}
-        )
+        req = urllib.request.Request(api_url, headers={"User-Agent": get_user_agent()})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode("utf-8"))
         for asset in data.get("assets", []):
@@ -213,7 +220,7 @@ def fetch_latest_hamlib_windows():
 
 def download_file(url, dest):
     print(f"[*] Downloading {url}...")
-    req = urllib.request.Request(url, headers={"User-Agent": "Hams-Build-Script"})
+    req = urllib.request.Request(url, headers={"User-Agent": get_user_agent()})
     with urllib.request.urlopen(req) as response, open(dest, "wb") as out_file:
         shutil.copyfileobj(response, out_file)
 

@@ -31,11 +31,19 @@ This directory contains the Architecture Decision Records (ADRs) that define the
 * [MASTER 13: Frontend UX & Accessibility](MASTER_13_FRONTEND_UX.md)
   Governs ARIA live-regions and OLED burn-in protection for dashboards.
 * [MASTER 14: LLM Context & Cognitive Load Management](MASTER_14_LLM_CONTEXT_MANAGEMENT.md)
-  Establishes rules for AI agents, including prompt engineering, task workspaces, API contracts, and patching protocols.
+  Establishes rules for AI agents, including prompt engineering, API contracts, and patching protocols.
 * [MASTER 15: Domain Identity & Verification](MASTER_15_DOMAIN_IDENTITY.md)
   Defines identity verification fallbacks and the Shadow Profile indexing pattern.
+* [MASTER 16: Financial Data Protection & Defense-in-Depth](MASTER_16_FINANCIAL_DATA_PROTECTION.md)
+  Mandates multiple layers of security and mandatory SQL view masking to prevent financial identifier leakage through Odoo's ORM.
 
 ## Standard ADRs
 
 * [ADR 0073: Fail-Fast Dependency Resolution](0073_fail_fast_dependency_resolution.md)
   Mandates that all external Python dependencies must be declared in module manifests to trigger immediate startup halts instead of silent runtime failures.
+* [ADR 0074: User-Facing Semantic Anchors and Context-Sensitive Help](0074_User_Facing_Semantic_Anchors_and_Context-Sensitive_Help.md)
+  Governs the injection of help documentation dynamically into views via system parameters.
+* [ADR 0075: LLM Dependency Contract Visibility](0075_llm_dependency_contract_visibility.md)
+  Mandates that external Python dependencies be explicitly listed in LLM API contracts to ensure AI agents can properly mock and integrate them across the repository.
+* [ADR 0076: UI Tour Mandate and Bypass Governance](0076_ui_tour_mandate_and_bypass_governance.md)
+  Defines the strict criteria for when JavaScript UI Tours are mandatory ("The Gold Standard") and when the `burn-ignore-tour` tag is architecturally justified.

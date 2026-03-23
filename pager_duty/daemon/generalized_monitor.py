@@ -23,10 +23,48 @@ try:
 except ImportError:
     psycopg2 = None
 
-# Ensure the system path is updated after all standard imports but before
-# internal project imports, complying with Flake8 E402.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from hams_config import get_odoo_client  # noqa: E402
+import xmlrpc.client
+
+
+class OdooClient:
+    def __init__(self, url, db, user, password):
+        self.url = url
+        self.db = db
+        self.password = password
+        self.common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
+        self.uid = self.common.authenticate(db, user, password, {})
+        if not self.uid:
+            raise Exception(f"Authentication failed for user {user} on db {db}")
+        self.models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
+
+    def execute(self, model, method, *args, **kwargs):
+        return self.models.execute_kw(
+            self.db, self.uid, self.password, model, method, args, kwargs
+        )
+
+
+def get_odoo_client(logger, config):
+    url = os.environ.get("ODOO_URL", "http://127.0.0.1:8069")
+    db = config.get("odoo_database") or os.environ.get("ODOO_DB")
+    if not db:
+        try:
+            db_proxy = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/db")
+            dbs = db_proxy.list()
+            if dbs:
+                db = dbs[0]
+        except Exception:
+            pass
+    if not db:
+        db = "odoo"
+
+    user = os.environ.get("ODOO_USER", "pager_service_internal")
+    password = os.environ.get("ODOO_PASSWORD", "")
+    try:
+        return OdooClient(url, db, user, password)
+    except Exception as e:
+        logger.error(f"Failed to connect to Odoo: {e}")
+        return None
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s"
@@ -1188,7 +1226,6 @@ def log_tail_thread(client, check):
 
 
 if __name__ == "__main__":
-    client = get_odoo_client(logger)
     config_path = os.path.join(os.path.dirname(__file__), "pager_config.json")
 
     if not os.path.exists(config_path):
@@ -1204,6 +1241,11 @@ if __name__ == "__main__":
         msg = f"FATAL: Failed to parse {config_path} as valid JSON: {e}"
         logger.critical(msg)
         fallback_notify("Daemon Boot", msg, "critical")
+        sys.exit(1)
+
+    client = get_odoo_client(logger, config)
+    if not client:
+        logger.critical("Failed to connect to Odoo XML-RPC. Halting.")
         sys.exit(1)
 
     checks = config.get("checks", [])

@@ -2,6 +2,7 @@
 
 *Copyright © Bruce Perens K6BP.*
 
+<system_role>
 **Purpose:** This document is the ultimate reference sheet for the platform's DevSecOps pipeline. It exhaustively details every syntax pattern, AST structure, and architectural anti-pattern that the custom linters (`check_burn_list.py`, `verify_anchors.py`) will physically reject.
 
 You MUST consult this guide to understand the *intent* of the rules and format your code to pass the CI/CD pipeline on the first attempt.
@@ -9,9 +10,11 @@ You MUST consult this guide to understand the *intent* of the rules and format y
 **CRITICAL ANTI-EVASION MANDATE:** This document is a blueprint for *architectural alignment and secure design*, NOT a recipe book for bypassing security checks. You are strictly forbidden from using this guide to engineer semantic tricks, obfuscations, or workarounds that evade the AST linters without fixing the underlying architectural flaw.
 
 **DEAD CODE, LOOP, & MOCK EVASION IS BANNED:** You MUST NOT place required method calls (like `send_mail()`, `_trigger()`) inside unreachable execution blocks (e.g., `if False:` or after a `return`, `raise`, `break`, or `continue`) or use empty context managers. Additionally, wrapping assertions (like `get_view` or `url_open`) inside `for` or `while` loops is strictly forbidden. You MUST NOT mock required functions (via `patch` or `patch.object`); the test must legitimately invoke the targeted logic sequentially.
+</system_role>
 
 ---
 
+<critical_guardrails>
 ## 1. 🛡️ Privilege Escalation & Security (Zero-Sudo)
 
 The AST linter recursively tracks assignments and function calls to block absolute privilege escalation. You MUST use the **Service Account Pattern** (`with_user(svc_uid)`) or the **Public User Idiom**.
@@ -23,9 +26,11 @@ The AST linter recursively tracks assignments and function calls to block absolu
 * **Code Execution:** `eval()`, `exec()`, `pickle.loads/dumps`, and `yaml.load` are strictly banned. Use `ast.literal_eval()`, `odoo.tools.safe_eval()`, or `json`.
 * **Service Account Base Groups:** You MUST NOT grant `base.group_user` to domain-specific Service Accounts. Only a *special* user (`odoo_facility_service_internal`) may possess `base.group_user`, and it MUST only be assumed via `with_user()` when strictly necessary.
 * **Weak Cryptography:** `md5`, `sha1`, and the `random` module are banned for security tokens. Use `hashlib.sha256` and the `secrets` module.
+</critical_guardrails>
 
 ---
 
+<database_rules>
 ## 2. 🗄️ Database & ORM Integrity
 
 The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL injection.
@@ -43,13 +48,16 @@ The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL inj
 * **Cache Purging:** `.clear_caches()` is deprecated in Odoo 19. You MUST use `self.env.registry.clear_cache()` or `self.method_name.clear_cache(self)`.
 * **Test Cursor Corruption:** Odoo 19 tests run in a single transaction. Calling `env.cr.commit()` or `env.cr.rollback()` inside a `test_` file will raise an `AssertionError`. If testing background loop functions, you MUST conditionally bypass commits using `if not odoo.tools.config.get('test_enable'):` or utilize the `RealTransactionCase`.
 * **Controller Caching:** Using `@tools.ormcache` on an `@http.route` controller method is banned.
+</database_rules>
 
 ---
 
+<python_standards>
 ## 3. 🐍 Python Odoo 19 Core Deprecations & Formatting
 
 * **Single Statement Per Line & Short Lines:** You MUST NOT use multiple statements on a single line (no semicolons). You MUST proactively shorten lines by extracting complex logic to prevent the Black formatter from wrapping lines and detaching inline linter comments (`# burn-ignore`).
 * **Long String Formatting:** Strings longer than 40 characters MUST NOT be defined inline. Extract them to variables using multi-line triple-quotes.
+* **Empty F-Strings (F541):** You MUST NOT prefix static strings with `f` if they do not contain variables. Flake8 will fatally reject this. (LLM Generation Bias).
 * **Constraints:** `_sql_constraints = [...]` is banned. Use `models.Constraint(...)` class attributes.
 * **File Reading:** `get_module_resource` is banned. Use `odoo.tools.file_open`.
 * **Security Groups Mapping:** When mapping users to groups in Python dictionaries or XML, you MUST use `group_ids` (for `res.users`) and `user_ids` (for `res.groups`). Legacy `groups_id` and `users` strings are hard-blocked.
@@ -63,9 +71,11 @@ The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL inj
 * **Search Count Parameter:** `search(..., count=True)` is banned. Use `search_count(...)`.
 * **Thread Blocking:** `time.sleep()` in main application code is banned. If used in a background daemon for rate-limiting, it MUST be appended with `# audit-ignore-sleep`.
 * **Thread Spawning:** `threading.Thread` is banned as a DoS vector. Use `concurrent.futures.ThreadPoolExecutor`.
+</python_standards>
 
 ---
 
+<frontend_standards>
 ## 4. 🎨 XML, QWeb, and UI Elements
 
 * **XSS Prevention:** `<t t-raw...>` is banned. Use `<t t-out...>`.
@@ -82,17 +92,21 @@ The AST linter defends PostgreSQL from lock exhaustion, OOM crashes, and SQL inj
 * **Parent Axis Traversals:** Using `..` (e.g., `//input[@name='login']/..`) or complex container predicates (`//div[input[@name='login']]`) is strictly banned. Odoo's XML compiler often fails to resolve these when patching inherited views.
 * **Security Categories:** Using `name="category_id"` in `<record model="res.groups">` is banned. Use `privilege_id`.
 * **Cron Infinity:** Specifying `numbercall` in an `ir.cron` XML record is banned. Odoo 18+ runs crons indefinitely when `active="True"`.
+</frontend_standards>
 
 ---
 
+<javascript_standards>
 ## 5. 🖥️ Frontend JavaScript
 
 * **jQuery Ban:** The `$` identifier is banned. You MUST use Vanilla JS or modern OWL components.
 * **DOM XSS:** Passing template literals (backtick strings) into `.innerHTML` or `.bindPopup` is flagged. Ensure all dynamic data injected into the DOM is sanitized.
 * **Deprecated Services:** `useService('company')` is banned.
+</javascript_standards>
 
 ---
 
+<ci_cd_bypasses>
 ## 6. 🚦 CI/CD Bypasses & Automated Test Audits (The `ignore` Protocol)
 
 The linter outputs `[AUDIT]` warnings for specific architectural patterns. You MUST silence these by appending specific `audit-ignore` tags, but **ONLY** if you write an automated Python test to mathematically verify the constraint.
@@ -125,9 +139,11 @@ The AST parser physically reads your test files to verify the assertions exist.
      </record>
      ```
 3. **The Web UI Destruction Trap (XML URL-Encoding Mandate):** When writing the XML comments shown in Rule 2, the Web UI will silently intercept and delete them from your output before they are saved to disk. To survive the UI parser, any Parcel payload touching XML/HTML MUST use `Encoding: url-encoded` in the header and strictly percent-encode the payload (`<` to `%3C`, `>` to `%3E`, `%` to `%25`).
+</ci_cd_bypasses>
 
 ---
 
+<semantic_anchors>
 ## 7. ⚓ Semantic Anchors & UI Tour Mandate
 
 The `verify_anchors.py` script enforces strict documentation traceability:
@@ -136,3 +152,4 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 2. **Documentation Mandate:** Any anchor embedded in source code MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules). These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text.
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
+</semantic_anchors>

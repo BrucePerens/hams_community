@@ -30,7 +30,7 @@ To guarantee the stability and security of the platform without a massive QA dep
 * Any method utilizing `@tools.ormcache` MUST be tested using `with self.assertQueryCount(0):` (or cursor mocks) to mathematically guarantee zero SQL executions on a cache hit.
 
 ### 8. Security & Architecture Behavior Testing
-* **Proxy Ownership & IDOR:** Tests must rigorously prove data isolation across the entire spectrum of platform users, actively asserting that Unauthorized Personas are violently denied access.
+* **Proxy Ownership & IDOR (Multi-Persona Testing):** Tests must rigorously prove data isolation across the entire spectrum of platform users. You MUST explicitly test all personas (Guest, Standard User, Domain Roles) to actively assert that Unauthorized Personas are violently denied access. Crucially, multi-persona tests MUST always include the Administrator persona (`base.user_admin`) to verify they either possess the correct global overrides or are correctly restricted by immutable architectural blocks (e.g., preventing log deletion).
 * **GDPR Erasure:** Tests must assert that calling the erasure hook actually executes the hard-delete cascade.
 
 ### 9. Transaction Boundaries & Test Realism
@@ -38,3 +38,7 @@ To guarantee the stability and security of the platform without a massive QA dep
 
 ### 10. The View-Tour UI Mandate
 * Every `<template>` and `<record model="ir.ui.view">` defined in XML MUST contain a bidirectional semantic anchor linking it to an automated JS Tour.
+
+### 11. Bug Fix & Regression Testing Mandate
+* **Test-Driven Remediation:** When a bug is discovered in production or during QA, the developer MUST write an automated test that specifically reproduces and isolates the bug alongside the fix, if the current test suite does not isolate it sufficiently.
+* **Proof of Resolution:** The test suite is considered insufficient if it allowed the bug to manifest. The newly written regression test MUST mathematically fail on the broken code and strictly pass on the patched code, permanently immunizing the platform against regressions.

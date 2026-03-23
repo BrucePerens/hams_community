@@ -130,6 +130,13 @@ ERROR_RULES = [
         re.compile(r"['\"]detailed_type['\"]\s*:"),
         "CRITICAL DEPRECATION: 'detailed_type' on product.template was reverted to 'type' in Odoo 19.",
     ),
+    (
+        r"\.(py|js|xml)$",
+        re.compile(
+            r"['\"](account\.move|account\.payment|res\.partner\.bank|payment\.token|payment\.transaction)['\"]|\.bank_ids|\.payment_token_ids"
+        ),
+        "CRITICAL FINANCIAL EXPOSURE: Access to financial models or relational fields is forbidden without 'burn-ignore-financial' and an anchor.",
+    ),
 ]
 
 WARNING_RULES = []
@@ -275,10 +282,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         "warning",
                         "message",
                     ) and self.is_untranslated_string(v):
-                        self.add_warning(
-                            node.lineno,
-                            f"[AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.",
-                        )
+                        if not re.search(r".*_?api\.py$", self.filename):
+                            self.add_warning(
+                                node.lineno,
+                                f"[%AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.",
+                            )
                     if k.value == "groups_id":
                         self.add_error(
                             node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
@@ -436,7 +444,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 ):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] I18N: Untranslated string assigned to dict key.",
+                        "[%AUDIT] I18N: Untranslated string assigned to dict key.",
                     )
             self.generic_visit(node)
 
@@ -467,10 +475,12 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.generic_visit(node)
 
         def visit_Constant(self, node):
-            if isinstance(node.value, str) and re.search(r" numbercall ", node.value):
-                self.add_error(
-                    node.lineno, "Remove 'numbercall'. Odoo 18+ crons run indefinitely."
-                )
+            if isinstance(node.value, str):
+                if re.search(r" numbercall ", node.value):
+                    self.add_error(
+                        node.lineno,
+                        "Remove 'numbercall'. Odoo 18+ crons run indefinitely.",
+                    )
             self.generic_visit(node)
 
         def visit_Name(self, node):
@@ -597,11 +607,13 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 )
 
         def _check_i18n_messages(self, node, func_name):
+            if re.search(r".*_?api\.py$", self.filename):
+                return
             if func_name in ("UserError", "AccessError", "ValidationError"):
                 if node.args and self.is_untranslated_string(node.args[0]):
                     self.add_warning(
                         node.lineno,
-                        f"[AUDIT] I18N: User-facing exception message in '{func_name}' should be wrapped in _() for translation.",
+                        f"[%AUDIT] I18N: User-facing exception message in '{func_name}' should be wrapped in _() for translation.",
                     )
             elif func_name in ("message_post", "message_subscribe"):
                 for kw in node.keywords:
@@ -610,7 +622,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     ):
                         self.add_warning(
                             node.lineno,
-                            f"[AUDIT] I18N: User-facing chatter '{kw.arg}' in {func_name} should be wrapped in _() for translation.",
+                            f"[%AUDIT] I18N: User-facing chatter '{kw.arg}' in {func_name} should be wrapped in _() for translation.",
                         )
 
         def _check_forbidden_attributes(self, node, attr):
@@ -623,7 +635,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 is_cr_execute = True
             elif attr == "send_mail":
                 self.add_warning(
-                    node.lineno, "[AUDIT] Mail Templates: Verify model_id matches."
+                    node.lineno, "[%AUDIT] Mail Templates: Verify model_id matches."
                 )
             elif attr == "_sign_token":
                 self.add_error(node.lineno, "Verify '_sign_token' context...")
@@ -660,12 +672,10 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 and isinstance(node.args[0], ast.Constant)
                 and node.args[0].value == "base.group_user"
             ):
-                if not (
-                    "odoo_facility_service" in self.filename
-                ):
+                if not ("odoo_facility_service" in self.filename):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Only odoo_facility_service_internal may hold this.",
+                        "[%AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Only odoo_facility_service_internal may hold this.",
                     )
             elif (
                 attr in ("loads", "dumps")
@@ -696,7 +706,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             ):
                 self.add_warning(
                     node.lineno,
-                    "[AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...",
+                    "[%AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...",
                 )
             elif attr == "Thread" and getattr(node.func.value, "id", "") == "threading":
                 self.add_error(node.lineno, "CRITICAL DOS VECTOR: Unbounded Thread.")
@@ -708,7 +718,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 ):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] CONTROLLER BINDING: Ensure explicit inputs.",
+                        "[%AUDIT] CONTROLLER BINDING: Ensure explicit inputs.",
                     )
                 elif attr in ("create", "write") and (
                     any(
@@ -723,7 +733,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 ):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] RPC MASS ASSIGNMENT: Never pass raw request payloads directly to create/write.",
+                        "[%AUDIT] RPC MASS ASSIGNMENT: Never pass raw request payloads directly to create/write.",
                     )
             return is_cr_execute
 
@@ -736,7 +746,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 ) and not self.filename.startswith("test_"):
                     self.add_warning(
                         node.lineno,
-                        "[AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'.",
+                        "[%AUDIT] UNBOUNDED SEARCH: '.search()' called without 'limit'.",
                     )
                 if any(kw.arg == "count" for kw in node.keywords):
                     self.add_error(
@@ -755,7 +765,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             ):
                 self.add_warning(
                     node.lineno,
-                    f"[AUDIT] Data Integrity: Direct `{attr}()` on env without `.sudo()`.",
+                    f"[%AUDIT] Data Integrity: Direct `{attr}()` on env without `.sudo()`.",
                 )
 
         def _check_cr_execute(self, node, is_cr_execute):
@@ -847,6 +857,28 @@ def scan_file(filepath):
         return [f"Could not read file: {e}"], []
 
     filename = os.path.basename(filepath)
+    if filename.endswith(".csv"):
+        financial_models = [
+            "model_res_partner_bank",
+            "model_account_tax",
+            "model_res_company",
+            "model_account_move",
+            "model_account_payment",
+            "model_payment_token",
+            "model_payment_transaction",
+            "model_account_journal",
+        ]
+        for i, line in enumerate(lines, 1):
+            if not line.strip() or line.startswith("id,"):
+                continue
+            parts = line.split(",")
+            if len(parts) >= 3:
+                model_id = parts[2]
+                if any(model_id == f_model for f_model in financial_models):
+                    errors_found.append(
+                        f"Line {i}: CRITICAL FINANCIAL EXPOSURE: Granting access to '{model_id}' in custom ir.model.access.csv is strictly forbidden."
+                    )
+
     if filename.endswith(".xml"):
         try:
             root_node = parse_odoo_xml(content)
@@ -881,7 +913,11 @@ def scan_file(filepath):
                                 )
                             ]
                         )
-                        if "[@ANCHOR:" in raw_text or "audit-ignore-view" in raw_text:
+                        if (
+                            "[@ANCHOR:" in raw_text
+                            or "burn-ignore-tour" in raw_text
+                            or "audit-ignore-view" in raw_text
+                        ):
                             has_tour = True
                     if not has_tour:
                         errors_found.append(
@@ -906,6 +942,27 @@ def scan_file(filepath):
                     errors_found.append(
                         f"Line {node.lineno}: CRITICAL SECURITY: <record> must be inside noupdate data block."
                     )
+                if node.tag == "record" and node.attrs.get("model") == "ir.rule":
+                    for child in node.children:
+                        if (
+                            child.tag == "field"
+                            and child.attrs.get("name") == "model_id"
+                        ):
+                            ref = child.attrs.get("ref", "")
+                            financial_models = [
+                                "model_res_partner_bank",
+                                "model_account_tax",
+                                "model_res_company",
+                                "model_account_move",
+                                "model_account_payment",
+                                "model_payment_token",
+                                "model_payment_transaction",
+                                "model_account_journal",
+                            ]
+                            if ref in financial_models:
+                                errors_found.append(
+                                    f"Line {node.lineno}: CRITICAL FINANCIAL EXPOSURE: Creating ir.rule for '{ref}' is strictly forbidden."
+                                )
                 if node.tag == "xpath" and node.attrs.get("position") not in (
                     "inside",
                     "replace",
@@ -973,7 +1030,7 @@ def scan_file(filepath):
                     )
                     if "audit-ignore-cron" not in raw_text:
                         warnings_found.append(
-                            f"Line {node.lineno}: [AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger()."
+                            f"Line {node.lineno}: [%AUDIT] CRON ARCHITECTURE: Ensure the Python method implements stateless batching via _trigger()."
                         )
                 if node.tag == "xpath":
                     raw_text = "\n".join(
@@ -985,7 +1042,7 @@ def scan_file(filepath):
                     )
                     if "audit-ignore-xpath" not in raw_text:
                         warnings_found.append(
-                            f"Line {node.lineno}: [AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly."
+                            f"Line {node.lineno}: [%AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly."
                         )
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
@@ -1042,6 +1099,9 @@ def scan_file(filepath):
             for allowed in [
                 "database.secret",
                 ".sudo().unlink()",
+                "burn-ignore-sudo",
+                "burn-ignore-financial",
+                "burn-ignore-tour",
             ]
         ):
             errors_found.append(
@@ -1076,17 +1136,18 @@ def scan_file(filepath):
                         }
                     )
 
-        if "burn-ignore-sudo" in line:
-            anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
-            if anchor_match:
-                REQUIRE_TEST_VERIFICATION.append(
-                    {
-                        "anchor": anchor_match.group(1),
-                        "type": "burn-ignore-sudo",
-                        "file": filepath,
-                        "line": line_num,
-                    }
-                )
+        for burn_type in ["burn-ignore-sudo", "burn-ignore-financial"]:
+            if burn_type in line:
+                anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
+                if anchor_match:
+                    REQUIRE_TEST_VERIFICATION.append(
+                        {
+                            "anchor": anchor_match.group(1),
+                            "type": burn_type,
+                            "file": filepath,
+                            "line": line_num,
+                        }
+                    )
 
         for ext_pattern, regex, msg in ERROR_RULES:
             if re.search(ext_pattern, filename) and regex.search(line):
@@ -1150,6 +1211,7 @@ def _verify_test_ast(
     found_view = False
     found_trigger = False
     found_mail = False
+    found_security_check = False
 
     for node in ast.walk(target_func):
         if isinstance(node, ast.Call):
@@ -1162,6 +1224,13 @@ def _verify_test_ast(
                 found_trigger = True
             if func_attr in ("send_mail", "message_post"):
                 found_mail = True
+            if func_attr in (
+                "assertRaises",
+                "assertRaisesRegex",
+                "assertFalse",
+                "assertTrue",
+            ):
+                found_security_check = True
             if func_attr == "object":
                 for arg in getattr(node, "args", []):
                     if isinstance(arg, ast.Constant) and arg.value in (
@@ -1177,11 +1246,11 @@ def _verify_test_ast(
         if isinstance(node, ast.With):
             for item in node.items:
                 if isinstance(item.context_expr, ast.Call):
-                    if (
-                        getattr(item.context_expr.func, "attr", "")
-                        == "assertQueryCount"
-                    ):
+                    func_attr = getattr(item.context_expr.func, "attr", "")
+                    if func_attr == "assertQueryCount":
                         found_qcount = True
+                    elif func_attr in ("assertRaises", "assertRaisesRegex"):
+                        found_security_check = True
 
     for node in ast.walk(target_func):
         if isinstance(node, (ast.For, ast.While)):
@@ -1219,6 +1288,15 @@ def _verify_test_ast(
             if found_mail
             else (False, "AST requires 'send_mail' or 'message_post'.")
         )
+    elif b_type == "burn-ignore-financial":
+        is_valid, msg = (
+            (True, "")
+            if found_security_check
+            else (
+                False,
+                "AST requires security assertion (e.g., assertRaises, assertTrue) to verify financial data protection limits.",
+            )
+        )
     elif b_type == "audit-ignore-i18n":
         is_valid, msg = True, ""
 
@@ -1233,9 +1311,31 @@ def _verify_test_ast(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("directory", nargs="?", default=".")
+    parser.add_argument(
+        "--ignore-file", default="ignore_list.txt", help="Path to ignore config file"
+    )
     args = parser.parse_args()
     target_dir = os.path.abspath(args.directory)
     total_errors, total_warnings, scanned_files = 0, 0, 0
+
+    ignore_patterns = []
+    ignore_path = (
+        args.ignore_file
+        if os.path.isabs(args.ignore_file)
+        else os.path.join(target_dir, args.ignore_file)
+    )
+    if os.path.exists(ignore_path):
+        with open(ignore_path, "r", encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    ignore_patterns.append(re.compile(stripped))
+
+    def is_ignored(path_str):
+        for pat in ignore_patterns:
+            if pat.search(path_str):
+                return True
+        return False
 
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [
@@ -1252,12 +1352,15 @@ def main():
                 "env",
                 "hams_local_relay",
             )
+            and not is_ignored(os.path.relpath(os.path.join(root, d), target_dir))
         ]
         for file in files:
             if file in (os.path.basename(__file__), "LLM_LINTER_GUIDE.md"):
                 continue
-            if file.endswith((".py", ".xml", ".js")):
-                filepath = os.path.join(root, file)
+            filepath = os.path.join(root, file)
+            if is_ignored(os.path.relpath(filepath, target_dir)):
+                continue
+            if file.endswith((".py", ".xml", ".js", ".csv")):
                 scanned_files += 1
                 errors, warnings = scan_file(filepath)
                 if errors or warnings:

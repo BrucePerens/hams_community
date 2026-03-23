@@ -1,11 +1,10 @@
 # Runbook: Deployment & Provisioning
 
-This document serves as the high-level operational map for provisioning the Hams.com architecture. 
+This document serves as the high-level operational map for provisioning the Hams.com architecture.
 
-**For step-by-step execution, CLI commands, and server setup instructions, you MUST refer to the authoritative tactical guides:**
-* 🐳 **[Docker Deployment Guide](../../deploy/DOCKER_DEPLOYMENT.md):** The primary, highly-secure orchestration method using containerized isolation.
-* 🐧 **[Bare-Metal Debian Guide](../../deploy/DEBIAN_DEPLOYMENT.md):** Legacy/Alternative method for direct OS installations.
-* ☁️ **[Cloudflare mTLS Guide](../../deploy/CLOUDFLARE_MTLS_GUIDE.md):** Network edge configuration for Zero-Touch authentication.
+********For step-by-step execution, CLI commands, and server setup instructions, you MUST refer to the authoritative tactical guide:**
+******* 🚀 **[Unified Deployment Guide](../deploy/DEPLOYMENT_GUIDE.md):** The primary orchestration method for both Docker and Bare-Metal Debian installations, natively handling secrets, SSL scaffolding, and service provisioning.
+******* ☁️ **[Cloudflare mTLS Guide](../deploy/CLOUDFLARE_MTLS_GUIDE.md):** Network edge configuration for Zero-Touch authentication...
 
 ---
 
@@ -13,8 +12,8 @@ This document serves as the high-level operational map for provisioning the Hams
 *(Reference: `deploy/.env.template`)*
 The application utilizes a centralized environment file for secrets management. External infrastructure tokens (such as PowerDNS, RabbitMQ, and Cloudflare API keys for Edge Orchestration) are fully abstracted from the Python source code.
 
-**Securing the Odoo Admin Password (ADR-0006):**
-To comply with strict DevSecOps mandates, the UI Admin password is never stored in plaintext within the `.env` vault. It must be cryptographically hashed (PBKDF2-SHA512) using the interactive `tools/init_environment.py` utility before deployment. This utility also centralizes the generation of all internal cryptographic secrets. Please see the Docker Deployment Guide for exact execution steps.
+****Securing the Odoo Admin Password (ADR-0006):**
+**To comply with strict DevSecOps mandates, the UI Admin password is never stored in plaintext within the `.env` vault. It must be cryptographically hashed (PBKDF2-SHA512) using the interactive `deploy_wizard.py` utility before deployment. This utility also centralizes the generation of all internal cryptographic secrets. Please see the Docker Deployment Guide for exact execution steps..
 
 ## 2. Docker Orchestration (Production Standard)
 *(Reference: `deploy/docker-compose.yml`)*
