@@ -10,7 +10,10 @@ def post_init_hook(env):
         with open(html_path, "r", encoding="utf-8") as f:
             body_html = f.read()
 
-        env["knowledge.article"].sudo().create(
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.odoo_facility_service_internal"
+        )
+        env["knowledge.article"].with_user(svc_uid).create(
             {
                 "name": "Distributed Redis Cache",
                 "body": body_html,

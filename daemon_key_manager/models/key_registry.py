@@ -32,9 +32,11 @@ class DaemonKeyRegistry(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(user_xml_id)
         user = self.env["res.users"].browse(svc_uid)
 
-        registry = self.search([("name", "=", daemon_name)], limit=1)
+        registry = self.env["daemon.key.registry"].search(
+            [("name", "=", daemon_name)], limit=1
+        )
         if not registry:
-            registry = self.create(
+            registry = self.env["daemon.key.registry"].create(
                 {
                     "name": daemon_name,
                     "user_id": user.id,
@@ -52,7 +54,7 @@ class DaemonKeyRegistry(models.Model):
 
         # Revoke old keys for this specific service account
         old_keys = self.env["res.users.apikeys"].search(
-            [("user_id", "=", self.user_id.id)]
+            [("user_id", "=", self.user_id.id)], limit=100
         )
         old_keys.unlink()
 
@@ -89,7 +91,19 @@ class DaemonKeyRegistry(models.Model):
     def _cron_rotate_all_keys(self):
         """
         Executes via ir.cron. Rotates keys for all registered daemons.
+        Uses stateless batching and programmatic re-triggering.
         """
-        registries = self.search([])
+        import datetime
+
+        threshold = fields.Datetime.now() - datetime.timedelta(days=59)
+        registries = self.env["daemon.key.registry"].search(
+            ["|", ("last_rotated", "=", False), ("last_rotated", "<", threshold)],
+            limit=10,
+        )
+
         for reg in registries:
             reg._rotate_key_and_write_file()
+            self.env.cr.commit()
+
+        if len(registries) == 10:
+            self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys")._trigger()

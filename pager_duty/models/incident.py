@@ -28,7 +28,7 @@ class PagerIncident(models.Model):
     _inherit = ["mail.thread"]
 
     name = fields.Char(
-        string="ID", required=True, copy=False, readonly=True, default="New"
+        string="Incident ID", required=True, copy=False, readonly=True, default="New"
     )
     source = fields.Char(string="Source", required=True)
     severity = fields.Selection(
