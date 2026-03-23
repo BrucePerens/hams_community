@@ -4,7 +4,9 @@
 Accepted (Consolidates ADRs 0001, 0022, 0023, 0024, 0027, 0031, 0047, 0048, 0057, 0066, 0071)
 
 ## Context & Philosophy
-The platform handles massive real-time data ingestion, external polling, and WebSocket concurrency. Standard Odoo WSGI workers are optimized for low-concurrency ERP transactions. To prevent CPU/RAM exhaustion, all heavy lifting MUST be distributed asynchronously and managed with strict O(1) memory profiling.
+The platform handles massive real-time data ingestion, external polling, and WebSocket concurrency.
+Standard Odoo WSGI workers are optimized for low-concurrency ERP transactions.
+To prevent CPU/RAM exhaustion, all heavy lifting MUST be distributed asynchronously and managed with strict O(1) memory profiling.
 
 ## Decisions & Mandates
 
@@ -39,4 +41,4 @@ To prevent hanging WSGI workers and "split-brain" states, all heavy OS-level or 
 1. **State Initialization:** Odoo creates a tracking record and sets its status to `pending`.
 2. **Transactional Dispatch:** Odoo uses `env.cr.postcommit.add()` to push the task payload to RabbitMQ.
 3. **Isolated Execution:** The standalone Python daemon consumes the message and executes the dangerous operation.
-4. **XML-RPC Callback:** Upon completion, the daemon executes an XML-RPC call back to Odoo to update the tracking record's state to `done` or `failed`.
+4. **JSON-2 RPC Callback:** Upon completion, the daemon executes a JSON-2 RPC call back to Odoo to update the tracking record's state to `done` or `failed`.

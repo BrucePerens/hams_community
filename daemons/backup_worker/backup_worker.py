@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import time
 import pika
 import subprocess
-import xmlrpc.client
 import logging
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../core_base"))
+try:
+    from json_rpc_client import SecureJSONRPCClient
+except ImportError:
+    SecureJSONRPCClient = None
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [BACKUP_WORKER] - %(message)s"
 )
 logger = logging.getLogger("backup_worker")
 
-ODOO_URL = os.environ.get("ODOO_URL", "http://127.0.0.1:8069")
-ODOO_DB = os.environ.get("DB_NAME", "odoo")
-ODOO_USER = "backup_service_internal"
-ODOO_PASS = os.environ.get("ODOO_SERVICE_PASSWORD", "")
+ODOO_URL = os.environ.get("ODOO_URL", "[http://127.0.0.1:8069](http://127.0.0.1:8069)")
+ODOO_DB = os.environ.get("DB_NAME", "hams")
 
 RMQ_HOST = os.environ.get("RMQ_HOST", "127.0.0.1")
 RMQ_USER = os.environ.get("RMQ_USER", "guest")
@@ -32,36 +36,39 @@ def execute_job(ch, method, properties, body):
 
         logger.info(f"Processing job {job_id} ({engine})")
 
-        common = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/common")
-        uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASS, {})
-        if not uid:
-            logger.error("XML-RPC Authentication failed. Requeueing...")
+        env_path = os.environ.get(
+            "DAEMON_ENV_PATH", "/var/lib/odoo/daemon_keys/backup_worker.env"
+        )
+        if not SecureJSONRPCClient:
+            logger.error("SecureJSONRPCClient missing. Requeueing...")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
             return
 
-        models = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/object")
+        try:
+            client = SecureJSONRPCClient(
+                env_path=env_path, base_url=ODOO_URL, db_name=ODOO_DB
+            )
+        except Exception as e:
+            logger.error(f"JSON-RPC authentication/key load failed: {e}. Requeueing...")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            return
 
-        models.execute_kw(
-            ODOO_DB,
-            uid,
-            ODOO_PASS,
+        client.call(
             "backup.job",
             "write",
-            [
+            args=[
                 [job_id],
                 {"state": "processing", "output_log": f"Starting {engine} backup...\n"},
             ],
         )
 
-        config = models.execute_kw(
-            ODOO_DB,
-            uid,
-            ODOO_PASS,
+        config_data = client.call(
             "backup.config",
             "read",
-            [[config_id]],
-            {"fields": ["kopia_password"]},
-        )[0]
+            args=[[config_id]],
+            kwargs={"fields": ["kopia_password"]},
+        )
+        config = config_data[0] if config_data else {}
 
         env_vars = os.environ.copy()
         if engine == "kopia" and config.get("kopia_password"):
@@ -87,14 +94,11 @@ def execute_job(ch, method, properties, body):
 
         for line in iter(proc.stdout.readline, ""):
             log_buffer += line
-            if time.time() - last_update > 2.0:
-                models.execute_kw(
-                    ODOO_DB,
-                    uid,
-                    ODOO_PASS,
+            if time.time() - last_update < 2.0:
+                client.call(
                     "backup.job",
                     "write",
-                    [[job_id], {"output_log": log_buffer}],
+                    args=[[job_id], {"output_log": log_buffer}],
                 )
                 last_update = time.time()
 
@@ -104,34 +108,25 @@ def execute_job(ch, method, properties, body):
         final_state = "done" if return_code == 0 else "failed"
         log_buffer += f"\nProcess exited with code {return_code}"
 
-        models.execute_kw(
-            ODOO_DB,
-            uid,
-            ODOO_PASS,
+        client.call(
             "backup.job",
             "write",
-            [[job_id], {"state": final_state, "output_log": log_buffer}],
+            args=[[job_id], {"state": final_state, "output_log": log_buffer}],
         )
 
         if final_state == "done":
-            models.execute_kw(
-                ODOO_DB,
-                uid,
-                ODOO_PASS,
+            client.call(
                 "backup.config",
                 "action_sync_snapshots",
-                [[config_id]],
+                args=[[config_id]],
             )
         else:
             # Trigger Pager Duty reporting via Odoo model
             error_msg = f"{engine.capitalize()} backup failed for job {job_id}."
-            models.execute_kw(
-                ODOO_DB,
-                uid,
-                ODOO_PASS,
+            client.call(
                 "backup.config",
                 "_report_backup_failure",
-                [[config_id], error_msg],
+                args=[[config_id], error_msg],
             )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)

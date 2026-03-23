@@ -23,46 +23,34 @@ try:
 except ImportError:
     psycopg2 = None
 
-import xmlrpc.client
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../core_base"))
+try:
+    from json_rpc_client import SecureJSONRPCClient
+except ImportError:
+    SecureJSONRPCClient = None
 
 
 class OdooClient:
-    def __init__(self, url, db, user, password):
-        self.url = url
-        self.db = db
-        self.password = password
-        self.common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
-        self.uid = self.common.authenticate(db, user, password, {})
-        if not self.uid:
-            raise Exception(f"Authentication failed for user {user} on db {db}")
-        self.models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
+    def __init__(self, url, db):
+        env_path = os.environ.get(
+            "DAEMON_ENV_PATH", "/var/lib/odoo/daemon_keys/pager_duty.env"
+        )
+        if not SecureJSONRPCClient:
+            raise Exception("SecureJSONRPCClient could not be imported from core_base.")
+        self.client = SecureJSONRPCClient(env_path=env_path, base_url=url, db_name=db)
 
     def execute(self, model, method, *args, **kwargs):
-        return self.models.execute_kw(
-            self.db, self.uid, self.password, model, method, args, kwargs
-        )
+        return self.client.call(model, method, args=list(args), kwargs=kwargs)
 
 
 def get_odoo_client(logger, config):
-    url = os.environ.get("ODOO_URL", "http://127.0.0.1:8069")
-    db = config.get("odoo_database") or os.environ.get("ODOO_DB")
-    if not db:
-        try:
-            db_proxy = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/db")
-            dbs = db_proxy.list()
-            if dbs:
-                db = dbs[0]
-        except Exception:
-            pass
-    if not db:
-        db = "odoo"
+    url = os.environ.get("ODOO_URL", "[http://127.0.0.1:8069](http://127.0.0.1:8069)")
+    db = config.get("odoo_database") or os.environ.get("ODOO_DB", "hams")
 
-    user = os.environ.get("ODOO_USER", "pager_service_internal")
-    password = os.environ.get("ODOO_PASSWORD", "")
     try:
-        return OdooClient(url, db, user, password)
+        return OdooClient(url, db)
     except Exception as e:
-        logger.error(f"Failed to connect to Odoo: {e}")
+        logger.error(f"Failed to connect to Odoo via JSON-RPC: {e}")
         return None
 
 
@@ -714,7 +702,8 @@ def execute_check(check, client=None):
         headers = {"User-Agent": "HamMonitor/1.0"}
         try:
             req = urllib.request.Request(
-                "https://acme-v02.api.letsencrypt.org/directory", headers=headers
+                "[https://acme-v02.api.letsencrypt.org/directory](https://acme-v02.api.letsencrypt.org/directory)",
+                headers=headers,
             )
             with urllib.request.urlopen(req, timeout=10) as response:
                 if response.status != 200:
@@ -725,7 +714,9 @@ def execute_check(check, client=None):
         domains = parse_env(check.get("target", ""))
         if domains and domains != "auto":
             try:
-                req = urllib.request.Request("https://api.ipify.org", headers=headers)
+                req = urllib.request.Request(
+                    "[https://api.ipify.org](https://api.ipify.org)", headers=headers
+                )
                 with urllib.request.urlopen(req, timeout=10) as ip_resp:
                     my_ip = ip_resp.read().decode("utf-8").strip()
 
