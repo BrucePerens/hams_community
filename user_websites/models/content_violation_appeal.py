@@ -32,12 +32,13 @@ class ContentViolationAppeal(models.Model):
 
     def action_approve(self):
         """Approves the appeal and pardons the user."""
+        # ADR 0078: Fetch service account outside the loop for O(1) Memory Mapping
+        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.mail_service_internal"
+        )
         for appeal in self:
             appeal.state = "approved"
             appeal.user_id.action_pardon_user_websites()
-            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.mail_service_internal"
-            )
             appeal.with_user(mail_svc).message_post(
                 body=_(
                     "Appeal approved. You pardoned the user and lifted their suspension."
@@ -47,11 +48,12 @@ class ContentViolationAppeal(models.Model):
 
     def action_reject(self):
         """Rejects the appeal."""
+        # ADR 0078: Fetch service account outside the loop for O(1) Memory Mapping
+        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.mail_service_internal"
+        )
         for appeal in self:
             appeal.state = "rejected"
-            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.mail_service_internal"
-            )
             appeal.with_user(mail_svc).message_post(
                 body=_("Appeal rejected. The user remains suspended."),
                 subtype_xmlid="mail.mt_note",

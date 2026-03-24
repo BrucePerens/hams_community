@@ -10,13 +10,20 @@ from odoo.exceptions import ValidationError
 _logger = logging.getLogger(__name__)
 
 import json
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import (
+    distributed_cache,
+    invalidate_model_cache,
+)
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 redis_pool = redis.ConnectionPool(
-    host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True,
-    socket_timeout=1.0, socket_connect_timeout=1.0
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=0,
+    decode_responses=True,
+    socket_timeout=1.0,
+    socket_connect_timeout=1.0,
 )
 redis_client = redis.Redis(connection_pool=redis_pool)
 
@@ -29,9 +36,17 @@ class WebsitePage(models.Model):
         string="View Count", default=0, help="Privacy-friendly tracking of page views."
     )
 
+    _url_website_uniq = models.Constraint(
+        "UNIQUE(url, website_id)", "The page URL must be unique per website!"
+    )
+
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
         if "cloudflare.purge.queue" in self.env:
+            # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
+            self.mapped("owner_user_id.website_slug")
+            self.mapped("user_websites_group_id.website_slug")
+
             tags = set()
             for rec in self:
                 if rec.owner_user_id and rec.owner_user_id.website_slug:
@@ -82,7 +97,13 @@ class WebsitePage(models.Model):
                         continue
                     val = elem.attrib[attr]
                     # Block all dangerous URI schemes (data, vbscript, javascript)
-                    if attr_lower in ("href", "src", "content", "formaction", "action") and re.match(
+                    if attr_lower in (
+                        "href",
+                        "src",
+                        "content",
+                        "formaction",
+                        "action",
+                    ) and re.match(
                         r"^\s*(javascript|data|vbscript):", val, re.IGNORECASE
                     ):
                         del elem.attrib[attr]
@@ -128,22 +149,39 @@ class WebsitePage(models.Model):
         if not url and records:
             url = records[0].url
 
-        report = (
+        target_url = url or "/unknown-page"
+        reporter_id = self.env.user.id
+
+        existing = (
             self.env["content.violation.report"]
             .with_user(svc_uid)
-            .create(
-                {
-                    "target_url": url or "/unknown-page",
-                    "description": "🚨 AUTOMATED SECURITY ALERT: The system detected and neutralized malicious code (SSTI/XSS) attempting to execute on this page. The attacker attempted to inject forbidden <script> tags, IFrames, or t-* QWeb evaluation directives. The payload was stripped, but the user account may be compromised or acting maliciously.",
-                    "content_owner_id": owner_id,
-                    "content_group_id": group_id,
-                    "reported_by_user_id": self.env.user.id,
-                }
+            .search(
+                [
+                    ("target_url", "=", target_url),
+                    ("reported_by_user_id", "=", reporter_id),
+                ],
+                limit=1,
             )
         )
 
-        # Immediately strike the offending account (fulfilling "at least the level of a content-rule violation")
-        report.with_user(svc_uid).action_take_action_and_strike()
+        if existing:
+            existing.with_user(svc_uid).action_take_action_and_strike()
+        else:
+            report = (
+                self.env["content.violation.report"]
+                .with_user(svc_uid)
+                .create(
+                    {
+                        "target_url": target_url,
+                        "description": "🚨 AUTOMATED SECURITY ALERT: The system detected and neutralized malicious code (SSTI/XSS) attempting to execute on this page. The attacker attempted to inject forbidden <script> tags, IFrames, or t-* QWeb evaluation directives. The payload was stripped, but the user account may be compromised or acting maliciously.",
+                        "content_owner_id": owner_id,
+                        "content_group_id": group_id,
+                        "reported_by_user_id": reporter_id,
+                    }
+                )
+            )
+            # Immediately strike the offending account (fulfilling "at least the level of a content-rule violation")
+            report.with_user(svc_uid).action_take_action_and_strike()
 
     @api.model
     @distributed_cache()
@@ -411,7 +449,10 @@ class WebsitePage(models.Model):
                 utils._notify_cache_invalidation("website.page", urls_to_notify)
                 invalidate_model_cache(self.env, self._name)
                 payload = json.dumps({"model": self._name})
-                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+                self.env.cr.execute(
+                    "SELECT pg_notify(%s, %s)",
+                    ("distributed_cache_invalidation", payload),
+                )
 
         self._invalidate_cloudflare_cache()
         return res
@@ -432,7 +473,9 @@ class WebsitePage(models.Model):
             utils._notify_cache_invalidation("website.page", pages_to_invalidate)
             invalidate_model_cache(self.env, self._name)
             payload = json.dumps({"model": self._name})
-            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+            self.env.cr.execute(
+                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+            )
 
         return res
 

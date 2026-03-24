@@ -47,7 +47,17 @@ class FailureExtractor:
     """
 
     def __init__(self, output_path):
-        self.output_path = os.path.expanduser(output_path)
+        # Resolve the intended display path vs the physical write path
+        self.display_path = os.environ.get(
+            "HAMS_REAL_ERROR_LOG", os.path.abspath(os.path.expanduser(output_path))
+        )
+
+        # If we are inside the RO namespace, we MUST write to the spool tmpfs
+        if os.environ.get("HAMS_ISOLATED_NS") == "1":
+            self.output_path = "/opt/hams/spool/filtered_test.txt"
+        else:
+            self.output_path = self.display_path
+
         self.log_prefix_pattern = re.compile(
             r"^(?:\s*)?\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}"
         )
@@ -147,7 +157,6 @@ class FailureExtractor:
 
         out_dir = os.path.dirname(self.output_path)
         if out_dir:
-            # Automatically create ~/tmp/ or any other parent directory if it doesn't exist
             os.makedirs(out_dir, exist_ok=True)
 
         num_failures = len(self.captured_blocks)
@@ -206,7 +215,9 @@ class FailureExtractor:
                 )
             )
             print(
-                "📄 Failure details extracted and saved to: {}".format(self.output_path)
+                "📄 Failure details extracted and saved to: {}".format(
+                    self.display_path
+                )
             )
         print("==========================================================\n")
 
@@ -362,7 +373,7 @@ def run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns):
     return final_rc
 
 
-def run_in_isolated_environment():
+def run_in_isolated_environment(real_error_log):
     """
     Re-executes the test runner inside an isolated Linux namespace (Mount & Network)
     with a dedicated, ephemeral PostgreSQL instance to guarantee zero interference
@@ -490,7 +501,7 @@ sleep 3
 # Prevent Python from attempting to write .pyc files to the RO workspace
 export PYTHONDONTWRITEBYTECODE=1
 
-sudo -E -u {orig_user} env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 "$@"
+sudo -E -u {orig_user} env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_REAL_ERROR_LOG="{real_error_log}" "$@"
 RET=$?
 
 # Cleanup RabbitMQ and Redis so they don't hold the namespace open
@@ -528,6 +539,32 @@ exit $RET
             stderr=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
         )
+
+        # Rescue the generated log file from the ephemeral spool and copy it to the user's real home
+        spool_log = os.path.join(spool_dir, "filtered_test.txt")
+        if os.path.exists(spool_log):
+            try:
+                os.makedirs(os.path.dirname(real_error_log), exist_ok=True)
+                shutil.copy2(spool_log, real_error_log)
+                # Ensure the user can actually read/delete it without sudo
+                if (
+                    os.geteuid() == 0
+                    and orig_user
+                    and orig_user not in ["root", "odoo"]
+                ):
+                    import pwd
+
+                    try:
+                        uid = pwd.getpwnam(orig_user).pw_uid
+                        gid = pwd.getpwnam(orig_user).pw_gid
+                        os.chown(real_error_log, uid, gid)
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(
+                    f"⚠️ WARNING: Could not rescue extracted log to {real_error_log}: {e}"
+                )
+
         shutil.rmtree(spool_dir, ignore_errors=True)
         shutil.rmtree(pg_data_dir, ignore_errors=True)
         shutil.rmtree(pg_socket_dir, ignore_errors=True)
@@ -562,27 +599,6 @@ def rebuild_db(db_name):
 
 
 def main():
-    if os.environ.get("HAMS_ISOLATED_NS") != "1":
-        if is_odoo_running(8069):
-            print("[*] Port 8069 is active (Odoo is running).")
-            print(
-                "[*] Routing test execution to isolated namespace to protect environment..."
-            )
-            run_in_isolated_environment()
-            return
-        else:
-            print("[*] Port 8069 is free. Running tests natively (CI/CD compatible).")
-            try:
-                os.makedirs("/opt/hams/spool/adif_queue", exist_ok=True)
-                os.makedirs("/opt/hams/spool/ncvec", exist_ok=True)
-                os.chmod("/opt/hams/spool", 0o777)
-                os.chmod("/opt/hams/spool/adif_queue", 0o777)
-                os.chmod("/opt/hams/spool/ncvec", 0o777)
-            except Exception as e:
-                print(
-                    f"[*] Note: Could not provision /opt/hams/spool natively ({e}). Ensure it exists."
-                )
-
     try:
         parser = argparse.ArgumentParser(
             description="Unified Odoo Test Runner for Hams.com",
@@ -625,6 +641,32 @@ def main():
         )
 
         args = parser.parse_args()
+
+        # Resolve path early before any namespace shifts
+        real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
+
+        if os.environ.get("HAMS_ISOLATED_NS") != "1":
+            if is_odoo_running(8069):
+                print("[*] Port 8069 is active (Odoo is running).")
+                print(
+                    "[*] Routing test execution to isolated namespace to protect environment..."
+                )
+                run_in_isolated_environment(real_error_log)
+                return
+            else:
+                print(
+                    "[*] Port 8069 is free. Running tests natively (CI/CD compatible)."
+                )
+                try:
+                    os.makedirs("/opt/hams/spool/adif_queue", exist_ok=True)
+                    os.makedirs("/opt/hams/spool/ncvec", exist_ok=True)
+                    os.chmod("/opt/hams/spool", 0o777)
+                    os.chmod("/opt/hams/spool/adif_queue", 0o777)
+                    os.chmod("/opt/hams/spool/ncvec", 0o777)
+                except Exception as e:
+                    print(
+                        f"[*] Note: Could not provision /opt/hams/spool natively ({e}). Ensure it exists."
+                    )
 
         # Path Resolution
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -670,7 +712,7 @@ def main():
         print("==========================================================")
         print(" Target Database: {}".format(args.db))
         print(" Target Modules:  {}".format(mod_string))
-        print(" Error Log:       {}".format(args.error_log))
+        print(" Error Log:       {}".format(extractor.display_path))
         print("==========================================================")
 
         final_rc = 0

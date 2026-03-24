@@ -84,7 +84,7 @@ class PagerCheck(models.Model):
         string="Ignored Services",
         help="Comma-separated list of systemd services to ignore when monitoring all failures (e.g., 'fwupd-refresh.service').",
     )
-    warning_threshold = fields.Integer(string="Warning Threshold %")
+    warning_threshold = fields.Integer(string="Warning Threshold %25")
 
     target = fields.Char(
         string="Target (Host/URL/File)",
@@ -158,6 +158,23 @@ class PagerCheck(models.Model):
         string="Heartbeat UUID", default=lambda self: str(uuid.uuid4()), readonly=True
     )
     last_heartbeat = fields.Datetime(string="Last Heartbeat", readonly=True)
+
+    _name_uniq = models.Constraint("UNIQUE(name)", "The check name must be unique!")
+    _uuid_uniq = models.Constraint(
+        "UNIQUE(heartbeat_uuid)", "The heartbeat UUID must be unique!"
+    )
+
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)",
+        "The check name cannot be empty or just spaces.",
+    )
+    _interval_positive = models.Constraint(
+        "CHECK(interval > 0)",
+        "The polling interval must be strictly greater than zero.",
+    )
+    _grace_period_non_negative = models.Constraint(
+        "CHECK(grace_period >= 0)", "The grace period cannot be negative."
+    )
 
     @api.model
     @distributed_cache()
@@ -579,7 +596,7 @@ class PagerCheck(models.Model):
             {
                 "name": "WSGI HTTP Ping",
                 "check_type": "http",
-                "target": "http://127.0.0.1:8069/api/v1/pager/ping",
+                "target": "[http://127.0.0.1:8069/api/v1/pager/ping](http://127.0.0.1:8069/api/v1/pager/ping)",
                 "payload_expect": '{"status": "ok"}',
                 "interval": 60,
                 "grace_period": 120,
@@ -587,8 +604,14 @@ class PagerCheck(models.Model):
             }
         )
 
-        existing_names = self.env["pager.check"].search([], limit=5000).mapped("name")
-        new_checks = [c for c in checks if c["name"] not in existing_names]
+        existing_names = set(
+            self.env["pager.check"].search([], limit=5000).mapped("name")
+        )
+        new_checks = []
+        for c in checks:
+            if c["name"] not in existing_names:
+                new_checks.append(c)
+                existing_names.add(c["name"])
 
         if new_checks:
             self.env["pager.check"].create(new_checks)

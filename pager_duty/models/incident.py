@@ -68,7 +68,10 @@ class PagerIncident(models.Model):
                 vals["acknowledged_by_id"] = self.env.user.id
         elif vals.get("status") == "resolved":
             vals["time_resolved"] = now
+
         res = super().write(vals)
+
+        # ADR 0078: O(1) Memory Mapping / Event Bus Optimization
         for rec in self:
             if rec.time_acknowledged and rec.create_date and not rec.mtta:
                 rec.mtta = (
@@ -77,7 +80,9 @@ class PagerIncident(models.Model):
             if rec.time_resolved and rec.create_date and not rec.mttr:
                 rec.mttr = (rec.time_resolved - rec.create_date).total_seconds() / 60.0
 
+        if self:
             self.env["bus.bus"]._sendone("pager_duty", "update_board", {})
+
         return res
 
     @api.model
@@ -94,6 +99,7 @@ class PagerIncident(models.Model):
         )
         if not incidents:
             return
+
         mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.mail_service_internal"
         )
@@ -174,7 +180,7 @@ class PagerIncident(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
-        for rec in records:
+        if records:
             self.env["bus.bus"]._sendone("pager_duty", "update_board", {})
         return records
 

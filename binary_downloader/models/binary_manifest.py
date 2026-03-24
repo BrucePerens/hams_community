@@ -32,6 +32,15 @@ class BinaryManifest(models.Model):
     )
 
     _name_uniq = models.Constraint("UNIQUE(name)", "The binary name must be unique!")
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)", "The binary name cannot be empty."
+    )
+    _url_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(url)) > 0)", "The download URL cannot be empty."
+    )
+    _chksum_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(checksum)) > 0)", "The checksum cannot be empty."
+    )
 
     @api.model
     def ensure_executable(self, cmd_name):

@@ -23,6 +23,19 @@ class DaemonKeyRegistry(models.Model):
     )
     last_rotated = fields.Datetime(string="Last Rotated", readonly=True)
 
+    _name_uniq = models.Constraint("UNIQUE(name)", "The daemon name must be unique!")
+    _user_uniq = models.Constraint(
+        "UNIQUE(user_id)", "Each service account can only have one registered daemon!"
+    )
+
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)", "The daemon name cannot be empty."
+    )
+    _path_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(env_file_path)) > 0)",
+        "The environment file path cannot be empty.",
+    )
+
     @api.model
     def register_daemon(self, daemon_name, user_xml_id, env_file_path):
         """

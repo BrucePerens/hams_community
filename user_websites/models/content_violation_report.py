@@ -42,6 +42,17 @@ class ContentViolationReport(models.Model):
     )
     reported_by_email = fields.Char(string="Reported By (Guest Email)")
 
+    _report_uniq = models.Constraint(
+        "UNIQUE(target_url, reported_by_user_id)",
+        "You have already submitted a report for this URL.",
+    )
+    _url_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(target_url)) > 0)", "The target URL cannot be empty."
+    )
+    _desc_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(description)) > 0)", "The description cannot be empty."
+    )
+
     @api.model
     def _cron_notify_pending_reports(self):
         # [@ANCHOR: cron_notify_pending_reports]

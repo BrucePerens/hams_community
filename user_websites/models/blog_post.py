@@ -15,9 +15,18 @@ class BlogPost(models.Model):
         string="View Count", default=0, help="Privacy-friendly tracking of post views."
     )
 
+    _name_owner_uniq = models.Constraint(
+        "UNIQUE(name, owner_user_id, user_websites_group_id)",
+        "You already have a blog post with this exact title!",
+    )
+
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
         if "cloudflare.purge.queue" in self.env:
+            # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
+            self.mapped("owner_user_id.website_slug")
+            self.mapped("user_websites_group_id.website_slug")
+
             tags = set()
             for rec in self:
                 if rec.owner_user_id and rec.owner_user_id.website_slug:
@@ -41,6 +50,10 @@ class BlogPost(models.Model):
     def _get_blog_urls(self):
         """Helper method to construct the blog index URLs for Cloudflare cache invalidation."""
         urls = set()
+        # ADR 0078: Pre-fetch related fields
+        self.mapped("owner_user_id.website_slug")
+        self.mapped("user_websites_group_id.website_slug")
+
         for post in self:
             if post.owner_user_id and post.owner_user_id.website_slug:
                 urls.add(f"/{post.owner_user_id.website_slug}/blog")
@@ -247,7 +260,7 @@ class BlogPost(models.Model):
             unsub_url = f"{base_url}/website/unsubscribe/{digest.owner_model}/{digest.owner_record_id}/{partner.id}/{timestamp}/{token}"
 
             headers = {
-                "List-Unsubscribe": f"<{unsub_url}>",
+                "List-Unsubscribe": f"<<{unsub_url}>>",
                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             }
 

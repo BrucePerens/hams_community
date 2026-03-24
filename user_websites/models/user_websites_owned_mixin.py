@@ -35,6 +35,40 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
         # Verified by [@ANCHOR: test_mixin_ownership_validation]
         # Verified by [@ANCHOR: test_api_armor_mandatory_assignment]
         """Validates that the current user is legally allowed to assign the provided ownership, enforces mandatory ownership, and prevents dual ownership."""
+
+        user_id = self.env.user.id
+        is_admin = (
+            self.env.su
+            or self.env.user.has_group("base.group_system")
+            or self.env.user.has_group(
+                "user_websites.group_user_websites_administrator"
+            )
+            or self.env.user.has_group(
+                "user_websites.group_user_websites_service_account"
+            )
+        )
+
+        # ADR 0078: O(1) Memory Mapping - Pre-fetch all group memberships to prevent N+1 lazy loading queries in the loop
+        group_ids = {
+            int(vals.get("user_websites_group_id"))
+            for vals in vals_list
+            if vals.get("user_websites_group_id")
+        }
+        valid_group_members = {}
+
+        if group_ids and not is_admin:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+            groups = (
+                self.env["user.websites.group"]
+                .with_user(svc_uid)
+                .browse(list(group_ids))
+            )
+            for group in groups:
+                if group.exists():
+                    valid_group_members[group.id] = set(group.member_ids.ids)
+
         for vals in vals_list:
             owner_id = vals.get("owner_user_id")
             group_id = vals.get("user_websites_group_id")
@@ -46,16 +80,7 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
                     )
                 )
 
-            if (
-                self.env.su
-                or self.env.user.has_group("base.group_system")
-                or self.env.user.has_group(
-                    "user_websites.group_user_websites_administrator"
-                )
-                or self.env.user.has_group(
-                    "user_websites.group_user_websites_service_account"
-                )
-            ):
+            if is_admin:
                 continue
 
             if not owner_id and not group_id:
@@ -65,21 +90,17 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
                     )
                 )
 
-            if owner_id and int(owner_id) != self.env.user.id:
+            if owner_id and int(owner_id) != user_id:
                 raise AccessError(
                     _("You cannot create a record owned by another user.")
                 )
 
             if group_id:
-                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "user_websites.user_user_websites_service_account"
-                )
-                group = (
-                    self.env["user.websites.group"]
-                    .with_user(svc_uid)
-                    .browse(int(group_id))
-                )
-                if not group.exists() or self.env.user not in group.member_ids:
+                g_id = int(group_id)
+                if (
+                    g_id not in valid_group_members
+                    or user_id not in valid_group_members[g_id]
+                ):
                     raise AccessError(
                         _(
                             "You cannot create a record for a group you do not belong to, or the group does not exist."
@@ -102,6 +123,9 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
             )
         ):
             if "owner_user_id" in vals or "user_websites_group_id" in vals:
+                # ADR 0078: O(1) Memory Mapping - Pre-fetch relations to avoid N+1 queries during lazy load inside the loop
+                self.mapped("owner_user_id")
+                self.mapped("user_websites_group_id")
                 for record in self:
                     new_owner = vals.get(
                         "owner_user_id",

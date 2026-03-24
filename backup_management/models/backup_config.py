@@ -70,6 +70,27 @@ class BackupConfig(models.Model):
 
     snapshot_ids = fields.One2many("backup.snapshot", "config_id", string="Snapshots")
 
+    _name_uniq = models.Constraint(
+        "UNIQUE(name)", "The backup configuration name must be unique!"
+    )
+    _target_uniq = models.Constraint(
+        "UNIQUE(engine, target_path)", "The target path must be unique per engine!"
+    )
+
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)", "The configuration name cannot be empty."
+    )
+    _target_path_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(target_path)) > 0)", "The target path cannot be empty."
+    )
+    _retention_positive = models.Constraint(
+        "CHECK(keep_daily >= 0 AND keep_weekly >= 0 AND keep_monthly >= 0)",
+        "Retention values cannot be negative.",
+    )
+    _min_size_positive = models.Constraint(
+        "CHECK(minimum_size_mb >= 0)", "Minimum size threshold cannot be negative."
+    )
+
     def _get_fernet(self):
         key = os.environ.get("HAMS_CRYPTO_KEY")
         if key and Fernet:

@@ -56,6 +56,14 @@ class KnowledgeArticle(models.Model):
     helpful_count = fields.Integer(string="Helpful Votes", default=0)
     unhelpful_count = fields.Integer(string="Unhelpful Votes", default=0)
 
+    _name_parent_uniq = models.Constraint(
+        "UNIQUE(name, parent_id)",
+        "Article titles must be unique within the same parent folder!",
+    )
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)", "The article title cannot be empty."
+    )
+
     # --- Constraints ---
     @api.constrains("parent_id")
     def _check_hierarchy(self):
