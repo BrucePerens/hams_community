@@ -60,9 +60,8 @@ class KnowledgeArticle(models.Model):
         "UNIQUE(name, parent_id)",
         "Article titles must be unique within the same parent folder!",
     )
-    _name_not_empty = models.Constraint(
-        "CHECK(LENGTH(TRIM(name)) > 0)", "The article title cannot be empty."
-    )
+    # NOTE: We rely on the ORM's required=True for the 'name' field because it is a translate=True (JSONB) column.
+    # Applying a Postgres TRIM() CHECK constraint to JSONB causes an initialization crash.
 
     # --- Constraints ---
     @api.constrains("parent_id")

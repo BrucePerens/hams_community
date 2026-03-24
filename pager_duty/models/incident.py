@@ -30,7 +30,8 @@ class PagerIncident(models.Model):
     name = fields.Char(
         string="Incident ID", required=True, copy=False, readonly=True, default="New"
     )
-    source = fields.Char(string="Source", required=True)
+    # Added index=True to prevent sequential scans during daemon polling
+    source = fields.Char(string="Source", required=True, index=True)
     severity = fields.Selection(
         [
             ("low", "Low"),
@@ -42,12 +43,15 @@ class PagerIncident(models.Model):
         required=True,
     )
     description = fields.Text(string="Description", required=True)
+    # Added index=True to prevent sequential scans during daemon polling
     status = fields.Selection(
         [("open", "Open"), ("acknowledged", "Acknowledged"), ("resolved", "Resolved")],
         string="Status",
         default="open",
+        index=True,
     )
-    is_escalated = fields.Boolean(string="Escalated", default=False)
+    # Added index=True to prevent sequential scans during cron escalations
+    is_escalated = fields.Boolean(string="Escalated", default=False, index=True)
     time_acknowledged = fields.Datetime(string="Acknowledged At", readonly=True)
     time_resolved = fields.Datetime(string="Resolved At", readonly=True)
     acknowledged_by_id = fields.Many2one(
