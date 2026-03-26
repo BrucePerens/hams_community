@@ -44,10 +44,15 @@ The `user_websites` module enables decentralized content creation. It employs th
 
 ### Explicit Dropzones
 To prevent monolithic entanglement, `user_websites` provides the following explicitly designated dropzones. You MUST use `<xpath>` targeting these specific IDs and cite the corresponding Semantic Anchor:
-* **Navbar Actions:** `id="user_websites_dropzone_navbar_actions"` -> `[@ANCHOR: dropzone_navbar_actions]`
-* **Home Header:** `id="user_websites_dropzone_home_header"` -> `[@ANCHOR: dropzone_home_header]`
-* **Home Footer:** `id="user_websites_dropzone_home_footer"` -> `[@ANCHOR: dropzone_home_footer]`
-* **Community Directory Card:** `id="user_websites_dropzone_directory_card"` -> `[@ANCHOR: dropzone_directory_card]`
+* **Home Header:** `id="user_websites_master_header"` -> `[@ANCHOR: dropzone_home_header]`
+* **Home Footer:** `id="user_websites_master_footer"` -> `[@ANCHOR: dropzone_home_footer]`
+
+### Core Framework Injection Anchors (AST Linter Traceability)
+The following anchors represent points where `user_websites` injects its baseline layouts into the upstream Odoo framework (e.g., `website.layout`). While primarily used as bidirectional test links for the `audit-ignore-xpath` linter rule, AI agents in downstream modules MAY target the elements associated with these anchors if they require deep integration into the core rendering pipeline (e.g., injecting SEO metadata or new structural templates):
+* `[@ANCHOR: xpath_rendering_navbar]`: Targets the global website header injection.
+* `[@ANCHOR: xpath_rendering_templates]`: Targets the portal dashboard modifications.
+* `[@ANCHOR: xpath_rendering_snippets]`: Targets the Odoo website builder snippet sidebar.
+* `[@ANCHOR: xpath_rendering_layout]`, `[@ANCHOR: xpath_rendering_settings]`, `[@ANCHOR: xpath_rendering_users]`, `[@ANCHOR: xpath_rendering_blog_post]`: Target specific structural model views and inherited XML data.
 
 ### Endpoints & Webhooks
 * **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.

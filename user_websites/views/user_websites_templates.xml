@@ -37,6 +37,12 @@
     <template id="layout_inherit_user_navbar" inherit_id="website.layout" name="User Navbar Global">
         <!-- [@ANCHOR: xpath_rendering_navbar] -->
         <!-- Verified by [@ANCHOR: test_xpath_rendering_navbar] -->
+        <xpath expr="//head" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_navbar] -->
+            <!-- Universal Context Provider for Frontend JS Widgets -->
+            <t t-if="resolved_slug">
+                <meta name="user_websites_slug" t-att-content="resolved_slug"/>
+            </t>
+        </xpath>
         <xpath expr="//header" position="after"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_navbar] -->
             <t t-if="resolved_slug">
                 <t t-call="user_websites.user_navbar"/>
