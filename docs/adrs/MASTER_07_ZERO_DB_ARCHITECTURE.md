@@ -8,10 +8,10 @@ During major amateur radio contests, the global DX Cluster network generates an 
 
 ## Decisions & Mandates
 
-### 1. Ephemeral Memory Routing
-The DX Cluster ingestion engine (`ham.dx.spot`) MUST be implemented as an Odoo `AbstractModel`. It acts purely as a memory router.
-* It intercepts incoming XML-RPC payloads.
-* It validates the payload and pushes it directly to a Redis Sorted Set (for short-term historical caching) and the Odoo WebSocket Bus (`bus.bus`) for real-time UI updates.
+### ### 1. Ephemeral Memory Routing
+### The DX Cluster ingestion engine (`ham.dx.spot`) MUST be implemented as an Odoo `AbstractModel`. It acts purely as a memory router.
+### * It intercepts incoming JSON2-RPC payloads.
+### * It validates the payload and pushes it directly to a Redis Sorted Set (for short-term historical caching) and the Odoo WebSocket Bus (`bus.bus`) for real-time UI updates..
 * It explicitly DOES NOT execute PostgreSQL `INSERT` statements.
 
 ### 2. UI Exemption

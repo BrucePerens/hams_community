@@ -50,7 +50,7 @@ def parse_pdfs(input_dir="input_pdfs", output_dir="output_forms"):
                 "  .checkbox-label { position: absolute; background: rgba(173, 216, 230, 0.4); mix-blend-mode: multiply; cursor: pointer; z-index: 15; pointer-events: auto; }",
                 "  .checkbox-label:hover { background: rgba(173, 216, 230, 0.7); }",
                 "  .custom-checkbox { position: absolute; background: transparent; cursor: pointer; z-index: 20; pointer-events: auto; appearance: none; -webkit-appearance: none; border: none !important; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; outline: none; }",
-                "  .custom-checkbox:checked { background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='darkgreen' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E\") !important; background-size: contain !important; background-position: center !important; background-repeat: no-repeat !important; }",
+                "  .custom-checkbox:checked { background-image: url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='darkgreen' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'></polyline></svg>\") !important; background-size: contain !important; background-position: center !important; background-repeat: no-repeat !important; }",
                 "</style></head><body>",
                 f"<form action='/submit-ics-form' id='{filename.replace('.pdf', '')}_form' method='POST' class='form-wrapper'>",
             ]

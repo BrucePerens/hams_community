@@ -1,0 +1,45 @@
+Call Sign Systems
+
+Special Event Call Sign Coordinators
+
+The American Radio Relay League, Inc.
+VEC Department
+225 Main Street
+Newington, CT 06111-1494
+P: 860-594-0300
+F: 860-594-0339
+E: vec@arrl.org
+
+W5YI-VEC, Inc.
+P.O. Box 260196
+Plano TX, 75026-0916
+Contact: Allan Batteiger
+P: 972-412-5221
+E: arb@w5yi-vec.org
+Laurel Amateur Radio Club, Inc.
+5287 W Belmont Rd
+Tucson, AZ 85743
+Special Events Contact Phil Carter
+P: 614-864-1884
+E: wd8qwr@twc.com
+
+W4VEC Volunteer Examiners Club of America
+P. O. Box 41
+Lexington, NC 27293-0041
+Contact: Billy Stewart
+P: 704-279-8567
+E: bstewart@windstream.net
+Western Carolina Amateur Radio Society VEC, Inc.
+7 Skylyn Ct
+Asheville, NC 28806-3922
+P: 828-253-1192
+E: wcarsvec@wcarsvec.net
+
+When transmitting in conjunction with an event of special significance, an amateur station ("special event station") may transmit the identification announcement using a special event call sign in accord with the procedures detailed below. Substituting a special event call sign for its assigned call sign may help a special event station call attention "on-air" to its participation in the special event and to the unique opportunity for the amateur service community to exchange greetings with the station. Use of these provisions, however, must not detract from the station making the source of its transmissions known to those receiving them. The special event station must also transmit its assigned call sign at least once per hour during such operation.
+
+A block of 750 call signs is available for use in the special event call sign system. The format of each call sign ("one-by-one") consists of a single letter prefix "K", "N" or "W", followed by a single digit numeral "0" through "9", followed by a single letter "A" through "W" or "Y" or "Z" ("X" is not available to amateur stations). The station license grantee must obtain coordination for the use of a special event call sign through one of the following special event call sign coordinators. These coordinators maintain and disseminate world-wide a common data base for the day-to-day usage of the one-by-one format call signs (for example "K1A"). Upon completing the coordination process, the special event station may substitute the one-by-one format call sign for its assigned call sign during the period of the special event. The following volunteer entities have been certified as special event call sign coordinators.
+
+Indicators
+In addition to the special event call sign system, any amateur station, including a special event station, may include with its assigned call sign one or more indicators (example "W1AW/national convention"). Each indicator must be separated from the assigned call sign by a slant ("/") or any suitable word that denotes the slant mark ("portable," "stroke," etc.). If the indicator is self-assigned, it must be included before, after, or both before and after, the assigned call sign (example "KP2/W1AW/contest"). No self-assigned indicator may conflict with any other indicator specified by the FCC Rules (such as "AA", "AG", "AE" or "KT") or with any prefix assigned to another country (such as "DL", "F", "G" or "VE").
+
+Questions concerning one-by-one call signs and the common data base should be directed to the special event call sign coordinators.

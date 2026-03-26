@@ -137,6 +137,18 @@ ERROR_RULES = [
         ),
         "CRITICAL FINANCIAL EXPOSURE: Access to financial models or relational fields is forbidden without 'burn-ignore-financial' and an anchor.",
     ),
+    (
+        r"\.xml$",
+        re.compile(r"<tree\b"),
+        "CRITICAL DEPRECATION: The <tree> tag is banned in Odoo 19. Use <list> instead.",
+    ),
+    (
+        r"\.xml$",
+        re.compile(
+            r"hasclass\(['\"]card['\"]\)|hasclass\(['\"]field-.*['\"]\)|//label\[@for='.*'\]|//button\[@string='.*'\]"
+        ),
+        "FRAGILE XPATH: Targeting 'hasclass(\"card\")', 'hasclass(\"field-*\")', labels by 'for', or buttons by 'string' is banned. Target robust structural elements.",
+    ),
 ]
 
 WARNING_RULES = []
@@ -837,7 +849,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                             ):
                                 self.add_error(
                                     node.lineno,
-                                    "CRITICAL XML-RPC KWARGS: Do not pass a dictionary of kwargs as a positional argument to search/search_read. Use explicit keyword arguments (e.g., fields=...).",
+                                    "CRITICAL JSON-RPC KWARGS: Do not pass a dictionary of kwargs as a positional argument to search/search_read. Use explicit keyword arguments (e.g., fields=...).",
                                 )
 
             self.generic_visit(node)

@@ -13,12 +13,12 @@ The Pager Duty module is an enterprise-grade Site Reliability Engineering (SRE) 
 * **Zero-Sudo RPC:** The daemon pushes incidents to Odoo using the `pager_service_internal` micro-account. This triggers automated notifications [@ANCHOR: test_pager_notification] and implements Redis TTLs to prevent alert spam [@ANCHOR: report_incident_rate_limit].
 * **Documentation Injection:** The module automatically provisions its documentation payload into the `knowledge.article` API upon installation. [@ANCHOR: doc_inject_pager_duty]
 * **Watchdog Threading:** The daemon wraps every check in an isolated thread. The main thread acts as a watchdog, forcibly terminating and restarting the daemon if a thread hangs beyond its timeout threshold.
-* **Airgapped SMTP & Webhooks:** If the Odoo XML-RPC interface crashes (500 Error / Connection Refused), the daemon catches the exception and connects directly to the external `SMTP_HOST` or posts to `PAGER_WEBHOOK_URL` to fire the alert.
+* **Airgapped SMTP & Webhooks:** If the Odoo JSON-RPC interface crashes (500 Error / Connection Refused), the daemon catches the exception and connects directly to the external `SMTP_HOST` or posts to `PAGER_WEBHOOK_URL` to fire the alert.
 * **Self-Healing Dependencies:** The daemon gracefully verifies system dependencies (e.g., `docker`, `pg_dump`, `nginx`) via `shutil.which`. For Zero Trust edge integration, if the `cloudflared` binary is missing, it dynamically downloads and executes the static GitHub release without requiring administrative intervention.
 * **Stochastic Jitter:** Check loops offset their start times randomly to prevent resource "thundering herds".
 * **Intelligent Calendar Routing:** Natively extends Odoo's `calendar.event` model (`is_pager_duty=True`). When an incident fires, the ORM queries the calendar for the active shift and routes the internal message/email precisely to the user currently on call.
 * **Cascading Suppression & Maintenance:** The daemon parses `parent` and `maint_start`/`maint_end` dependencies to short-circuit execution natively, preventing alert storms. It also automatically resolves incidents when systems recover. [@ANCHOR: auto_resolve_incidents]
-* **Push Monitoring (Heartbeat):** The `/api/v1/pager/heartbeat/<uuid>` REST endpoint accepts check-ins from external bash scripts. The daemon queries `check_heartbeat_rpc` via XML-RPC to verify TTL breaches.
+* **Push Monitoring (Heartbeat):** The `/api/v1/pager/heartbeat/<uuid>` REST endpoint accepts check-ins from external bash scripts. The daemon queries `check_heartbeat_rpc` via JSON-RPC to verify TTL breaches.
 * **Multi-Tier Escalation:** An Odoo `ir.cron` (`cron_escalate_incidents`) sweeps for forgotten incidents and escalates them to the whole admin group. [@ANCHOR: test_pager_escalation]
 * **SRE Analytics:** The `pager.incident` model auto-computes `mtta` and `mttr` in minutes during state transitions, such as when an incident is acknowledged. [@ANCHOR: action_acknowledge_incident] Active and resolved incidents are aggregated and presented on the NOC Dashboard [@ANCHOR: pager_board_data], which enforces strict URL authentication checks [@ANCHOR: test_pager_board_url].
 
@@ -35,16 +35,16 @@ checks:
     expect: '{"status": "ok"}'
     interval: 60
     grace: 120  # Startup grace period suppression
-    parent: "Odoo XML-RPC Handshake"
+    parent: "Odoo JSON-RPC Handshake"
     maint_start: "2026-03-15 00:00:00"
     maint_end: "2026-03-15 02:00:00"
   - name: "Nightly Backup"
     type: heartbeat
     uuid: "123e4567-e89b-12d3-a456-426614174000"
     interval: 86400
-  - name: "Odoo XML-RPC Handshake"
-    type: xmlrpc
-    target: [http://127.0.0.1:8069/xmlrpc/2/common](http://127.0.0.1:8069/xmlrpc/2/common)
+  - name: "Odoo JSON-RPC Handshake"
+    type: jsonrpc
+    target: [http://127.0.0.1:8069/jsonrpc](http://127.0.0.1:8069/jsonrpc)
     rpc_method: version
     expect: "server_version"
     interval: 60

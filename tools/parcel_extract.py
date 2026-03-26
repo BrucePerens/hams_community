@@ -190,7 +190,7 @@ def check_ai_foibles(payload, filepath=""):
         raise ValueError(
             "UI Data Loss Detected: Found empty inline code block (``). "
             "The conversational UI likely stripped an HTML/XML comment before reaching the extractor. "
-            "You MUST percent-encode the tags (%3C, %3E) to bypass the UI."
+            "You MUST percent-encode the tags (<, >) to bypass the UI."
         )
 
     return payload
@@ -722,28 +722,25 @@ def parse_search_replace_blocks(payload):
 
 def extract_parcel(raw_text):
     lines = raw_text.splitlines()
-    boundaries_found = set()
+    boundary = None
 
     # 1. Enforce rigorous boundary checking and matching
+    # We capture the FIRST valid boundary string we encounter.
+    # This allows example boundary strings to be safely nested inside file payloads.
     for line_item in lines:
         stripped = line_item.strip()
         if stripped.startswith("@@BOUNDARY_"):
             if stripped.endswith("@@"):
-                boundaries_found.add(stripped)
+                boundary = stripped
+                break
             elif stripped.endswith("@@--"):
-                boundaries_found.add(stripped[:-2])
+                boundary = stripped[:-2]
+                break
 
-    if not boundaries_found:
+    if not boundary:
         print("❌ Error: Invalid Parcel format. Missing boundary string.\n")
         return
 
-    if len(boundaries_found) > 1:
-        print(
-            f"❌ Error: Mismatched boundaries detected in Parcel: {', '.join(boundaries_found)}. All boundaries must be identical.\n"
-        )
-        return
-
-    boundary = list(boundaries_found)[0]
     terminator = boundary + "--"
 
     # 2. Enforce explicit terminator to prevent partial payloads
@@ -830,19 +827,22 @@ def extract_parcel(raw_text):
         if terminator in payload:
             payload = payload.split(terminator)[0]
 
-        # REJECTION GUARD: Fail instantly if the payload contains raw unencoded angle brackets or non-hex percent signs.
-        if re.search(r"<|>|%(?![0-9a-fA-F]{2})", payload):
-            tasks_by_file.setdefault(filepath, []).append(
-                {
-                    "error": "CRITICAL ENCODING ERROR: Payload contains unencoded '<', '>', or '%' characters. You MUST URL-encode these characters (%3C, %3E, %25)."
-                }
-            )
-            continue
-
-        # ALWAYS unquote, regardless of encoding header, because the new architecture enforces URL-encoding on all payloads
+        # ALWAYS unquote, regardless of encoding header, because the new architecture
+        # may process URL-encoded payloads to bypass the Web UI XML-stripper trap.
         import urllib.parse
 
         payload = urllib.parse.unquote(payload)
+
+        # UI Data Loss Guardrail: Repair URLs corrupted by the Web UI's markdown auto-linker.
+        # Catches cases like "https://[text](url)" or "[text](url)" anywhere in the file.
+        if (
+            filepath.endswith(".py")
+            or filepath.endswith(".sh")
+            or filepath.endswith(".conf")
+        ):
+            payload = re.sub(
+                r"(?:https?://)?\[[^\]]*\]\((https?://[^)]+)\)", r"\1", payload
+            )
 
         try:
             payload = check_ai_foibles(payload, filepath)
@@ -881,6 +881,7 @@ def extract_parcel(raw_text):
 
     failed_files = []
     shortened_files = []
+    python_files_changed = False
 
     for filepath, tasks in tasks_by_file.items():
         errors = []
@@ -1064,18 +1065,24 @@ def extract_parcel(raw_text):
                 if os.path.exists(filepath):
                     os.remove(filepath)
                 print(f"✅ Deleted: {filepath}")
+                if filepath.endswith(".py"):
+                    python_files_changed = True
                 continue
 
             if renamed_to:
                 os.makedirs(os.path.dirname(renamed_to), exist_ok=True)
                 os.rename(filepath, renamed_to)
                 print(f"✅ Renamed: {filepath} -> {renamed_to}")
+                if filepath.endswith(".py") or renamed_to.endswith(".py"):
+                    python_files_changed = True
                 continue
 
             if copied_to:
                 os.makedirs(os.path.dirname(copied_to), exist_ok=True)
                 shutil.copy2(filepath, copied_to)
                 print(f"✅ Copied: {filepath} -> {copied_to}")
+                if filepath.endswith(".py") or copied_to.endswith(".py"):
+                    python_files_changed = True
                 continue
 
             if file_mutated:
@@ -1094,6 +1101,9 @@ def extract_parcel(raw_text):
 
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
+
+                if filepath.endswith(".py"):
+                    python_files_changed = True
 
                 if filepath.endswith(".py"):
                     try:
@@ -1178,6 +1188,25 @@ def extract_parcel(raw_text):
         for sf in shortened_files:
             print(f"  - {sf}")
         print("!" * 80 + "\n")
+
+    if python_files_changed:
+        generate_script = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "generate_pot.py"
+        )
+        if os.path.exists(generate_script):
+            print("\n[*] Python files modified. Synchronizing i18n/hams_master.pot...")
+            try:
+                res = subprocess.run(
+                    [sys.executable, generate_script], capture_output=True, text=True
+                )
+                if res.returncode == 0:
+                    print("✅ i18n/hams_master.pot synchronized successfully.")
+                else:
+                    print(
+                        f"⚠️  Failed to synchronize POT file:\n{res.stderr or res.stdout}"
+                    )
+            except Exception as e:
+                print(f"⚠️  Failed to execute generate_pot.py: {e}")
 
 
 if __name__ == "__main__":
