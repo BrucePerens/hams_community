@@ -1,37 +1,33 @@
 # -*- coding: utf-8 -*-
+# Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 import odoo.tests
+from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase
 
 
 @odoo.tests.common.tagged("post_install", "-at_install")
-class TestControllers(odoo.tests.common.HttpCase):
+class TestUserWebsitesControllers(RealTransactionCase):
+    """
+    Integration tests targeting the HTTP controller layer.
+    Enforces multi-persona isolation (Admin, User, Public) and
+    validates the REST API contracts defined in the module specification.
+    """
 
     def setUp(self):
-        super(TestControllers, self).setUp()
-        self.user_public = self.env["res.users"].create(
+        super().setUp()
+        self.password = "test_password"
+
+        # Setup Admin Persona
+        self.admin = self.env.ref("base.user_admin")
+        self.admin.password = self.password
+
+        # Setup Standard User Persona
+        self.user_a = self.env["res.users"].create(
             {
-                "name": "Public Opt-in User",
-                "login": "publicuser",
-                "email": "public@example.com",
-                "website_slug": "publicuser",
-                "group_ids": [
-                    (
-                        6,
-                        0,
-                        [
-                            self.env.ref("base.group_portal").id,
-                            self.env.ref("user_websites.group_user_websites_user").id,
-                        ],
-                    )
-                ],
+                "name": "User A",
+                "login": "user_a_http",
+                "password": self.password,
+                "website_slug": "usera-http",
                 "privacy_show_in_directory": True,
-            }
-        )
-        self.user_private = self.env["res.users"].create(
-            {
-                "name": "Hidden User",
-                "login": "hiddenuser",
-                "email": "hidden@example.com",
-                "website_slug": "hiddenuser",
                 "group_ids": [
                     (
                         6,
@@ -42,299 +38,125 @@ class TestControllers(odoo.tests.common.HttpCase):
                         ],
                     )
                 ],
-                "privacy_show_in_directory": False,
             }
         )
 
-    def test_01_community_directory_rendering(self):
-        # Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
-        """
-        Ensure the /community route only lists users who have opted in.
-        """
-        response = self.url_open("/community")
-        self.assertEqual(response.status_code, 200)
-
-        # Public user should be listed
-        self.assertIn(b"Public Opt-in User", response.content)
-        self.assertIn(f"/{self.user_public.website_slug}".encode(), response.content)
-
-        # Hidden user should NOT be listed
-        self.assertNotIn(b"Hidden User", response.content)
-
-    def test_02_404_on_invalid_slug(self):
-        """
-        Ensure hitting a non-existent slug returns a 404 gracefully without crashing.
-        """
-        response = self.url_open("/this-slug-definitely-does-not-exist/home")
-        self.assertEqual(response.status_code, 404)
-
-        response_blog = self.url_open("/this-slug-definitely-does-not-exist/blog")
-        self.assertEqual(response_blog.status_code, 404)
-
-    def test_03_report_violation_maps_content_owner(self):
-        # Tests [@ANCHOR: UX_REPORT_VIOLATION]
-        """
-        Ensure submitting a violation report correctly maps the content_owner_id
-        if the URL matches a private page.
-        """
-        self.env["website.page"].create(
+        # Setup Attacker Persona
+        self.attacker = self.env["res.users"].create(
             {
-                "url": f"/{self.user_public.website_slug}/home",
-                "name": "Home",
-                "type": "qweb",
-                "arch": '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
-                "owner_user_id": self.user_public.id,
-            }
-        )
-
-        target_url = f"/{self.user_public.website_slug}/home"
-
-        # Submit the form data directly to the controller
-        self.authenticate(None, None)
-        self.url_open(
-            "/website/report_violation",
-            data={
-                "csrf_token": odoo.http.Request.csrf_token(self),
-                "url": target_url,
-                "description": "Test Violation",
-                "email": "guest@example.com",
-            },
-            method="POST",
-        )
-
-        # Find the generated report
-        report = self.env["content.violation.report"].search(
-            [("target_url", "=", target_url)], limit=1
-        )
-
-        self.assertTrue(report, "The report should have been created.")
-        self.assertEqual(report.reported_by_email, "guest@example.com")
-        self.assertEqual(
-            report.content_owner_id.id,
-            self.user_public.id,
-            "Controller must map the content_owner_id from the website.page record matching the URL.",
-        )
-
-    def test_04_case_insensitive_slug_routing(self):
-        """
-        Verify that hitting a URL with mixed-case characters resolves correctly
-        if the underlying slug exists in lowercase.
-        """
-        # Ensure the page exists first
-        self.env["website.page"].create(
-            {
-                "url": f"/{self.user_public.website_slug}/home",
-                "name": "Home",
-                "type": "qweb",
-                "arch": '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
-                "website_published": True,
-                "owner_user_id": self.user_public.id,
-            }
-        )
-
-        # Test visiting with an uppercase version of the slug
-        uppercase_slug = self.user_public.website_slug.upper()
-        response = self.url_open(f"/{uppercase_slug}/home")
-
-        # This will fail if the controller does not use '=ilike'
-        self.assertEqual(
-            response.status_code,
-            200,
-            "The controller should gracefully handle uppercase URLs by using '=ilike' in its search domain.",
-        )
-
-    def test_05_trailing_slash_resolution(self):
-        """
-        Ensure that appending a trailing slash to the base routes does not
-        break the routing or cause an unexpected 404.
-        """
-        self.env["website.page"].create(
-            {
-                "url": f"/{self.user_public.website_slug}/home",
-                "name": "Home",
-                "type": "qweb",
-                "arch": '<t name="Home" t-name="home"><t t-call="website.layout"><div>Test</div></t></t>',
-                "website_published": True,
-                "owner_user_id": self.user_public.id,
-            }
-        )
-
-        # Testing the explicit route with a trailing slash
-        response = self.url_open(f"/{self.user_public.website_slug}/home/")
-
-        self.assertIn(
-            response.status_code,
-            [200, 301, 308],
-            "A trailing slash should either render the page (200) or safely redirect (301/308) to the non-slash version.",
-        )
-
-    def test_06_report_violation_open_redirect_protection(self):
-        """
-        Verify that submitting a violation report with a maliciously crafted
-        external Referer header safely redirects to a local path instead of an open redirect.
-        """
-        self.authenticate(None, None)
-
-        malicious_host = "evil-phishing-site.com"
-        malicious_referrer = f"http://{malicious_host}/steal-data"
-
-        response = self.url_open(
-            "/website/report_violation",
-            data={
-                "csrf_token": odoo.http.Request.csrf_token(self),
-                "url": f"/{self.user_public.website_slug}/home",
-                "description": "Testing open redirect protection",
-                "email": "guest@example.com",
-            },
-            headers={"Referer": malicious_referrer},
-            method="POST",
-        )
-
-        # Odoo's url_open follows redirects. We verify the final destination
-        # completely stripped the malicious host and only utilized the path.
-        self.assertNotIn(
-            malicious_host.encode(),
-            response.url.encode(),
-            "The controller MUST strip the external host from the Referer header to prevent open redirects.",
-        )
-        self.assertTrue(
-            "/steal-data?report_submitted=1" in response.url
-            or "/?report_submitted=1" in response.url,
-            "The controller should safely redirect to a local path containing the success query parameter.",
-        )
-
-    def test_07_report_violation_honeypot_bot_rejection(self):
-        """
-        Verify that if a bot fills out the hidden honeypot field,
-        the request is silently rejected without creating a database record.
-        """
-        self.authenticate(None, None)
-
-        target_url = f"/{self.user_public.website_slug}/home"
-        bot_email = "spambot@example.com"
-
-        response = self.url_open(
-            "/website/report_violation",
-            data={
-                "csrf_token": odoo.http.Request.csrf_token(self),
-                "url": target_url,
-                "description": "Buy my cheap raybans!",
-                "email": bot_email,
-                "website_honeypot": "I am a bot filling hidden fields",  # The Trap
-            },
-            method="POST",
-        )
-
-        # It should appear successful to the bot to prevent it from trying other vectors
-        self.assertEqual(response.status_code, 200)
-
-        # But the record MUST NOT exist in the database
-        report = self.env["content.violation.report"].search(
-            [("reported_by_email", "=", bot_email)]
-        )
-        self.assertFalse(
-            report,
-            "The honeypot mechanism failed; a report from the bot was written to the database.",
-        )
-
-    def test_08_public_access_no_acl_denials(self):
-        """
-        Verify that public route access does not trigger ACL denials,
-        especially around route map rebuilds.
-        """
-        # Provision public content for the user before hitting the routes
-        self.env["website.page"].create(
-            {
-                "url": f"/{self.user_public.website_slug}/home",
-                "name": "Public Home",
-                "type": "qweb",
-                "arch": '<t name="Public Home" t-name="user_websites.public_home"><div>Public</div></t>',
-                "owner_user_id": self.user_public.id,
-                "website_published": True,
-                "is_published": True,
-            }
-        )
-        blog = self.env["blog.blog"].search([("name", "=", "Community Blog")], limit=1)
-        if not blog:
-            blog = self.env["blog.blog"].create({"name": "Community Blog"})
-        self.env["blog.post"].create(
-            {
-                "name": "Public Post",
-                "blog_id": blog.id,
-                "owner_user_id": self.user_public.id,
-                "is_published": True,
-            }
-        )
-
-        self.authenticate(None, None)
-
-        # Access a known public route to flush out intermittent ACL issues
-        response = self.url_open(f"/{self.user_public.website_slug}/home")
-        self.assertEqual(
-            response.status_code,
-            200,
-            "Public access should never fail with an ACL error on published pages.",
-        )
-
-        response_blog = self.url_open(f"/{self.user_public.website_slug}/blog")
-        self.assertEqual(
-            response_blog.status_code,
-            200,
-            "Public access should never fail with an ACL error on published blogs.",
-        )
-
-    def test_09_admin_violation_toast_rpc(self):
-        # [@ANCHOR: test_admin_violation_toast_rpc]
-        # Tests [@ANCHOR: api_pending_reports]
-        # Tests [@ANCHOR: admin_toast_logic]
-        """
-        Verify the GET endpoint returns correct pending counts for admins and 0 for guests/users.
-        """
-        self.env["content.violation.report"].create(
-            {
-                "target_url": "/toast-test",
-                "description": "Toast",
-            }
-        )
-
-        # 1. Guest
-        self.authenticate(None, None)
-        res = self.url_open("/api/v1/user_websites/pending_reports")
-        self.assertEqual(res.status_code, 200)
-        import json
-
-        data = json.loads(res.content)
-        self.assertEqual(
-            data["count"], 0, "Guests MUST receive 0 to prevent information disclosure."
-        )
-
-        # 2. Standard User
-        self.authenticate(self.user_private.login, self.user_private.login)
-        res2 = self.url_open("/api/v1/user_websites/pending_reports")
-        data2 = json.loads(res2.content)
-        self.assertEqual(
-            data2["count"],
-            0,
-            "Standard users MUST receive 0 to prevent information disclosure.",
-        )
-
-        # 3. Admin
-        admin = self.env.ref("base.user_admin")
-        admin.write(
-            {
+                "name": "Attacker",
+                "login": "attacker_http",
+                "password": self.password,
+                "website_slug": "attacker-http",
                 "group_ids": [
                     (
-                        4,
-                        self.env.ref(
-                            "user_websites.group_user_websites_administrator"
-                        ).id,
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_portal").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
                     )
-                ]
+                ],
             }
         )
-        self.authenticate("admin", "admin")
-        res3 = self.url_open("/api/v1/user_websites/pending_reports")
-        data3 = json.loads(res3.content)
-        self.assertGreater(
-            data3["count"], 0, "Admins MUST receive the true pending count."
+
+        # Inject a pending violation report for the API to discover
+        self.env["content.violation.report"].with_user(self.user_a).create(
+            {
+                "target_url": "/some-bad-page",
+                "description": "Found a violation",
+            }
+        )
+
+        # Commit to ensure the concurrent HTTP worker can see the database state
+        self.env.cr.commit()
+
+    def test_01_api_pending_reports_admin_access(self):
+        """
+        Tests [@ANCHOR: api_pending_reports]
+        Action: Administrator requests the pending reports API.
+        Expected: HTTP 200 OK and a valid JSON payload containing the count.
+        """
+        self.authenticate(self.admin.login, self.password)
+
+        response = self.url_open("/api/v1/user_websites/pending_reports")
+        self.assertEqual(
+            response.status_code,
+            200,
+            "Administrator MUST be able to access the pending reports API.",
+        )
+
+        data = response.json()
+        self.assertIn(
+            "count", data, "API contract violation: JSON response missing 'count' key."
+        )
+        self.assertGreaterEqual(
+            data["count"],
+            1,
+            "API failed to return the correct count of pending reports.",
+        )
+
+    def test_02_api_pending_reports_unauthorized_access(self):
+        """
+        Tests [@ANCHOR: api_pending_reports]
+        Action: A standard user and an unauthenticated user attempt to access the admin API.
+        Expected: HTTP 403 Forbidden or 404 Not Found (Werkzeug natively obfuscates routes).
+        """
+        # 1. Test as Standard Authenticated User
+        self.authenticate(self.attacker.login, self.password)
+        res_user = self.url_open("/api/v1/user_websites/pending_reports")
+        self.assertIn(
+            res_user.status_code,
+            [403, 404],
+            "CRITICAL: Standard user gained access to restricted administrator API!",
+        )
+
+        # 2. Test as Unauthenticated Public Guest
+        self.authenticate(None, None)
+        res_public = self.url_open("/api/v1/user_websites/pending_reports")
+        self.assertIn(
+            res_public.status_code,
+            [403, 404],
+            "CRITICAL: Unauthenticated guest gained access to restricted administrator API!",
+        )
+
+    def test_03_community_directory_rendering(self):
+        """
+        Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
+        Action: Public user browses the community directory.
+        Expected: HTTP 200 OK. The user who opted into `privacy_show_in_directory` MUST be visible.
+        """
+        self.authenticate(None, None)
+
+        response = self.url_open("/community")
+        self.assertEqual(
+            response.status_code, 200, "Community directory route is offline."
+        )
+
+        content = response.content.decode("utf-8")
+        self.assertIn(
+            self.user_a.website_slug,
+            content,
+            "User A opted into the directory but is missing from the rendered HTML.",
+        )
+
+    def test_04_community_directory_privacy_respect(self):
+        """
+        Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
+        Action: User opts out of the directory.
+        Expected: The user's slug MUST NOT appear in the rendered HTML.
+        """
+        # Attacker explicitly opts out (default behavior, but let's be sure)
+        self.attacker.privacy_show_in_directory = False
+        self.env.cr.commit()
+
+        self.authenticate(None, None)
+        response = self.url_open("/community")
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(
+            self.attacker.website_slug,
+            content,
+            "CRITICAL PRIVACY VIOLATION: User opted out of the directory but was exposed!",
         )

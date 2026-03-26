@@ -80,7 +80,8 @@ class BlogBlog(models.Model):
         return super(BlogBlog, self).check_access_rule(operation)
 
     def write(self, vals):
-        self.check_access("write")
+        self.check_access_rights("write")
+        self.check_access_rule("write")
         self._check_proxy_ownership_write(vals)
         if not (
             self.env.su
@@ -106,7 +107,8 @@ class BlogBlog(models.Model):
         return super(BlogBlog, self.with_user(svc_uid)).write(vals)
 
     def unlink(self):
-        self.check_access("unlink")
+        self.check_access_rights("unlink")
+        self.check_access_rule("unlink")
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )

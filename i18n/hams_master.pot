@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-26 06:40+0000\n"
-"PO-Revision-Date: 2026-03-26 06:40+0000\n"
+"POT-Creation-Date: 2026-03-26 18:04+0000\n"
+"PO-Revision-Date: 2026-03-26 18:04+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -232,7 +232,7 @@ msgstr ""
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
-#: user_websites/models/res_users.py:334
+#: user_websites/models/res_users.py:343
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
@@ -240,7 +240,7 @@ msgstr ""
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
-#: user_websites/models/res_users.py:181
+#: user_websites/models/res_users.py:186
 #: user_websites/models/user_websites_groups.py:89
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
@@ -249,7 +249,7 @@ msgstr ""
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
-#: user_websites/models/res_users.py:204
+#: user_websites/models/res_users.py:209
 #: user_websites/models/user_websites_groups.py:126
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""

@@ -80,14 +80,19 @@ def _async_unpublish_content(db_name, user_ids):
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
-            blogs = (
-                env["blog.blog"]
-                .with_user(svc_uid)
-                .search([("owner_user_id", "in", user_ids)])
-            )
-            if blogs:
+            while True:
+                blogs = (
+                    env["blog.blog"]
+                    .with_user(svc_uid)
+                    .search([("owner_user_id", "in", user_ids)], limit=5000)
+                )
+                if not blogs:
+                    break
                 blogs.write({"active": False})
                 env.cr.commit()
+                if len(blogs) < 5000:
+                    break
+                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
         except Exception as e:
             env.cr.rollback()
             import logging
@@ -319,13 +324,17 @@ class ResUsers(models.Model):
                         break
                     posts.write({"is_published": False})
 
-                blogs = (
-                    self.env["blog.blog"]
-                    .with_user(svc_uid)
-                    .search([("owner_user_id", "in", users_to_archive)])
-                )
-                if blogs:
+                while True:
+                    blogs = (
+                        self.env["blog.blog"]
+                        .with_user(svc_uid)
+                        .search([("owner_user_id", "in", users_to_archive)], limit=5000)
+                    )
+                    if not blogs:
+                        break
                     blogs.write({"active": False})
+                    if len(blogs) < 5000:
+                        break
 
         try:
             result = super(ResUsers, self).write(vals)
@@ -679,11 +688,19 @@ class ResUsers(models.Model):
             if not os.environ.get("HAMS_DISABLE_SLEEPS"):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
-        blogs = self.env["blog.blog"].search([("owner_user_id", "=", self.id)])
-        if blogs:
+        while True:
+            blogs = self.env["blog.blog"].search(
+                [("owner_user_id", "=", self.id)], limit=5000
+            )
+            if not blogs:
+                break
             blogs.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
+            if len(blogs) < 5000:
+                break
+            if not os.environ.get("HAMS_DISABLE_SLEEPS"):
+                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
         self.with_user(svc_uid).write({"privacy_show_in_directory": False})
 

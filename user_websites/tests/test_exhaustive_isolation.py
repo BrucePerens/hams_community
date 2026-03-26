@@ -14,11 +14,13 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
 
     def setUp(self):
         super().setUp()
+        self.password = "test_password"
 
         self.malice = self.env["res.users"].create(
             {
                 "name": "Malice Attacker",
                 "login": "malice_redteam",
+                "password": self.password,
                 "email": "malice@example.com",
                 "website_slug": "malice",
                 "group_ids": [
@@ -38,6 +40,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             {
                 "name": "Innocent Victim",
                 "login": "victim_redteam",
+                "password": self.password,
                 "email": "victim@example.com",
                 "website_slug": "victim",
                 "group_ids": [
@@ -78,6 +81,29 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 "owner_user_id": self.victim.id,
                 "is_published": True,
             }
+        )
+
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
+
+        self.victim_page = (
+            self.env["website.page"]
+            .with_user(svc_uid)
+            .create(
+                {
+                    "url": f"/{self.victim.website_slug}/about",
+                    "name": "Victim About",
+                    "type": "qweb",
+                    "website_published": True,
+                    "owner_user_id": self.victim.id,
+                    "arch": f"""<t name="About" t-name="user_websites.about_{self.victim.website_slug}">
+                    <t t-call="website.layout">
+                        <div>About Victim</div>
+                    </t>
+                </t>""",
+                }
+            )
         )
 
     def test_01_community_blog_container_protection(self):
@@ -135,6 +161,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 {"member_ids": [(4, self.malice.id)]}
             )
 
+    @odoo.tests.mute_logger("odoo.http")
     def test_04_qweb_ssti_injection_attempt(self):
         """
         Risk: Because the Proxy Ownership service account executes the write,
@@ -215,8 +242,6 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
         Expected: The system should allow the creation, but the `create_uid` or controller
         logic must override/ignore the spoofed ID, OR the record rules must prevent viewing it.
         """
-        # In Odoo, if a user has 'create' access, they can theoretically pass any field value.
-        # However, the controller overrides this naturally. Let's test direct ORM access.
         report = (
             self.env["content.violation.report"]
             .with_user(self.malice)
@@ -224,14 +249,10 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 {
                     "target_url": "/some/bad/page",
                     "description": "Framing the victim",
-                    "reported_by_user_id": self.victim.id,  # The spoof attempt
+                    "reported_by_user_id": self.victim.id,
                 }
             )
         )
-
-        # If the spoof succeeded at the ORM layer, the Victim would now be able to read it
-        # because of the 'reported_by_user_id = user.id' Record Rule.
-        # Wait, if Malice created it, Malice's create_uid is on the record.
 
         # We assert that the system tracks the true creator regardless of the spoofed field.
         self.assertEqual(
@@ -239,3 +260,68 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             self.malice.id,
             "The true creator UID must be permanently stamped.",
         )
+
+    def test_07_public_read_access(self):
+        """
+        Risk: Personal blogs and web pages might be accidentally locked behind authentication.
+        Action: Unauthenticated public user reads the records.
+        Expected: Successful read (HTTP 200 and ORM read capabilities).
+        """
+        public_user = self.env.ref("base.public_user")
+
+        # 1. ORM Read Checks
+        self.assertTrue(self.community_blog.with_user(public_user).read(["name"]))
+        self.assertTrue(self.victim_post.with_user(public_user).read(["name"]))
+        self.assertTrue(self.victim_page.with_user(public_user).read(["name"]))
+
+        # 2. HTTP Read Checks
+        self.authenticate(None, None)
+
+        # Test Blog Index
+        blog_url = f"/{self.victim.website_slug}/blog"
+        res_blog = self.url_open(blog_url)
+        self.assertEqual(
+            res_blog.status_code,
+            200,
+            f"Public user MUST be able to read blog at {blog_url}",
+        )
+
+        # Test Custom Page
+        page_url = f"/{self.victim.website_slug}/about"
+        res_page = self.url_open(page_url)
+        self.assertEqual(
+            res_page.status_code,
+            200,
+            f"Public user MUST be able to read page at {page_url}",
+        )
+
+    @odoo.tests.mute_logger("odoo.http")
+    def test_08_rpc_confused_deputy(self):
+        """
+        Risk: Controllers or RPC endpoints might not enforce Proxy Ownership correctly,
+        allowing Malice to pass Victim's ID in the payload (Confused Deputy), bypassing ORM tests.
+        """
+        self.authenticate(self.malice.login, self.password)
+
+        payload = {
+            "model": "blog.post",
+            "method": "create",
+            "args": [
+                [
+                    {
+                        "name": "Malice Spoofed Post",
+                        "blog_id": self.community_blog.id,
+                        "owner_user_id": self.victim.id,  # Spoofing the victim!
+                        "is_published": True,
+                    }
+                ]
+            ],
+            "kwargs": {},
+        }
+
+        # Make the raw RPC request simulating a frontend dataset call
+        with self.assertRaises(
+            Exception,
+            msg="RPC call MUST fail proxy ownership validation and raise an exception.",
+        ):
+            self.make_jsonrpc_request("/web/dataset/call_kw/blog.post/create", payload)

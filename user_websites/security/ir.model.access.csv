@@ -43,3 +43,9 @@ access_public_directory_view_portal,public directory view portal,model_user_webs
 access_content_routing_view_public,content routing view public,model_user_websites_content_routing_view,base.group_public,1,0,0,0
 access_content_routing_view_portal,content routing view portal,model_user_websites_content_routing_view,base.group_portal,1,0,0,0
 access_weekly_digest_view_svc,weekly digest view svc,model_user_websites_weekly_digest_view,user_websites.group_user_websites_service_account,1,0,0,0
+access_website_page_public,website.page public,website.model_website_page,base.group_public,1,0,0,0
+access_website_page_portal,website.page portal,website.model_website_page,base.group_portal,1,0,0,0
+access_blog_post_public,blog.post public,website_blog.model_blog_post,base.group_public,1,0,0,0
+access_blog_post_portal,blog.post portal,website_blog.model_blog_post,base.group_portal,1,0,0,0
+access_blog_blog_public,blog.blog public,website_blog.model_blog_blog,base.group_public,1,0,0,0
+access_blog_blog_portal,blog.blog portal,website_blog.model_blog_blog,base.group_portal,1,0,0,0

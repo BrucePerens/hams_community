@@ -899,9 +899,7 @@ class UserWebsitesController(http.Controller):
         if not request.env.user.has_group(
             "user_websites.group_user_websites_administrator"
         ):
-            return request.make_response(
-                json.dumps({"count": 0}), headers=[("Content-Type", "application/json")]
-            )
+            raise werkzeug.exceptions.Forbidden()
 
         count = request.env["content.violation.report"].search_count(
             [("state", "=", "new")]
