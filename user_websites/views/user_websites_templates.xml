@@ -25,6 +25,10 @@
                             <a class="nav-link" t-attf-href="/#{resolved_slug}/blog">Blog</a>
                         </li>
                     </ul>
+                    <!-- Downstream Dropzone for Navbar Actions -->
+                    <div id="user_websites_dropzone_navbar_actions">
+                        <!-- [@ANCHOR: dropzone_navbar_actions] -->
+                    </div>
                 </div>
             </div>
         </nav>
@@ -33,12 +37,6 @@
     <template id="layout_inherit_user_navbar" inherit_id="website.layout" name="User Navbar Global">
         <!-- [@ANCHOR: xpath_rendering_navbar] -->
         <!-- Verified by [@ANCHOR: test_xpath_rendering_navbar] -->
-        <xpath expr="//head" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_navbar] -->
-            <!-- Universal Context Provider for Frontend JS Widgets -->
-            <t t-if="resolved_slug">
-                <meta name="user_websites_slug" t-att-content="resolved_slug"/>
-            </t>
-        </xpath>
         <xpath expr="//header" position="after"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_navbar] -->
             <t t-if="resolved_slug">
                 <t t-call="user_websites.user_navbar"/>
@@ -132,13 +130,17 @@
     <template id="template_default_home" name="User Website Home Master Layout">
         <t t-call="website.layout">
             <!-- Global User Website Header / Monetization Dropzone -->
-            <div id="user_websites_master_header"/>
+            <div id="user_websites_dropzone_home_header">
+                <!-- [@ANCHOR: dropzone_home_header] -->
+            </div>
 
             <!-- Yields to the individual user's page content -->
             <t t-out="0"/>
 
             <!-- Global User Website Footer / Monetization Dropzone -->
-            <div id="user_websites_master_footer"/>
+            <div id="user_websites_dropzone_home_footer">
+                <!-- [@ANCHOR: dropzone_home_footer] -->
+            </div>
         </t>
     </template>
 
@@ -163,6 +165,10 @@
                                     <a t-attf-href="/{{ user.website_slug }}/home" class="btn btn-outline-primary w-100 mt-2">
                                         Visit Website
                                     </a>
+                                    <!-- Downstream Dropzone for User Cards -->
+                                    <div id="user_websites_dropzone_directory_card" class="mt-3">
+                                        <!-- [@ANCHOR: dropzone_directory_card] -->
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -67,11 +67,3 @@ Empower users while maintaining legal compliance and moderation capabilities.
 * **[Manual Library](manual_library/README.md) (`manual_library`):** A clean-room, open-source replacement for the Knowledge app, enabling hierarchical instruction manuals.
 * **[Global Compliance](compliance/README.md) (`compliance`):** Automatically provisions GDPR/CCPA privacy pages, terms of service, and enforces cookie consent across the ecosystem.
 
----
-
-## 🚀 Ready to Deploy?
-
-Use the interactive bare-metal wizard or the provided Docker Compose stack to get started:
-```bash
-python3 tools/deploy_wizard.py
-```

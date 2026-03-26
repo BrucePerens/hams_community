@@ -42,9 +42,12 @@ The `user_websites` module enables decentralized content creation. It employs th
 <public_api>
 ## 3. 🐍 Public API & Extensibility Methods
 
-### Frontend Widget Extensibility (The Dropzone)
-* **Context Provider:** The module dynamically injects `<meta name="user_websites_slug" content="...">` into the layout `<head>`. Vanilla JS widgets MUST query this meta tag to discover the current page owner's slug statelessly, rather than parsing the URL.
-* **Snippet Dropzone:** The module provides a `user_websites_snippet_category` template with an empty `user_websites_snippets_body` div. Dependent modules MUST use `xpath` to inject their custom profile widgets (e.g., stats, recent logs) into this dropzone to maintain strict Open Source Isolation.
+### Explicit Dropzones
+To prevent monolithic entanglement, `user_websites` provides the following explicitly designated dropzones. You MUST use `<xpath>` targeting these specific IDs and cite the corresponding Semantic Anchor:
+* **Navbar Actions:** `id="user_websites_dropzone_navbar_actions"` -> `[@ANCHOR: dropzone_navbar_actions]`
+* **Home Header:** `id="user_websites_dropzone_home_header"` -> `[@ANCHOR: dropzone_home_header]`
+* **Home Footer:** `id="user_websites_dropzone_home_footer"` -> `[@ANCHOR: dropzone_home_footer]`
+* **Community Directory Card:** `id="user_websites_dropzone_directory_card"` -> `[@ANCHOR: dropzone_directory_card]`
 
 ### Endpoints & Webhooks
 * **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.
