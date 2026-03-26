@@ -73,9 +73,11 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             }
         )
         self.authenticate(user_no_site.login, user_no_site.login)
-        self.start_tour(f"/{user_no_site.website_slug}/home", "create_site_tour")
+        # Start at the portal so the tour can navigate to the site
+        self.start_tour("/my/home", "create_site_tour")
 
     def test_06_create_blog_tour(self):
+        # Tests [@ANCHOR: test_tour_create_blog]
         user_no_blog = self.env["res.users"].create(
             {
                 "name": "Blog Tour User",
@@ -94,7 +96,8 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             }
         )
         self.authenticate(user_no_blog.login, user_no_blog.login)
-        self.start_tour(f"/{user_no_blog.website_slug}/blog", "create_blog_tour")
+        # Start at the portal so the tour can navigate to the blog
+        self.start_tour("/my/home", "create_blog_tour")
 
     def test_07_community_directory_tour(self):
         self.start_tour("/community", "community_directory_tour")
