@@ -23,8 +23,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_01_res_config_settings(self):
-        # [@ANCHOR: test_xpath_rendering_settings]
-        # Tests [@ANCHOR: xpath_rendering_settings]
+        # [@ANCHOR: test_dropzone_settings]
+        # Tests [@ANCHOR: dropzone_settings]
         res = self.env["res.config.settings"].get_view(
             view_id=self.env.ref("base.res_config_settings_view_form").id,
             view_type="form",
@@ -36,8 +36,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_02_res_users(self):
-        # [@ANCHOR: test_xpath_rendering_users]
-        # Tests [@ANCHOR: xpath_rendering_users]
+        # [@ANCHOR: test_dropzone_users]
+        # Tests [@ANCHOR: dropzone_users]
         res = self.env["res.users"].get_view(
             view_id=self.env.ref("base.view_users_form").id, view_type="form"
         )
@@ -48,8 +48,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_03_blog_post(self):
-        # [@ANCHOR: test_xpath_rendering_blog_post]
-        # Tests [@ANCHOR: xpath_rendering_blog_post]
+        # [@ANCHOR: test_dropzone_blog_post]
+        # Tests [@ANCHOR: dropzone_blog_post]
         res = self.env["blog.post"].get_view(
             view_id=self.env.ref("website_blog.view_blog_post_form").id,
             view_type="form",
@@ -61,8 +61,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_04_snippets(self):
-        # [@ANCHOR: test_xpath_rendering_snippets]
-        # Tests [@ANCHOR: xpath_rendering_snippets]
+        # [@ANCHOR: test_dropzone_snippets]
+        # Tests [@ANCHOR: dropzone_snippets]
         # website.snippets is a QWeb view, so we pull its combined architecture
         view = self.env.ref("website.snippets")
         arch = view.with_context(lang=None)._get_combined_arch()
@@ -74,8 +74,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_05_portal_templates(self):
-        # [@ANCHOR: test_xpath_rendering_templates]
-        # Tests [@ANCHOR: xpath_rendering_templates]
+        # [@ANCHOR: test_dropzone_templates]
+        # Tests [@ANCHOR: dropzone_templates]
         self.authenticate(self.portal_user.login, self.portal_user.login)
         response = self.url_open("/my/home")
         self.assertEqual(response.status_code, 200)
@@ -83,8 +83,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.assertIn(b"Data", response.content)
 
     def test_06_layout_templates(self):
-        # [@ANCHOR: test_xpath_rendering_layout]
-        # Tests [@ANCHOR: xpath_rendering_layout]
+        # [@ANCHOR: test_dropzone_layout]
+        # Tests [@ANCHOR: dropzone_layout]
         self.authenticate(None, None)
         response = self.url_open("/")
         self.assertEqual(response.status_code, 200)
@@ -95,8 +95,8 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
     def test_07_navbar_rendering(self):
-        # [@ANCHOR: test_xpath_rendering_navbar]
-        # Tests [@ANCHOR: xpath_rendering_navbar]
+        # [@ANCHOR: test_dropzone_navbar]
+        # Tests [@ANCHOR: dropzone_navbar]
         user = self.env["res.users"].create(
             {
                 "name": "Nav User",

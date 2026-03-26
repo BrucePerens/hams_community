@@ -7,6 +7,7 @@ from . import res_users_moderation  # noqa: F401
 from . import user_websites_groups  # noqa: F401
 from . import website_page  # noqa: F401
 from . import blog_post  # noqa: F401
+from . import blog_blog  # noqa: F401
 from . import content_violation_report  # noqa: F401
 from . import content_violation_appeal  # noqa: F401
 from . import sql_views  # noqa: F401

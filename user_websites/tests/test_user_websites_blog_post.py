@@ -11,13 +11,6 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
         if not main_website:
             main_website = self.env["website"].search([], limit=1)
 
-        self.blog = self.env["blog.blog"].create(
-            {
-                "name": "Community Blog",
-                "website_id": main_website.id,
-            }
-        )
-
         self.user_a = self.env["res.users"].create(
             {
                 "name": "User A",
@@ -53,6 +46,14 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
                         ],
                     )
                 ],
+            }
+        )
+
+        self.blog = self.env["blog.blog"].create(
+            {
+                "name": f"{self.user_a.name}'s Blog",
+                "website_id": main_website.id,
+                "owner_user_id": self.user_a.id,
             }
         )
 

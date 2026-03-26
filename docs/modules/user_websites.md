@@ -46,13 +46,15 @@ The `user_websites` module enables decentralized content creation. It employs th
 To prevent monolithic entanglement, `user_websites` provides the following explicitly designated dropzones. You MUST use `<xpath>` targeting these specific IDs and cite the corresponding Semantic Anchor:
 * **Home Header:** `id="user_websites_master_header"` -> `[@ANCHOR: dropzone_home_header]`
 * **Home Footer:** `id="user_websites_master_footer"` -> `[@ANCHOR: dropzone_home_footer]`
-
-### Core Framework Injection Anchors (AST Linter Traceability)
-The following anchors represent points where `user_websites` injects its baseline layouts into the upstream Odoo framework (e.g., `website.layout`). While primarily used as bidirectional test links for the `audit-ignore-xpath` linter rule, AI agents in downstream modules MAY target the elements associated with these anchors if they require deep integration into the core rendering pipeline (e.g., injecting SEO metadata or new structural templates):
-* `[@ANCHOR: xpath_rendering_navbar]`: Targets the global website header injection.
-* `[@ANCHOR: xpath_rendering_templates]`: Targets the portal dashboard modifications.
-* `[@ANCHOR: xpath_rendering_snippets]`: Targets the Odoo website builder snippet sidebar.
-* `[@ANCHOR: xpath_rendering_layout]`, `[@ANCHOR: xpath_rendering_settings]`, `[@ANCHOR: xpath_rendering_users]`, `[@ANCHOR: xpath_rendering_blog_post]`: Target specific structural model views and inherited XML data.
+* **Navbar Actions:** `id="user_websites_dropzone_navbar_actions"` -> `[@ANCHOR: dropzone_navbar_actions]`
+* **Directory Card:** `id="user_websites_dropzone_directory_card"` -> `[@ANCHOR: dropzone_directory_card]`
+* **Global Navbar:** `id="user_websites_dropzone_navbar"` -> `[@ANCHOR: dropzone_navbar]`
+* **Portal Templates:** `id="user_websites_dropzone_templates"` -> `[@ANCHOR: dropzone_templates]`
+* **Snippets Sidebar:** `id="user_websites_dropzone_snippets"` -> `[@ANCHOR: dropzone_snippets]`
+* **Website Layout:** `id="user_websites_dropzone_layout"` -> `[@ANCHOR: dropzone_layout]`
+* **Config Settings:** `id="user_websites_dropzone_settings"` -> `[@ANCHOR: dropzone_settings]`
+* **User Settings:** `id="user_websites_dropzone_users"` -> `[@ANCHOR: dropzone_users]`
+* **Blog Post Form:** `id="user_websites_dropzone_blog_post"` -> `[@ANCHOR: dropzone_blog_post]`
 
 ### Endpoints & Webhooks
 * **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.
@@ -92,7 +94,7 @@ If your dependent module (e.g., `cloudflare`, `custom_dns`) needs to programmati
 * **Privacy & GDPR:** `[@ANCHOR: res_users_gdpr_export]`, `[@ANCHOR: test_gdpr_export_hook]`, `[@ANCHOR: gdpr_sudo_erasure]`, `[@ANCHOR: test_gdpr_erasure_pages]`, `[@ANCHOR: test_gdpr_erasure_posts]`.
 * **Cache Invalidation:** `[@ANCHOR: slug_cache_invalidation]`, `[@ANCHOR: slug_cache_invalidation_unlink]`, `[@ANCHOR: group_slug_cache_invalidation]`, `[@ANCHOR: group_slug_cache_invalidation_unlink]`.
 * **Crons:** `[@ANCHOR: ir_cron_send_weekly_digest]`, `[@ANCHOR: test_cron_batching_resumption]`, `[@ANCHOR: send_weekly_digest]`, `[@ANCHOR: test_weekly_digest_secret]`, `[@ANCHOR: test_weekly_digest_mail_template]`, `[@ANCHOR: ir_cron_flush_view_counters]`, `[@ANCHOR: test_cron_redis_flush]`, `[@ANCHOR: ir_cron_notify_pending_reports]`, `[@ANCHOR: cron_notify_pending_reports]`, `[@ANCHOR: test_cron_pending_reports]`.
-* **Views & XPath:** `[@ANCHOR: xpath_rendering_settings]`, `[@ANCHOR: xpath_rendering_users]`, `[@ANCHOR: xpath_rendering_blog_post]`, `[@ANCHOR: xpath_rendering_snippets]`, `[@ANCHOR: xpath_rendering_templates]`, `[@ANCHOR: xpath_rendering_layout]`, `[@ANCHOR: xpath_rendering_navbar]` (and corresponding tests).
+* **Views & XPath:** `[@ANCHOR: dropzone_settings]`, `[@ANCHOR: dropzone_users]`, `[@ANCHOR: dropzone_blog_post]`, `[@ANCHOR: dropzone_snippets]`, `[@ANCHOR: dropzone_templates]`, `[@ANCHOR: dropzone_layout]`, `[@ANCHOR: dropzone_navbar]` (and corresponding tests).
 * **UI Logic:** `[@ANCHOR: violation_report_logic]`, `[@ANCHOR: toast_notifications_logic]`, `[@ANCHOR: test_tour_violation_report]`, `[@ANCHOR: test_tour_toast_notifications]`, `[@ANCHOR: admin_toast_logic]`.
 * **Other:** `[@ANCHOR: utils_slugify]`, `[@ANCHOR: website_page_quota_check]`, `[@ANCHOR: simulation_environment]`, `[@ANCHOR: test_site_creation_performance_scaling]`, `[@ANCHOR: test_acl_overhead_loop_elimination]`, `[@ANCHOR: test_tenant_view_isolation]`.
 </semantic_anchors>

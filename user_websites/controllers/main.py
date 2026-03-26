@@ -526,7 +526,6 @@ class UserWebsitesController(http.Controller):
 
         domain = [
             ("is_published", "=", True),
-            ("blog_id.name", "=", "Community Blog"),
             "|",
             ("website_id", "=", False),
             ("website_id", "=", request.website.id),
@@ -536,14 +535,22 @@ class UserWebsitesController(http.Controller):
             (user.website_slug or slug_lower) if user else group.website_slug
         )
 
+        blog_domain = [
+            "|",
+            ("website_id", "=", False),
+            ("website_id", "=", request.website.id),
+        ]
+
         if user:
             if getattr(user, "is_suspended_from_websites", False):
                 raise werkzeug.exceptions.NotFound()
             domain.append(("owner_user_id", "=", user.id))
+            blog_domain.append(("owner_user_id", "=", user.id))
             main_object = user
             meta_title = f"{user.name}'s Blog"
         else:
             domain.append(("user_websites_group_id", "=", group.id))
+            blog_domain.append(("user_websites_group_id", "=", group.id))
             main_object = group
             meta_title = f"{group.name}'s Blog"
 
@@ -571,15 +578,7 @@ class UserWebsitesController(http.Controller):
             domain, limit=step, offset=(page_num - 1) * step
         )
 
-        blogs = request.env["blog.blog"].search(
-            [
-                ("name", "=", "Community Blog"),
-                "|",
-                ("website_id", "=", False),
-                ("website_id", "=", request.website.id),
-            ],
-            limit=1,
-        )
+        blogs = request.env["blog.blog"].search(blog_domain, limit=1)
 
         def blog_url(tag=None, date_begin=None, date_end=None, search=None):
             url = request.httprequest.path
@@ -696,25 +695,32 @@ class UserWebsitesController(http.Controller):
         )
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
-        blog = request.env["blog.blog"].search(
-            [
-                ("name", "=", "Community Blog"),
-                "|",
-                ("website_id", "=", False),
-                ("website_id", "=", request.website.id),
-            ],
-            limit=1,
-        )
+        blog_domain = [
+            "|",
+            ("website_id", "=", False),
+            ("website_id", "=", request.website.id),
+        ]
+        if user:
+            blog_domain.append(("owner_user_id", "=", user.id))
+        elif group:
+            blog_domain.append(("user_websites_group_id", "=", group.id))
+
+        blog = request.env["blog.blog"].search(blog_domain, limit=1)
 
         if not blog:
             svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
-            blog = (
-                request.env["blog.blog"]
-                .with_user(svc_uid)
-                .create({"name": "Community Blog", "website_id": request.website.id})
-            )
+            blog_vals = {
+                "name": f"{user.name}'s Blog" if user else f"{group.name} Blog",
+                "website_id": request.website.id,
+            }
+            if user:
+                blog_vals["owner_user_id"] = user.id
+            elif group:
+                blog_vals["user_websites_group_id"] = group.id
+
+            blog = request.env["blog.blog"].with_user(svc_uid).create(blog_vals)
 
         # Make sure we don't accidentally create duplicate posts if the user clicks twice
         domain = [("blog_id", "=", blog.id), ("is_published", "=", True)]

@@ -23,11 +23,11 @@
             <field name="implied_ids" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
             <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
         </record>
-        
+
         <record id="group_user_websites_service_account" model="res.groups">
             <field name="name">Service Account: User Websites Provisioning</field>
         </record>
-        
+
         <record id="website_page_svc_rule" model="ir.rule">
             <field name="name">Website Page Service Account Rule</field>
             <field name="model_id" ref="website.model_website_page"/>
@@ -49,7 +49,7 @@
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
         </record>
-        
+
         <record id="blog_blog_svc_rule" model="ir.rule">
             <field name="name">Blog Service Account Rule</field>
             <field name="model_id" ref="website_blog.model_blog_blog"/>
@@ -189,11 +189,22 @@
             <field name="name">Blog Private Rule</field>
             <field name="model_id" ref="website_blog.model_blog_blog"/>
             <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('owner_user_id', '=', user.id)]</field>
             <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="False"/>
-            <field name="perm_create" eval="False"/>
-            <field name="perm_unlink" eval="False"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="blog_blog_group_rule" model="ir.rule">
+            <field name="name">Blog Group Rule</field>
+            <field name="model_id" ref="website_blog.model_blog_blog"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
+            <field name="domain_force">[('user_websites_group_id.odoo_group_id.user_ids', 'in', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
         </record>
     </data>
 </odoo>
