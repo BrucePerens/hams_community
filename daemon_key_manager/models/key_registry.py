@@ -1,6 +1,7 @@
 import os
 import logging
-from odoo import models, fields, api
+from odoo import models, fields, api, SUPERUSER_ID
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class DaemonKeyRegistry(models.Model):
     def register_daemon(self, daemon_name, user_xml_id, env_file_path):
         """
         API for other modules to request a bearer token/API key for their daemon.
-        This registers the daemon for automated 60-day rotations.
+        This registers the daemon for automated 60-day rotations and provisions synchronously.
         """
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(user_xml_id)
         user = self.env["res.users"].browse(svc_uid)
@@ -62,8 +63,26 @@ class DaemonKeyRegistry(models.Model):
         registry._rotate_key_and_write_file()
         return True
 
+    @api.model
+    def action_force_provision_all(self):
+        """
+        Synchronously provisions API keys for all registered daemons.
+        Designed to be called via `odoo-bin shell` during systemd bootstrapping
+        to prevent race conditions before daemon startup.
+        """
+        registries = self.search([])
+        for reg in registries:
+            _logger.info(f"Synchronously provisioning key for daemon: {reg.name}")
+            reg._rotate_key_and_write_file()
+        return True
+
     def _rotate_key_and_write_file(self):
         self.ensure_one()
+
+        if self.user_id.id == SUPERUSER_ID:
+            raise UserError(
+                "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
+            )
 
         # Revoke old keys for this specific service account
         old_keys = self.env["res.users.apikeys"].search(
@@ -72,10 +91,8 @@ class DaemonKeyRegistry(models.Model):
         old_keys.unlink()
 
         # Generate new key
-        key_description = f"Daemon Vault: {self.name} - {fields.Datetime.now()}"
-        raw_key = self.env["res.users.apikeys"]._generate(
-            self.user_id.id, key_description
-        )
+        key_name = f"{self.name}_key"
+        raw_key = self.env["res.users.apikeys"]._generate(key_name, self.user_id.id)
 
         # Write to secure file
         self._write_secure_env_file(self.env_file_path, self.user_id.login, raw_key)

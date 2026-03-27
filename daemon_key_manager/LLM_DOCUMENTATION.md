@@ -33,7 +33,15 @@ self.env['daemon.key.registry'].register_daemon(daemon_name, user_xml_id, env_fi
     * `daemon_name` (str): Human-readable name of the daemon (e.g., `"Pager Duty Monitor"`).
     * `user_xml_id` (str): The exact XML ID of the micro-service account (e.g., `"pager_duty.pager_service_internal"`).
     * `env_file_path` (str): Absolute file path to the desired protected output directory. You MUST use the standard directory convention (e.g., `"/var/lib/odoo/daemon_keys/pager_duty.env"`).
-    * **Behavior:** Safely generates a new API key via `zero_sudo` utilities, writes it to the designated file with strict OS-level `0600` sandboxing, and schedules it for automated 60-day rotation.
+    * **Behavior:** Safely generates a new API key via `zero_sudo` utilities, writes it to the designated file with strict OS-level `0600` sandboxing, and schedules it for automated 60-day rotation. **The key is generated synchronously during this exact database transaction.**
+
+* **`action_force_provision_all()`** [@ANCHOR: action_force_provision_all]:
+    * **Behavior:** Synchronously iterates through all registered daemons, purges legacy keys, and securely provisions fresh keys to disk.
+    * **Use Case:** Designed to be executed programmatically via `odoo-bin shell` during systemd CI/CD bootstrapping sequences. This resolves start-up race conditions where headless containers boot and check for `.env` keys faster than Odoo's automated cron pipeline cycles.
+    * **Example Execution:**
+      ```bash
+      odoo-bin shell -c odoo.conf -d hams --no-http -e "env['daemon.key.registry'].action_force_provision_all(); env.cr.commit()"
+      ```
 
 ## 5. Security & File Output
 
@@ -43,6 +51,9 @@ The generated `.env` file will contain:
 ODOO_RPC_LOGIN=service_account_login
 ODOO_RPC_KEY=12345abcd...
 ```
+
+### The `__system__` User Restriction
+The `__system__` user ID (`SUPERUSER_ID` 1) is strictly forbidden from provisioning API keys. This account is natively blocked from making JSON-RPC calls for security reasons. Attempting to assign an API key to the `__system__` account will result in an immediate `UserError` and abort the provisioning transaction.
 
 ### Self-Healing Rotation
 Daemons utilizing these files must implement a `try/except` loop around their JSON-RPC calls. Upon detecting an `AccessError` (indicating the `ir.cron` job has rotated the keys), the daemon should simply re-read the `.env` file from the disk to acquire the new key and retry the transaction seamlessly.

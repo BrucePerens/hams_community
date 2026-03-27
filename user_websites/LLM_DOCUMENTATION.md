@@ -50,9 +50,11 @@ The `user_websites` module enables decentralized content creation. It employs th
 ### * **Portal Templates:** `id="user_websites_dropzone_templates"` -> `[@ANCHOR: dropzone_templates]`
 ### * **Snippets Sidebar:** `id="user_websites_dropzone_snippets"` -> `[@ANCHOR: dropzone_snippets]`
 ### * **Website Layout:** `id="user_websites_dropzone_layout"` -> `[@ANCHOR: dropzone_layout]`
-### * **Config Settings:** `id="user_websites_dropzone_settings"` -> `[@ANCHOR: dropzone_settings]`
 ### * **User Settings:** `id="user_websites_dropzone_users"` -> `[@ANCHOR: dropzone_users]`
 ### * **Blog Post Form:** `id="user_websites_dropzone_blog_post"` -> `[@ANCHOR: dropzone_blog_post]`.
+
+### ### Prohibited Dropzones
+DO NOT USE user_websites_settings_dropzone. All settings views must now inherit directly from base.res_config_settings_view_form and target the //form element using the modernized <app>, <block>, and <setting> XML tags.
 
 ### Endpoints & Webhooks
 * **`GET /api/v1/user_websites/pending_reports`**: Returns a JSON object `{'count': int}` of unhandled violation reports. Restricted to administrators. Used by the frontend to trigger session-guarded toast notifications upon login.
