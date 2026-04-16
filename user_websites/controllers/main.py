@@ -23,8 +23,8 @@ _logger = logging.getLogger(__name__)
 BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 # ADR-0024: Global Connection Pooling for Non-ORM Datastores
-REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_HOST = os.environ.get("REDIS_HOST") or "redis"
+REDIS_PORT = int(os.environ.get("REDIS_PORT") or 6379)
 redis_pool = redis.ConnectionPool(
     host=REDIS_HOST,
     port=REDIS_PORT,

@@ -170,7 +170,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         success, msg = generalized_monitor.execute_check(
             {
                 "type": "tcp",
-                "target": "127.0.0.1",
+                "target": "redis",
                 "port": 6379,
                 "send": "PING",
                 "expect": "+PONG",
@@ -181,13 +181,13 @@ class TestMonitorExhaustive(unittest.TestCase):
         # Mismatch
         mock_socket.recv.return_value = b"ERR"
         success, msg = generalized_monitor.execute_check(
-            {"type": "tcp", "target": "127.0.0.1", "port": 6379, "expect": "+PONG"}
+            {"type": "tcp", "target": "redis", "port": 6379, "expect": "+PONG"}
         )
         self.assertFalse(success)
 
         # Hex send
         success, msg = generalized_monitor.execute_check(
-            {"type": "tcp", "target": "127.0.0.1", "port": 5672, "send_hex": "414d5150"}
+            {"type": "tcp", "target": "rabbitmq", "port": 5672, "send_hex": "414d5150"}
         )
         self.assertTrue(success)
         mock_socket.sendall.assert_called_with(b"AMQP")
@@ -340,9 +340,9 @@ class TestMonitorExhaustive(unittest.TestCase):
         # 1. UDP Datagram
         mock_sock_inst = MagicMock()
         mock_socket.return_value.__enter__.return_value = mock_sock_inst
-        mock_sock_inst.recvfrom.return_value = (b"PONG", ("127.0.0.1", 80))
+        mock_sock_inst.recvfrom.return_value = (b"PONG", ("odoo", 80))
         success, msg = generalized_monitor.execute_check(
-            {"type": "udp", "target": "127.0.0.1", "send": "PING", "expect": "PONG"}
+            {"type": "udp", "target": "odoo", "send": "PING", "expect": "PONG"}
         )
         self.assertTrue(success)
         mock_sock_inst.sendto.assert_called()
@@ -368,7 +368,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         success, msg = generalized_monitor.execute_check(
             {
                 "type": "xmlrpc",
-                "target": "http://127.0.0.1:8069/xmlrpc/2/common",
+                "target": "http://odoo:8069/xmlrpc/2/common",
                 "rpc_method": "test_method",
                 "rpc_params": "[1, 2]",
                 "expect": "RPC_SUCCESS",
@@ -385,7 +385,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         success, msg = generalized_monitor.execute_check(
             {
                 "type": "jsonrpc",
-                "target": "http://127.0.0.1:8069/jsonrpc",
+                "target": "http://odoo:8069/jsonrpc",
                 "rpc_method": "test_json",
                 "expect": "JSON_SUCCESS",
             }
@@ -398,7 +398,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_redis_lib.Redis.return_value = mock_redis_inst
             mock_redis_inst.ping.return_value = True
             success, msg = generalized_monitor.execute_check(
-                {"type": "redis", "target": "127.0.0.1"}
+                {"type": "redis", "target": "redis"}
             )
             self.assertTrue(success)
             mock_redis_inst.ping.assert_called_once()
@@ -409,7 +409,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_conn.return_value.__enter__.return_value = mock_tcp_sock
             mock_tcp_sock.recv.return_value = b"\x01\x02\x03"
             success, msg = generalized_monitor.execute_check(
-                {"type": "rabbitmq", "target": "127.0.0.1"}
+                {"type": "rabbitmq", "target": "rabbitmq"}
             )
             self.assertTrue(success)
             mock_tcp_sock.sendall.assert_called_with(b"AMQP\x00\x00\x09\x01")
@@ -465,7 +465,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         mock_conn.return_value.__enter__.return_value = mock_sock
         mock_sock.recv.return_value = b"STAT pid 1234\r\n"
         success, msg = generalized_monitor.execute_check(
-            {"type": "memcached", "target": "127.0.0.1"}
+            {"type": "memcached", "target": "odoo"}
         )
         self.assertTrue(success)
         mock_sock.sendall.assert_any_call(b"stats\r\n")
@@ -473,7 +473,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         # SSH
         mock_sock.recv.return_value = b"SSH-2.0-OpenSSH_8.4p1 Debian-5+deb11u1\r\n"
         success, msg = generalized_monitor.execute_check(
-            {"type": "ssh", "target": "127.0.0.1"}
+            {"type": "ssh", "target": "odoo"}
         )
         self.assertTrue(success)
 
@@ -508,7 +508,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_inst = MagicMock()
             mock_ftp.return_value.__enter__.return_value = mock_inst
             success, msg = generalized_monitor.execute_check(
-                {"type": "ftp", "target": "127.0.0.1"}
+                {"type": "ftp", "target": "odoo"}
             )
             self.assertTrue(success)
             mock_inst.login.assert_called()
@@ -518,7 +518,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_inst = MagicMock()
             mock_imap.return_value = mock_inst
             success, msg = generalized_monitor.execute_check(
-                {"type": "imap", "target": "127.0.0.1"}
+                {"type": "imap", "target": "odoo"}
             )
             self.assertTrue(success)
             mock_inst.logout.assert_called()
@@ -528,7 +528,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_inst = MagicMock()
             mock_pop3.return_value = mock_inst
             success, msg = generalized_monitor.execute_check(
-                {"type": "pop3", "target": "127.0.0.1"}
+                {"type": "pop3", "target": "odoo"}
             )
             self.assertTrue(success)
             mock_inst.quit.assert_called()
@@ -543,7 +543,7 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_conn.cursor.return_value.__enter__.return_value = mock_cur
             mock_cur.fetchone.return_value = [1]
             success, msg = generalized_monitor.execute_check(
-                {"type": "mysql", "target": "127.0.0.1"}
+                {"type": "mysql", "target": "odoo"}
             )
             self.assertTrue(success)
             mock_cur.execute.assert_called_with("SELECT 1;")
@@ -551,7 +551,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         # LDAP (Fallback)
         with patch("generalized_monitor.socket.create_connection") as mock_conn:
             success, msg = generalized_monitor.execute_check(
-                {"type": "ldap", "target": "127.0.0.1"}
+                {"type": "ldap", "target": "odoo"}
             )
             self.assertTrue(success)
 
@@ -561,10 +561,10 @@ class TestMonitorExhaustive(unittest.TestCase):
             mock_socket.return_value.__enter__.return_value = mock_sock_inst
             mock_sock_inst.recvfrom.return_value = (
                 b"\x1c" + 47 * b"\0",
-                ("127.0.0.1", 123),
+                ("odoo", 123),
             )
             success, msg = generalized_monitor.execute_check(
-                {"type": "ntp", "target": "127.0.0.1"}
+                {"type": "ntp", "target": "odoo"}
             )
             self.assertTrue(success)
 
@@ -576,7 +576,7 @@ class TestMonitorExhaustive(unittest.TestCase):
                 success, msg = generalized_monitor.execute_check(
                     {
                         "type": "snmp",
-                        "target": "127.0.0.1",
+                        "target": "odoo",
                         "snmp_oid": "1.3.6",
                         "expect": "OK",
                     }
@@ -587,7 +587,7 @@ class TestMonitorExhaustive(unittest.TestCase):
                 success, msg = generalized_monitor.execute_check(
                     {
                         "type": "snmp",
-                        "target": "127.0.0.1",
+                        "target": "odoo",
                         "snmp_oid": "1.3.6",
                         "expect": "OK",
                     }

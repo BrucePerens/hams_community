@@ -536,7 +536,7 @@ class PagerCheck(models.Model):
                     {
                         "name": "PostgreSQL DB (Ping)",
                         "check_type": "postgres",
-                        "target": "127.0.0.1",
+                        "target": "postgres",
                         "port": 5432,
                         "dbname": "postgres",
                         "dbuser": "postgres",
@@ -552,7 +552,7 @@ class PagerCheck(models.Model):
                     {
                         "name": "Redis Ping",
                         "check_type": "redis",
-                        "target": "127.0.0.1",
+                        "target": "redis",
                         "port": 6379,
                         "interval": 60,
                         "comment": "Autodiscovered Redis instance",
@@ -563,7 +563,7 @@ class PagerCheck(models.Model):
                     {
                         "name": "RabbitMQ AMQP",
                         "check_type": "rabbitmq",
-                        "target": "127.0.0.1",
+                        "target": "rabbitmq",
                         "port": 5672,
                         "interval": 60,
                         "comment": "Autodiscovered RabbitMQ instance",
@@ -596,7 +596,7 @@ class PagerCheck(models.Model):
             {
                 "name": "WSGI HTTP Ping",
                 "check_type": "http",
-                "target": "[http://127.0.0.1:8069/api/v1/pager/ping](http://127.0.0.1:8069/api/v1/pager/ping)",
+                "target": "http://odoo:8069/api/v1/pager/ping",
                 "payload_expect": '{"status": "ok"}',
                 "interval": 60,
                 "grace_period": 120,

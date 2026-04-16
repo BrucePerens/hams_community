@@ -25,20 +25,14 @@ Registry.clear_cache = _new_clear_cache
 # Hook into Odoo's test teardown to purge the cache between test transactions.
 # This prevents test pollution since the local fallback cache isn't natively bound to savepoints.
 if odoo.tools.config.get("test_enable"):
-    try:
-        import odoo.tests.common
+    import odoo.tests.common
 
-        _orig_tearDown = odoo.tests.common.BaseCase.tearDown
+    _orig_tearDown = odoo.tests.common.BaseCase.tearDown
 
-        def _new_tearDown(self):
-            try:
-                from odoo.addons.distributed_redis_cache.redis_cache import _local_cache
+    def _new_tearDown(self):
+        from odoo.addons.distributed_redis_cache.redis_cache import _local_cache
 
-                _local_cache.clear()
-            except ImportError:
-                pass
-            return _orig_tearDown(self)
+        _local_cache.clear()
+        return _orig_tearDown(self)
 
-        odoo.tests.common.BaseCase.tearDown = _new_tearDown
-    except ImportError:
-        pass
+    odoo.tests.common.BaseCase.tearDown = _new_tearDown

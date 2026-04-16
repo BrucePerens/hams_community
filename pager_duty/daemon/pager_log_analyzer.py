@@ -17,11 +17,7 @@ import logging
 import concurrent.futures
 import ctypes
 
-try:
-    import redis
-except ImportError:
-    print("[!] Redis required.")
-    sys.exit(1)
+import redis
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [LOG_ANALYZER] - %(message)s"
@@ -55,8 +51,8 @@ if not patterns:
         }
     )
 
-redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
-redis_port = int(os.getenv("REDIS_PORT", "6379"))
+redis_host = os.getenv("REDIS_HOST") or "redis"
+redis_port = int(os.getenv("REDIS_PORT") or "6379")
 
 try:
     r_client = redis.Redis(

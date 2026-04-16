@@ -36,7 +36,7 @@ class TestCloudflareAPIs(TransactionCase):
         mock_post.return_value = mock_response
 
         res = self.env["cloudflare.turnstile"].verify_token(
-            "fake_token_123", "127.0.0.1", website_id=website.id
+            "fake_token_123", "odoo", website_id=website.id
         )
         self.assertTrue(res)
 

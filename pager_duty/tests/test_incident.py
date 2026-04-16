@@ -24,8 +24,8 @@ class TestPagerIncident(TransactionCase):
                 import redis
 
                 r = redis.Redis(
-                    host=os.getenv("REDIS_HOST", "127.0.0.1"),
-                    port=int(os.getenv("REDIS_PORT", "6379")),
+                    host=os.getenv("REDIS_HOST") or "redis",
+                    port=int(os.getenv("REDIS_PORT") or "6379"),
                     db=0,
                 )
                 r.delete("pager_rate_limit:test_daemon")
@@ -70,8 +70,8 @@ class TestPagerIncident(TransactionCase):
                 import redis
 
                 r = redis.Redis(
-                    host=os.getenv("REDIS_HOST", "127.0.0.1"),
-                    port=int(os.getenv("REDIS_PORT", "6379")),
+                    host=os.getenv("REDIS_HOST") or "redis",
+                    port=int(os.getenv("REDIS_PORT") or "6379"),
                     db=0,
                 )
                 r.delete("pager_rate_limit:test_daemon_2")

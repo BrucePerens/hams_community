@@ -7,22 +7,18 @@ from odoo import http, _
 from odoo.http import request
 from odoo.exceptions import AccessError
 
-try:
-    import redis
+import redis
 
-    redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
-    redis_port = int(os.getenv("REDIS_PORT", "6379"))
-    redis_pool = redis.ConnectionPool(
-        host=redis_host,
-        port=redis_port,
-        db=0,
-        decode_responses=True,
-        socket_timeout=2.0,
-        socket_connect_timeout=2.0,
-    )
-except ImportError:
-    redis = None
-    redis_pool = None
+redis_host = os.getenv("REDIS_HOST") or "redis"
+redis_port = int(os.getenv("REDIS_PORT") or "6379")
+redis_pool = redis.ConnectionPool(
+    host=redis_host,
+    port=redis_port,
+    db=0,
+    decode_responses=True,
+    socket_timeout=2.0,
+    socket_connect_timeout=2.0,
+)
 
 
 class PagerLogAPI(http.Controller):

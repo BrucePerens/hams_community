@@ -19,10 +19,7 @@ import urllib.request
 import urllib.error
 from email.message import EmailMessage
 
-try:
-    import psycopg2
-except ImportError:
-    psycopg2 = None
+import psycopg2
 
 
 class OdooClient:
@@ -52,7 +49,7 @@ class OdooClient:
 
 
 def get_odoo_client(logger, config):
-    url = os.environ.get("ODOO_URL", "http://127.0.0.1:8069").rstrip("/")
+    url = (os.environ.get("ODOO_URL") or "http://odoo:8069").rstrip("/")
     db = config.get("odoo_database") or os.environ.get("ODOO_DB")
     if not db:
         try:
@@ -72,8 +69,8 @@ def get_odoo_client(logger, config):
     if not db:
         db = "odoo"
 
-    user = os.environ.get("ODOO_USER", "pager_service_internal")
-    password = os.environ.get("ODOO_PASSWORD", "")
+    user = os.environ.get("ODOO_USER") or "pager_service_internal"
+    password = os.environ.get("ODOO_PASSWORD") or ""
     try:
         return OdooClient(url, db, user, password)
     except Exception as e:
@@ -89,7 +86,7 @@ logger = logging.getLogger("generalized_monitor")
 
 def parse_env(val):
     if isinstance(val, str) and val.startswith("ENV:"):
-        return os.environ.get(val[4:], "")
+        return os.environ.get(val[4:]) or ""
     return val
 
 
@@ -189,10 +186,10 @@ def is_in_maintenance(check):
 def fallback_notify(source, msg, severity):
     fallback_email = os.environ.get("PAGER_FALLBACK_EMAIL")
     smtp_host = os.environ.get("SMTP_HOST")
-    smtp_port = int(os.environ.get("SMTP_PORT", 587))
+    smtp_port = int(os.environ.get("SMTP_PORT") or 587)
     smtp_user = os.environ.get("SMTP_USER")
     smtp_pass = os.environ.get("SMTP_PASS")
-    from_email = os.environ.get("SMTP_FROM", "pager-daemon@hams.com")
+    from_email = os.environ.get("SMTP_FROM") or "pager-daemon@hams.com"
 
     if not fallback_email or not smtp_host:
         logger.critical(
@@ -375,15 +372,6 @@ def execute_check(check, client=None):
             finally:
                 conn.close()
             return True, "OK"
-        except ImportError:
-            try:
-                with socket.create_connection((target, port), timeout=5) as s:
-                    res = s.recv(1024)
-                    if len(res) < 5:
-                        return False, "Invalid MySQL/MariaDB greeting"
-                return True, "OK (Socket fallback)"
-            except Exception as e:
-                return False, f"MySQL/MariaDB socket fallback failed: {e}"
         except Exception as e:
             return False, f"MySQL/MariaDB check failed: {e}"
 
@@ -398,13 +386,6 @@ def execute_check(check, client=None):
             conn = ldap3.Connection(server, auto_bind=True, receive_timeout=5)
             conn.unbind()
             return True, "OK"
-        except ImportError:
-            try:
-                with socket.create_connection((target, port), timeout=5):
-                    pass
-                return True, "OK (Socket fallback)"
-            except Exception as e:
-                return False, f"LDAP socket fallback failed: {e}"
         except Exception as e:
             return False, f"LDAP check failed: {e}"
 
@@ -416,19 +397,6 @@ def execute_check(check, client=None):
             client_ntp = ntplib.NTPClient()
             response = client_ntp.request(target, version=3, timeout=5)
             return True, f"OK (Offset: {response.offset:.4f}s)"
-        except ImportError:
-            # SNTP v4 client request packet
-            req = b"\x1b" + 47 * b"\0"
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                    s.settimeout(5)
-                    s.sendto(req, (target, port))
-                    data, _ = s.recvfrom(1024)
-                    if len(data) < 48:
-                        return False, "Invalid NTP response length"
-                return True, "OK (UDP fallback)"
-            except Exception as e:
-                return False, f"NTP UDP fallback failed: {e}"
         except Exception as e:
             return False, f"NTP check failed: {e}"
 
@@ -571,19 +539,6 @@ def execute_check(check, client=None):
             if r.ping():
                 return True, "OK"
             return False, "Redis PING returned False"
-        except ImportError:
-            try:
-                with socket.create_connection((target, port), timeout=2) as s:
-                    if password:
-                        s.sendall(f"AUTH {password}\r\n".encode("utf-8"))
-                        s.recv(1024)
-                    s.sendall(b"PING\r\n")
-                    res = s.recv(1024)
-                    if b"+PONG" not in res:
-                        return False, "Redis socket PING failed"
-                return True, "OK"
-            except Exception as e:
-                return False, f"Redis socket fallback failed: {e}"
         except Exception as e:
             return False, f"Redis connection failed: {e}"
 
@@ -806,7 +761,7 @@ def execute_check(check, client=None):
                     "-U",
                     user,
                     "-h",
-                    target or "127.0.0.1",
+                    target or "postgres",
                     "-p",
                     port,
                     dbname,
@@ -1280,8 +1235,8 @@ if __name__ == "__main__":
         import redis as redis_lib
 
         r = redis_lib.Redis(
-            host=os.getenv("REDIS_HOST", "127.0.0.1"),
-            port=int(os.getenv("REDIS_PORT", "6379")),
+            host=os.getenv("REDIS_HOST") or "redis",
+            port=int(os.getenv("REDIS_PORT") or "6379"),
             db=0,
             decode_responses=True,
         )

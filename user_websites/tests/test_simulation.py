@@ -219,7 +219,7 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         # [@ANCHOR: simulation_environment]
         # Tests [@ANCHOR: simulation_environment]
         # Use the variable as an iteration count instead of minutes now
-        iterations = int(os.environ.get("SIMULATION_DURATION_MINUTES", "60"))
+        iterations = int(os.environ.get("SIMULATION_DURATION_MINUTES") or "60")
 
         # Flush the setup state so DB reflects latest ORM creations
         self.env.flush_all()
@@ -234,7 +234,7 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         _logger.info("==========================================================")
 
         regression_detected = False
-        fallback_threshold = float(os.environ.get("SIMULATION_MAX_AVG_TIME", "0.5"))
+        fallback_threshold = float(os.environ.get("SIMULATION_MAX_AVG_TIME") or "0.5")
 
         # Override defaults for naturally heavier transactions
         custom_thresholds = {

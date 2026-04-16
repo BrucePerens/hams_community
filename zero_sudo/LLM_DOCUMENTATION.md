@@ -32,6 +32,8 @@ You are strictly FORBIDDEN from using `.sudo()` inline. To escalate privileges:
    `svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('your_module.user_xml_id')`
 3. Execute using the impersonation idiom:
    `self.env['target.model'].with_user(svc_uid).create(vals)`
+
+* **Cache & Resolution:** `_get_service_uid` `[@ANCHOR: get_service_uid]` safely resolves and caches the service account UID to prevent redundant database hits. This logic is verified by `[@ANCHOR: test_get_service_uid]`.
 </service_account_pattern>
 
 ---
@@ -67,8 +69,7 @@ When a daemon or unprivileged user strictly requires native ERP framework intera
 
 ---
 
-<semantic_anchors>
-## 4. 🔗 Semantic Anchors
-* `[@ANCHOR: get_service_uid]` / `[@ANCHOR: test_get_service_uid]`: Service account resolution and cache.
-* `[@ANCHOR: coherent_cache_signal]` / `[@ANCHOR: test_coherent_cache_signal]`: Global Postgres NOTIFY bus trigger.
-</semantic_anchors>
+<global_cache>
+## 4. Global Cache Signaling
+* **Postgres NOTIFY Bus:** The `_notify_cache_invalidation` function `[@ANCHOR: coherent_cache_signal]` provides an entry point to trigger cross-worker cache flushes via the distributed event bus, guaranteeing consistency in clustered setups. This behavior is covered by `[@ANCHOR: test_coherent_cache_signal]`.
+</global_cache>

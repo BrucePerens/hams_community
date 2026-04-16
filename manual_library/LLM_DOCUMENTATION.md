@@ -16,7 +16,11 @@ A clean-room, 100% drop-in API replacement for the proprietary Odoo Enterprise K
 * If the system is upgraded to Enterprise, the table structure allows perfect data retention.
 </architecture>
 
-<semantic_anchors>
-## 3. Semantic Anchors
-* `[@ANCHOR: controller_manual_feedback]`, `[@ANCHOR: controller_manual_search]`, `[@ANCHOR: manual_compute_website_url]`, `[@ANCHOR: manual_check_hierarchy]`, `[@ANCHOR: manual_toc_logic]`.
-</semantic_anchors>
+<features>
+## 3. Core Features & Logic
+* **User Feedback:** Handles user submissions of helpful/not-helpful article ratings via the feedback controller `[@ANCHOR: controller_manual_feedback]`.
+* **Search Integration:** Supports live querying of article contents via the search controller `[@ANCHOR: controller_manual_search]`.
+* **URL Resolution:** Computes the public website URL path for articles dynamically based on their hierarchy `[@ANCHOR: manual_compute_website_url]`.
+* **Structural Integrity:** Strictly enforces parent-child hierarchy checks to prevent recursive or invalid tree structures `[@ANCHOR: manual_check_hierarchy]`.
+* **Dynamic TOC:** Automatically parses article HTML on the frontend to generate a dynamic Table of Contents `[@ANCHOR: manual_toc_logic]`.
+</features>

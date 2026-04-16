@@ -14,8 +14,7 @@ This module acts as the foundational security layer for the entire ecosystem. It
 If you are an AI or developer working on downstream modules, you **MUST** perform the following migrations to integrate with this core:
 
 1. **Change Dependencies:** Add `'zero_sudo'` to the `depends` array in your `__manifest__.py`.
-2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules. The `zero_sudo` module now centrally natively intercepts interactive web logins and blocks access for accounts where `is_service_account=True`.
-2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules. Redundant interceptors will cause routing conflicts. *(Note: This lock only applies to the HTML web interface; JSON-RPC interfaces remain open for your external background daemons).*).*
+2. **Remove Redundant Login Interceptors:** Delete any custom `web_login` controller overrides in your proprietary modules. The `zero_sudo` module now centrally natively intercepts interactive web logins and blocks access for accounts where `is_service_account=True`. Redundant interceptors will cause routing conflicts. *(Note: This lock only applies to the HTML web interface; XML-RPC and JSON-RPC interfaces remain open for your external background daemons).*
 3. **Update Security Utility Calls:** Globally find-and-replace your utility calls to use the new centralized namespace:
    * **Change:** `self.env['custom.security.utils']._get_service_uid(...)`
    * **To:** `self.env['zero_sudo.security.utils']._get_service_uid(...)`
@@ -33,6 +32,8 @@ You are strictly FORBIDDEN from using `.sudo()` inline. To escalate privileges:
    `svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('your_module.user_xml_id')`
 3. Execute using the impersonation idiom:
    `self.env['target.model'].with_user(svc_uid).create(vals)`
+
+* **Cache & Resolution:** `_get_service_uid` `[@ANCHOR: get_service_uid]` safely resolves and caches the service account UID to prevent redundant database hits. This logic is verified by `[@ANCHOR: test_get_service_uid]`.
 </service_account_pattern>
 
 ---
@@ -68,8 +69,7 @@ When a daemon or unprivileged user strictly requires native ERP framework intera
 
 ---
 
-<semantic_anchors>
-## 4. 🔗 Semantic Anchors
-* `[@ANCHOR: get_service_uid]` / `[@ANCHOR: test_get_service_uid]`: Service account resolution and cache.
-* `[@ANCHOR: coherent_cache_signal]` / `[@ANCHOR: test_coherent_cache_signal]`: Global Postgres NOTIFY bus trigger.
-</semantic_anchors>
+<global_cache>
+## 4. Global Cache Signaling
+* **Postgres NOTIFY Bus:** The `_notify_cache_invalidation` function `[@ANCHOR: coherent_cache_signal]` provides an entry point to trigger cross-worker cache flushes via the distributed event bus, guaranteeing consistency in clustered setups. This behavior is covered by `[@ANCHOR: test_coherent_cache_signal]`.
+</global_cache>

@@ -7,10 +7,7 @@ import pika
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-try:
-    from cryptography.fernet import Fernet
-except ImportError:
-    Fernet = None
+from cryptography.fernet import Fernet
 
 
 class BackupConfig(models.Model):
@@ -200,9 +197,9 @@ class BackupConfig(models.Model):
 
             def publish_task(msg=payload):
                 try:
-                    rmq_host = os.environ.get("RMQ_HOST", "127.0.0.1")
-                    rmq_user = os.environ.get("RMQ_USER", "guest")
-                    rmq_pass = os.environ.get("RMQ_PASS", "guest")
+                    rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
+                    rmq_user = os.environ.get("RMQ_USER") or "guest"
+                    rmq_pass = os.environ.get("RMQ_PASS") or "guest"
                     credentials = pika.PlainCredentials(rmq_user, rmq_pass)
                     conn_params = pika.ConnectionParameters(
                         host=rmq_host, credentials=credentials

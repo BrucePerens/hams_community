@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-29 18:04+0000\n"
-"PO-Revision-Date: 2026-03-29 18:04+0000\n"
+"POT-Creation-Date: 2026-04-16 18:16+0000\n"
+"PO-Revision-Date: 2026-04-16 18:16+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -17,11 +17,11 @@ msgstr ""
 msgid "A record cannot be owned by both a user and a group simultaneously."
 msgstr ""
 
-#: pager_duty/controllers/log_api.py:72
+#: pager_duty/controllers/log_api.py:68
 msgid "Access Denied."
 msgstr ""
 
-#: pager_duty/controllers/log_api.py:36
+#: pager_duty/controllers/log_api.py:32
 msgid "Access Denied: Admins only."
 msgstr ""
 
@@ -61,7 +61,7 @@ msgstr ""
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
-#: pager_duty/models/incident.py:179
+#: pager_duty/models/incident.py:175
 msgid "Auto-resolved by NOC monitor recovery sequence."
 msgstr ""
 
@@ -69,11 +69,11 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:528
+#: backup_management/models/backup_config.py:525
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:80
+#: daemon_key_manager/models/key_registry.py:78
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -145,19 +145,19 @@ msgstr ""
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: backup_management/models/backup_config.py:263
+#: backup_management/models/backup_config.py:260
 msgid "Kopia backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:161
+#: backup_management/models/backup_config.py:158
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:323
+#: backup_management/models/backup_config.py:320
 msgid "Kopia policies applied successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:169
+#: backup_management/models/backup_config.py:166
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
@@ -170,7 +170,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
-#: pager_duty/models/incident.py:156
+#: pager_duty/models/incident.py:152
 msgid "New Incident Created"
 msgstr ""
 
@@ -222,7 +222,7 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:90
+#: daemon_key_manager/models/key_registry.py:88
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
@@ -262,7 +262,7 @@ msgstr ""
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:173
+#: backup_management/models/backup_config.py:170
 msgid "Unknown engine: %s"
 msgstr ""
 
@@ -323,11 +323,11 @@ msgstr ""
 msgid "You must provide both the Cloudflare API Token and Account ID to create a tunnel."
 msgstr ""
 
-#: backup_management/models/backup_config.py:284
+#: backup_management/models/backup_config.py:281
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:155
+#: backup_management/models/backup_config.py:152
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 
@@ -339,7 +339,7 @@ msgstr ""
 msgid "🚨 **AUTOMATED ACTION:** The system suspended this user for accumulating 3 or more violation strikes and unpublished their personal content."
 msgstr ""
 
-#: pager_duty/models/incident.py:113
+#: pager_duty/models/incident.py:109
 msgid "🚨 ESCALATION: Incident open for > 15 minutes!"
 msgstr ""
 
