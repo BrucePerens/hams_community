@@ -33,17 +33,6 @@
       "sandbox_network_access": "loopback"
     },
     {
-      "name": "Disk Space (/opt/hams/spool)",
-      "type": "system",
-      "target": "disk",
-      "interval": 300,
-      "critical": 90,
-      "snmp_community": "public",
-      "partition": "/opt/hams/spool",
-      "comment": "Autodiscovered disk space monitor for /opt/hams/spool",
-      "sandbox_network_access": "loopback"
-    },
-    {
       "name": "Disk Space (/tmp)",
       "type": "system",
       "target": "disk",
@@ -178,7 +167,7 @@
     {
       "name": "WSGI HTTP Ping",
       "type": "http",
-      "target": "http://127.0.0.1:8069/api/v1/pager/ping",
+      "target": "[http://127.0.0.1:8069/api/v1/pager/ping](http://127.0.0.1:8069/api/v1/pager/ping)",
       "interval": 60,
       "expect": "{\"status\": \"ok\"}",
       "snmp_community": "public",
@@ -190,5 +179,6 @@
   "log_analyzer": {
     "files": [],
     "patterns": []
-  }
+  },
+  "odoo_database": "hams_test"
 }

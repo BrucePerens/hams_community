@@ -1,6 +1,7 @@
 import os
 import logging
-from odoo import models, fields, api, SUPERUSER_ID
+import datetime
+from odoo import models, fields, api, SUPERUSER_ID, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -25,9 +26,6 @@ class DaemonKeyRegistry(models.Model):
     last_rotated = fields.Datetime(string="Last Rotated", readonly=True)
 
     _name_uniq = models.Constraint("UNIQUE(name)", "The daemon name must be unique!")
-    _user_uniq = models.Constraint(
-        "UNIQUE(user_id)", "Each service account can only have one registered daemon!"
-    )
 
     _name_not_empty = models.Constraint(
         "CHECK(LENGTH(TRIM(name)) > 0)", "The daemon name cannot be empty."
@@ -70,10 +68,16 @@ class DaemonKeyRegistry(models.Model):
         Designed to be called via `odoo-bin shell` during systemd bootstrapping
         to prevent race conditions before daemon startup.
         """
-        registries = self.search([])
+        registries = self.env["daemon.key.registry"].search([], limit=1000)
         for reg in registries:
-            _logger.info(f"Synchronously provisioning key for daemon: {reg.name}")
-            reg._rotate_key_and_write_file()
+            _logger.info("Synchronously provisioning key for daemon: %s", reg.name)
+            try:
+                reg._rotate_key_and_write_file()
+            except OSError:
+                raise UserError(
+                    _("Cannot write key file for '%s' " "at '%s'. Check permissions.")
+                    % (reg.name, reg.env_file_path)
+                )
         return True
 
     def _rotate_key_and_write_file(self):
@@ -81,24 +85,35 @@ class DaemonKeyRegistry(models.Model):
 
         if self.user_id.id == SUPERUSER_ID:
             raise UserError(
-                "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
+                _(
+                    "Security Alert: The __system__ user ID cannot be used to provision a key. "
+                    "This account is forbidden from RPC calls."
+                )
             )
 
-        # Revoke old keys for this specific service account
+        key_name = f"{self.name}_key"
+
+        # Revoke old keys for this specific service account AND daemon
         old_keys = self.env["res.users.apikeys"].search(
-            [("user_id", "=", self.user_id.id)], limit=100
+            [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
         old_keys.unlink()
 
         # Generate new key
-        key_name = f"{self.name}_key"
-        raw_key = self.env["res.users.apikeys"]._generate(key_name, self.user_id.id)
+        expiration_date = fields.Datetime.now() + datetime.timedelta(days=90)
+
+        # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
+        # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
+        # a 90-day key for the service account without exposing the entire ERP.
+        raw_key = self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate(
+            "rpc", key_name, expiration_date
+        )
 
         # Write to secure file
         self._write_secure_env_file(self.env_file_path, self.user_id.login, raw_key)
         self.last_rotated = fields.Datetime.now()
         _logger.info(
-            f"Successfully rotated and exported API key for daemon: {self.name}"
+            "Successfully rotated and exported API key for daemon: %s", self.name
         )
 
     def _write_secure_env_file(self, path, login, key):
@@ -123,8 +138,6 @@ class DaemonKeyRegistry(models.Model):
         Executes via ir.cron. Rotates keys for all registered daemons.
         Uses stateless batching and programmatic re-triggering.
         """
-        import datetime
-
         threshold = fields.Datetime.now() - datetime.timedelta(days=59)
         registries = self.env["daemon.key.registry"].search(
             ["|", ("last_rotated", "=", False), ("last_rotated", "<", threshold)],
