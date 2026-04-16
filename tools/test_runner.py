@@ -12,8 +12,11 @@ import argparse
 import signal
 import socket
 import tempfile
-import shutil
 import glob
+
+# Import the centralized infrastructure blueprint
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+import infrastructure
 
 
 def load_ignore_file(filepath):
@@ -46,11 +49,9 @@ class FailureExtractor:
     Tracebacks and error blocks for writing to a filtered log file.
     """
 
-    def __init__(self, output_path):
+    def __init__(self, output_path, disable_atexit=False):
         # Resolve the intended display path vs the physical write path
-        self.display_path = os.environ.get(
-            "HAMS_REAL_ERROR_LOG", os.path.abspath(os.path.expanduser(output_path))
-        )
+        self.display_path = os.environ.get("HAMS_REAL_ERROR_LOG") or os.path.abspath(os.path.expanduser(output_path))
 
         # If we are inside the RO namespace, we MUST write to the spool tmpfs
         if os.environ.get("HAMS_ISOLATED_NS") == "1":
@@ -68,10 +69,22 @@ class FailureExtractor:
         self.capturing = False
         self.captured_blocks = []
         self.current_block = []
+        self._written = False
+
+        if not disable_atexit:
+            import atexit
+            atexit.register(self.finish_and_write)
+
+    def set_context(self, context_name):
+        if self.capturing and self.current_block:
+            self.captured_blocks.append((self.current_context, self.current_block))
+            self.capturing = False
+            self.current_block = []
+        self.current_context = context_name
 
     def process_line(self, line):
         if self.test_start_pattern.search(line):
-            self.current_context = line.strip()
+            self.set_context(line.strip())
 
         is_log_line = self.log_prefix_pattern.match(line)
 
@@ -150,6 +163,10 @@ class FailureExtractor:
         return sorted([m for m in modules if m not in ignore_list])
 
     def finish_and_write(self):
+        if getattr(self, '_written', False):
+            return
+        self._written = True
+
         if self.capturing and self.current_block:
             self.captured_blocks.append((self.current_context, self.current_block))
             self.capturing = False
@@ -222,15 +239,13 @@ class FailureExtractor:
         print("==========================================================\n")
 
 
-def run_cmd(cmd, extractor=None, cwd=None):
+def run_cmd(cmd, extractor=None, cwd=None, env=None):
     """
     Executes a shell command, printing stdout in real-time to the terminal
     while simultaneously feeding the stream to the failure extractor.
     """
     initial_errors = len(extractor.captured_blocks) if extractor else 0
 
-    # start_new_session=True detaches the process into its own POSIX process group,
-    # ensuring any child workers or threads are encapsulated together.
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -239,6 +254,7 @@ def run_cmd(cmd, extractor=None, cwd=None):
         bufsize=1,
         start_new_session=True,
         cwd=cwd,
+        env=env,
     )
 
     force_killed = False
@@ -249,8 +265,6 @@ def run_cmd(cmd, extractor=None, cwd=None):
             if extractor:
                 extractor.process_line(line)
 
-            # Anti-Hang Mechanism: If Odoo gets stuck in the shutdown sequence waiting for
-            # rogue non-daemon threads (like async loops) to join, we terminate the entire process group.
             if "Hit CTRL-C again or send a second signal" in line:
                 print(
                     "\n[!] WARNING: Odoo did not terminate because a background thread within it,"
@@ -263,10 +277,9 @@ def run_cmd(cmd, extractor=None, cwd=None):
                 )
                 print("             group to end the test.\n")
 
-                # Kill the entire process tree cleanly using the process group ID
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                 force_killed = True
-                break  # Break out of the readline loop immediately
+                break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")
         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
@@ -275,8 +288,6 @@ def run_cmd(cmd, extractor=None, cwd=None):
 
     process.wait()
 
-    # If we force killed the process, the OS will return a non-zero exit code.
-    # We must evaluate our Extractor state to determine true test success/failure.
     if force_killed:
         final_errors = len(extractor.captured_blocks) if extractor else 0
         return 1 if final_errors > initial_errors else 0
@@ -356,7 +367,8 @@ def run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns):
                 print("\n[*] ----------------------------------------------------")
                 print("[*] Testing Daemon: {}".format(item))
                 print("[*] ----------------------------------------------------")
-                # By setting cwd=daemon_path, unittest can discover tests without an __init__.py package
+                if extractor:
+                    extractor.set_context("Daemon Tests / {}".format(item))
                 cmd = [
                     venv_python,
                     "-m",
@@ -373,208 +385,10 @@ def run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns):
     return final_rc
 
 
-def run_in_isolated_environment(real_error_log):
-    """
-    Re-executes the test runner inside an isolated Linux namespace (Mount & Network)
-    with a dedicated, ephemeral PostgreSQL instance to guarantee zero interference
-    with production files, network queues, and databases.
-    """
-    if os.geteuid() != 0:
-        print(
-            "[*] Elevating to sudo to provision isolated PostgreSQL and Namespaces..."
-        )
-        os.execvp("sudo", ["sudo", "-E", sys.executable] + sys.argv)
-
-    orig_user = os.environ.get("SUDO_USER", os.environ.get("USER", "root"))
-    if orig_user == "root":
-        # Fallback if somehow run as root directly, though Odoo dislikes it
-        orig_user = "odoo"
-
-    print(
-        "[*] Bootstrapping isolated testing environment (Mount & Network Namespaces)..."
-    )
-    spool_dir = tempfile.mkdtemp(prefix="hams_test_spool_")
-    pg_data_dir = tempfile.mkdtemp(prefix="hams_test_pgdata_")
-    pg_socket_dir = tempfile.mkdtemp(prefix="hams_test_pgsock_")
-
-    os.makedirs(os.path.join(spool_dir, "adif_queue"), exist_ok=True)
-    os.makedirs(os.path.join(spool_dir, "ncvec"), exist_ok=True)
-    os.chmod(spool_dir, 0o777)
-    os.chmod(os.path.join(spool_dir, "adif_queue"), 0o777)
-    os.chmod(os.path.join(spool_dir, "ncvec"), 0o777)
-
-    # Secure the Postgres internal data directory but open the separate Socket directory
-    os.chmod(pg_data_dir, 0o700)
-    subprocess.run(["chown", "-R", "postgres:postgres", pg_data_dir], check=True)
-    os.chmod(pg_socket_dir, 0o777)
-
-    pg_bin_dir = ""
-    pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
-    if pg_bins:
-        pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
-    else:
-        print(
-            "❌ ERROR: Could not locate PostgreSQL initdb in /usr/lib/postgresql/. Please ensure PostgreSQL is installed."
-        )
-        sys.exit(1)
-
-    os.environ["HAMS_ISOLATED_NS"] = "1"
-    os.environ["PGHOST"] = pg_socket_dir
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-    wrapper_script = os.path.join(spool_dir, "pg_wrapper.sh")
-    with open(wrapper_script, "w") as f:
-        f.write(f"""#!/bin/bash
-ip link set lo up
-
-# --- Global Read-Only Filesystem Isolation ---
-# Prevent changes from propagating to the host
-mount --make-rprivate /
-
-# Create required mount points before remounting root as RO
-mkdir -p /opt/hams/spool
-mkdir -p /var/lib/odoo
-mkdir -p /opt/hams/pycache
-
-# Explicitly bind-mount standard writable temporary directories to themselves
-# so they remain writable after the root remount. Use --rbind for dirs with submounts.
-mount --bind /tmp /tmp
-mount --bind /var/tmp /var/tmp
-mount --rbind /run /run
-mount --rbind /dev /dev
-mount --rbind /proc /proc
-mount --rbind /sys /sys
-
-# Mount temporary filesystems over directories that Odoo/System needs to write to
-mount -t tmpfs tmpfs /var/lib/odoo
-mount -t tmpfs tmpfs /var/log
-
-# RabbitMQ and Redis writeable paths
-mount -t tmpfs tmpfs /var/lib/rabbitmq
-mount -t tmpfs tmpfs /var/lib/redis
-
-# Recreate log folders since /var/log is now an empty tmpfs
-mkdir -p /var/log/redis /var/log/rabbitmq
-chown redis:redis /var/log/redis
-chown rabbitmq:rabbitmq /var/log/rabbitmq
-chown rabbitmq:rabbitmq /var/lib/rabbitmq
-chown redis:redis /var/lib/redis
-
-# Remount the global root filesystem as Read-Only
-mount --bind / /
-mount -o remount,bind,ro /
-
-# Explicitly make the workspace read-only in case it's on a separate partition (e.g. /home)
-mount --bind {base_dir} {base_dir}
-mount -o remount,bind,ro {base_dir}
-
-# Ensure tertiary, secondary, and community dirs are also explicitly read-only if they exist
-for dir in "{base_dir}/../hams_community" "{base_dir}/../hams_private_secondary" "{base_dir}/../hams_private_tertiary"; do
-if [ -d "$dir" ]; then
-REAL_DIR=$(realpath "$dir")
-mount --bind "$REAL_DIR" "$REAL_DIR"
-mount -o remount,bind,ro "$REAL_DIR"
-fi
-done
-# ---------------------------------------------
-
-# Mount our special writeable spool directory
-mount --bind {spool_dir} /opt/hams/spool
-
-# Redirect Odoo home to a writable tmpfs
-export HOME=/tmp/odoo_test_home
-mkdir -p $HOME
-chmod 777 $HOME
-
-su -s /bin/bash postgres -c "{pg_bin_dir}initdb -D {pg_data_dir}" >/dev/null 2>&1
-su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir}' -w start" >/dev/null 2>&1
-su -s /bin/bash postgres -c "psql -h {pg_socket_dir} -d postgres -c \\"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo';\\"" >/dev/null 2>&1
-su -s /bin/bash postgres -c "psql -h {pg_socket_dir} -d postgres -c \\"CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\\"" >/dev/null 2>&1
-
-# Initialize and start Redis & RabbitMQ natively inside the namespace
-su -s /bin/bash redis -c "redis-server --daemonize yes" >/dev/null 2>&1
-su -s /bin/bash rabbitmq -c "rabbitmq-server -detached" >/dev/null 2>&1
-
-# Wait for them to be ready
-sleep 3
-
-# Prevent Python from attempting to write .pyc files to the RO workspace
-export PYTHONDONTWRITEBYTECODE=1
-
-sudo -E -u {orig_user} env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_REAL_ERROR_LOG="{real_error_log}" "$@"
-RET=$?
-
-# Cleanup RabbitMQ and Redis so they don't hold the namespace open
-su -s /bin/bash rabbitmq -c "rabbitmqctl stop" >/dev/null 2>&1
-pkill -u redis redis-server >/dev/null 2>&1
-
-exit $RET
-""")
-    os.chmod(wrapper_script, 0o755)
-
-    script_path = os.path.abspath(sys.argv[0])
-    args = [sys.executable, script_path] + sys.argv[1:]
-
-    # -nm creates both Mount and Network namespaces for complete isolation
-    exec_cmd = ["unshare", "-nm", wrapper_script] + args
-
-    try:
-        result = subprocess.run(exec_cmd)
-        sys.exit(result.returncode)
-    except Exception as e:
-        print(f"❌ ERROR launching isolated environment: {e}")
-        sys.exit(1)
-    finally:
-        print("[*] Tearing down ephemeral PostgreSQL and cleaning up spool...")
-        subprocess.run(
-            [
-                "su",
-                "-s",
-                "/bin/bash",
-                "postgres",
-                "-c",
-                f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop",
-            ],
-            check=False,
-            stderr=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-        )
-
-        # Rescue the generated log file from the ephemeral spool and copy it to the user's real home
-        spool_log = os.path.join(spool_dir, "filtered_test.txt")
-        if os.path.exists(spool_log):
-            try:
-                os.makedirs(os.path.dirname(real_error_log), exist_ok=True)
-                shutil.copy2(spool_log, real_error_log)
-                # Ensure the user can actually read/delete it without sudo
-                if (
-                    os.geteuid() == 0
-                    and orig_user
-                    and orig_user not in ["root", "odoo"]
-                ):
-                    import pwd
-
-                    try:
-                        uid = pwd.getpwnam(orig_user).pw_uid
-                        gid = pwd.getpwnam(orig_user).pw_gid
-                        os.chown(real_error_log, uid, gid)
-                    except Exception:
-                        pass
-            except Exception as e:
-                print(
-                    f"⚠️ WARNING: Could not rescue extracted log to {real_error_log}: {e}"
-                )
-
-        shutil.rmtree(spool_dir, ignore_errors=True)
-        shutil.rmtree(pg_data_dir, ignore_errors=True)
-        shutil.rmtree(pg_socket_dir, ignore_errors=True)
-
-
 def rebuild_db(db_name):
     """Drops and creates a fresh PostgreSQL database"""
     print("[*] Dropping and Rebuilding Database Schema ({})...".format(db_name))
 
-    # Aggressively terminate active connections to prevent dropdb from failing silently
     subprocess.run(
         [
             "psql",
@@ -589,7 +403,6 @@ def rebuild_db(db_name):
         stderr=subprocess.DEVNULL,
     )
 
-    # Use --force to ensure the drop succeeds
     subprocess.run(
         ["dropdb", "--if-exists", "--force", db_name],
         check=False,
@@ -598,8 +411,302 @@ def rebuild_db(db_name):
     subprocess.run(["createdb", db_name], check=True)
 
 
+def check_and_restore_cache(db_name):
+    cache_dir = "/opt/hams/test"
+    cache_file = os.path.join(cache_dir, "db_cache_master.dump")
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    community_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_community"))
+
+    search_bases = [base_dir]
+    if os.path.exists(community_dir):
+        search_bases.append(community_dir)
+
+    dirs_to_check = []
+    for sb in search_bases:
+        try:
+            for item in os.listdir(sb):
+                item_path = os.path.join(sb, item)
+                if os.path.isdir(item_path) and os.path.isfile(os.path.join(item_path, "__manifest__.py")):
+                    dirs_to_check.append(item_path)
+        except OSError:
+            pass
+
+    newest_mtime = 0
+    for d in dirs_to_check:
+        for root, dirs, files in os.walk(d):
+            dirs[:] = [
+                di for di in dirs
+                if not di.startswith('.') and di not in ('__pycache__', 'tests')
+            ]
+
+            for f in files:
+                if f.endswith(('.pyc', '.pyo', '.dump', '.log', '.swp', '.pot', '.po')) or f.startswith('.') or f == 'filtered_test.txt':
+                    continue
+                p = os.path.join(root, f)
+                try:
+                    mtime = os.path.getmtime(p)
+                    if mtime > newest_mtime:
+                        newest_mtime = mtime
+                except OSError:
+                    pass
+
+    # Explicitly check critical infrastructure files that dictate DB schema or provisioning state
+    critical_infra_files = [
+        os.path.join(base_dir, "tools", "infrastructure.py"),
+        os.path.join(base_dir, "tools", "test_runner.py"),
+        os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py"),
+    ]
+    for cf in critical_infra_files:
+        if os.path.exists(cf):
+            try:
+                cf_mtime = os.path.getmtime(cf)
+                if cf_mtime > newest_mtime:
+                    newest_mtime = cf_mtime
+            except OSError:
+                pass
+
+    cache_valid = False
+    if os.path.exists(cache_file):
+        try:
+            sz = os.path.getsize(cache_file)
+            print(f"[*] Found existing DB cache: {sz} bytes.")
+            if sz > 5000000:
+                cache_mtime = os.path.getmtime(cache_file)
+                if cache_mtime >= newest_mtime:
+                    cache_valid = True
+            else:
+                print("[*] DB cache is too small to be valid (< 5MB).")
+        except OSError:
+            pass
+
+    if cache_valid:
+        print(f"[*] Valid DB cache found ({cache_file}). Restoring (Parallel)...")
+        rebuild_db(db_name)
+        res = subprocess.run(
+            ["pg_restore", "-d", db_name, "-O", "-x", "-j", "4", cache_file],
+            capture_output=True,
+            text=True
+        )
+        if res.returncode == 0:
+            print("[*] DB restored from cache.")
+            return True, cache_file
+        else:
+            print(f"[*] WARNING: pg_restore failed. Cache might be corrupted. Output:\n{res.stderr}")
+            try:
+                os.remove(cache_file)
+            except OSError:
+                pass
+            rebuild_db(db_name)
+            return False, cache_file
+    else:
+        if os.path.exists(cache_file):
+            print("[*] DB cache invalid or too small. Discarding.")
+            try:
+                os.remove(cache_file)
+            except OSError:
+                pass
+        else:
+            print("[*] DB cache missing. Rebuilding...")
+        rebuild_db(db_name)
+        return False, cache_file
+
+def save_db_cache(db_name, cache_file):
+    print(f"[*] Caching newly initialized DB to {cache_file}...")
+    try:
+        os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+    except Exception:
+        pass
+
+    try:
+        res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", "-f", cache_file, db_name], capture_output=True, text=True)
+        if res.returncode == 0:
+            sz = os.path.getsize(cache_file)
+            if sz > 5000000:
+                print(f"[*] DB cached successfully ({sz} bytes).")
+            else:
+                print(f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache.")
+                try:
+                    os.remove(cache_file)
+                except OSError:
+                    pass
+        else:
+            print(f"[*] WARNING: pg_dump failed (exit code {res.returncode}):\n{res.stderr}")
+            try:
+                os.remove(cache_file)
+            except OSError:
+                pass
+    except Exception as e:
+        print(f"[*] WARNING: Failed to execute pg_dump: {e}")
+
+
+def run_in_isolated_environment(real_error_log):
+    print("**** RUN IN ISOLATED ENVIRONMENT. ****\n");
+    if os.geteuid() != 0:
+        print(
+            "[*] Elevating to sudo to provision isolated PostgreSQL and Namespaces..."
+        )
+        os.execvp("sudo", ["sudo", "-E", sys.executable] + sys.argv)
+
+    orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
+    if orig_user == "root":
+        raise ValueError("Test runner MUST NOT be executed directly as root. Use a standard user with sudo privileges.")
+
+    print(
+        "[*] Bootstrapping isolated testing environment (Mount Namespaces)..."
+    )
+    pg_data_dir = "/opt/hams/pgdata"
+    pg_socket_dir = "/opt/hams/pgsock"
+
+    pg_bin_dir = ""
+    pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
+    if pg_bins:
+        pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
+    else:
+        print(
+            "❌ ERROR: Could not locate PostgreSQL initdb in /usr/lib/postgresql/.\n"
+            "Please ensure PostgreSQL is installed."
+        )
+        sys.exit(1)
+
+    os.environ["HAMS_ISOLATED_NS"] = "1"
+    os.environ["PGHOST"] = pg_socket_dir
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    fd, wrapper_script = tempfile.mkstemp(prefix="hams_pg_wrapper_", suffix=".sh")
+    with os.fdopen(fd, "w") as f:
+        f.write(f"""#!/bin/bash
+ip link set lo up
+
+mkdir -p /opt/hams/test/debug_mnt
+rm -rf /opt/hams/test/debug_mnt/*
+
+mount --make-rprivate /
+
+mount -t tmpfs tmpfs /mnt
+mkdir -p /mnt/upper /mnt/work /mnt/host_test_dir
+
+mkdir -p /opt/hams/test
+mount --bind /opt/hams/test /mnt/host_test_dir
+
+{sys.executable} -c 'import sys, os; sys.path.append("{base_dir}/tools"); import infrastructure; run_cmd = lambda cmd, **kw: os.system(" ".join(cmd) if isinstance(cmd, list) else cmd); infrastructure.apply_production_directories(run_cmd, environment="test", dest_dir="/mnt/upper"); infrastructure.write_env_files("/opt/hams/etc", dict(os.environ), run_cmd, dest_dir="/mnt/upper"); infrastructure.provision_static_files(run_cmd, dict(os.environ), environment="test", dest_dir="/mnt/upper"); infrastructure.execute_hooks("test", run_cmd, dict(os.environ), dest_dir="/mnt/upper")'
+
+for d in /mnt/upper/*; do
+    if [ -d "$d" ]; then
+        dirname=$(basename "$d")
+        if [ "$dirname" != "mnt" ]; then
+            mkdir -p "/mnt/work/$dirname"
+            mount -t overlay overlay -o lowerdir=/$dirname,upperdir=$d,workdir=/mnt/work/$dirname /$dirname
+        fi
+    fi
+done
+
+rm -rf /opt/hams/etc/keys/* 2>/dev/null || true
+rm -rf /opt/hams/pgdata/* 2>/dev/null || true
+rm -rf /opt/hams/pgsock/* 2>/dev/null || true
+rm -rf /opt/hams/spool/* 2>/dev/null || true
+
+export HOME=/var/lib/odoo
+
+mount --bind {base_dir} {base_dir}
+mount -o remount,bind,ro {base_dir}
+
+for dir in "{base_dir}/../hams_community"; do
+    if [ -d "$dir" ]; then
+        REAL_DIR=$(realpath "$dir")
+        mount --bind "$REAL_DIR" "$REAL_DIR"
+        mount -o remount,bind,ro "$REAL_DIR"
+    fi
+done
+
+echo '[*] Initializing PostgreSQL...'
+su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'
+echo '[*] Starting PostgreSQL...'
+su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"
+echo '[*] Provisioning PostgreSQL roles...'
+echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;" | su -s /bin/bash postgres -c 'PGUSER=postgres psql -h {pg_socket_dir} -d postgres'
+
+su -s /bin/bash redis -c 'redis-server --daemonize yes' >/dev/null 2>&1
+su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached' >/dev/null 2>&1
+
+sleep 3
+
+export PYTHONDONTWRITEBYTECODE=1
+
+sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
+RET=$?
+
+su -s /bin/bash rabbitmq -c 'rabbitmqctl stop' >/dev/null 2>&1
+pkill -u redis redis-server >/dev/null 2>&1
+su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop' >/dev/null 2>&1
+
+if [ -f /opt/hams/spool/filtered_test.txt ]; then
+    mkdir -p "$(dirname '{real_error_log}')" 2>/dev/null || true
+    cp /opt/hams/spool/filtered_test.txt '{real_error_log}'
+    chown {orig_user} '{real_error_log}' 2>/dev/null || true
+    chmod 644 '{real_error_log}' 2>/dev/null || true
+fi
+
+if [ -f /opt/hams/test/db_cache_master.dump ]; then
+    echo '[*] Committing Database Cache to Host...'
+    cp /opt/hams/test/db_cache_master.dump /mnt/host_test_dir/db_cache_master.dump
+    chmod 666 /mnt/host_test_dir/db_cache_master.dump 2>/dev/null || true
+fi
+
+echo '[*] DEBUG: Exporting ephemeral namespace state to /opt/hams/test/debug_mnt for inspection...'
+mkdir -p /mnt/host_test_dir/debug_mnt
+cp -ra /mnt/upper/* /mnt/host_test_dir/debug_mnt/ >/dev/null 2>&1 || true
+
+exit $RET
+""")
+    os.chmod(wrapper_script, 0o755)
+
+    script_path = os.path.abspath(sys.argv[0])
+    args = [sys.executable, script_path] + sys.argv[1:]
+
+    exec_cmd = ["unshare", "-m", wrapper_script] + args
+
+    try:
+        result = subprocess.run(exec_cmd)
+        sys.exit(result.returncode)
+    except Exception as e:
+        print(f"❌ ERROR launching isolated environment: {e}")
+        sys.exit(1)
+    finally:
+        print("[*] Cleaning up isolated test wrapper...")
+        try:
+            pass
+        except OSError:
+            pass
+
+
 def main():
     try:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        os.environ["REPO_ROOT"] = base_dir
+        env_path = os.path.join(base_dir, "deploy", "env")
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        if k.strip() not in os.environ:
+                            os.environ[k.strip()] = v.strip("'\" ")
+
+        if not os.environ.get("PGHOST"):
+            os.environ["PGHOST"] = "127.0.0.1"
+        if not os.environ.get("PGUSER"):
+            os.environ["PGUSER"] = os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER") or "odoo"
+        if not os.environ.get("PGPASSWORD"):
+            os.environ["PGPASSWORD"] = os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD") or "odoo"
+        if not os.environ.get("RABBITMQ_HOST"):
+            os.environ["RABBITMQ_HOST"] = "127.0.0.1"
+        if not os.environ.get("RMQ_HOST"):
+            os.environ["RMQ_HOST"] = "127.0.0.1"
+        if not os.environ.get("REDIS_HOST"):
+            os.environ["REDIS_HOST"] = "127.0.0.1"
+
         parser = argparse.ArgumentParser(
             description="Unified Odoo Test Runner for Hams.com",
             formatter_class=argparse.RawTextHelpFormatter,
@@ -607,14 +714,8 @@ def main():
         parser.add_argument(
             "-m",
             "--mode",
-            choices=["standard", "integration", "individual", "xml"],
-            default="standard",
-            help="""Execution mode:
-  standard    : Run all tests in a single database (Default).
-  integration : Run tests with HAMS_INTEGRATION_MODE=1 and full DB init prior to testing.
-  individual  : Loop through each module and test it in a fresh database.
-  xml         : Perform a fast XML compilation check without running Python tests.
-""",
+            choices=["standard", "integration", "individual", "xml", "downloads"],
+            default="standard"
         )
         parser.add_argument(
             "-d",
@@ -639,52 +740,62 @@ def main():
             default="ignore_list.txt",
             help="Path to ignore config file (default: ignore_list.txt)",
         )
+        parser.add_argument(
+            "--daemon",
+            help="Specific daemon to test in 'downloads' mode (e.g., fcc_uls_sync)",
+        )
 
         args = parser.parse_args()
 
-        # Resolve path early before any namespace shifts
+        try:
+            infrastructure.scaffold_test_environment(args.db, provision_dirs=(os.environ.get("HAMS_ISOLATED_NS") != "1"))
+            if os.environ.get("HAMS_ISOLATED_NS") != "1":
+                scaffold_run_cmd = lambda cmd, **kw: subprocess.run(["/bin/bash", "-c", cmd], check=True, **kw) if isinstance(cmd, str) else (subprocess.run(["sudo"] + cmd, check=True, **kw) if "sudo" not in cmd else subprocess.run(cmd, check=True, **kw))
+                infrastructure.execute_hooks("test", scaffold_run_cmd, env_vars=os.environ.copy(), dest_dir="")
+        except Exception as e:
+            print(f"[*] Note: Could not provision directories natively ({e}). Ensure they exist.")
+
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
 
         if os.environ.get("HAMS_ISOLATED_NS") != "1":
-            if is_odoo_running(8069):
-                print("[*] Port 8069 is active (Odoo is running).")
-                print(
-                    "[*] Routing test execution to isolated namespace to protect environment..."
-                )
-                run_in_isolated_environment(real_error_log)
-                return
-            else:
-                print(
-                    "[*] Port 8069 is free. Running tests natively (CI/CD compatible)."
-                )
-                try:
-                    os.makedirs("/opt/hams/spool/adif_queue", exist_ok=True)
-                    os.makedirs("/opt/hams/spool/ncvec", exist_ok=True)
-                    os.chmod("/opt/hams/spool", 0o777)
-                    os.chmod("/opt/hams/spool/adif_queue", 0o777)
-                    os.chmod("/opt/hams/spool/ncvec", 0o777)
-                except Exception as e:
-                    print(
-                        f"[*] Note: Could not provision /opt/hams/spool natively ({e}). Ensure it exists."
-                    )
+            print("[*] Routing test execution to isolated namespace to protect environment...")
+            run_in_isolated_environment(real_error_log)
+            return
 
-        # Path Resolution
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         venv_python = os.path.join(base_dir, ".venv", "bin", "python")
         odoo_bin = "/usr/bin/odoo"
 
-        # Load Ignore Config
         ignore_filepath = os.path.join(base_dir, args.config)
         ignore_patterns = load_ignore_file(ignore_filepath)
 
         # Environment Provisioning
-        if not os.path.exists(venv_python):
-            print("[*] Common virtual environment not found. Building it now...")
-            subprocess.run(
-                ["bash", os.path.join(base_dir, "tools", "setup_venv.sh")], check=True
-            )
+        venv_dir = os.path.join(base_dir, ".venv")
+        pyvenv_cfg = os.path.join(venv_dir, "pyvenv.cfg")
+        req_file = os.path.join(base_dir, "requirements.txt")
 
-        # Export PYTHONPATH to bridge the OS Odoo package with the local venv
+        needs_update = True
+        if os.path.exists(pyvenv_cfg) and os.path.exists(req_file):
+            if os.path.getmtime(pyvenv_cfg) >= os.path.getmtime(req_file):
+                needs_update = False
+
+        if needs_update:
+            print("[*] Validating virtual environment and dependencies...")
+            def _run_venv_cmd(cmd, env=None):
+                if isinstance(cmd, list):
+                    subprocess.run(cmd, check=True, env=env, capture_output=True)
+                else:
+                    subprocess.run(["/bin/bash", "-c", cmd], check=True, env=env, capture_output=True)
+
+            try:
+                infrastructure.provision_python_venvs(_run_venv_cmd, environment="pre_flight", dest_dir=base_dir)
+                # Touch pyvenv.cfg to update its modification time after successful install
+                if os.path.exists(pyvenv_cfg):
+                    os.utime(pyvenv_cfg, None)
+            except subprocess.CalledProcessError as e:
+                print(f"❌ ERROR: Failed to provision dependencies. Error details:\n{e.stderr.decode('utf-8', errors='ignore')}")
+                sys.exit(1)
+
         current_pythonpath = os.environ.get("PYTHONPATH", "")
         os.environ["PYTHONPATH"] = "/usr/lib/python3/dist-packages:{}".format(
             current_pythonpath
@@ -692,7 +803,6 @@ def main():
 
         addons_path = get_addons_path(base_dir)
 
-        # Determine Target Modules
         if args.module:
             target_modules = [args.module]
         else:
@@ -702,7 +812,7 @@ def main():
             print("❌ ERROR: No modules found in this repository. Aborting.")
             sys.exit(1)
 
-        mod_string = ",".join(target_modules)
+        mod_string = "base," + ",".join(target_modules)
         test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
         extractor = FailureExtractor(args.error_log)
@@ -717,7 +827,6 @@ def main():
 
         final_rc = 0
 
-        # Execute Mode Logic
         if args.mode == "standard":
             check_linters(venv_python, base_dir, ignore_filepath)
             final_rc = run_daemon_tests(
@@ -725,10 +834,34 @@ def main():
             )
             if final_rc != 0:
                 print(
-                    "\n⚠️ WARNING: Daemon tests failed! Continuing to Odoo suite to collect all errors.\n"
+                    "\n⚠️ WARNING: Daemon tests failed!\nContinuing to Odoo suite to collect all errors.\n"
                 )
 
-            rebuild_db(args.db)
+            restored, cache_file = check_and_restore_cache(args.db)
+            if not restored:
+                print("[*] Initializing DB...")
+                init_cmd = [
+                    venv_python,
+                    odoo_bin,
+                    "--addons-path",
+                    addons_path,
+                    "-d",
+                    args.db,
+                    "-i",
+                    mod_string,
+                    "--stop-after-init",
+                    "--workers=0",
+                    "--max-cron-threads=0",
+                    "--http-interface",
+                    "127.0.0.1",
+                    "--log-level=warn",
+                ]
+                rc_init = run_cmd(init_cmd, extractor)
+                if rc_init != 0:
+                    print("❌ ERROR: Database initialization failed!")
+                    sys.exit(rc_init)
+                save_db_cache(args.db, cache_file)
+
             print("[*] Executing Test Suite...")
             cmd = [
                 venv_python,
@@ -738,7 +871,7 @@ def main():
                 "--dev=all",
                 "-d",
                 args.db,
-                "-i",
+                "-u",
                 mod_string,
                 "--test-enable",
                 "--test-tags",
@@ -746,6 +879,8 @@ def main():
                 "--stop-after-init",
                 "--workers=0",
                 "--max-cron-threads=0",
+                "--http-interface",
+                "127.0.0.1",
             ]
             rc_odoo = run_cmd(cmd, extractor)
             if rc_odoo != 0:
@@ -758,35 +893,41 @@ def main():
             )
             if final_rc != 0:
                 print(
-                    "\n⚠️ WARNING: Daemon tests failed! Continuing to Odoo suite to collect all errors.\n"
+                    "\n⚠️ WARNING: Daemon tests failed!\nContinuing to Odoo suite to collect all errors.\n"
                 )
 
             os.environ["HAMS_INTEGRATION_MODE"] = "1"
-            rebuild_db(args.db)
 
-            print("[*] Initializing the DB (creating tables for daemons)...")
-            init_cmd = [
-                venv_python,
-                odoo_bin,
-                "--addons-path",
-                addons_path,
-                "-d",
-                args.db,
-                "-i",
-                mod_string,
-                "--test-enable",  # <--- FIX: Informs Odoo framework this is a test context, allowing the Cache teardown hook to safely import odoo.tests.common .
-                "--test-tags",
-                "/__skip_init_tests__",
-                "--stop-after-init",
-                "--workers=0",
-                "--max-cron-threads=0",
-            ]
-            # We capture initialization errors via the extractor too
-            rc_init = run_cmd(init_cmd, extractor)
-            if rc_init != 0:
-                print("❌ ERROR: Database initialization failed!")
-                final_rc = rc_init
-            else:
+            restored, cache_file = check_and_restore_cache(args.db)
+            if not restored:
+                print("[*] Initializing the DB (creating tables for daemons)...")
+                init_cmd = [
+                    venv_python,
+                    odoo_bin,
+                    "--addons-path",
+                    addons_path,
+                    "-d",
+                    args.db,
+                    "-i",
+                    mod_string,
+                    "--test-enable",
+                    "--test-tags",
+                    "/__skip_init_tests__",
+                    "--stop-after-init",
+                    "--workers=0",
+                    "--max-cron-threads=0",
+                    "--http-interface",
+                    "127.0.0.1",
+                    "--log-level=warn",
+                ]
+                rc_init = run_cmd(init_cmd, extractor)
+                if rc_init != 0:
+                    print("❌ ERROR: Database initialization failed!")
+                    final_rc = rc_init
+                else:
+                    save_db_cache(args.db, cache_file)
+
+            if final_rc == 0:
                 print("[*] Executing Test Suite in Integration Mode...")
                 test_cmd = [
                     venv_python,
@@ -803,6 +944,8 @@ def main():
                     "--stop-after-init",
                     "--workers=0",
                     "--max-cron-threads=0",
+                    "--http-interface",
+                    "127.0.0.1",
                 ]
                 rc_odoo = run_cmd(test_cmd, extractor)
                 if rc_odoo != 0:
@@ -815,7 +958,34 @@ def main():
                 print("\n[*] ----------------------------------------------------")
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
-                rebuild_db(args.db)
+
+                restored, cache_file = check_and_restore_cache(args.db)
+                if not restored:
+                    print(f"[*] Initializing DB for {mod}...")
+                    init_cmd = [
+                        venv_python,
+                        odoo_bin,
+                        "--addons-path",
+                        addons_path,
+                        "--dev=all",
+                        "-d",
+                        args.db,
+                        "-i",
+                        mod,
+                        "--stop-after-init",
+                        "--workers=0",
+                        "--max-cron-threads=0",
+                        "--http-interface",
+                        "127.0.0.1",
+                        "--log-level=warn",
+                    ]
+                    rc_init = run_cmd(init_cmd, extractor)
+                    if rc_init != 0:
+                        failed_modules.append(mod)
+                        continue
+                    save_db_cache(args.db, cache_file)
+
+                print(f"[*] Executing tests for {mod}...")
                 cmd = [
                     venv_python,
                     odoo_bin,
@@ -824,14 +994,16 @@ def main():
                     "--dev=all",
                     "-d",
                     args.db,
-                    "-i",
+                    "-u",
                     mod,
                     "--test-enable",
                     "--test-tags",
-                    "/{}".format(mod),
+                    f"/{mod}",
                     "--stop-after-init",
                     "--workers=0",
                     "--max-cron-threads=0",
+                    "--http-interface",
+                    "127.0.0.1",
                 ]
                 rc = run_cmd(cmd, extractor)
                 if rc != 0:
@@ -865,6 +1037,8 @@ def main():
                     "--log-level=error",
                     "--workers=0",
                     "--max-cron-threads=0",
+                    "--http-interface",
+                    "127.0.0.1",
                 ]
                 rc = run_cmd(cmd, extractor)
                 if rc != 0:
@@ -879,7 +1053,319 @@ def main():
                     print("   - {}".format(fmod))
                 final_rc = 1
 
-        extractor.finish_and_write()
+        elif args.mode == "downloads":
+            restored, cache_file = check_and_restore_cache(args.db)
+            if not restored:
+                print("[*] Initializing the DB (creating tables)...")
+                init_cmd = [
+                    venv_python, odoo_bin, "--addons-path", addons_path,
+                    "-d", args.db, "-i", mod_string, "--stop-after-init",
+                    "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1", "--log-level=warn",
+                ]
+                rc_init = run_cmd(init_cmd, extractor)
+                if rc_init != 0:
+                    print("❌ ERROR: Database initialization failed!")
+                    final_rc = rc_init
+                else:
+                    save_db_cache(args.db, cache_file)
+
+            if final_rc == 0:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('', 0))
+                    free_port = s.getsockname()[1]
+
+                print(f"[*] Starting Odoo in background on port {free_port} for JSON-2 RPC...")
+                odoo_proc = subprocess.Popen(
+                    [
+                        venv_python, odoo_bin, "--addons-path", addons_path,
+                        "-d", args.db, "--workers=0", "--max-cron-threads=0",
+                        "--http-port", str(free_port), "--http-interface", "127.0.0.1",
+                        "--log-level=info"
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    start_new_session=True,
+                )
+
+                import atexit
+                def cleanup_odoo():
+                    try:
+                        os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                        odoo_proc.wait(timeout=2)
+                    except Exception:
+                        pass
+
+                atexit.register(cleanup_odoo)
+
+                import threading
+                odoo_extractor = FailureExtractor(args.error_log, disable_atexit=True)
+
+                def stream_odoo_output(proc, o_extr, m_extr):
+                    for line in proc.stdout:
+                        sys.stdout.write(line)
+                        sys.stdout.flush()
+                        if o_extr:
+                            if m_extr and getattr(m_extr, 'current_context', None):
+                                o_extr.current_context = m_extr.current_context + " (Background Odoo)"
+                            o_extr.process_line(line)
+
+                odoo_thread = threading.Thread(target=stream_odoo_output, args=(odoo_proc, odoo_extractor, extractor))
+                odoo_thread.daemon = True
+                odoo_thread.start()
+
+                print(f"[*] Waiting for Odoo to bind to port {free_port}...")
+                import time
+                for _ in range(30):
+                    if is_odoo_running(free_port):
+                        time.sleep(3)
+                        break
+                    time.sleep(1)
+                else:
+                    print(f"❌ ERROR: Odoo failed to start on port {free_port}!")
+                    try:
+                        os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                    except Exception:
+                        pass
+                    sys.exit(1)
+
+                try:
+                    import psycopg2
+                    from psycopg2 import sql
+                    from psycopg2.errors import UndefinedTable
+                except ImportError:
+                    print("❌ ERROR: psycopg2 is required for this test.")
+                    os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                    sys.exit(1)
+
+                env_path = os.path.join(base_dir, "deploy", "env")
+                db_user = "odoo"
+                db_password = None
+                db_host = None
+                db_port = "5432"
+                odoo_admin_password = "admin"
+
+                if os.environ.get("HAMS_ISOLATED_NS") == "1":
+                    db_host = os.environ.get("PGHOST")
+                    db_user = "odoo"
+                    db_password = "odoo"
+                else:
+                    if os.path.exists(env_path):
+                        with open(env_path, "r", encoding="utf-8") as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("POSTGRES_USER="):
+                                    db_user = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("DB_USER="):
+                                    db_user = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("POSTGRES_PASSWORD="):
+                                    db_password = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("DB_PASSWORD="):
+                                    db_password = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("POSTGRES_HOST="):
+                                    db_host = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("DB_HOST="):
+                                    db_host = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("ODOO_ADMIN_PASSWORD="):
+                                    odoo_admin_password = line.split("=", 1)[1].strip("'\"")
+                                elif line.startswith("ODOO_SERVICE_PASSWORD="):
+                                    odoo_admin_password = line.split("=", 1)[1].strip("'\"")
+
+                    if not db_host:
+                        db_host = "127.0.0.1"
+
+                daemon_env = os.environ.copy()
+                daemon_env["ODOO_URL"] = f"http://127.0.0.1:{free_port}"
+                daemon_env["DB_NAME"] = args.db
+                daemon_env["ODOO_USER"] = "admin"
+                daemon_env["ODOO_PASSWORD"] = odoo_admin_password
+                daemon_env["HAMS_NO_AI"] = "1"
+                daemon_env["DISABLE_AI_EXPLANATIONS"] = "1"
+                daemon_env["GEMINI_API_KEY"] = "dummy_key_to_bypass"
+
+                c_kwargs = {"dbname": args.db, "user": db_user, "port": db_port}
+                if db_password:
+                    c_kwargs["password"] = db_password
+                if db_host:
+                    c_kwargs["host"] = db_host
+
+                try:
+                    conn = psycopg2.connect(**c_kwargs)
+                except Exception as e:
+                    print("[!] Failed to connect to PostgreSQL: {}".format(e))
+                    os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                    sys.exit(1)
+
+                def discover_test_daemons(base_dir):
+                    daemons = []
+                    daemons_dir = os.path.join(base_dir, "daemons")
+                    if not os.path.exists(daemons_dir):
+                        return daemons
+
+                    for root, _, files in os.walk(daemons_dir):
+                        if "__pycache__" in root or "tests" in root:
+                            continue
+                        for f in sorted(files):
+                            if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__") and f != "hams_config.py":
+                                full_path = os.path.join(root, f)
+                                try:
+                                    with open(full_path, "r", encoding="utf-8") as script_file:
+                                        content = script_file.read()
+                                        if '__name__' in content and ('"__main__"' in content or "'__main__'" in content):
+                                            rel_path = os.path.relpath(full_path, base_dir)
+                                            daemon_name = os.path.basename(root)
+                                            args_list = [rel_path]
+                                            if daemon_name == "ncvec_sync":
+                                                ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
+                                                args_list.extend(["--url", ncvec_url])
+                                            daemons.append((daemon_name, args_list))
+                                except Exception:
+                                    pass
+                    return daemons
+
+                d_list = discover_test_daemons(base_dir)
+
+                if args.daemon:
+                    d_list = [d for d in d_list if args.daemon in d[0]]
+                    if not d_list:
+                        print(f"❌ ERROR: No daemon matched '{args.daemon}'")
+                        os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                        sys.exit(1)
+
+                TABLES_TO_TRACK = [
+                    "ham_callbook",
+                    "ham_space_weather",
+                    "ham_satellite_tle",
+                    "survey_question",
+                    "ham_contest",
+                    "event_event",
+                    "ham_repeater",
+                    "ham_au_register",
+                ]
+
+                def get_table_counts(c):
+                    counts = {}
+                    with c.cursor() as cr:
+                        for table in TABLES_TO_TRACK:
+                            try:
+                                q_str = "SELECT count(*) FROM {}"
+                                q = sql.SQL(q_str).format(
+                                    sql.Identifier(table)
+                                )
+                                cr.execute(q)
+                                counts[table] = cr.fetchone()[0]
+                            except UndefinedTable:
+                                c.rollback()
+                                counts[table] = "Not Installed"
+                            except Exception:
+                                c.rollback()
+                                counts[table] = "Error"
+                    return counts
+
+                print("\n[*] Fetching Initial Database Counts...")
+                initial_counts = get_table_counts(conn)
+
+                print("\n[*] Bootstrapping Real Bearer Tokens via Odoo Shell...")
+                bootstrap_script = os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py")
+                if os.path.exists(bootstrap_script):
+                    try:
+                        with open(bootstrap_script, "r") as script_file:
+                            res = subprocess.run(
+                                [
+                                    venv_python, odoo_bin, "shell", "--addons-path", addons_path,
+                                    "-d", args.db, "--no-http", "--workers=0"
+                                ],
+                                stdin=script_file,
+                                text=True,
+                                capture_output=True,
+                            )
+                        if res.returncode != 0:
+                            print(res.stdout)
+                            print(res.stderr)
+                            print(f"❌ ERROR: Failed to bootstrap API keys (exit code {res.returncode})")
+                            if extractor:
+                                extractor.captured_blocks.append(("Daemon Key Bootstrapper", [(res.stdout or "") + "\n", (res.stderr or "") + "\n", "\nERROR: Bootstrapper failed.\n"]))
+                                extractor.finish_and_write()
+                            os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                            sys.exit(1)
+                        else:
+                            print("[+] Real daemon bearer tokens provisioned successfully.")
+                    except Exception as e:
+                        print(f"❌ ERROR: Failed to execute bootstrapper: {e}")
+                        if extractor:
+                            extractor.captured_blocks.append(("Daemon Key Bootstrapper", [f"ERROR: {e}\n"]))
+                            extractor.finish_and_write()
+                        os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                        sys.exit(1)
+                else:
+                    print("❌ ERROR: deploy/bootstrap_daemon_keys.py not found.")
+                    if extractor:
+                        extractor.captured_blocks.append(("Daemon Key Bootstrapper", ["ERROR: deploy/bootstrap_daemon_keys.py not found.\n"]))
+                        extractor.finish_and_write()
+                    os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                    sys.exit(1)
+
+                print("\n[*] Commencing Download Framework Execution...")
+                for name, script_args in d_list:
+                    script_path = script_args[0]
+                    full_path = os.path.join(base_dir, script_path)
+                    if not os.path.exists(full_path):
+                        print("[-] Skipping {}".format(name))
+                        continue
+
+                    print("\n[*] --> Running {}...".format(name))
+                    if extractor:
+                        extractor.set_context("Daemon Execution / {}".format(name))
+
+                    key_name = name
+                    daemon_env["ODOO_KEY_FILE"] = f"/opt/hams/etc/keys/{key_name}.env"
+
+                    try:
+                        cmd_list = [venv_python, full_path] + script_args[1:]
+                        rc = run_cmd(cmd_list, extractor, cwd=base_dir, env=daemon_env)
+                        if rc == 0:
+                            print("[+] {} completed.".format(name))
+                        else:
+                            print("[!] {} failed.".format(name))
+                            final_rc = 1
+                    except KeyboardInterrupt:
+                        print("\n[!] Execution aborted by user.")
+                        break
+                    except Exception as e:
+                        print("[!] Error executing {}: {}".format(name, e))
+                        final_rc = 1
+
+                print("\n[*] Fetching Final Database Counts...")
+                final_counts = get_table_counts(conn)
+                conn.close()
+
+                print("\nFinal Record Counts Comparison:")
+                for t in TABLES_TO_TRACK:
+                    init_c = initial_counts.get(t, "N/A")
+                    fin_c = final_counts.get(t, "N/A")
+                    print("{:<20} | {:<15} | {:<15}".format(
+                        t, str(init_c), str(fin_c))
+                    )
+
+                print("\n[+] Tearing down background Odoo server...")
+                if hasattr(atexit, 'unregister'):
+                    atexit.unregister(cleanup_odoo)
+                try:
+                    os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
+                except Exception:
+                    print("[!] Note: Could not kill process group.")
+                odoo_proc.wait()
+
+                if odoo_extractor.capturing and odoo_extractor.current_block:
+                    odoo_extractor.captured_blocks.append((odoo_extractor.current_context, odoo_extractor.current_block))
+                    odoo_extractor.capturing = False
+                    odoo_extractor.current_block = []
+
+                if odoo_extractor.captured_blocks:
+                    extractor.captured_blocks.extend(odoo_extractor.captured_blocks)
+                    final_rc = 1
+
         sys.exit(final_rc)
     except KeyboardInterrupt:
         print("\n[!] Test run aborted by user.")

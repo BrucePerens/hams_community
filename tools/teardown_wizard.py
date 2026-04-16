@@ -88,8 +88,15 @@ def main():
 
     print("\n[*] Phase 4: Wiping FHS Codebase (/opt/hams)...")
     if os.path.exists("/opt/hams"):
-        shutil.rmtree("/opt/hams")
-        print("   [-] /opt/hams removed completely.")
+        for item in os.listdir("/opt/hams"):
+            if item in ["downloads", "test"]:
+                continue
+            item_path = os.path.join("/opt/hams", item)
+            if os.path.isdir(item_path) and not os.path.islink(item_path):
+                shutil.rmtree(item_path)
+            else:
+                os.remove(item_path)
+        print("   [-] /opt/hams cleaned (preserved /opt/hams/downloads and /opt/hams/test).")
     else:
         print("   [-] /opt/hams already missing.")
 
