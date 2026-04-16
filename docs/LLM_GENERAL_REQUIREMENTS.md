@@ -52,9 +52,10 @@ You are an expert AI developer operating under strict architectural mandates. Th
 * **Meaningful Variables:** Avoid single-letter variables (`l`, `O`, `I`).
 
 ### Daemons & External Polling
+* **Standardized Entry Point:** All background daemons MUST standardize their entry point by naming the primary execution script `main.py`. Do not use module-specific or redundant names for the entry script.
 * **Ethical Crawling:** Use designated User-Agent and HEAD requests to evaluate ETags before downloading.
 * **Anti-Thundering Herd:** Use `RandomizedDelaySec` in scheduled systemd timers.
-* **Cryptographic Checksums:** Hash downloaded payloads and compare against persistent storage before execution.
+* **Cryptographic Checksums:** Hash downloaded payloads and compare against persistent storage before execution..
 
 ### Data Models & UI
 * **Bulk Operation Safety:** All creation/update methods MUST support batch processing.
