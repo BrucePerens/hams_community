@@ -847,11 +847,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
             if isinstance(node.func, ast.Attribute) and node.func.attr == "get":
                 val = node.func.value
                 if isinstance(val, ast.Attribute) and val.attr == "environ" and getattr(val.value, "id", "") == "os":
-                    if len(node.args) == 2:
-                        self.add_error(node.lineno, "CRITICAL FALLBACK: os.environ.get() with two arguments is forbidden. Use fail-fast explicit variables or string literals.")
+                    if len(node.args) != 2 or getattr(node.args[1], "value", None) != "localhost":
+                        self.add_error(node.lineno, "CRITICAL FALLBACK: os.environ.get() must always have a second argument of 'localhost'.")
             if getattr(node.func, "id", getattr(node.func, "attr", "")) == "getenv":
-                if len(node.args) == 2:
-                    self.add_error(node.lineno, "CRITICAL FALLBACK: os.getenv() with two arguments is forbidden. Use fail-fast explicit variables or string literals.")
+                if len(node.args) != 2 or getattr(node.args[1], "value", None) != "localhost":
+                    self.add_error(node.lineno, "CRITICAL FALLBACK: os.getenv() must always have a second argument of 'localhost'.")
 
             if getattr(node.func, "attr", getattr(node.func, "id", "")) == "env":
                 for kw in node.keywords:

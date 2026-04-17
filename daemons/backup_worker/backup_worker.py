@@ -18,9 +18,9 @@ ODOO_DB = os.environ.get("DB_NAME", "odoo")
 ODOO_USER = "backup_service_internal"
 ODOO_PASS = os.environ.get("ODOO_SERVICE_PASSWORD", "")
 
-RMQ_HOST = os.environ.get("RMQ_HOST", "127.0.0.1")
-RMQ_USER = os.environ.get("RMQ_USER", "guest")
-RMQ_PASS = os.environ.get("RMQ_PASS", "guest")
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "127.0.0.1")
+RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "guest")
+RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")
 
 
 def _json2_call(model, method_name, **kwargs):
@@ -136,9 +136,9 @@ def execute_job(ch, method, properties, body):
 def main():
     while True:
         try:
-            credentials = pika.PlainCredentials(RMQ_USER, RMQ_PASS)
+            credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
             parameters = pika.ConnectionParameters(
-                host=RMQ_HOST, credentials=credentials
+                host=RABBITMQ_HOST, credentials=credentials
             )
             connection = pika.BlockingConnection(parameters)
             channel = connection.channel()
@@ -147,7 +147,7 @@ def main():
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(queue="backup_tasks", on_message_callback=execute_job)
 
-            logger.info("Connected to RMQ. Waiting for backup tasks...")
+            logger.info("Connected to RABBITMQ. Waiting for backup tasks...")
             channel.start_consuming()
         except pika.exceptions.AMQPConnectionError:
             logger.warning("RabbitMQ offline. Retrying in 5s...")

@@ -60,10 +60,10 @@ def main():
     success &= check_path(conf_path, "Odoo Config (odoo.conf)")
 
     # 3. Check Infrastructure Ports
-    success &= check_port("127.0.0.1", 80, "Nginx (HTTP Edge)")
-    success &= check_port("127.0.0.1", 5432, "PostgreSQL Database")
-    success &= check_port("127.0.0.1", 6379, "Redis Cache")
-    success &= check_port("127.0.0.1", 5672, "RabbitMQ Bus")
+    success &= check_port("localhost", 80, "Nginx (HTTP Edge)")
+    success &= check_port("localhost", 5432, "PostgreSQL Database")
+    success &= check_port("localhost", 6379, "Redis Cache")
+    success &= check_port("localhost", 5672, "RabbitMQ Bus")
 
     # 4. Check Continuous Background Daemons (Process Check)
     continuous_daemons = [

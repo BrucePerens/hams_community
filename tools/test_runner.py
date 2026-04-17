@@ -40,7 +40,7 @@ def is_ignored(path, patterns):
 def is_odoo_running(port=8069):
     """Checks if a service (presumably Odoo) is actively listening on the target port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
+        return s.connect_ex(("localhost", port)) == 0
 
 
 class FailureExtractor:
@@ -695,17 +695,15 @@ def main():
                             os.environ[k.strip()] = v.strip("'\" ")
 
         if not os.environ.get("PGHOST"):
-            os.environ["PGHOST"] = "127.0.0.1"
+            os.environ["PGHOST"] = "localhost"
         if not os.environ.get("PGUSER"):
             os.environ["PGUSER"] = os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER") or "odoo"
         if not os.environ.get("PGPASSWORD"):
             os.environ["PGPASSWORD"] = os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD") or "odoo"
         if not os.environ.get("RABBITMQ_HOST"):
-            os.environ["RABBITMQ_HOST"] = "127.0.0.1"
-        if not os.environ.get("RMQ_HOST"):
-            os.environ["RMQ_HOST"] = "127.0.0.1"
+            os.environ["RABBITMQ_HOST"] = "localhost"
         if not os.environ.get("REDIS_HOST"):
-            os.environ["REDIS_HOST"] = "127.0.0.1"
+            os.environ["REDIS_HOST"] = "localhost"
 
         parser = argparse.ArgumentParser(
             description="Unified Odoo Test Runner for Hams.com",
@@ -853,7 +851,7 @@ def main():
                     "--workers=0",
                     "--max-cron-threads=0",
                     "--http-interface",
-                    "127.0.0.1",
+                    "localhost",
                     "--log-level=warn",
                 ]
                 rc_init = run_cmd(init_cmd, extractor)
@@ -880,7 +878,7 @@ def main():
                 "--workers=0",
                 "--max-cron-threads=0",
                 "--http-interface",
-                "127.0.0.1",
+                "localhost",
             ]
             rc_odoo = run_cmd(cmd, extractor)
             if rc_odoo != 0:
@@ -917,7 +915,7 @@ def main():
                     "--workers=0",
                     "--max-cron-threads=0",
                     "--http-interface",
-                    "127.0.0.1",
+                    "localhost",
                     "--log-level=warn",
                 ]
                 rc_init = run_cmd(init_cmd, extractor)
@@ -945,7 +943,7 @@ def main():
                     "--workers=0",
                     "--max-cron-threads=0",
                     "--http-interface",
-                    "127.0.0.1",
+                    "localhost",
                 ]
                 rc_odoo = run_cmd(test_cmd, extractor)
                 if rc_odoo != 0:
@@ -976,7 +974,7 @@ def main():
                         "--workers=0",
                         "--max-cron-threads=0",
                         "--http-interface",
-                        "127.0.0.1",
+                        "localhost",
                         "--log-level=warn",
                     ]
                     rc_init = run_cmd(init_cmd, extractor)
@@ -1003,7 +1001,7 @@ def main():
                     "--workers=0",
                     "--max-cron-threads=0",
                     "--http-interface",
-                    "127.0.0.1",
+                    "localhost",
                 ]
                 rc = run_cmd(cmd, extractor)
                 if rc != 0:
@@ -1038,7 +1036,7 @@ def main():
                     "--workers=0",
                     "--max-cron-threads=0",
                     "--http-interface",
-                    "127.0.0.1",
+                    "localhost",
                 ]
                 rc = run_cmd(cmd, extractor)
                 if rc != 0:
@@ -1060,7 +1058,7 @@ def main():
                 init_cmd = [
                     venv_python, odoo_bin, "--addons-path", addons_path,
                     "-d", args.db, "-i", mod_string, "--stop-after-init",
-                    "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1", "--log-level=warn",
+                    "--workers=0", "--max-cron-threads=0", "--http-interface", "localhost", "--log-level=warn",
                 ]
                 rc_init = run_cmd(init_cmd, extractor)
                 if rc_init != 0:
@@ -1079,7 +1077,7 @@ def main():
                     [
                         venv_python, odoo_bin, "--addons-path", addons_path,
                         "-d", args.db, "--workers=0", "--max-cron-threads=0",
-                        "--http-port", str(free_port), "--http-interface", "127.0.0.1",
+                        "--http-port", str(free_port), "--http-interface", "localhost",
                         "--log-level=info"
                     ],
                     stdout=subprocess.PIPE,
@@ -1173,10 +1171,10 @@ def main():
                                     odoo_admin_password = line.split("=", 1)[1].strip("'\"")
 
                     if not db_host:
-                        db_host = "127.0.0.1"
+                        db_host = "localhost"
 
                 daemon_env = os.environ.copy()
-                daemon_env["ODOO_URL"] = f"http://127.0.0.1:{free_port}"
+                daemon_env["ODOO_URL"] = f"http://localhost:{free_port}"
                 daemon_env["DB_NAME"] = args.db
                 daemon_env["ODOO_USER"] = "admin"
                 daemon_env["ODOO_PASSWORD"] = odoo_admin_password

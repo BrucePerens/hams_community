@@ -439,7 +439,8 @@ def fuzzy_token_replace(original_text, search_text, replace_text, filepath=""):
 
 def get_markdown_tokens(text):
     tokens = []
-    for match in re.finditer(r"[a-zA-Z0-9]+", text):
+    # Capture alphanumerics OR non-whitespace punctuation to prevent boundary clipping
+    for match in re.finditer(r"([a-zA-Z0-9]+|[^\w\s])", text):
         tokens.append(
             {
                 "raw": match.group(),
@@ -959,15 +960,17 @@ def extract_parcel(raw_text):
 
                         new_text = None
                         if filepath.endswith(".py"):
-                            new_text = semantic_token_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            if new_text is None:
+                                new_text = semantic_token_replace(current_text, search_text, replace_text, filepath)
                             if new_text is None:
                                 new_text = fuzzy_token_replace(current_text, search_text, replace_text, filepath)
                             if new_text is None:
-                                new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
-                            if new_text is None:
                                 new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
                         elif filepath.endswith(".md"):
-                            new_text = semantic_markdown_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            if new_text is None:
+                                new_text = semantic_markdown_replace(current_text, search_text, replace_text, filepath)
                             if new_text is None:
                                 new_text = boundary_markdown_replace(current_text, search_text, replace_text, filepath)
                             if new_text is None:
@@ -975,11 +978,15 @@ def extract_parcel(raw_text):
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
                         elif filepath.endswith(".xml"):
-                            new_text = semantic_xml_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            if new_text is None:
+                                new_text = semantic_xml_replace(current_text, search_text, replace_text, filepath)
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
                         else:
-                            new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            if new_text is None:
+                                new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
 
                         if new_text is None:
                             raise ValueError("Semantic token, fuzzy line, and whitespace fallback all failed for search block.")
