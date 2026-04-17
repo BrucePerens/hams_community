@@ -4,16 +4,16 @@
         <div class="pager-board p-4" style="background: #121212; min-height: 100vh; color: #e0e0e0; overflow: hidden;">
             <div t-att-style="state.transformStyle" style="will-change: transform;">
                 <div class="d-flex justify-content-between align-items-center mb-4 p-3 rounded shadow-sm" style="background: #1e1e1e;">
-                    <h1 class="m-0 text-light"><i class="fa fa-tv me-2"/>NOC Dashboard</h1>
+                    <h1 class="m-0 text-light"><i class="fa fa-tv me-2" aria-hidden="true"/>NOC Dashboard</h1>
                     <h3 class="m-0 text-secondary">On Duty: <strong class="text-info" t-out="state.on_duty"/></h3>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-8">
                         <h2 class="mb-3 text-light">Active Incidents</h2>
                         <t t-if="state.active_incidents.length === 0">
                             <div class="p-4 rounded shadow-sm" style="background: rgba(25, 135, 84, 0.2); border: 1px solid #198754;">
-                                <i class="fa fa-check-circle me-2 text-success"/> No active incidents. The system is healthy.
+                                <i class="fa fa-check-circle me-2 text-success" aria-hidden="true"/> No active incidents. The system is healthy.
                             </div>
                         </t>
                         <t t-foreach="state.active_incidents" t-as="inc" t-key="inc.id">
@@ -22,16 +22,16 @@
                                     <strong class="fs-5"><t t-out="inc.name"/></strong>: <span class="fs-6"><t t-out="inc.source"/> (<t t-out="inc.severity"/>)</span><br/>
                                     <small class="mt-1 d-block opacity-75">
                                         <t t-if="inc.status === 'acknowledged'">
-                                            <i class="fa fa-user-check me-1"/> Acknowledged by <strong><t t-out="inc.ack_name"/></strong>
+                                            <i class="fa fa-user-check me-1" aria-hidden="true"/> Acknowledged by <strong><t t-out="inc.ack_name"/></strong>
                                         </t>
                                         <t t-else="">
-                                            <i class="fa fa-exclamation-triangle me-1"/> Unacknowledged
+                                            <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"/> Unacknowledged
                                         </t>
                                     </small>
                                 </div>
                                 <div>
                                     <button t-if="inc.status === 'open'" class="btn btn-dark shadow-sm" t-on-click="() => this.acknowledge(inc.id)">
-                                        <i class="fa fa-check me-1"/> Acknowledge
+                                        <i class="fa fa-check me-1" aria-hidden="true"/> Acknowledge
                                     </button>
                                 </div>
                             </div>
@@ -48,7 +48,7 @@
                             </t>
                             <t t-if="state.resolved_incidents.length === 0">
                                 <li class="list-group-item text-muted text-center py-4" style="background: #1e1e1e; border-color: #333;">
-                                    <i class="fa fa-history d-block mb-2 fs-3"/>
+                                    <i class="fa fa-history d-block mb-2 fs-3" aria-hidden="true"/>
                                     No recent resolved alerts.
                                 </li>
                             </t>

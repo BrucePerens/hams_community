@@ -414,7 +414,7 @@ def rebuild_db(db_name):
     subprocess.run(["createdb", db_name], check=True)
 
 
-def check_and_restore_cache(db_name):
+def check_and_restore_cache(db_name, mod_string):
     cache_dir = "/opt/hams/test"
     cache_file = os.path.join(cache_dir, "db_cache_master.dump")
 
@@ -484,6 +484,18 @@ def check_and_restore_cache(db_name):
             pass
 
     if cache_valid:
+        mod_file = cache_file.replace(".dump", ".modules")
+        if os.path.exists(mod_file):
+            with open(mod_file, "r") as f:
+                cached_mods = f.read().strip()
+            if cached_mods != mod_string:
+                print(f"[*] Module list changed (was: '{cached_mods}', now: '{mod_string}'). Discarding cache.")
+                cache_valid = False
+        else:
+            print("[*] Cache module list missing. Discarding cache.")
+            cache_valid = False
+
+    if cache_valid:
         print(f"[*] Valid DB cache found ({cache_file}). Restoring (Parallel)...")
         rebuild_db(db_name)
         res = subprocess.run(
@@ -514,7 +526,7 @@ def check_and_restore_cache(db_name):
         rebuild_db(db_name)
         return False, cache_file
 
-def save_db_cache(db_name, cache_file):
+def save_db_cache(db_name, cache_file, mod_string):
     print(f"[*] Caching newly initialized DB to {cache_file}...")
     try:
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
@@ -522,19 +534,26 @@ def save_db_cache(db_name, cache_file):
         pass
 
     try:
-        res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", "-f", cache_file, db_name], capture_output=True, text=True)
+        with open(cache_file, "wb") as f:
+            res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE)
+
         if res.returncode == 0:
             sz = os.path.getsize(cache_file)
             if sz > 5000000:
                 print(f"[*] DB cached successfully ({sz} bytes).")
+                mod_file = cache_file.replace(".dump", ".modules")
+                with open(mod_file, "w") as mf:
+                    mf.write(mod_string)
             else:
                 print(f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache.")
+                if res.stderr:
+                    print(f"[*] pg_dump stderr: {res.stderr.decode('utf-8', errors='ignore')}")
                 try:
                     os.remove(cache_file)
                 except OSError:
                     pass
         else:
-            print(f"[*] WARNING: pg_dump failed (exit code {res.returncode}):\n{res.stderr}")
+            print(f"[*] WARNING: pg_dump failed (exit code {res.returncode}):\n{res.stderr.decode('utf-8', errors='ignore')}")
             try:
                 os.remove(cache_file)
             except OSError:
@@ -650,10 +669,14 @@ if [ -f /opt/hams/spool/filtered_test.txt ]; then
     chmod 644 '{real_error_log}' 2>/dev/null || true
 fi
 
-if [ -f /opt/hams/test/db_cache_master.dump ]; then
+if [ -f /mnt/upper/opt/hams/test/db_cache_master.dump ]; then
     echo '[*] Committing Database Cache to Host...'
-    cp /opt/hams/test/db_cache_master.dump /mnt/host_test_dir/db_cache_master.dump
+    cp /mnt/upper/opt/hams/test/db_cache_master.dump /mnt/host_test_dir/db_cache_master.dump
     chmod 666 /mnt/host_test_dir/db_cache_master.dump 2>/dev/null || true
+    if [ -f /mnt/upper/opt/hams/test/db_cache_master.modules ]; then
+        cp /mnt/upper/opt/hams/test/db_cache_master.modules /mnt/host_test_dir/db_cache_master.modules
+        chmod 666 /mnt/host_test_dir/db_cache_master.modules 2>/dev/null || true
+    fi
 fi
 
 echo '[*] DEBUG: Exporting ephemeral namespace state to /opt/hams/test/debug_mnt for inspection...'
@@ -841,7 +864,7 @@ def main():
                     "\n⚠️ WARNING: Daemon tests failed!\nContinuing to Odoo suite to collect all errors.\n"
                 )
 
-            restored, cache_file = check_and_restore_cache(args.db)
+            restored, cache_file = check_and_restore_cache(args.db, mod_string)
             if not restored:
                 print("[*] Initializing DB...")
                 init_cmd = [
@@ -864,7 +887,7 @@ def main():
                 if rc_init != 0:
                     print("❌ ERROR: Database initialization failed!")
                     sys.exit(rc_init)
-                save_db_cache(args.db, cache_file)
+                save_db_cache(args.db, cache_file, mod_string)
 
             print("[*] Executing Test Suite...")
             cmd = [
@@ -902,7 +925,7 @@ def main():
 
             os.environ["HAMS_INTEGRATION_MODE"] = "1"
 
-            restored, cache_file = check_and_restore_cache(args.db)
+            restored, cache_file = check_and_restore_cache(args.db, mod_string)
             if not restored:
                 print("[*] Initializing the DB (creating tables for daemons)...")
                 init_cmd = [
@@ -929,7 +952,7 @@ def main():
                     print("❌ ERROR: Database initialization failed!")
                     final_rc = rc_init
                 else:
-                    save_db_cache(args.db, cache_file)
+                    save_db_cache(args.db, cache_file, mod_string)
 
             if final_rc == 0:
                 print("[*] Executing Test Suite in Integration Mode...")
@@ -963,7 +986,7 @@ def main():
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
 
-                restored, cache_file = check_and_restore_cache(args.db)
+                restored, cache_file = check_and_restore_cache(args.db, mod)
                 if not restored:
                     print(f"[*] Initializing DB for {mod}...")
                     init_cmd = [
@@ -987,7 +1010,7 @@ def main():
                     if rc_init != 0:
                         failed_modules.append(mod)
                         continue
-                    save_db_cache(args.db, cache_file)
+                    save_db_cache(args.db, cache_file, mod)
 
                 print(f"[*] Executing tests for {mod}...")
                 cmd = [
@@ -1058,7 +1081,7 @@ def main():
                 final_rc = 1
 
         elif args.mode == "downloads":
-            restored, cache_file = check_and_restore_cache(args.db)
+            restored, cache_file = check_and_restore_cache(args.db, mod_string)
             if not restored:
                 print("[*] Initializing the DB (creating tables)...")
                 init_cmd = [
@@ -1071,7 +1094,7 @@ def main():
                     print("❌ ERROR: Database initialization failed!")
                     final_rc = rc_init
                 else:
-                    save_db_cache(args.db, cache_file)
+                    save_db_cache(args.db, cache_file, mod_string)
 
             if final_rc == 0:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

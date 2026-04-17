@@ -133,7 +133,7 @@ class PagerCheck(models.Model):
     )
     sandbox_downloads = fields.Text(
         string="Sandbox Downloads",
-        help="One per line: URL | SHA-256 | Filename. Downloaded into the sandbox before execution.",
+        help="Provide one entry per line in the format: URL, then SHA-256, then Filename. Downloaded into the sandbox before execution.",
     )
     sandbox_network_access = fields.Selection(
         [

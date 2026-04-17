@@ -21,7 +21,7 @@
                             <field name="violation_strike_count"/>
                             <field name="is_suspended_from_websites" widget="boolean_toggle"/>
                             <div class="mt-2" invisible="not is_suspended_from_websites">
-                                <span class="text-danger fw-bold"><i class="fa fa-ban"/> User is currently suspended.</span>
+                                <span class="text-danger fw-bold"><i class="fa fa-ban" aria-hidden="true"/> User is currently suspended.</span>
                                 <button name="action_pardon_user_websites" string="Pardon &amp; Lift Suspension" type="object" class="btn-link text-success ms-2"/>
                             </div>
                         </group>

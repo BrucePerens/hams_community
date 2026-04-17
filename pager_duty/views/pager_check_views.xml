@@ -77,7 +77,7 @@
                                 Bash and Executables are strictly airgapped and chrooted via Bubblewrap (bwrap).
                             </div>
                             <div class="alert alert-warning" role="alert" invisible="check_type != 'playwright' or sandbox_network_access != 'loopback'">
-                                <i class="fa fa-info-circle me-1"/> <strong>Loop-back only mode:</strong> only URLs with host address 127.0.0.1 or [::1] will work. Turn on full network mode if other host-names or addresses are necessary.
+                                <i class="fa fa-info-circle me-1" title="Information"/> <strong>Loop-back only mode:</strong> only URLs with host address 127.0.0.1 or [::1] will work. Turn on full network mode if other host-names or addresses are necessary.
                             </div>
                             <group>
                                 <field name="code_payload" widget="text" invisible="check_type not in ('playwright', 'bash')"/>

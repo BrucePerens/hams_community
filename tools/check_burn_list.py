@@ -1055,6 +1055,52 @@ def scan_file(filepath):
                     )
                 if "t-raw" in node.attrs:
                     errors_found.append(f"Line {node.lineno}: CRITICAL XSS: use t-out.")
+
+                # WCAG Accessibility Enforcement
+                if node.tag == "i":
+                    cls = str(node.attrs.get("class", ""))
+                    if "fa " in cls or "fa-" in cls or "oi " in cls or "oi-" in cls:
+                        if not any(k in node.attrs for k in ("title", "aria-label", "aria-hidden")):
+                            errors_found.append(
+                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
+                            )
+
+                if node.tag == "img":
+                    if "alt" not in node.attrs:
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): <img> tags must have an 'alt' attribute."
+                        )
+
+                if node.tag in ("button", "a"):
+                    if not any(k in node.attrs for k in ("title", "aria-label", "string")):
+                        # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
+                        if not (node.text and node.text.strip()) and not node.children:
+                            warnings_found.append(
+                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty <{node.tag}> tag lacks 'string', 'title', or 'aria-label'."
+                            )
+
+                # WCAG Accessibility Enforcement
+                if node.tag == "i":
+                    cls = str(node.attrs.get("class", ""))
+                    if "fa " in cls or "fa-" in cls or "oi " in cls or "oi-" in cls:
+                        if not any(k in node.attrs for k in ("title", "aria-label", "aria-hidden")):
+                            errors_found.append(
+                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
+                            )
+
+                if node.tag == "img":
+                    if "alt" not in node.attrs:
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): <img> tags must have an 'alt' attribute."
+                        )
+
+                if node.tag in ("button", "a"):
+                    if not any(k in node.attrs for k in ("title", "aria-label", "string")):
+                        # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
+                        if not (node.text and node.text.strip()) and not node.children:
+                            warnings_found.append(
+                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty <{node.tag}> tag lacks 'string', 'title', or 'aria-label'."
+                            )
                 if node.tag == "field" and node.attrs.get("name") in (
                     "category_id",
                     "users",

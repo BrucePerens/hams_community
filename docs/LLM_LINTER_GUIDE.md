@@ -129,6 +129,12 @@ Arbitrary structural targeting inside our own custom views is banned to prevent 
 * **Record Rules (ir.rule):** Every `<record model="ir.rule">` MUST specify a `<field name="groups" ...>`.
 Global rules (rules without a group) are deprecated and banned.
 * **Cron Infinity:** Specifying `numbercall` in an `ir.cron` XML record is banned. Odoo 18+ runs crons indefinitely when `active="True"`.
+* **WCAG Accessibility (Icons):** Any `<i>` tag utilizing FontAwesome (`fa`) or Odoo Icons (`oi`) MUST possess a `title`, `aria-label`, or `aria-hidden="true"` attribute to satisfy screen readers.
+* **WCAG Accessibility (Images):** Any `<img>` tag MUST possess an `alt` attribute.
+* **WCAG Accessibility (Buttons & Links):** Empty `<button>` or `<a>` tags lacking text content, a `string` attribute, `title`, or `aria-label` will trigger an audit warning.
+* **WCAG Accessibility (Icons):** Any `<i>` tag utilizing FontAwesome (`fa`) or Odoo Icons (`oi`) MUST possess a `title`, `aria-label`, or `aria-hidden="true"` attribute to satisfy screen readers.
+* **WCAG Accessibility (Images):** Any `<img>` tag MUST possess an `alt` attribute.
+* **WCAG Accessibility (Buttons & Links):** Empty `<button>` or `<a>` tags lacking text content, a `string` attribute, `title`, or `aria-label` will trigger an audit warning.
 </frontend_standards>
 
 ---
