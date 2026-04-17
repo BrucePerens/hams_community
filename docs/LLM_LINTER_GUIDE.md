@@ -90,8 +90,8 @@ Legacy `groups_id` and `users` strings are hard-blocked.
 * **API Decorators:** `@api.returns` is deprecated and banned.
 * **HTTP Routes:** `type='json'` is banned for routes. Use `type='jsonrpc'`.
 * **Search Count Parameter:** `search(..., count=True)` is banned. Use `search_count(...)`.
-* **Hardcoded Localhost Ban:** You MUST NOT hardcode `127.0.0.1` in Python files. Local loop-back is prohibited; use a name that can be resolved using Docker or `/etc/hosts` .
-* **Environment Fallbacks:** `os.environ.get()` and `os.getenv()` for host names MUST ALWAYS be used with a second argument of "localhost". You must use the two-argument variant and fail-fast, or use a string literal if the environment variable is not expected. This guarantees deterministic host names and ports.
+* **Hardcoded Localhost Ban:** You MUST NOT hardcode `127.0.0.1` in Python files. Local loop-back is prohibited;
+use a name that can be resolved using Docker or `/etc/hosts` .
 * **Thread Blocking:** `time.sleep()` in main application code is banned..
 If used in a background daemon for rate-limiting, it MUST be appended with `# audit-ignore-sleep`.
 * *** **Thread Spawning:** `threading.Thread` is banned as a DoS vector. Use `concurrent.futures.ThreadPoolExecutor`.

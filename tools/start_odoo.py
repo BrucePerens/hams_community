@@ -108,6 +108,9 @@ def main():
 
     print("\n[+] All systems nominal. Starting Odoo...")
 
+    # Silence Odoo's core framework noise (Cybercrud Policy)
+    os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+
     # Safely replace the current process with the Odoo executable
     args = [odoo_exec] + sys.argv[1:]
     os.execv(odoo_exec, args)

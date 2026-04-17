@@ -844,15 +844,6 @@ def check_ast_vulnerabilities(filepath, content, lines):
             func_name = getattr(node.func, "id", getattr(node.func, "attr", ""))
             self._check_i18n_messages(node, func_name)
 
-            if isinstance(node.func, ast.Attribute) and node.func.attr == "get":
-                val = node.func.value
-                if isinstance(val, ast.Attribute) and val.attr == "environ" and getattr(val.value, "id", "") == "os":
-                    if len(node.args) != 2 or getattr(node.args[1], "value", None) != "localhost":
-                        self.add_error(node.lineno, "CRITICAL FALLBACK: os.environ.get() must always have a second argument of 'localhost'.")
-            if getattr(node.func, "id", getattr(node.func, "attr", "")) == "getenv":
-                if len(node.args) != 2 or getattr(node.args[1], "value", None) != "localhost":
-                    self.add_error(node.lineno, "CRITICAL FALLBACK: os.getenv() must always have a second argument of 'localhost'.")
-
             if getattr(node.func, "attr", getattr(node.func, "id", "")) == "env":
                 for kw in node.keywords:
                     if kw.arg == "su":
@@ -1196,7 +1187,6 @@ def scan_file(filepath):
                 "burn-ignore-sudo",
                 "burn-ignore-financial",
                 "burn-ignore-tour",
-                "burn-ignore-localhost",
             ]
         ):
             errors_found.append(

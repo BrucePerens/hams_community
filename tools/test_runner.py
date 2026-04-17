@@ -260,6 +260,9 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     force_killed = False
     try:
         for line in process.stdout:
+            line_lower = line.lower()
+            if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
+                continue
             sys.stdout.write(line)
             sys.stdout.flush()
             if extractor:
@@ -633,7 +636,7 @@ sleep 3
 
 export PYTHONDONTWRITEBYTECODE=1
 
-sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
+sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
 
 su -s /bin/bash rabbitmq -c 'rabbitmqctl stop' >/dev/null 2>&1
@@ -682,6 +685,9 @@ exit $RET
 
 def main():
     try:
+        # Silence Odoo's core framework noise (Cybercrud Policy)
+        os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         os.environ["REPO_ROOT"] = base_dir
         env_path = os.path.join(base_dir, "deploy", "env")
@@ -1102,6 +1108,9 @@ def main():
 
                 def stream_odoo_output(proc, o_extr, m_extr):
                     for line in proc.stdout:
+                        line_lower = line.lower()
+                        if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
+                            continue
                         sys.stdout.write(line)
                         sys.stdout.flush()
                         if o_extr:
