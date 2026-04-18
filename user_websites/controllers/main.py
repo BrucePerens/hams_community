@@ -871,7 +871,15 @@ class UserWebsitesController(http.Controller):
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
 
-        db_secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
+        db_secret = request.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
+        if not db_secret:
+            _logger.error(
+                "Security Alert: 'database.secret' is not configured. Unsubscribe tokens cannot be verified."
+            )
+            raise werkzeug.exceptions.InternalServerError(
+                "System configuration error: cryptographic secret missing."
+            )
+
         message = f"{model_name}-{record_id}-{partner_id}-{timestamp}".encode("utf-8")
         expected_token = hmac.new(
             db_secret.encode("utf-8"), message, hashlib.sha256
