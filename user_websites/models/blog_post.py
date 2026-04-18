@@ -4,7 +4,10 @@ from odoo import models, fields, api, _
 import time
 import hashlib
 import hmac
+import logging
 from markupsafe import Markup
+
+_logger = logging.getLogger(__name__)
 
 
 class BlogPost(models.Model):
@@ -243,7 +246,12 @@ class BlogPost(models.Model):
         base_url = self.env["zero_sudo.security.utils"]._get_system_param(
             "web.base.url"
         )
-        db_secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'default_secret')  # burn-ignore-sudo: Tested by [@ANCHOR: test_weekly_digest_secret]  # fmt: skip
+        db_secret = self.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_weekly_digest_secret]  # fmt: skip
+        if not db_secret:
+            _logger.error(
+                "Security Alert: 'database.secret' is not configured. Weekly digest tokens cannot be generated."
+            )
+            return
 
         for digest in digests:
             partner = digest.partner_id
