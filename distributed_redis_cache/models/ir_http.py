@@ -42,8 +42,10 @@ def _redis_listener_thread():
                         if model_name:
                             with _listener_lock:
                                 _invalidation_queue.add(model_name)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        import logging
+
+                        logging.getLogger(__name__).warning("An error occurred: %s", e)
     except Exception as e:
         _logger.warning("Redis async listener thread disconnected: %s", e)
     finally:

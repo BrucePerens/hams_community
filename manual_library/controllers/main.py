@@ -65,7 +65,10 @@ class ManualLibraryController(http.Controller):
         try:
             article.check_access("read")
             _ = article.name
-        except Exception:
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
             raise werkzeug.exceptions.NotFound()
 
         # 6. Render standard QWeb response
@@ -156,7 +159,10 @@ class ManualLibraryController(http.Controller):
                         "UPDATE knowledge_article SET unhelpful_count = COALESCE(unhelpful_count, 0) + 1 WHERE id = %s",
                         (article.id,),
                     )
-        except Exception:
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
             # Silently fail on bad input to prevent brute-force discovery
             pass
 

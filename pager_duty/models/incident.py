@@ -122,8 +122,10 @@ class PagerIncident(models.Model):
                 if r_client.get(redis_key):
                     return False
                 r_client.setex(redis_key, 60, "1")
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "pager_duty.user_pager_service_internal"

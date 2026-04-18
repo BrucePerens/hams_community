@@ -113,7 +113,10 @@ class UserWebsitesController(http.Controller):
                 if cached_total is not None:
                     total_users = int(cached_total)
             except Exception as e:
-                _logger.error("Redis operation failed during community directory cache lookup: %s", e)
+                _logger.error(
+                    "Redis operation failed during community directory cache lookup: %s",
+                    e,
+                )
 
         if total_users is None:
             total_users = request.env[
@@ -123,7 +126,10 @@ class UserWebsitesController(http.Controller):
                 try:
                     redis_client.setex(cache_key, 300, total_users)
                 except Exception as e:
-                    _logger.error("Redis operation failed during community directory cache set: %s", e)
+                    _logger.error(
+                        "Redis operation failed during community directory cache set: %s",
+                        e,
+                    )
 
         users = request.env["user_websites.public.directory.view"].search(
             domain, limit=step, offset=(page - 1) * step

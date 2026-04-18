@@ -47,8 +47,10 @@ class BlogPost(models.Model):
                     self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
                         list(tags)
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
 
     def _get_blog_urls(self):
         """Helper method to construct the blog index URLs for Cloudflare cache invalidation."""

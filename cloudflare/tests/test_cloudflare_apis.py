@@ -53,7 +53,9 @@ class TestCloudflareAPIs(TransactionCase):
         mock_get_token.return_value = (True, "mock_token_xyz")
 
         website = self.env["website"].get_current_website()
-        website.write({"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"})
+        website.write(
+            {"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"}
+        )
         settings = self.env["res.config.settings"].create({"website_id": website.id})
 
         action = settings.action_generate_tunnel_command()
@@ -88,11 +90,14 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertEqual(kwargs["json"]["files"], urls)
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer fake_token")
 
-        # Case 4: Truncation
+        # Case 4: Batching (Chunking to max 30)
         mock_post.reset_mock()
         many_urls = [f"https://a.com/{i}" for i in range(40)]
         purge_urls(many_urls, "fake_token", "fake_zone")
-        self.assertEqual(len(mock_post.call_args[1]["json"]["files"]), 30)
+        self.assertEqual(mock_post.call_count, 2)
+        # First call has 30, second call has 10
+        self.assertEqual(len(mock_post.call_args_list[0][1]["json"]["files"]), 30)
+        self.assertEqual(len(mock_post.call_args_list[1][1]["json"]["files"]), 10)
 
         # Case 5: API failure
         mock_post.reset_mock()
@@ -125,11 +130,13 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertEqual(kwargs["json"]["tags"], tags)
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer fake_token")
 
-        # Case 4: Truncation
+        # Case 4: Batching (Chunking to max 30)
         mock_post.reset_mock()
         many_tags = [f"tag-{i}" for i in range(40)]
         purge_tags(many_tags, "fake_token", "fake_zone")
-        self.assertEqual(len(mock_post.call_args[1]["json"]["tags"]), 30)
+        self.assertEqual(mock_post.call_count, 2)
+        self.assertEqual(len(mock_post.call_args_list[0][1]["json"]["tags"]), 30)
+        self.assertEqual(len(mock_post.call_args_list[1][1]["json"]["tags"]), 10)
 
         # Case 5: API failure
         mock_post.reset_mock()

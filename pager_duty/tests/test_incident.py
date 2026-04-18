@@ -29,8 +29,10 @@ class TestPagerIncident(TransactionCase):
                     db=0,
                 )
                 r.delete("pager_rate_limit:test_daemon")
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
 
             # First request passes the cache check
             res1 = self.incident_model.report_incident(vals)
@@ -75,8 +77,10 @@ class TestPagerIncident(TransactionCase):
                     db=0,
                 )
                 r.delete("pager_rate_limit:test_daemon_2")
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
 
             incident_id = self.incident_model.report_incident(vals)
             self.assertTrue(

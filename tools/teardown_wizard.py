@@ -96,7 +96,9 @@ def main():
                 shutil.rmtree(item_path)
             else:
                 os.remove(item_path)
-        print("   [-] /opt/hams cleaned (preserved /opt/hams/downloads and /opt/hams/test).")
+        print(
+            "   [-] /opt/hams cleaned (preserved /opt/hams/downloads and /opt/hams/test)."
+        )
     else:
         print("   [-] /opt/hams already missing.")
 

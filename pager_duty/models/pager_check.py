@@ -510,8 +510,10 @@ class PagerCheck(models.Model):
                             "comment": f"Autodiscovered disk space monitor for {p.mountpoint}",
                         }
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         # 3. Common Services
         try:
@@ -588,8 +590,10 @@ class PagerCheck(models.Model):
                         "comment": "Autodiscovered Docker daemon monitor",
                     }
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         # 4. Odoo Web Server
         checks.append(

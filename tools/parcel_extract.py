@@ -8,6 +8,7 @@ import json
 import ast
 import difflib
 
+
 def _cluster_indices(indices, max_gap):
     """
     Groups overlapping or adjacent match indices into clusters.
@@ -26,6 +27,7 @@ def _cluster_indices(indices, max_gap):
             clusters.append([idx])
     return clusters
 
+
 def verify_python(filepath):
     """Runs flake8 to verify Python syntax and style."""
     try:
@@ -42,6 +44,7 @@ def verify_python(filepath):
         return "[WARN] flake8 is not installed. Skipping verification."
     return None
 
+
 def verify_xml(filepath):
     """Verifies that the XML is well-formed."""
     try:
@@ -49,6 +52,7 @@ def verify_xml(filepath):
     except ET.ParseError as e:
         return f"[ERROR] XML Parsing Error: {e}"
     return None
+
 
 def verify_markdown(filepath):
     """Checks for unclosed inline and fenced code blocks using robust state parsing."""
@@ -62,6 +66,7 @@ def verify_markdown(filepath):
         return f"[WARN] Could not verify Markdown: {e}"
     return None
 
+
 def verify_json(filepath):
     """Verifies JSON payload validity."""
     try:
@@ -70,6 +75,7 @@ def verify_json(filepath):
     except Exception as e:
         return f"[ERROR] Invalid JSON: {e}"
     return None
+
 
 def run_burn_list_linter(filepath):
     """Runs custom project linter to catch architectural issues."""
@@ -85,6 +91,7 @@ def run_burn_list_linter(filepath):
         except Exception as e:
             return f"[WARN] Failed to execute custom linter: {e}"
     return None
+
 
 def mask_markdown_and_check_balance(payload):
     """
@@ -160,6 +167,7 @@ def mask_markdown_and_check_balance(payload):
 
     return payload
 
+
 def check_ai_foibles(payload, filepath=""):
     """Strips rogue markdown wrappers and rejects laziness placeholders."""
     if payload.lstrip().startswith("```"):
@@ -202,6 +210,7 @@ def check_ai_foibles(payload, filepath=""):
 
     return payload
 
+
 def validate_syntax_in_memory(filepath, content):
     """Validates the syntax of the fully patched file in memory before writing to disk."""
     ext = os.path.splitext(filepath)[1].lower()
@@ -223,17 +232,21 @@ def validate_syntax_in_memory(filepath, content):
     elif ext == ".md":
         mask_markdown_and_check_balance(content)
 
+
 def get_semantic_tokens(source_text):
     tokens = []
     pattern = re.compile(r"([a-zA-Z_]\w*|\d+|[^\w\s])")
     for match in pattern.finditer(source_text):
-        tokens.append({
-            "type": "REGEX_TOKEN",
-            "val": match.group(1),
-            "start": match.start(),
-            "end": match.end()
-        })
+        tokens.append(
+            {
+                "type": "REGEX_TOKEN",
+                "val": match.group(1),
+                "start": match.start(),
+                "end": match.end(),
+            }
+        )
     return tokens if tokens else None
+
 
 def smart_replace(original_text, start_idx, end_idx, replace_text, filepath=""):
     orig_match = original_text[start_idx:end_idx]
@@ -257,16 +270,39 @@ def smart_replace(original_text, start_idx, end_idx, replace_text, filepath=""):
         else:
             abs_orig_lines.append(line)
 
-    orig_min_indent = min((len(line) - len(line.lstrip(" \t")) for line in abs_orig_lines if line.strip()), default=0)
-    replace_min_indent = min((len(line) - len(line.lstrip(" \t")) for line in replace_lines if line.strip()), default=0)
+    orig_min_indent = min(
+        (
+            len(line) - len(line.lstrip(" \t"))
+            for line in abs_orig_lines
+            if line.strip()
+        ),
+        default=0,
+    )
+    replace_min_indent = min(
+        (len(line) - len(line.lstrip(" \t")) for line in replace_lines if line.strip()),
+        default=0,
+    )
 
     base_shift = orig_min_indent - replace_min_indent
     shifts_to_try = [base_shift]
     if filepath.endswith(".py"):
-        shifts_to_try.extend([
-            0, base_shift + 4, base_shift - 4, base_shift + 8, base_shift - 8,
-            base_shift + 12, base_shift - 12, 4, 8, 12, 16, -4, -8
-        ])
+        shifts_to_try.extend(
+            [
+                0,
+                base_shift + 4,
+                base_shift - 4,
+                base_shift + 8,
+                base_shift - 8,
+                base_shift + 12,
+                base_shift - 12,
+                4,
+                8,
+                12,
+                16,
+                -4,
+                -8,
+            ]
+        )
 
     best_new_text = None
 
@@ -283,7 +319,7 @@ def smart_replace(original_text, start_idx, end_idx, replace_text, filepath=""):
 
             if i == 0:
                 if new_line.startswith(first_line_indent_str):
-                    new_line = new_line[len(first_line_indent_str):]
+                    new_line = new_line[len(first_line_indent_str) :]
                 else:
                     new_line = new_line.lstrip(" \t")
 
@@ -294,11 +330,14 @@ def smart_replace(original_text, start_idx, end_idx, replace_text, filepath=""):
         if orig_match.endswith("\n") and not indented_replace_text.endswith("\n"):
             indented_replace_text += "\n"
 
-        new_text = original_text[:start_idx] + indented_replace_text + original_text[end_idx:]
+        new_text = (
+            original_text[:start_idx] + indented_replace_text + original_text[end_idx:]
+        )
 
         if filepath.endswith(".py"):
             try:
                 import ast
+
                 ast.parse(new_text)
                 return new_text
             except SyntaxError:
@@ -309,6 +348,7 @@ def smart_replace(original_text, start_idx, end_idx, replace_text, filepath=""):
             return new_text
 
     return best_new_text or new_text
+
 
 def fuzzy_line_replace(original_text, search_text, replace_text, filepath=""):
     orig_lines = original_text.split("\n")
@@ -348,11 +388,14 @@ def fuzzy_line_replace(original_text, search_text, replace_text, filepath=""):
 
         best_idx = clusters[0][0]
         start_idx = sum(len(line) + 1 for line in orig_lines[:best_idx])
-        end_idx = start_idx + sum(len(line) + 1 for line in orig_lines[best_idx:best_idx + search_len])
+        end_idx = start_idx + sum(
+            len(line) + 1 for line in orig_lines[best_idx : best_idx + search_len]
+        )
         end_idx = min(end_idx, len(original_text))
         return smart_replace(original_text, start_idx, end_idx, replace_text, filepath)
 
     return None
+
 
 def semantic_token_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_semantic_tokens(original_text)
@@ -393,6 +436,7 @@ def semantic_token_replace(original_text, search_text, replace_text, filepath=""
         return smart_replace(original_text, start_idx, end_idx, replace_text, filepath)
 
     return None
+
 
 def fuzzy_token_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_semantic_tokens(original_text)
@@ -437,6 +481,7 @@ def fuzzy_token_replace(original_text, search_text, replace_text, filepath=""):
 
     return None
 
+
 def get_markdown_tokens(text):
     tokens = []
     # Capture alphanumerics OR non-whitespace punctuation to prevent boundary clipping
@@ -450,6 +495,7 @@ def get_markdown_tokens(text):
             }
         )
     return tokens
+
 
 def semantic_markdown_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_markdown_tokens(original_text)
@@ -478,7 +524,9 @@ def semantic_markdown_replace(original_text, search_text, replace_text, filepath
     if len(matches) > 1:
         clusters = _cluster_indices(matches, search_len)
         if len(clusters) > 1:
-            raise ValueError("Semantic Markdown match is not unique. Please provide more context lines.")
+            raise ValueError(
+                "Semantic Markdown match is not unique. Please provide more context lines."
+            )
         matches = [clusters[0][0]]
 
     if len(matches) == 1:
@@ -487,6 +535,7 @@ def semantic_markdown_replace(original_text, search_text, replace_text, filepath
         return smart_replace(original_text, start_idx, end_idx, replace_text, filepath)
 
     return None
+
 
 def boundary_markdown_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_markdown_tokens(original_text)
@@ -533,6 +582,7 @@ def boundary_markdown_replace(original_text, search_text, replace_text, filepath
     end_idx = target_tokens[best_end_token_idx]["end"]
     return smart_replace(original_text, start_idx, end_idx, replace_text, filepath)
 
+
 def fuzzy_markdown_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_markdown_tokens(original_text)
     search_tokens = get_markdown_tokens(search_text)
@@ -564,7 +614,9 @@ def fuzzy_markdown_replace(original_text, search_text, replace_text, filepath=""
     if best_ratio > 0.90:
         clusters = _cluster_indices(best_indices, search_len)
         if len(clusters) > 1:
-            raise ValueError("Fuzzy Markdown match is not unique. Please provide more context lines.")
+            raise ValueError(
+                "Fuzzy Markdown match is not unique. Please provide more context lines."
+            )
 
         best_idx = clusters[0][0]
         start_idx = target_tokens[best_idx]["start"]
@@ -573,12 +625,17 @@ def fuzzy_markdown_replace(original_text, search_text, replace_text, filepath=""
 
     return None
 
+
 def get_xml_tokens(text):
     tokens = []
     pattern = re.compile(r"(<!\[CDATA\[.*?\]\]>||<[^>]+>|[^<]+)", re.DOTALL)
 
     def normalize_tag(tag_str):
-        if tag_str.startswith("</") or tag_str.startswith("<!") or tag_str.startswith("<?"):
+        if (
+            tag_str.startswith("</")
+            or tag_str.startswith("<!")
+            or tag_str.startswith("<?")
+        ):
             return " ".join(tag_str.split())
 
         inner = tag_str[1:-1]
@@ -615,8 +672,11 @@ def get_xml_tokens(text):
             if not norm:
                 continue
 
-        tokens.append({"raw": raw, "norm": norm, "start": match.start(), "end": match.end()})
+        tokens.append(
+            {"raw": raw, "norm": norm, "start": match.start(), "end": match.end()}
+        )
     return tokens
+
 
 def semantic_xml_replace(original_text, search_text, replace_text, filepath=""):
     target_tokens = get_xml_tokens(original_text)
@@ -644,7 +704,9 @@ def semantic_xml_replace(original_text, search_text, replace_text, filepath=""):
     if len(matches) > 1:
         clusters = _cluster_indices(matches, search_len)
         if len(clusters) > 1:
-            raise ValueError("Semantic XML match is not unique. Please provide more context lines.")
+            raise ValueError(
+                "Semantic XML match is not unique. Please provide more context lines."
+            )
         matches = [clusters[0][0]]
 
     if len(matches) == 1:
@@ -653,6 +715,7 @@ def semantic_xml_replace(original_text, search_text, replace_text, filepath=""):
         return smart_replace(original_text, start_idx, end_idx, replace_text, filepath)
 
     return None
+
 
 def whitespace_agnostic_replace(original_text, search_text, replace_text, filepath=""):
     search_stripped = "".join(search_text.split())
@@ -677,16 +740,21 @@ def whitespace_agnostic_replace(original_text, search_text, replace_text, filepa
     if len(matches) > 1:
         clusters = _cluster_indices(matches, len(search_stripped))
         if len(clusters) > 1:
-            raise ValueError("Whitespace-agnostic match is not unique. Please provide more context lines.")
+            raise ValueError(
+                "Whitespace-agnostic match is not unique. Please provide more context lines."
+            )
         matches = [clusters[0][0]]
 
     if len(matches) == 1:
         idx = matches[0]
         start_idx = indices[idx]
         end_idx = indices[idx + len(search_stripped) - 1]
-        return smart_replace(original_text, start_idx, end_idx + 1, replace_text, filepath)
+        return smart_replace(
+            original_text, start_idx, end_idx + 1, replace_text, filepath
+        )
 
     return None
+
 
 def parse_search_replace_blocks(payload):
     def _strip_empty_bounding_lines(lines):
@@ -710,20 +778,31 @@ def parse_search_replace_blocks(payload):
 
         if stripped_no_space.startswith("::::SEARCH"):
             if state != "TEXT":
-                raise ValueError("Malformed search block: ':::: SEARCH' found inside another block.")
+                raise ValueError(
+                    "Malformed search block: ':::: SEARCH' found inside another block."
+                )
             state = "SEARCH"
             current_search = []
             current_replace = []
-        elif stripped.startswith("====") and len(stripped) >= 4 and all(c == '=' for c in stripped):
+        elif (
+            stripped.startswith("====")
+            and len(stripped) >= 4
+            and all(c == "=" for c in stripped)
+        ):
             if state != "SEARCH":
-                raise ValueError("Malformed search block: '====' found without preceding ':::: SEARCH'.")
+                raise ValueError(
+                    "Malformed search block: '====' found without preceding ':::: SEARCH'."
+                )
             state = "REPLACE"
         elif stripped_no_space.startswith("::::REPLACE"):
             if state != "REPLACE":
-                raise ValueError("Malformed search block: ':::: REPLACE' found without preceding '===='.")
+                raise ValueError(
+                    "Malformed search block: ':::: REPLACE' found without preceding '===='."
+                )
             blocks.append(
                 {
-                    "search": "\n".join(_strip_empty_bounding_lines(current_search)) + "\n",
+                    "search": "\n".join(_strip_empty_bounding_lines(current_search))
+                    + "\n",
                     "replace": "\n".join(current_replace) + "\n",
                 }
             )
@@ -735,9 +814,12 @@ def parse_search_replace_blocks(payload):
                 current_replace.append(line)
 
     if state != "TEXT":
-        raise ValueError("Malformed search block: Unclosed ':::: SEARCH' or '====' block.")
+        raise ValueError(
+            "Malformed search block: Unclosed ':::: SEARCH' or '====' block."
+        )
 
     return blocks
+
 
 def extract_parcel(raw_text):
     # Normalize line endings to prevent \r logic drifting and boundary failure
@@ -763,7 +845,9 @@ def extract_parcel(raw_text):
 
     terminator_found = any(line_item.strip() == terminator for line_item in lines)
     if not terminator_found:
-        print(f"❌ Error: Parcel terminator ({terminator}) missing. Rejecting payload.\n")
+        print(
+            f"❌ Error: Parcel terminator ({terminator}) missing. Rejecting payload.\n"
+        )
         return
 
     pattern = rf"^{re.escape(boundary)}$"
@@ -785,7 +869,9 @@ def extract_parcel(raw_text):
                 if not line.strip():
                     in_header = False
                     continue
-                if line.startswith(("Path: ", "Operation: ", "New-Path: ", "Mode: ", "Encoding: ")):
+                if line.startswith(
+                    ("Path: ", "Operation: ", "New-Path: ", "Mode: ", "Encoding: ")
+                ):
                     header_lines.append(line)
                 else:
                     in_header = False
@@ -804,11 +890,21 @@ def extract_parcel(raw_text):
             continue
         filepath = path_lines[0].replace("Path: ", "").strip()
 
-        operation_lines = [l for l in header.splitlines() if l.startswith("Operation: ")]
-        operation = operation_lines[0].replace("Operation: ", "").strip().lower() if operation_lines else "overwrite"
+        operation_lines = [
+            l for l in header.splitlines() if l.startswith("Operation: ")
+        ]
+        operation = (
+            operation_lines[0].replace("Operation: ", "").strip().lower()
+            if operation_lines
+            else "overwrite"
+        )
 
         new_path_lines = [l for l in header.splitlines() if l.startswith("New-Path: ")]
-        new_filepath = new_path_lines[0].replace("New-Path: ", "").strip() if new_path_lines else None
+        new_filepath = (
+            new_path_lines[0].replace("New-Path: ", "").strip()
+            if new_path_lines
+            else None
+        )
 
         mode_lines = [l for l in header.splitlines() if l.startswith("Mode: ")]
         mode_str = mode_lines[0].replace("Mode: ", "").strip() if mode_lines else None
@@ -817,10 +913,13 @@ def extract_parcel(raw_text):
             payload = payload.split(terminator)[0]
 
         import urllib.parse
+
         payload = urllib.parse.unquote(payload)
 
         if filepath.endswith((".py", ".sh", ".conf")):
-            payload = re.sub(r"(?:https?://)?\[[^\]]*\]\((https?://[^)]+)\)", r"\1", payload)
+            payload = re.sub(
+                r"(?:https?://)?\[[^\]]*\]\((https?://[^)]+)\)", r"\1", payload
+            )
 
         try:
             payload = check_ai_foibles(payload, filepath)
@@ -885,7 +984,9 @@ def extract_parcel(raw_text):
                     current_text = original_text
             except Exception as e:
                 errors.append(f"Failed to read existing file {filepath}: {e}")
-                _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+                _print_summary(
+                    filepath, errors, warnings, aborted=True, count=len(tasks)
+                )
                 failed_files.append(filepath)
                 continue
         else:
@@ -911,7 +1012,9 @@ def extract_parcel(raw_text):
                     try:
                         mode_int = int(mode_str, 8)
                     except ValueError:
-                        raise ValueError(f"Invalid mode format: {mode_str}. Must be octal.")
+                        raise ValueError(
+                            f"Invalid mode format: {mode_str}. Must be octal."
+                        )
 
                 if op in ("delete", "remove"):
                     file_deleted = True
@@ -920,7 +1023,9 @@ def extract_parcel(raw_text):
                     if not task["new_filepath"]:
                         raise ValueError("Rename requires 'New-Path: <target>'")
                     if not os.path.exists(filepath):
-                        raise FileNotFoundError(f"Cannot rename missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot rename missing file: {filepath}"
+                        )
                     renamed_to = task["new_filepath"]
                 elif op == "copy":
                     if not task["new_filepath"]:
@@ -932,7 +1037,9 @@ def extract_parcel(raw_text):
                     if not mode_str:
                         raise ValueError("Chmod requires 'Mode: <octal_string>'")
                     if not os.path.exists(filepath) and not file_mutated:
-                        raise FileNotFoundError(f"Cannot chmod missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot chmod missing file: {filepath}"
+                        )
                 elif op == "overwrite":
                     current_text = payload
                     if not payload.strip():
@@ -947,12 +1054,16 @@ def extract_parcel(raw_text):
                     file_mutated = True
                 elif op == "search-and-replace":
                     if not os.path.exists(filepath) and not file_mutated:
-                        raise FileNotFoundError(f"Cannot search-and-replace missing file: {filepath}")
+                        raise FileNotFoundError(
+                            f"Cannot search-and-replace missing file: {filepath}"
+                        )
 
                     search_blocks = parse_search_replace_blocks(payload)
 
                     if not search_blocks:
-                        raise ValueError("Malformed search-and-replace block. Missing markers.")
+                        raise ValueError(
+                            "Malformed search-and-replace block. Missing markers."
+                        )
 
                     for block in search_blocks:
                         search_text = block["search"]
@@ -960,36 +1071,66 @@ def extract_parcel(raw_text):
 
                         new_text = None
                         if filepath.endswith(".py"):
-                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(
+                                current_text, search_text, replace_text, filepath
+                            )
                             if new_text is None:
-                                new_text = semantic_token_replace(current_text, search_text, replace_text, filepath)
+                                new_text = semantic_token_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = fuzzy_token_replace(current_text, search_text, replace_text, filepath)
+                                new_text = fuzzy_token_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
+                                new_text = whitespace_agnostic_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                         elif filepath.endswith(".md"):
-                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(
+                                current_text, search_text, replace_text, filepath
+                            )
                             if new_text is None:
-                                new_text = semantic_markdown_replace(current_text, search_text, replace_text, filepath)
+                                new_text = semantic_markdown_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = boundary_markdown_replace(current_text, search_text, replace_text, filepath)
+                                new_text = boundary_markdown_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = fuzzy_markdown_replace(current_text, search_text, replace_text, filepath)
+                                new_text = fuzzy_markdown_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
+                                new_text = whitespace_agnostic_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                         elif filepath.endswith(".xml"):
-                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(
+                                current_text, search_text, replace_text, filepath
+                            )
                             if new_text is None:
-                                new_text = semantic_xml_replace(current_text, search_text, replace_text, filepath)
+                                new_text = semantic_xml_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                             if new_text is None:
-                                new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
+                                new_text = whitespace_agnostic_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
                         else:
-                            new_text = fuzzy_line_replace(current_text, search_text, replace_text, filepath)
+                            new_text = fuzzy_line_replace(
+                                current_text, search_text, replace_text, filepath
+                            )
                             if new_text is None:
-                                new_text = whitespace_agnostic_replace(current_text, search_text, replace_text, filepath)
+                                new_text = whitespace_agnostic_replace(
+                                    current_text, search_text, replace_text, filepath
+                                )
 
                         if new_text is None:
-                            raise ValueError("Semantic token, fuzzy line, and whitespace fallback all failed for search block.")
+                            raise ValueError(
+                                "Semantic token, fuzzy line, and whitespace fallback all failed for search block."
+                            )
                         current_text = new_text
                     file_mutated = True
 
@@ -1034,14 +1175,18 @@ def extract_parcel(raw_text):
 
             if file_mutated:
                 if filepath.endswith((".py", ".xml", ".md", ".js", ".html")):
-                    current_text = re.sub(r"[ \t]+$", "", current_text, flags=re.MULTILINE)
+                    current_text = re.sub(
+                        r"[ \t]+$", "", current_text, flags=re.MULTILINE
+                    )
 
                 if original_text is not None:
                     orig_lines = len(original_text.splitlines())
                     new_lines = len(current_text.splitlines())
                     if new_lines < orig_lines:
                         is_shortened = True
-                        shortened_str = f"{filepath} ({orig_lines} -> {new_lines} lines)"
+                        shortened_str = (
+                            f"{filepath} ({orig_lines} -> {new_lines} lines)"
+                        )
 
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(current_text)
@@ -1098,7 +1243,9 @@ def extract_parcel(raw_text):
                         if os.path.exists(filepath):
                             os.remove(filepath)
                 errors.extend(post_errors)
-                _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
+                _print_summary(
+                    filepath, errors, warnings, aborted=True, count=len(tasks)
+                )
                 failed_files.append(filepath)
                 continue
 
@@ -1139,9 +1286,12 @@ def extract_parcel(raw_text):
                 if res.returncode == 0:
                     print("✅ i18n/hams_master.pot synchronized successfully.")
                 else:
-                    print(f"⚠️  Failed to synchronize POT file:\n{res.stderr or res.stdout}")
+                    print(
+                        f"⚠️  Failed to synchronize POT file:\n{res.stderr or res.stdout}"
+                    )
             except Exception as e:
                 print(f"⚠️  Failed to execute generate_pot.py: {e}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

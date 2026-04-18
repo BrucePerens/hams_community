@@ -107,7 +107,8 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
             "user_websites.last_digest_id"
         )
         self.assertEqual(
-            final_key, "0",
+            final_key,
+            "0",
             "Cron must safely reset the digest id to 0 after completing the remaining queue.",
         )
         self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
@@ -158,7 +159,10 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
         # 2. Verify 0 queries on hit
         from unittest.mock import patch
-        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             self.env["res.users"]._get_user_id_by_slug("cacheuser")
             for call in mock_execute.call_args_list:
                 self.assertNotIn("res_users", call[0][0])
@@ -194,7 +198,10 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
         # 2. Verify 0 queries on hit
         from unittest.mock import patch
-        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
             for call in mock_execute.call_args_list:
                 self.assertNotIn("user_websites_group", call[0][0])
@@ -295,7 +302,10 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
         # 2. Verify 0 queries on hit
         from unittest.mock import patch
-        with patch.object(self.env.cr, 'execute', wraps=self.env.cr.execute) as mock_execute:
+
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             self.env["website.page"]._get_page_id_by_url(page.url, website_id)
             for call in mock_execute.call_args_list:
                 self.assertNotIn("website_page", call[0][0])

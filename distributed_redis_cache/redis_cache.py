@@ -40,9 +40,12 @@ def distributed_cache():
             dbname = self.env.cr.dbname
             model_name = self._name
             arg_hash = _get_hash(*args, **kwargs)
-            cache_key = f"{dbname}:distributed_cache:{model_name}:{func.__name__}:{arg_hash}"
+            cache_key = (
+                f"{dbname}:distributed_cache:{model_name}:{func.__name__}:{arg_hash}"
+            )
 
             import odoo
+
             use_redis = bool(redis and redis_pool)
 
             # Completely sever Redis connection during automated testing

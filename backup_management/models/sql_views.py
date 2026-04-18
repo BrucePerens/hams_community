@@ -1,5 +1,6 @@
 from odoo import models, fields, tools
 
+
 class BackupLatestSnapshotView(models.Model):
     _name = "backup.latest.snapshot.view"
     _description = "Latest Backup Snapshot View"

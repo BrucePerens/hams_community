@@ -40,7 +40,11 @@ class IrHttp(models.AbstractModel):
 
         # 3. Dynamic State Isolation (Protecting Authenticated User Data)
         is_public = True
-        if getattr(request, "env", False) and getattr(request.env, "user", False) and request.env.user:
+        if (
+            getattr(request, "env", False)
+            and getattr(request.env, "user", False)
+            and request.env.user
+        ):
             is_public = request.env.user._is_public()
 
         if not is_public:

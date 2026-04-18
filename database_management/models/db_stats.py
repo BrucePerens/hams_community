@@ -104,8 +104,10 @@ class DatabaseTableStat(models.Model):
                         "description": f"Database Bloat Warning! The following tables have >20%% dead tuples and require a manual Vacuum Analyze: {tables}",
                     }
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
 
 
 class DatabaseQueryStat(models.Model):

@@ -78,7 +78,10 @@ class RealTransactionCase(HttpCase):
         # preventing "concurrent update" deadlocks with background HTTP workers.
         try:
             self.env.cr.commit()
-        except Exception:
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)

@@ -4,6 +4,7 @@ Infrastructure Blueprint & Provisioning Engine
 Serves as the Single Source of Truth for test_runner.py and deploy_wizard.py.
 Supports environment scoping, lifecycle hooks, and precise runtime mount states.
 """
+
 import os
 import subprocess
 import urllib.request
@@ -15,28 +16,28 @@ MANIFEST = {
             "owner": "root:root",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/etc",
             "owner": "root:root",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/etc/keys",
             "owner": "odoo:odoo",
             "provision_mode": "700",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/nginx",
             "owner": "root:root",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod"]
+            "environments": ["prod"],
         },
         {
             "path": "/opt/hams/nginx/ssl",
@@ -54,7 +55,7 @@ MANIFEST = {
                     cp {DEST_DIR}/opt/hams/nginx/ssl/fullchain.pem {DEST_DIR}/opt/hams/nginx/ssl/lotw_root.pem
                 fi\
                 """
-            ]
+            ],
         },
         {
             "path": "/deploy/ssl",
@@ -72,35 +73,35 @@ MANIFEST = {
                     cp {DEST_DIR}/deploy/ssl/fullchain.pem {DEST_DIR}/deploy/ssl/lotw_root.pem
                 fi\
                 """
-            ]
+            ],
         },
         {
             "path": "/opt/hams/odoo",
             "owner": "odoo:odoo",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd",
             "owner": "root:root",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/cache",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/cache/ms-playwright",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/pycache",
@@ -114,165 +115,189 @@ MANIFEST = {
                 if [ -d {DEST_DIR}/opt/hams/daemons ]; then
                     python3 -m compileall -q {DEST_DIR}/opt/hams/daemons 2>/dev/null || true
                 fi\
-                """
-            ]
+                """,
+            ],
         },
         {
             "path": "/opt/hams/spool",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/spool/adif_queue",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/spool/ncvec",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/pgdata",
             "owner": "postgres:postgres",
             "provision_mode": "700",
             "runtime_mount": "rw",
-            "environments": ["test"]
+            "environments": ["test"],
         },
         {
             "path": "/opt/hams/pgsock",
             "owner": "postgres:postgres",
             "provision_mode": "777",
             "runtime_mount": "rw",
-            "environments": ["test"]
+            "environments": ["test"],
         },
         {
             "path": "/opt/hams/failed_input",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/downloads",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/test",
             "owner": "odoo:odoo",
             "provision_mode": "777",
             "runtime_mount": "rw",
-            "environments": ["test"]
+            "environments": ["test"],
         },
         {
             "path": "/var/lib/odoo",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share/Odoo",
             "owner": "odoo:odoo",
             "provision_mode": "775",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share/Odoo/sessions",
             "owner": "odoo:odoo",
             "provision_mode": "700",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/odoo",
             "owner": "odoo:odoo",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/powerdns",
             "owner": "pdns:pdns",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/odoo.service.d",
             "owner": "root:root",
             "provision_mode": "755",
             "runtime_mount": "ro",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/redis",
             "owner": "redis:redis",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/rabbitmq",
             "owner": "rabbitmq:rabbitmq",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/redis",
             "owner": "redis:redis",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/rabbitmq",
             "owner": "rabbitmq:rabbitmq",
             "provision_mode": "755",
             "runtime_mount": "rw",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/tmp/odoo_test_home",
             "owner": "root:root",
             "provision_mode": "777",
             "runtime_mount": "rw",
-            "environments": ["test"]
-        }
+            "environments": ["test"],
+        },
     ],
     "env_groups": {
-        "db.env": ["DB_NAME", "POSTGRES_PASSWORD", "DB_PASS", "DB_HOST", "DB_PORT", "DB_USER"],
+        "db.env": [
+            "DB_NAME",
+            "POSTGRES_PASSWORD",
+            "DB_PASS",
+            "DB_HOST",
+            "DB_PORT",
+            "DB_USER",
+        ],
         "pdns.env": ["PDNS_API_KEY", "PDNS_API_URL"],
-        "odoo.env": ["ODOO_ADMIN_PASSWORD", "ODOO_SERVICE_PASSWORD", "ODOO_URL", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"],
+        "odoo.env": [
+            "ODOO_ADMIN_PASSWORD",
+            "ODOO_SERVICE_PASSWORD",
+            "ODOO_URL",
+            "CLOUDFLARE_API_TOKEN",
+            "CLOUDFLARE_ZONE_ID",
+        ],
         "rabbitmq.env": ["RMQ_PASS", "RABBITMQ_HOST", "RMQ_PORT", "RMQ_USER"],
         "redis.env": ["REDIS_HOST", "REDIS_PORT"],
         "smtp.env": ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"],
-        "core.env": ["DOMAIN", "SYSTEM_USER_AGENT", "SYSADMIN_EMAILS", "HAMS_CRYPTO_KEY", "CLOUDFLARE_TUNNEL_TOKEN", "PYTHONPYCACHEPREFIX", "WS_PORT", "GEMINI_API_KEY", "GEMINI_MODEL", "PLAYWRIGHT_BROWSERS_PATH"]
+        "core.env": [
+            "DOMAIN",
+            "SYSTEM_USER_AGENT",
+            "SYSADMIN_EMAILS",
+            "HAMS_CRYPTO_KEY",
+            "CLOUDFLARE_TUNNEL_TOKEN",
+            "PYTHONPYCACHEPREFIX",
+            "WS_PORT",
+            "GEMINI_API_KEY",
+            "GEMINI_MODEL",
+            "PLAYWRIGHT_BROWSERS_PATH",
+        ],
     },
     "static_files": [
         {
@@ -280,14 +305,14 @@ MANIFEST = {
             "content": "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] https://nightly.odoo.com/19.0/nightly/deb/ ./\n",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"]
+            "environments": ["prod"],
         },
         {
             "path": "/etc/apt/sources.list.d/kopia.list",
             "content": "deb [signed-by=/usr/share/keyrings/kopia-keyring.gpg] http://packages.kopia.io/apt/ stable main\n",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"]
+            "environments": ["prod"],
         },
         {
             "path": "/opt/hams/etc/pdns_gsqlite3.conf",
@@ -308,7 +333,7 @@ loglevel=6
 """,
             "owner": "pdns:pdns",
             "mode": "640",
-            "environments": ["prod"]
+            "environments": ["prod"],
         },
         {
             "path": "/etc/hosts",
@@ -319,7 +344,7 @@ loglevel=6
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["test"]
+            "environments": ["test"],
         },
         {
             "path": "/opt/hams/systemd/hams-pycache.service",
@@ -341,7 +366,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/hams.daemon.keys.service",
@@ -368,7 +393,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/tmp/odoo.key",
@@ -378,7 +403,7 @@ WantedBy=multi-user.target
             "environments": ["prod"],
             "post_provision_hooks": [
                 "gpg --dearmor -o {DEST_DIR}/usr/share/keyrings/odoo-archive-keyring.gpg --yes {PATH}"
-            ]
+            ],
         },
         {
             "path": "/tmp/kopia-keyring.key",
@@ -388,7 +413,7 @@ WantedBy=multi-user.target
             "environments": ["prod"],
             "post_provision_hooks": [
                 "gpg --dearmor -o {DEST_DIR}/usr/share/keyrings/kopia-keyring.gpg --yes {PATH}"
-            ]
+            ],
         },
         {
             "path": "/tmp/cloudflared.deb",
@@ -400,25 +425,24 @@ WantedBy=multi-user.target
             "post_provision_hooks": [
                 "dpkg -i {PATH} || true",
                 "cloudflared service install {CLOUDFLARE_TUNNEL_TOKEN} || true",
-                "rm -f {PATH}"
-            ]
+                "rm -f {PATH}",
+            ],
         },
         {
             "src": "{REPO_ROOT}/daemons",
             "path": "/opt/hams/",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "src": "{REPO_ROOT}/deploy",
             "path": "/opt/hams/",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "src": "{REPO_ROOT}/requirements.txt",
             "path": "/opt/hams/",
-            "environments": ["prod", "test"]
-        }
-,
+            "environments": ["prod", "test"],
+        },
         {
             "path": "/opt/hams/systemd/system-startup.service",
             "content": """\
@@ -436,7 +460,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/adif.processor.service",
@@ -476,7 +500,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/br.anatel.sync.service",
@@ -511,7 +535,7 @@ SyslogIdentifier=br.anatel.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/br.anatel.sync.timer",
@@ -529,7 +553,7 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/de.bnetza.sync.service",
@@ -564,7 +588,7 @@ SyslogIdentifier=de.bnetza.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/de.bnetza.sync.timer",
@@ -582,7 +606,7 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/dx.firehose.service",
@@ -624,7 +648,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/fcc.uls.sync.service",
@@ -665,7 +689,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/ham.dx.daemon.service",
@@ -704,7 +728,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/ised.canada.sync.service",
@@ -745,7 +769,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/ncvec.sync.service",
@@ -786,7 +810,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/noaa-swpc-sync.service",
@@ -828,7 +852,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/noaa.swpc.sync.service",
@@ -870,7 +894,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/nz.rsm.sync.service",
@@ -905,7 +929,7 @@ SyslogIdentifier=nz.rsm.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/nz.rsm.sync.timer",
@@ -923,7 +947,7 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/uk.ofcom.sync.service",
@@ -958,7 +982,7 @@ SyslogIdentifier=uk.ofcom.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/uk.ofcom.sync.timer",
@@ -976,7 +1000,7 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/pdns.sync.service",
@@ -1016,7 +1040,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/lotw.eqsl.sync.service",
@@ -1056,7 +1080,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/amsat.tle.sync.service",
@@ -1090,7 +1114,7 @@ SyslogIdentifier=amsat.tle.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/amsat.tle.sync.timer",
@@ -1108,7 +1132,7 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/qrz.scraper.service",
@@ -1148,7 +1172,7 @@ WantedBy=multi-user.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/au.repeater.sync.service",
@@ -1183,7 +1207,7 @@ SyslogIdentifier=au.acma.sync
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
+            "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/au.repeater.sync.timer",
@@ -1201,28 +1225,28 @@ WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod", "test"]
-        }
+            "environments": ["prod", "test"],
+        },
     ],
     "addon_repos": [
         "hams_community",
         "hams_private_primary",
         "hams_private_secondary",
-        "hams_private_tertiary"
+        "hams_private_tertiary",
     ],
     "python_venvs": [
         {
             "path": "/opt/hams/.venv",
             "system_site_packages": True,
             "requirements_file": "/opt/hams/requirements.txt",
-            "environments": ["prod"]
+            "environments": ["prod"],
         },
         {
             "path": ".venv",
             "system_site_packages": False,
             "requirements_file": "requirements.txt",
-            "environments": ["pre_flight"]
-        }
+            "environments": ["pre_flight"],
+        },
     ],
     "apt_packages": [
         {"name": "postgresql", "environments": ["early_prod"]},
@@ -1246,7 +1270,7 @@ WantedBy=timers.target
         {"name": "build-essential", "environments": ["early_prod"]},
         {"name": "libpq-dev", "environments": ["early_prod"]},
         {"name": "python3-dev", "environments": ["early_prod"]},
-        {"name": "bind9-dnsutils", "environments": ["early_prod"]}
+        {"name": "bind9-dnsutils", "environments": ["early_prod"]},
     ],
     "env_defaults": {
         "DB_PORT": "5432",
@@ -1255,15 +1279,20 @@ WantedBy=timers.target
         "WS_PORT": "8765",
         "RMQ_USER": "guest",
         "RMQ_PASS": "guest",
-        "PLAYWRIGHT_BROWSERS_PATH": "/opt/hams/cache/ms-playwright"
+        "PLAYWRIGHT_BROWSERS_PATH": "/opt/hams/cache/ms-playwright",
     },
     "systemd_odoo_override": {
-        "Unit": {
-            "Requires": "hams-pycache.service",
-            "After": "hams-pycache.service"
-        },
+        "Unit": {"Requires": "hams-pycache.service", "After": "hams-pycache.service"},
         "Service": {
-            "EnvironmentFiles": ["odoo.env", "core.env", "db.env", "redis.env", "rabbitmq.env", "smtp.env", "pdns.env"],
+            "EnvironmentFiles": [
+                "odoo.env",
+                "core.env",
+                "db.env",
+                "redis.env",
+                "rabbitmq.env",
+                "smtp.env",
+                "pdns.env",
+            ],
             "Environment": ["PYTHONPYCACHEPREFIX=/opt/hams/pycache"],
             "ProtectSystem": "strict",
             "BindPaths": "/opt/hams/etc/keys:/var/lib/odoo/daemon_keys",
@@ -1271,9 +1300,9 @@ WantedBy=timers.target
             "PrivateDevices": "true",
             "NoNewPrivileges": "true",
             "KillSignal": "SIGINT",
-            "TimeoutStopSec": "15"
-        }
-    }
+            "TimeoutStopSec": "15",
+        },
+    },
 }
 
 
@@ -1287,11 +1316,15 @@ def scaffold_test_environment(args_db, provision_dirs=True):
     os.environ.setdefault("DB_PASS", "odoo")
     os.environ.setdefault("DB_HOST", "postgres")
     os.environ.setdefault("ODOO_URL", "http://odoo:8069")
-    os.environ.setdefault("PDNS_API_URL", "http://powerdns:8081/api/v1/servers/localhost/zones")
+    os.environ.setdefault(
+        "PDNS_API_URL", "http://powerdns:8081/api/v1/servers/localhost/zones"
+    )
     os.environ.setdefault("PDNS_API_KEY", "secret")
 
     if provision_dirs:
-        dirs = [d["path"] for d in MANIFEST["directories"] if "test" in d["environments"]]
+        dirs = [
+            d["path"] for d in MANIFEST["directories"] if "test" in d["environments"]
+        ]
         try:
             for d in dirs:
                 os.makedirs(d, exist_ok=True)
@@ -1309,7 +1342,11 @@ def scaffold_test_environment(args_db, provision_dirs=True):
 
 
 def get_mount_paths(environment, mount_type):
-    return [d["path"] for d in MANIFEST["directories"] if environment in d["environments"] and d.get("runtime_mount") == mount_type]
+    return [
+        d["path"]
+        for d in MANIFEST["directories"]
+        if environment in d["environments"] and d.get("runtime_mount") == mount_type
+    ]
 
 
 def execute_hooks(environment, run_cmd_func, env_vars=None, dest_dir=""):
@@ -1402,7 +1439,9 @@ def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir
         if os.path.isdir(repo_path):
             for item in os.listdir(repo_path):
                 item_path = os.path.join(repo_path, item)
-                if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, "__manifest__.py")):
+                if os.path.isdir(item_path) and os.path.exists(
+                    os.path.join(item_path, "__manifest__.py")
+                ):
                     target = os.path.join(custom_addons_dir, item)
                     run_cmd_func(["/bin/bash", "-c", f"rm -rf {target}"])
                     run_cmd_func(["mkdir", "-p", target])
@@ -1435,13 +1474,23 @@ def provision_python_venvs(run_cmd_func, environment="prod", dest_dir=""):
         pip_exe = os.path.join(venv_path, "bin", "pip")
         if req_file:
             if not os.path.exists(req_file):
-                raise FileNotFoundError(f"Required requirements file not found: {req_file}")
+                raise FileNotFoundError(
+                    f"Required requirements file not found: {req_file}"
+                )
             run_cmd_func([pip_exe, "install", "-r", req_file])
 
             # Ensure Playwright browser binaries are installed for SPA scraping
             playwright_exe = os.path.join(venv_path, "bin", "playwright")
             if os.path.exists(playwright_exe):
-                run_cmd_func(["env", "PLAYWRIGHT_BROWSERS_PATH=/opt/hams/cache/ms-playwright", playwright_exe, "install", "chromium"])
+                run_cmd_func(
+                    [
+                        "env",
+                        "PLAYWRIGHT_BROWSERS_PATH=/opt/hams/cache/ms-playwright",
+                        playwright_exe,
+                        "install",
+                        "chromium",
+                    ]
+                )
 
 
 def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=""):
@@ -1479,14 +1528,24 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                 run_cmd_func(["cp", "-a", src, path])
         elif url:
             try:
-                if "{DEB_TARGET_ARCH_CPU}" in url and "DEB_TARGET_ARCH_CPU" not in env_vars:
-                    res = subprocess.run(["dpkg-architecture", "-q", "DEB_TARGET_ARCH_CPU"], capture_output=True, text=True)
+                if (
+                    "{DEB_TARGET_ARCH_CPU}" in url
+                    and "DEB_TARGET_ARCH_CPU" not in env_vars
+                ):
+                    res = subprocess.run(
+                        ["dpkg-architecture", "-q", "DEB_TARGET_ARCH_CPU"],
+                        capture_output=True,
+                        text=True,
+                    )
                     if res.returncode == 0:
                         env_vars["DEB_TARGET_ARCH_CPU"] = res.stdout.strip()
                 url = url.format(**env_vars)
             except KeyError:
                 pass
-            ua = env_vars.get("SYSTEM_USER_AGENT", "Hams.com Bruce Perens K6BP <bruce@perens.com> +1 510-394-5627")
+            ua = env_vars.get(
+                "SYSTEM_USER_AGENT",
+                "Hams.com Bruce Perens K6BP <bruce@perens.com> +1 510-394-5627",
+            )
             req = urllib.request.Request(url, headers={"User-Agent": ua})
             with urllib.request.urlopen(req) as response:
                 data = response.read()
@@ -1564,6 +1623,8 @@ def generate_odoo_override_conf(odoo_conf_path):
     lines.append(f"KillSignal={spec['Service']['KillSignal']}")
     lines.append(f"TimeoutStopSec={spec['Service']['TimeoutStopSec']}")
     lines.append("ExecStart=")
-    lines.append(f"ExecStart=/opt/hams/.venv/bin/python /usr/bin/odoo -c {odoo_conf_path}")
+    lines.append(
+        f"ExecStart=/opt/hams/.venv/bin/python /usr/bin/odoo -c {odoo_conf_path}"
+    )
 
     return "\n".join(lines) + "\n"

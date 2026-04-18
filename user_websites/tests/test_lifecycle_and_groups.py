@@ -90,8 +90,10 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
                 data={"csrf_token": odoo.http.Request.csrf_token(self)},
                 method="POST",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         group_home = self.env["website.page"].search(
             [("url", "=", f"/{self.test_group.website_slug}/home")]
@@ -209,8 +211,10 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
                 data={"csrf_token": odoo.http.Request.csrf_token(self)},
                 method="POST",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         group_home = self.env["website.page"].search(
             [("url", "=", f"/{self.test_group.website_slug}/home")]

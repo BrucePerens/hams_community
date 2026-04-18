@@ -207,7 +207,10 @@ def main():
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
-    except Exception:
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("An error occurred: %s", e)
         sys.exit(1)
 
     checks = [
@@ -235,8 +238,10 @@ def main():
                 try:
                     name, res = future.result()
                     spool_data[name] = res
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         if spool_data:
             # Atomic Write via rename
@@ -246,7 +251,7 @@ def main():
             os.chmod(tmp_file, 0o644)
             os.rename(tmp_file, SPOOL_FILE)
 
-        time.sleep(5)  # audit-ignore-sleep
+        time.sleep(5)  # audit-ignore-sleep  # fmt: skip
 
 
 if __name__ == "__main__":
