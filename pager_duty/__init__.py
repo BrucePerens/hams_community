@@ -20,5 +20,7 @@ def post_init_hook(env):
     if "pager.check" in env and not env["pager.check"].search_count([]):
         try:
             env["pager.check"]._run_autodiscovery()
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)

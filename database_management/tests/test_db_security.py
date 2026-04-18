@@ -26,9 +26,7 @@ class TestDbSecurity(TransactionCase):
             {"name": "Web", "login": "web_db", "group_ids": [(6, 0, groups_web)]}
         )
 
-        ham_grp = self.env.ref(
-            "base.group_portal", raise_if_not_found=False
-        )
+        ham_grp = self.env.ref("base.group_portal", raise_if_not_found=False)
         groups_ham = [self.env.ref("base.group_portal").id] + (
             [ham_grp.id] if ham_grp else []
         )
@@ -36,9 +34,7 @@ class TestDbSecurity(TransactionCase):
             {"name": "Ham", "login": "ham_db", "group_ids": [(6, 0, groups_ham)]}
         )
 
-        swl_grp = self.env.ref(
-            "base.group_portal", raise_if_not_found=False
-        )
+        swl_grp = self.env.ref("base.group_portal", raise_if_not_found=False)
         groups_swl = [self.env.ref("base.group_portal").id] + (
             [swl_grp.id] if swl_grp else []
         )

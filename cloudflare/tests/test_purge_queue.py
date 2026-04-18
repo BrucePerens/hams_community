@@ -87,3 +87,23 @@ class TestPurgeQueue(TransactionCase):
             self.assertTrue(True)
         except Exception as e:
             self.fail(f"Service account lacks ACLs to read website_id domain: {e}")
+
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
+    def test_04_purge_queue_tags_processing(self, mock_post):
+        """Verify that tag purges in the queue are processed correctly."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+
+        QueueModel = self.env["cloudflare.purge.queue"]
+        tags = ["tag1", "tag2", "tag3"]
+        QueueModel.enqueue_tags(tags, website_id=self.website.id)
+
+        self.assertEqual(QueueModel.search_count([("purge_type", "=", "tag")]), 3)
+
+        QueueModel.process_queue()
+
+        self.assertEqual(QueueModel.search_count([("purge_type", "=", "tag")]), 0)
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs["json"]["tags"], tags)

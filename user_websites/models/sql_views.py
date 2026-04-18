@@ -1,5 +1,6 @@
 from odoo import models, fields, tools
 
+
 class PublicDirectoryView(models.Model):
     _name = "user_websites.public.directory.view"
     _description = "Public Directory View"
@@ -19,6 +20,7 @@ class PublicDirectoryView(models.Model):
                 WHERE u.privacy_show_in_directory = TRUE AND u.website_slug IS NOT NULL
             )
         """)
+
 
 class ContentRoutingView(models.Model):
     _name = "user_websites.content.routing.view"
@@ -52,6 +54,7 @@ class ContentRoutingView(models.Model):
                 ) combined
             )
         """)
+
 
 class WeeklyDigestView(models.Model):
     _name = "user_websites.weekly.digest.view"

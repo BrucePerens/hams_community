@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+import logging
 Unified Odoo Test Runner for Hams.com
 Combines test execution, integration modes, and real-time failure extraction.
 """
@@ -51,7 +52,9 @@ class FailureExtractor:
 
     def __init__(self, output_path, disable_atexit=False):
         # Resolve the intended display path vs the physical write path
-        self.display_path = os.environ.get("HAMS_REAL_ERROR_LOG") or os.path.abspath(os.path.expanduser(output_path))
+        self.display_path = os.environ.get("HAMS_REAL_ERROR_LOG") or os.path.abspath(
+            os.path.expanduser(output_path)
+        )
 
         # If we are inside the RO namespace, we MUST write to the spool tmpfs
         if os.environ.get("HAMS_ISOLATED_NS") == "1":
@@ -73,6 +76,7 @@ class FailureExtractor:
 
         if not disable_atexit:
             import atexit
+
             atexit.register(self.finish_and_write)
 
     def set_context(self, context_name):
@@ -163,7 +167,7 @@ class FailureExtractor:
         return sorted([m for m in modules if m not in ignore_list])
 
     def finish_and_write(self):
-        if getattr(self, '_written', False):
+        if getattr(self, "_written", False):
             return
         self._written = True
 
@@ -275,7 +279,9 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     try:
         for line in process.stdout:
             line_lower = line.lower()
-            if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
+            if (
+                "deprecated" in line_lower and "directive" in line_lower
+            ) or "pypdf2" in line_lower:
                 continue
             sys.stdout.write(line)
             sys.stdout.flush()
@@ -452,7 +458,9 @@ def check_and_restore_cache(db_name, mod_string):
         try:
             for item in os.listdir(sb):
                 item_path = os.path.join(sb, item)
-                if os.path.isdir(item_path) and os.path.isfile(os.path.join(item_path, "__manifest__.py")):
+                if os.path.isdir(item_path) and os.path.isfile(
+                    os.path.join(item_path, "__manifest__.py")
+                ):
                     dirs_to_check.append(item_path)
         except OSError:
             pass
@@ -461,12 +469,17 @@ def check_and_restore_cache(db_name, mod_string):
     for d in dirs_to_check:
         for root, dirs, files in os.walk(d):
             dirs[:] = [
-                di for di in dirs
-                if not di.startswith('.') and di not in ('__pycache__', 'tests')
+                di
+                for di in dirs
+                if not di.startswith(".") and di not in ("__pycache__", "tests")
             ]
 
             for f in files:
-                if f.endswith(('.pyc', '.pyo', '.dump', '.log', '.swp', '.pot', '.po')) or f.startswith('.') or f == 'filtered_test.txt':
+                if (
+                    f.endswith((".pyc", ".pyo", ".dump", ".log", ".swp", ".pot", ".po"))
+                    or f.startswith(".")
+                    or f == "filtered_test.txt"
+                ):
                     continue
                 p = os.path.join(root, f)
                 try:
@@ -511,7 +524,9 @@ def check_and_restore_cache(db_name, mod_string):
             with open(mod_file, "r") as f:
                 cached_mods = f.read().strip()
             if cached_mods != mod_string:
-                print(f"[*] Module list changed (was: '{cached_mods}', now: '{mod_string}'). Discarding cache.")
+                print(
+                    f"[*] Module list changed (was: '{cached_mods}', now: '{mod_string}'). Discarding cache."
+                )
                 cache_valid = False
         else:
             print("[*] Cache module list missing. Discarding cache.")
@@ -527,13 +542,14 @@ def check_and_restore_cache(db_name, mod_string):
             ["pg_restore", "-d", db_name, "-O", "-x", "-j", "4", cache_file],
             capture_output=True,
             text=True,
-            env=env
         )
         if res.returncode == 0:
             print("[*] DB restored from cache.")
             return True, cache_file
         else:
-            print(f"[*] WARNING: pg_restore failed. Cache might be corrupted. Output:\n{res.stderr}")
+            print(
+                f"[*] WARNING: pg_restore failed. Cache might be corrupted. Output:\n{res.stderr}"
+            )
             try:
                 os.remove(cache_file)
             except OSError:
@@ -552,19 +568,21 @@ def check_and_restore_cache(db_name, mod_string):
         rebuild_db(db_name)
         return False, cache_file
 
+
 def save_db_cache(db_name, cache_file, mod_string):
     print(f"[*] Caching newly initialized DB to {cache_file}...")
     try:
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
         pass
 
     try:
         with open(cache_file, "wb") as f:
-            env = dict(os.environ)
-            if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-                env["PGHOST"] = "/opt/hams/pgsock"
-            res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env)
+            res = subprocess.run(
+                ["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env
+            )
 
         if res.returncode == 0:
             sz = os.path.getsize(cache_file)
@@ -574,15 +592,21 @@ def save_db_cache(db_name, cache_file, mod_string):
                 with open(mod_file, "w") as mf:
                     mf.write(mod_string)
             else:
-                print(f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache.")
+                print(
+                    f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache."
+                )
                 if res.stderr:
-                    print(f"[*] pg_dump stderr: {res.stderr.decode('utf-8', errors='ignore')}")
+                    print(
+                        f"[*] pg_dump stderr: {res.stderr.decode('utf-8', errors='ignore')}"
+                    )
                 try:
                     os.remove(cache_file)
                 except OSError:
                     pass
         else:
-            print(f"[*] WARNING: pg_dump failed (exit code {res.returncode}):\n{res.stderr.decode('utf-8', errors='ignore')}")
+            print(
+                f"[*] WARNING: pg_dump failed (exit code {res.returncode}):\n{res.stderr.decode('utf-8', errors='ignore')}"
+            )
             try:
                 os.remove(cache_file)
             except OSError:
@@ -592,7 +616,7 @@ def save_db_cache(db_name, cache_file, mod_string):
 
 
 def run_in_isolated_environment(real_error_log):
-    print("**** RUN IN ISOLATED ENVIRONMENT. ****\n");
+    print("**** RUN IN ISOLATED ENVIRONMENT. ****\n")
     if os.geteuid() != 0:
         print(
             "[*] Elevating to sudo to provision isolated PostgreSQL and Namespaces..."
@@ -601,11 +625,11 @@ def run_in_isolated_environment(real_error_log):
 
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
     if orig_user == "root":
-        raise ValueError("Test runner MUST NOT be executed directly as root. Use a standard user with sudo privileges.")
+        raise ValueError(
+            "Test runner MUST NOT be executed directly as root. Use a standard user with sudo privileges."
+        )
 
-    print(
-        "[*] Bootstrapping isolated testing environment (Mount Namespaces)..."
-    )
+    print("[*] Bootstrapping isolated testing environment (Mount Namespaces)...")
     pg_data_dir = "/opt/hams/pgdata"
     pg_socket_dir = "/opt/hams/pgsock"
 
@@ -755,9 +779,15 @@ def main():
         if not os.environ.get("PGHOST"):
             os.environ["PGHOST"] = "localhost"
         if not os.environ.get("PGUSER"):
-            os.environ["PGUSER"] = os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER") or "odoo"
+            os.environ["PGUSER"] = (
+                os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER") or "odoo"
+            )
         if not os.environ.get("PGPASSWORD"):
-            os.environ["PGPASSWORD"] = os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD") or "odoo"
+            os.environ["PGPASSWORD"] = (
+                os.environ.get("DB_PASSWORD")
+                or os.environ.get("POSTGRES_PASSWORD")
+                or "odoo"
+            )
         if not os.environ.get("RABBITMQ_HOST"):
             os.environ["RABBITMQ_HOST"] = "localhost"
         if not os.environ.get("REDIS_HOST"):
@@ -771,7 +801,7 @@ def main():
             "-m",
             "--mode",
             choices=["standard", "integration", "individual", "xml", "downloads"],
-            default="standard"
+            default="standard",
         )
         parser.add_argument(
             "-d",
@@ -814,12 +844,26 @@ def main():
         args = parser.parse_args()
 
         try:
-            infrastructure.scaffold_test_environment(args.db, provision_dirs=(os.environ.get("HAMS_ISOLATED_NS") != "1"))
+            infrastructure.scaffold_test_environment(
+                args.db, provision_dirs=(os.environ.get("HAMS_ISOLATED_NS") != "1")
+            )
             if os.environ.get("HAMS_ISOLATED_NS") != "1":
-                scaffold_run_cmd = lambda cmd, **kw: subprocess.run(["/bin/bash", "-c", cmd], check=True, **kw) if isinstance(cmd, str) else (subprocess.run(["sudo"] + cmd, check=True, **kw) if "sudo" not in cmd else subprocess.run(cmd, check=True, **kw))
-                infrastructure.execute_hooks("test", scaffold_run_cmd, env_vars=os.environ.copy(), dest_dir="")
+                scaffold_run_cmd = lambda cmd, **kw: (
+                    subprocess.run(["/bin/bash", "-c", cmd], check=True, **kw)
+                    if isinstance(cmd, str)
+                    else (
+                        subprocess.run(["sudo"] + cmd, check=True, **kw)
+                        if "sudo" not in cmd
+                        else subprocess.run(cmd, check=True, **kw)
+                    )
+                )
+                infrastructure.execute_hooks(
+                    "test", scaffold_run_cmd, env_vars=os.environ.copy(), dest_dir=""
+                )
         except Exception as e:
-            print(f"[*] Note: Could not provision directories natively ({e}). Ensure they exist.")
+            print(
+                f"[*] Note: Could not provision directories natively ({e}). Ensure they exist."
+            )
 
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
 
@@ -936,19 +980,29 @@ def main():
 
         if needs_update:
             print("[*] Validating virtual environment and dependencies...")
+
             def _run_venv_cmd(cmd, env=None):
                 if isinstance(cmd, list):
                     subprocess.run(cmd, check=True, env=env, capture_output=True)
                 else:
-                    subprocess.run(["/bin/bash", "-c", cmd], check=True, env=env, capture_output=True)
+                    subprocess.run(
+                        ["/bin/bash", "-c", cmd],
+                        check=True,
+                        env=env,
+                        capture_output=True,
+                    )
 
             try:
-                infrastructure.provision_python_venvs(_run_venv_cmd, environment="pre_flight", dest_dir=base_dir)
+                infrastructure.provision_python_venvs(
+                    _run_venv_cmd, environment="pre_flight", dest_dir=base_dir
+                )
                 # Touch pyvenv.cfg to update its modification time after successful install
                 if os.path.exists(pyvenv_cfg):
                     os.utime(pyvenv_cfg, None)
             except subprocess.CalledProcessError as e:
-                print(f"❌ ERROR: Failed to provision dependencies. Error details:\n{e.stderr.decode('utf-8', errors='ignore')}")
+                print(
+                    f"❌ ERROR: Failed to provision dependencies. Error details:\n{e.stderr.decode('utf-8', errors='ignore')}"
+                )
                 sys.exit(1)
 
         current_pythonpath = os.environ.get("PYTHONPATH", "")
@@ -1214,9 +1268,20 @@ def main():
             if not restored:
                 print("[*] Initializing the DB (creating tables)...")
                 init_cmd = [
-                    venv_python, odoo_bin, "--addons-path", addons_path,
-                    "-d", args.db, "-i", mod_string, "--stop-after-init",
-                    "--workers=0", "--max-cron-threads=0", "--http-interface", "localhost", "--log-level=warn",
+                    venv_python,
+                    odoo_bin,
+                    "--addons-path",
+                    addons_path,
+                    "-d",
+                    args.db,
+                    "-i",
+                    mod_string,
+                    "--stop-after-init",
+                    "--workers=0",
+                    "--max-cron-threads=0",
+                    "--http-interface",
+                    "localhost",
+                    "--log-level=warn",
                 ]
                 rc_init = run_cmd(init_cmd, extractor)
                 if rc_init != 0:
@@ -1227,16 +1292,27 @@ def main():
 
             if final_rc == 0:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(('', 0))
+                    s.bind(("", 0))
                     free_port = s.getsockname()[1]
 
-                print(f"[*] Starting Odoo in background on port {free_port} for JSON-2 RPC...")
+                print(
+                    f"[*] Starting Odoo in background on port {free_port} for JSON-2 RPC..."
+                )
                 odoo_proc = subprocess.Popen(
                     [
-                        venv_python, odoo_bin, "--addons-path", addons_path,
-                        "-d", args.db, "--workers=0", "--max-cron-threads=0",
-                        "--http-port", str(free_port), "--http-interface", "localhost",
-                        "--log-level=info"
+                        venv_python,
+                        odoo_bin,
+                        "--addons-path",
+                        addons_path,
+                        "-d",
+                        args.db,
+                        "--workers=0",
+                        "--max-cron-threads=0",
+                        "--http-port",
+                        str(free_port),
+                        "--http-interface",
+                        "localhost",
+                        "--log-level=info",
                     ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
@@ -1246,36 +1322,48 @@ def main():
                 )
 
                 import atexit
+
                 def cleanup_odoo():
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                         odoo_proc.wait(timeout=2)
-                    except Exception:
+                    except Exception as e:
+                        import logging
+                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
 
                 atexit.register(cleanup_odoo)
 
                 import threading
+
                 odoo_extractor = FailureExtractor(args.error_log, disable_atexit=True)
 
                 def stream_odoo_output(proc, o_extr, m_extr):
                     for line in proc.stdout:
                         line_lower = line.lower()
-                        if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
+                        if (
+                            "deprecated" in line_lower and "directive" in line_lower
+                        ) or "pypdf2" in line_lower:
                             continue
                         sys.stdout.write(line)
                         sys.stdout.flush()
                         if o_extr:
-                            if m_extr and getattr(m_extr, 'current_context', None):
-                                o_extr.current_context = m_extr.current_context + " (Background Odoo)"
+                            if m_extr and getattr(m_extr, "current_context", None):
+                                o_extr.current_context = (
+                                    m_extr.current_context + " (Background Odoo)"
+                                )
                             o_extr.process_line(line)
 
-                odoo_thread = threading.Thread(target=stream_odoo_output, args=(odoo_proc, odoo_extractor, extractor))
+                odoo_thread = threading.Thread(
+                    target=stream_odoo_output,
+                    args=(odoo_proc, odoo_extractor, extractor),
+                )
                 odoo_thread.daemon = True
                 odoo_thread.start()
 
                 print(f"[*] Waiting for Odoo to bind to port {free_port}...")
                 import time
+
                 for _ in range(30):
                     if is_odoo_running(free_port):
                         time.sleep(3)
@@ -1285,7 +1373,9 @@ def main():
                     print(f"❌ ERROR: Odoo failed to start on port {free_port}!")
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                    except Exception:
+                    except Exception as e:
+                        import logging
+                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
                     sys.exit(1)
 
@@ -1327,9 +1417,13 @@ def main():
                                 elif line.startswith("DB_HOST="):
                                     db_host = line.split("=", 1)[1].strip("'\"")
                                 elif line.startswith("ODOO_ADMIN_PASSWORD="):
-                                    odoo_admin_password = line.split("=", 1)[1].strip("'\"")
+                                    odoo_admin_password = line.split("=", 1)[1].strip(
+                                        "'\""
+                                    )
                                 elif line.startswith("ODOO_SERVICE_PASSWORD="):
-                                    odoo_admin_password = line.split("=", 1)[1].strip("'\"")
+                                    odoo_admin_password = line.split("=", 1)[1].strip(
+                                        "'\""
+                                    )
 
                     if not db_host:
                         db_host = "localhost"
@@ -1366,20 +1460,36 @@ def main():
                         if "__pycache__" in root or "tests" in root:
                             continue
                         for f in sorted(files):
-                            if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__") and f != "hams_config.py":
+                            if (
+                                f.endswith(".py")
+                                and not f.startswith("test_")
+                                and not f.startswith("__")
+                                and f != "hams_config.py"
+                            ):
                                 full_path = os.path.join(root, f)
                                 try:
-                                    with open(full_path, "r", encoding="utf-8") as script_file:
+                                    with open(
+                                        full_path, "r", encoding="utf-8"
+                                    ) as script_file:
                                         content = script_file.read()
-                                        if '__name__' in content and ('"__main__"' in content or "'__main__'" in content):
-                                            rel_path = os.path.relpath(full_path, base_dir)
+                                        if "__name__" in content and (
+                                            '"__main__"' in content
+                                            or "'__main__'" in content
+                                        ):
+                                            rel_path = os.path.relpath(
+                                                full_path, base_dir
+                                            )
                                             daemon_name = os.path.basename(root)
                                             args_list = [rel_path]
                                             if daemon_name == "ncvec_sync":
                                                 ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
                                                 args_list.extend(["--url", ncvec_url])
                                             daemons.append((daemon_name, args_list))
-                                except Exception:
+                                except Exception as e:
+                                    import logging
+                                    logging.getLogger('tools.test_runner').warning(
+                                        "An error occurred: %s", e
+                                    )
                                     pass
                     return daemons
 
@@ -1409,9 +1519,7 @@ def main():
                         for table in TABLES_TO_TRACK:
                             try:
                                 q_str = "SELECT count(*) FROM {}"
-                                q = sql.SQL(q_str).format(
-                                    sql.Identifier(table)
-                                )
+                                q = sql.SQL(q_str).format(sql.Identifier(table))
                                 cr.execute(q)
                                 counts[table] = cr.fetchone()[0]
                             except UndefinedTable:
@@ -1426,14 +1534,23 @@ def main():
                 initial_counts = get_table_counts(conn)
 
                 print("\n[*] Bootstrapping Real Bearer Tokens via Odoo Shell...")
-                bootstrap_script = os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py")
+                bootstrap_script = os.path.join(
+                    base_dir, "deploy", "bootstrap_daemon_keys.py"
+                )
                 if os.path.exists(bootstrap_script):
                     try:
                         with open(bootstrap_script, "r") as script_file:
                             res = subprocess.run(
                                 [
-                                    venv_python, odoo_bin, "shell", "--addons-path", addons_path,
-                                    "-d", args.db, "--no-http", "--workers=0"
+                                    venv_python,
+                                    odoo_bin,
+                                    "shell",
+                                    "--addons-path",
+                                    addons_path,
+                                    "-d",
+                                    args.db,
+                                    "--no-http",
+                                    "--workers=0",
                                 ],
                                 stdin=script_file,
                                 text=True,
@@ -1442,25 +1559,45 @@ def main():
                         if res.returncode != 0:
                             print(res.stdout)
                             print(res.stderr)
-                            print(f"❌ ERROR: Failed to bootstrap API keys (exit code {res.returncode})")
+                            print(
+                                f"❌ ERROR: Failed to bootstrap API keys (exit code {res.returncode})"
+                            )
                             if extractor:
-                                extractor.captured_blocks.append(("Daemon Key Bootstrapper", [(res.stdout or "") + "\n", (res.stderr or "") + "\n", "\nERROR: Bootstrapper failed.\n"]))
+                                extractor.captured_blocks.append(
+                                    (
+                                        "Daemon Key Bootstrapper",
+                                        [
+                                            (res.stdout or "") + "\n",
+                                            (res.stderr or "") + "\n",
+                                            "\nERROR: Bootstrapper failed.\n",
+                                        ],
+                                    )
+                                )
                                 extractor.finish_and_write()
                             os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                             sys.exit(1)
                         else:
-                            print("[+] Real daemon bearer tokens provisioned successfully.")
+                            print(
+                                "[+] Real daemon bearer tokens provisioned successfully."
+                            )
                     except Exception as e:
                         print(f"❌ ERROR: Failed to execute bootstrapper: {e}")
                         if extractor:
-                            extractor.captured_blocks.append(("Daemon Key Bootstrapper", [f"ERROR: {e}\n"]))
+                            extractor.captured_blocks.append(
+                                ("Daemon Key Bootstrapper", [f"ERROR: {e}\n"])
+                            )
                             extractor.finish_and_write()
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                         sys.exit(1)
                 else:
                     print("❌ ERROR: deploy/bootstrap_daemon_keys.py not found.")
                     if extractor:
-                        extractor.captured_blocks.append(("Daemon Key Bootstrapper", ["ERROR: deploy/bootstrap_daemon_keys.py not found.\n"]))
+                        extractor.captured_blocks.append(
+                            (
+                                "Daemon Key Bootstrapper",
+                                ["ERROR: deploy/bootstrap_daemon_keys.py not found.\n"],
+                            )
+                        )
                         extractor.finish_and_write()
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
@@ -1503,21 +1640,22 @@ def main():
                 for t in TABLES_TO_TRACK:
                     init_c = initial_counts.get(t, "N/A")
                     fin_c = final_counts.get(t, "N/A")
-                    print("{:<20} | {:<15} | {:<15}".format(
-                        t, str(init_c), str(fin_c))
-                    )
+                    print("{:<20} | {:<15} | {:<15}".format(t, str(init_c), str(fin_c)))
 
                 print("\n[+] Tearing down background Odoo server...")
-                if hasattr(atexit, 'unregister'):
+                if hasattr(atexit, "unregister"):
                     atexit.unregister(cleanup_odoo)
                 try:
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                 except Exception:
+
                     print("[!] Note: Could not kill process group.")
                 odoo_proc.wait()
 
                 if odoo_extractor.capturing and odoo_extractor.current_block:
-                    odoo_extractor.captured_blocks.append((odoo_extractor.current_context, odoo_extractor.current_block))
+                    odoo_extractor.captured_blocks.append(
+                        (odoo_extractor.current_context, odoo_extractor.current_block)
+                    )
                     odoo_extractor.capturing = False
                     odoo_extractor.current_block = []
 

@@ -105,8 +105,8 @@ class DaemonKeyRegistry(models.Model):
         # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
         # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
         # a 90-day key for the service account without exposing the entire ERP.
-        raw_key = self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate(
-            "rpc", key_name, expiration_date
+        raw_key = (
+            self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date)
         )
 
         # Write to secure file

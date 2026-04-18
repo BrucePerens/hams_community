@@ -63,8 +63,10 @@ def get_odoo_client(logger, config):
                 dbs = data.get("result", [])
                 if dbs:
                     db = dbs[0]
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
     if not db:
         db = "odoo"
 
@@ -141,7 +143,7 @@ def verify_and_install_dependencies(client, checks):
                         logger.warning(f"Provision failed: {err_msg}")
                 except Exception as e:
                     logger.warning(f"RPC unavailable, waiting... ({e})")
-                time.sleep(10)  # audit-ignore-sleep
+                time.sleep(10)  # audit-ignore-sleep  # fmt: skip
 
             if not success:
                 msg = f"FATAL: Missing dependency '{cmd}'. Halting."
@@ -157,8 +159,10 @@ def verify_and_install_dependencies(client, checks):
                             "description": msg,
                         },
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
                 sys.exit(1)
 
 
@@ -177,8 +181,10 @@ def is_in_maintenance(check):
             now = datetime.datetime.utcnow()
             if start <= now <= end:
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
     return False
 
 
@@ -231,8 +237,10 @@ def report(client, source, msg, severity="high"):
             )
             with urllib.request.urlopen(req, timeout=5):
                 pass
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
     try:
         payload = {"source": source, "description": msg, "severity": severity}
@@ -1107,19 +1115,19 @@ def polling_thread(client, check):
 
     jitter = secrets.SystemRandom().uniform(0, interval)
     logger.info(f"[{name}] Applying startup jitter: sleeping for {jitter:.1f}s")
-    time.sleep(jitter)  # audit-ignore-sleep
+    time.sleep(jitter)  # audit-ignore-sleep  # fmt: skip
 
     while True:
         THREAD_HEARTBEATS[name] = time.time()
         parent = check.get("parent")
 
         if is_in_maintenance(check):
-            time.sleep(interval)  # audit-ignore-sleep
+            time.sleep(interval)  # audit-ignore-sleep  # fmt: skip
             continue
 
         if parent and parent in FAILING_CHECKS:
             logger.debug(f"[{name}] Suppressed due to parent '{parent}' failure.")
-            time.sleep(interval)  # audit-ignore-sleep
+            time.sleep(interval)  # audit-ignore-sleep  # fmt: skip
             continue
 
         success, msg = execute_check(check, client)
@@ -1146,7 +1154,7 @@ def polling_thread(client, check):
             clean_loops += 1
             if clean_loops == 3:
                 auto_resolve(client, name)
-        time.sleep(interval)  # audit-ignore-sleep
+        time.sleep(interval)  # audit-ignore-sleep  # fmt: skip
 
 
 def log_tail_thread(client, check):
@@ -1181,7 +1189,7 @@ def log_tail_thread(client, check):
             if f:
                 line = f.readline()
                 if not line:
-                    time.sleep(1)  # audit-ignore-sleep
+                    time.sleep(1)  # audit-ignore-sleep  # fmt: skip
                     continue
                 if regex_str and re.search(regex_str, line, re.IGNORECASE):
                     if time.time() - thread_start_time < grace:
@@ -1191,9 +1199,9 @@ def log_tail_thread(client, check):
                     else:
                         report(client, name, line.strip(), "critical")
             else:
-                time.sleep(1)  # audit-ignore-sleep
+                time.sleep(1)  # audit-ignore-sleep  # fmt: skip
         except FileNotFoundError:
-            time.sleep(5)  # audit-ignore-sleep
+            time.sleep(5)  # audit-ignore-sleep  # fmt: skip
             continue
 
 
@@ -1250,8 +1258,11 @@ if __name__ == "__main__":
                         payload["description"],
                         payload["severity"],
                     )
-            except Exception:
-                time.sleep(1)  # audit-ignore-sleep
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                time.sleep(1)  # audit-ignore-sleep  # fmt: skip
 
     futures.append(executor.submit(log_anomaly_proxy, client))
 
@@ -1263,7 +1274,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            time.sleep(10)  # audit-ignore-sleep
+            time.sleep(10)  # audit-ignore-sleep  # fmt: skip
             now = time.time()
             for t_name, last_beat in THREAD_HEARTBEATS.items():
                 timeout = THREAD_TIMEOUTS.get(t_name, 300)

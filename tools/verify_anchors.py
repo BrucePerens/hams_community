@@ -309,7 +309,10 @@ def main():
                             r"\[@ANCHOR:\s*(UX_[a-zA-Z0-9_]+)\s*\]", f.read()
                         ):
                             user_manual_anchors.add(match.group(1))
-                except Exception:
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
                     pass
 
     errs = [

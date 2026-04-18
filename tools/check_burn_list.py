@@ -37,14 +37,24 @@ def parse_odoo_xml(content):
 
     xml_start = chr(60)
     content_clean = re.sub(
-        r"^\s*\%s\?xml[^>]*\?>" % xml_start, preserve_lines, content, flags=re.IGNORECASE
+        r"^\s*\%s\?xml[^>]*\?>" % xml_start,
+        preserve_lines,
+        content,
+        flags=re.IGNORECASE,
     )
     content_clean = re.sub(
-        r"\%s!DOCTYPE[^>]*>" % xml_start, preserve_lines, content_clean, flags=re.IGNORECASE
+        r"\%s!DOCTYPE[^>]*>" % xml_start,
+        preserve_lines,
+        content_clean,
+        flags=re.IGNORECASE,
     )
     content_clean = content_clean.replace("&", "&amp;")
 
-    wrapped = "%sroot_wrapper>%s%s/root_wrapper>" % (xml_start, content_clean, xml_start)
+    wrapped = "%sroot_wrapper>%s%s/root_wrapper>" % (
+        xml_start,
+        content_clean,
+        xml_start,
+    )
     parser = xml.parsers.expat.ParserCreate()
     stack = []
     root = None
@@ -281,16 +291,18 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
         def visit_BinOp(self, node):
             if isinstance(node.op, ast.Add):
+
                 def is_string_node(n):
                     if isinstance(n, ast.Constant) and isinstance(n.value, str):
                         return True
                     if isinstance(n, ast.JoinedStr):
                         return True
                     return False
+
                 if is_string_node(node.left) and is_string_node(node.right):
                     self.add_error(
-                        getattr(node, 'lineno', 1),
-                        "CRITICAL STRING CONCATENATION: Using '+' to concatenate two string literals is forbidden to prevent linter evasion."
+                        getattr(node, "lineno", 1),
+                        "CRITICAL STRING CONCATENATION: Using '+' to concatenate two string literals is forbidden to prevent linter evasion.",
                     )
             self.generic_visit(node)
 
@@ -503,9 +515,13 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
         def visit_Try(self, node):
             for handler in node.handlers:
-                if isinstance(handler.type, ast.Name) and handler.type.id == "ImportError":
+                if (
+                    isinstance(handler.type, ast.Name)
+                    and handler.type.id == "ImportError"
+                ):
                     self.add_error(
-                        node.lineno, "CRITICAL AI FAILURE: Wrapping imports in try/except ImportError is forbidden. Use manifest external_dependencies."
+                        node.lineno,
+                        "CRITICAL AI FAILURE: Wrapping imports in try/except ImportError is forbidden. Use manifest external_dependencies.",
                     )
             self.generic_visit(node)
 
@@ -532,7 +548,10 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         node.lineno,
                         "Remove 'numbercall'. Odoo 18+ crons run indefinitely.",
                     )
-                if node.value == "res.users.apikeys" and "key_registry.py" not in self.filename:
+                if (
+                    node.value == "res.users.apikeys"
+                    and "key_registry.py" not in self.filename
+                ):
                     self.add_error(
                         node.lineno,
                         "CRITICAL SECURITY: Odoo native RPC bearer token allocation (res.users.apikeys) is forbidden. Use 'daemon_key_manager'.",
@@ -849,7 +868,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     if kw.arg == "su":
                         self.add_error(
                             node.lineno,
-                            "CRITICAL PRIVILEGE ESCALATION: Environment modification with 'su=True' is strictly forbidden (Zero-Sudo evasion)."
+                            "CRITICAL PRIVILEGE ESCALATION: Environment modification with 'su=True' is strictly forbidden (Zero-Sudo evasion).",
                         )
 
             is_cr_execute = False
@@ -1060,7 +1079,10 @@ def scan_file(filepath):
                 if node.tag == "i":
                     cls = str(node.attrs.get("class", ""))
                     if "fa " in cls or "fa-" in cls or "oi " in cls or "oi-" in cls:
-                        if not any(k in node.attrs for k in ("title", "aria-label", "aria-hidden")):
+                        if not any(
+                            k in node.attrs
+                            for k in ("title", "aria-label", "aria-hidden")
+                        ):
                             errors_found.append(
                                 f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
                             )
@@ -1072,7 +1094,9 @@ def scan_file(filepath):
                         )
 
                 if node.tag in ("button", "a"):
-                    if not any(k in node.attrs for k in ("title", "aria-label", "string")):
+                    if not any(
+                        k in node.attrs for k in ("title", "aria-label", "string")
+                    ):
                         # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
                         if not (node.text and node.text.strip()) and not node.children:
                             warnings_found.append(
@@ -1083,7 +1107,10 @@ def scan_file(filepath):
                 if node.tag == "i":
                     cls = str(node.attrs.get("class", ""))
                     if "fa " in cls or "fa-" in cls or "oi " in cls or "oi-" in cls:
-                        if not any(k in node.attrs for k in ("title", "aria-label", "aria-hidden")):
+                        if not any(
+                            k in node.attrs
+                            for k in ("title", "aria-label", "aria-hidden")
+                        ):
                             errors_found.append(
                                 f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
                             )
@@ -1095,7 +1122,9 @@ def scan_file(filepath):
                         )
 
                 if node.tag in ("button", "a"):
-                    if not any(k in node.attrs for k in ("title", "aria-label", "string")):
+                    if not any(
+                        k in node.attrs for k in ("title", "aria-label", "string")
+                    ):
                         # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
                         if not (node.text and node.text.strip()) and not node.children:
                             warnings_found.append(
@@ -1188,10 +1217,18 @@ def scan_file(filepath):
 
     # Protect against AI meta-editing failures
     if filename == "check_burn_list.py" and "import xml.parsers.expat" not in content:
-         errors_found.append("AI LAZINESS TRAP: check_burn_list.py was truncated or modified incorrectly.")
+        errors_found.append(
+            "AI LAZINESS TRAP: check_burn_list.py was truncated or modified incorrectly."
+        )
 
-    if filename == "LLM_LINTER_GUIDE.md" and "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'." not in content:
-         errors_found.append("AI SUMMARIZATION BIAS TRAP: LLM_LINTER_GUIDE.md was truncated or summarized. All rules must be preserved.")
+    if (
+        filename == "LLM_LINTER_GUIDE.md"
+        and "CRITICAL BIAS TRAP: Odoo 18+ normalized the res.users groups relation to 'group_ids'."
+        not in content
+    ):
+        errors_found.append(
+            "AI SUMMARIZATION BIAS TRAP: LLM_LINTER_GUIDE.md was truncated or summarized. All rules must be preserved."
+        )
 
     if (
         filename.endswith(".js")
@@ -1281,13 +1318,17 @@ def scan_file(filepath):
                     )
 
         for ext_pattern, regex, msg in ERROR_RULES:
-            if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(line):
+            if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(
+                line
+            ):
                 if "burn-ignore" not in line:
                     errors_found.append(
                         f"Line {line_num}: {msg}\n      Code: `{stripped}`"
                     )
         for ext_pattern, regex, msg in WARNING_RULES:
-            if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(line):
+            if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(
+                line
+            ):
                 if "audit-ignore" not in line:
                     warnings_found.append(
                         f"Line {line_num}: {msg}\n      Code: `{stripped}`"

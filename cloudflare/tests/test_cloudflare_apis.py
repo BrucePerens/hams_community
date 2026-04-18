@@ -52,7 +52,9 @@ class TestCloudflareAPIs(TransactionCase):
         mock_get_token.return_value = (True, "mock_token_xyz")
 
         website = self.env["website"].get_current_website()
-        website.write({"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"})
+        website.write(
+            {"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"}
+        )
         settings = self.env["res.config.settings"].create({"website_id": website.id})
 
         action = settings.action_generate_tunnel_command()
@@ -60,3 +62,82 @@ class TestCloudflareAPIs(TransactionCase):
 
         wizard = self.env["cloudflare.tunnel.wizard"].browse(action["res_id"])
         self.assertIn("mock_token_xyz", wizard.command)
+
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
+    def test_04_purge_urls(self, mock_post):
+        from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls
+
+        # Case 1: Missing credentials
+        self.assertFalse(purge_urls(["https://a.com"], None, "zone1"))
+        self.assertFalse(purge_urls(["https://a.com"], "tok1", None))
+
+        # Case 2: Empty URLs
+        self.assertTrue(purge_urls([], "tok1", "zone1"))
+        mock_post.assert_not_called()
+
+        # Case 3: Success path
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+
+        urls = ["https://a.com/1", "https://a.com/2"]
+        res = purge_urls(urls, "fake_token", "fake_zone")
+        self.assertTrue(res)
+
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs["json"]["files"], urls)
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer fake_token")
+
+        # Case 4: Batching (Chunking to max 30)
+        mock_post.reset_mock()
+        many_urls = [f"https://a.com/{i}" for i in range(40)]
+        purge_urls(many_urls, "fake_token", "fake_zone")
+        self.assertEqual(mock_post.call_count, 2)
+        # First call has 30, second call has 10
+        self.assertEqual(len(mock_post.call_args_list[0][1]["json"]["files"]), 30)
+        self.assertEqual(len(mock_post.call_args_list[1][1]["json"]["files"]), 10)
+
+        # Case 5: API failure
+        mock_post.reset_mock()
+        mock_response.raise_for_status.side_effect = Exception("API fail")
+        self.assertFalse(purge_urls(["https://a.com"], "tok1", "zone1"))
+
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
+    def test_05_purge_tags(self, mock_post):
+        from odoo.addons.cloudflare.utils.cloudflare_api import purge_tags
+
+        # Case 1: Missing credentials
+        self.assertFalse(purge_tags(["tag1"], None, "zone1"))
+        self.assertFalse(purge_tags(["tag1"], "tok1", None))
+
+        # Case 2: Empty tags
+        self.assertTrue(purge_tags([], "tok1", "zone1"))
+        mock_post.assert_not_called()
+
+        # Case 3: Success path
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+
+        tags = ["tag-a", "tag-b"]
+        res = purge_tags(tags, "fake_token", "fake_zone")
+        self.assertTrue(res)
+
+        mock_post.assert_called_once()
+        _, kwargs = mock_post.call_args
+        self.assertEqual(kwargs["json"]["tags"], tags)
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer fake_token")
+
+        # Case 4: Batching (Chunking to max 30)
+        mock_post.reset_mock()
+        many_tags = [f"tag-{i}" for i in range(40)]
+        purge_tags(many_tags, "fake_token", "fake_zone")
+        self.assertEqual(mock_post.call_count, 2)
+        self.assertEqual(len(mock_post.call_args_list[0][1]["json"]["tags"]), 30)
+        self.assertEqual(len(mock_post.call_args_list[1][1]["json"]["tags"]), 10)
+
+        # Case 5: API failure
+        mock_post.reset_mock()
+        mock_response.raise_for_status.side_effect = Exception("API fail")
+        self.assertFalse(purge_tags(["tag1"], "tok1", "zone1"))

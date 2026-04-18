@@ -8,7 +8,10 @@ from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 from ..utils import slugify
 import json
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import (
+    distributed_cache,
+    invalidate_model_cache,
+)
 
 RESERVED_SLUGS = {
     "community",
@@ -220,7 +223,10 @@ class UserWebsitesGroup(models.Model):
                 )
                 invalidate_model_cache(self.env, self._name)
                 payload = json.dumps({"model": self._name})
-                self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+                self.env.cr.execute(
+                    "SELECT pg_notify(%s, %s)",
+                    ("distributed_cache_invalidation", payload),
+                )
 
             if vals.get("website_slug"):
                 if len(self) == 1:
@@ -306,5 +312,7 @@ class UserWebsitesGroup(models.Model):
             )
             invalidate_model_cache(self.env, self._name)
             payload = json.dumps({"model": self._name})
-            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+            self.env.cr.execute(
+                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
+            )
         return super(UserWebsitesGroup, self).unlink()

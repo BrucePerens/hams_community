@@ -151,10 +151,10 @@ def main():
             channel.start_consuming()
         except pika.exceptions.AMQPConnectionError:
             logger.warning("RabbitMQ offline. Retrying in 5s...")
-            time.sleep(5)  # audit-ignore-sleep
+            time.sleep(5)  # audit-ignore-sleep  # fmt: skip
         except Exception as e:
             logger.error(f"RabbitMQ consumer crash: {e}. Restarting...")
-            time.sleep(5)  # audit-ignore-sleep
+            time.sleep(5)  # audit-ignore-sleep  # fmt: skip
 
 
 if __name__ == "__main__":

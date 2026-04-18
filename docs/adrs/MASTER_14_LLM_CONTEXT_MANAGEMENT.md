@@ -23,9 +23,3 @@ LLMs natively possess generic base instructions (e.g., "always bundle all code,"
 ### ### 3. Targeted Directory Ingestion
 ### Context bundling tools MUST NOT be run against the repository root for execution tasks. Developers MUST pass specific subdirectory targets to strip irrelevant domain logic from the prompt.
 
-### ### 4. The Patch Protocol, Output Minimization & Pausing
-Heavy output generation degrades an LLM's attention span for the remainder of the session, directly leading to malformed boundaries and syntax errors.
-* **Autonomous Pausing (Micro-Transactions):** AI agents MUST NOT generate monolithic responses modifying multiple complex files at once. Operations MUST be autonomously chunked into micro-transactions based on a comfortable number of files given their size. **BEFORE** outputting the Parcel block, the agent MUST explicitly note that this is a partial output and instruct the user to type "continue" after extracting to receive the next batch.
-* For files of 500 lines or less, you MUST use `overwrite` mode.
-* You may use `search-and-replace` on any longer than 500 lines in length, if it is probable that the search action will be successful.
-* `search` blocks MUST be large enough to be unique within the file.

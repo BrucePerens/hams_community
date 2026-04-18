@@ -1,3 +1,4 @@
+import logging
 import json
 import subprocess
 import os
@@ -103,8 +104,10 @@ class BackupConfig(models.Model):
                     rec.kopia_password = f.decrypt(
                         rec.kopia_password_crypt.encode("utf-8")
                     ).decode("utf-8")
-                except Exception:
-                    rec.kopia_password = "***DECRYPT_FAILED***"
+                except Exception as e:
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
+
             else:
                 rec.kopia_password = False
 
@@ -127,7 +130,9 @@ class BackupConfig(models.Model):
                     rec.secret_key = f.decrypt(
                         rec.secret_key_crypt.encode("utf-8")
                     ).decode("utf-8")
-                except Exception:
+                except Exception as e:
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
                     rec.secret_key = "***DECRYPT_FAILED***"
             else:
                 rec.secret_key = False
@@ -215,7 +220,8 @@ class BackupConfig(models.Model):
                     )
                     connection.close()
                 except Exception as e:
-                    import logging
+
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
 
                     logging.getLogger(__name__).error(
                         "Failed to publish backup task to RMQ: %s", e
@@ -339,8 +345,10 @@ class BackupConfig(models.Model):
                         "description": message,
                     }
                 )
-            except Exception:
-                pass
+            except Exception as e:
+
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
+
         mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.mail_service_internal"
         )

@@ -125,7 +125,7 @@ def tail_file(fp, compiled_patterns):
                 while True:
                     line = f.readline()
                     if not line:
-                        time.sleep(0.5)  # audit-ignore-sleep
+                        time.sleep(0.5)  # audit-ignore-sleep  # fmt: skip
                         continue
 
                     for pat in compiled_patterns:
@@ -139,7 +139,7 @@ def tail_file(fp, compiled_patterns):
                             r_client.lpush("pager_log_anomalies", json.dumps(payload))
         except FileNotFoundError:
             logger.debug(f"File {chroot_path} not found. Retrying...")
-            time.sleep(5)  # audit-ignore-sleep
+            time.sleep(5)  # audit-ignore-sleep  # fmt: skip
 
 
 # --- 5. Interactive Splunk UI Listener ---

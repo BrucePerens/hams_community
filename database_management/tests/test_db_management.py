@@ -59,7 +59,10 @@ class TestDatabaseManagement(TransactionCase):
     def test_03_db_index_stats(self):
         # Tests [@ANCHOR: db_index_stats]
         from unittest.mock import patch
-        with patch.object(type(self.env["database.table.stat"]), "search") as mock_search:
+
+        with patch.object(
+            type(self.env["database.table.stat"]), "search"
+        ) as mock_search:
             mock_search.return_value = []
             self.env["database.table.stat"].cron_check_bloat()
             mock_search.assert_called_once()
