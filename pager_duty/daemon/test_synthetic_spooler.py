@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import unittest
 from unittest.mock import patch, MagicMock

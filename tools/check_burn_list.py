@@ -1535,6 +1535,18 @@ def main():
             if file.endswith((".py", ".xml", ".js", ".csv")):
                 scanned_files += 1
                 errors, warnings = scan_file(filepath)
+                if file.endswith(".py"):
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            first_line = f.readline()
+                            if first_line.startswith("#!") and not "daemons/" in filepath and not "tools/" in filepath and not filepath.endswith("setup.py") and not filepath.endswith("__init__.py"):
+                                errors.append(f"Line 1 (Shebang): Shebangs are strictly prohibited in standard Odoo module files as they can interfere with packaging and execution expectations. Code: {first_line.strip()}")
+                            if file == "__manifest__.py":
+                                f.seek(0)
+                                if first_line.startswith("#!"):
+                                    errors.append(f"Line 1 (__manifest__.py format): __manifest__.py must not contain a shebang. It should ideally start with the dictionary '{{' or standard -*- coding -*- comment. Code: {first_line.strip()}")
+                    except Exception:
+                        pass
                 if errors or warnings:
                     print(f" 📄 {os.path.relpath(filepath, target_dir)}")
                     for w in warnings:

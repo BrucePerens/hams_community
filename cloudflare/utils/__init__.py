@@ -1,3 +1,2 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from . import cloudflare_api  # noqa: F401

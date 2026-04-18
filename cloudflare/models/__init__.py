@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from . import website  # noqa: F401
 from . import ir_http  # noqa: F401
