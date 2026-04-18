@@ -28,7 +28,9 @@ def pin_comments(d):
                 try:
                     with open(path, "r", encoding="utf-8") as file:
                         lines = file.readlines()
-                except Exception:
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
                     continue
                 changed = False
                 for i, line in enumerate(lines):

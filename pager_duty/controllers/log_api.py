@@ -32,9 +32,7 @@ class PagerLogAPI(http.Controller):
             raise AccessError(_("Access Denied: Admins only."))
 
         if not redis or not redis_pool:
-            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
-                "error": "Redis not available for IPC."
-            }
+            return {"error": "Redis not available for IPC."}  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]  # fmt: skip
 
         req_uuid = str(uuid.uuid4())
         payload = {"uuid": req_uuid, "file": file_path, "regex": regex_query}
@@ -54,13 +52,9 @@ class PagerLogAPI(http.Controller):
                     pubsub.unsubscribe()
                     return data
 
-            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
-                "error": "Search timeout. Daemon may be offline."
-            }
+            return {"error": "Search timeout. Daemon may be offline."}  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]  # fmt: skip
         except Exception as e:
-            return {  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]
-                "error": f"IPC Failure: {e}"
-            }
+            return {"error": f"IPC Failure: {e}"}  # audit-ignore-i18n: Tested by [@ANCHOR: test_log_api_i18n]  # fmt: skip
 
     @http.route("/api/v1/pager/logs/files", type="jsonrpc", auth="user")
     def get_log_files(self):
