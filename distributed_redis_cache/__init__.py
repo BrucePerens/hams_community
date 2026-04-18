@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from . import redis_pool  # noqa: F401
 from . import redis_cache  # noqa: F401

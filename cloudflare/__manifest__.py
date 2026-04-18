@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 {
     "name": "Cloudflare Edge Orchestration",
     "summary": "Generalized CDN Edge Orchestration, Proactive Purging, and WAF Management.",

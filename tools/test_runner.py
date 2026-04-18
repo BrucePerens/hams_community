@@ -246,6 +246,20 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     """
     initial_errors = len(extractor.captured_blocks) if extractor else 0
 
+    if env is None:
+        import os
+        env = dict(os.environ)
+    if "RABBITMQ_HOST" not in env:
+        env["RABBITMQ_HOST"] = "localhost"
+    if "RMQ_HOST" not in env:
+        env["RMQ_HOST"] = "localhost"
+    if "REDIS_HOST" not in env:
+        env["REDIS_HOST"] = "localhost"
+    if "RMQ_USER" not in env:
+        env["RMQ_USER"] = "guest"
+    if "RMQ_PASS" not in env:
+        env["RMQ_PASS"] = "guest"
+
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -392,6 +406,9 @@ def rebuild_db(db_name):
     """Drops and creates a fresh PostgreSQL database"""
     print("[*] Dropping and Rebuilding Database Schema ({})...".format(db_name))
 
+    env = dict(os.environ)
+    if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
+        env["PGHOST"] = "/opt/hams/pgsock"
     subprocess.run(
         [
             "psql",
@@ -404,14 +421,19 @@ def rebuild_db(db_name):
         check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        env=env,
     )
 
     subprocess.run(
         ["dropdb", "--if-exists", "--force", db_name],
         check=False,
         stderr=subprocess.DEVNULL,
+        env=env,
     )
-    subprocess.run(["createdb", db_name], check=True)
+    env = dict(os.environ)
+    if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
+        env["PGHOST"] = "/opt/hams/pgsock"
+    subprocess.run(["createdb", db_name], check=True, env=env)
 
 
 def check_and_restore_cache(db_name, mod_string):
@@ -498,10 +520,14 @@ def check_and_restore_cache(db_name, mod_string):
     if cache_valid:
         print(f"[*] Valid DB cache found ({cache_file}). Restoring (Parallel)...")
         rebuild_db(db_name)
+        env = dict(os.environ)
+        if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
+            env["PGHOST"] = "/opt/hams/pgsock"
         res = subprocess.run(
             ["pg_restore", "-d", db_name, "-O", "-x", "-j", "4", cache_file],
             capture_output=True,
-            text=True
+            text=True,
+            env=env
         )
         if res.returncode == 0:
             print("[*] DB restored from cache.")
@@ -535,7 +561,10 @@ def save_db_cache(db_name, cache_file, mod_string):
 
     try:
         with open(cache_file, "wb") as f:
-            res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE)
+            env = dict(os.environ)
+            if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
+                env["PGHOST"] = "/opt/hams/pgsock"
+            res = subprocess.run(["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env)
 
         if res.returncode == 0:
             sz = os.path.getsize(cache_file)
@@ -772,6 +801,16 @@ def main():
             help="Specific daemon to test in 'downloads' mode (e.g., fcc_uls_sync)",
         )
 
+        parser.add_argument(
+            "--provision-jules",
+            action="store_true",
+            help="Provision the native Jules environment (install Odoo, PostgreSQL, etc.)",
+        )
+        parser.add_argument(
+            "--already-provisioned",
+            action="store_true",
+            help="Skip provisioning the Jules environment, assuming it is already set up.",
+        )
         args = parser.parse_args()
 
         try:
@@ -784,13 +823,102 @@ def main():
 
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
 
-        if os.environ.get("HAMS_ISOLATED_NS") != "1":
+        is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
+
+        if os.environ.get("HAMS_ISOLATED_NS") != "1" and not is_jules_vm:
             print("[*] Routing test execution to isolated namespace to protect environment...")
             run_in_isolated_environment(real_error_log)
             return
 
+        if is_jules_vm:
+            print("[*] Detected Jules VM environment. Bypassing isolated namespace...")
+
+            # Use /opt/hams/pgsock to closely mimic the isolated environment
+            pg_socket_dir = "/opt/hams/pgsock"
+            os.environ["PGHOST"] = pg_socket_dir
+            os.environ["HAMS_ISOLATED_NS"] = "1"  # Set to 1 so paths behave like prod/isolated
+
+            orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
+
+            if args.provision_jules:
+                print("[*] Provisioning local Jules environment (apt packages, services)...")
+                def _run_sudo_cmd(cmd, env=None):
+                    if isinstance(cmd, str):
+                        import subprocess
+                        subprocess.run(["sudo", "bash", "-c", cmd], check=True, env=env)
+                    else:
+                        import subprocess
+                        subprocess.run(["sudo"] + cmd, check=True, env=env)
+
+                print("[*] Installing APT packages for early_prod...")
+                import copy
+                import glob
+                old_apt = copy.deepcopy(infrastructure.MANIFEST.get("apt_packages", []))
+                infrastructure.MANIFEST["apt_packages"] = [
+                    pkg for pkg in infrastructure.MANIFEST.get("apt_packages", [])
+                    if pkg["name"] not in ("postgresql-17-pgvector", "kopia")
+                ]
+                infrastructure.provision_apt_packages(_run_sudo_cmd, environment="early_prod")
+                infrastructure.MANIFEST["apt_packages"] = old_apt
+
+                print("[*] Adding Odoo 19 repository and installing Odoo...")
+                _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes")
+                _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo")
+
+                print("[*] Configuring local PostgreSQL for test paths...")
+                pg_data_dir = "/opt/hams/pgdata"
+                pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
+                if not pg_bins:
+                    print("❌ ERROR: PostgreSQL initdb not found. Did the apt install fail?")
+                    sys.exit(1)
+                pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
+
+                _run_sudo_cmd(f"mkdir -p {pg_data_dir} {pg_socket_dir}")
+                _run_sudo_cmd(f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}")
+                _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
+
+                # Check if already initialized to avoid initdb error
+                import subprocess
+                res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
+                if not res.stdout.strip():
+                    _run_sudo_cmd(f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
+
+                _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\" || true")
+                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres psql -h {pg_socket_dir} -d postgres' || true")
+
+                print("[*] Starting local Redis and RabbitMQ...")
+                _run_sudo_cmd("systemctl start redis-server || true")
+                _run_sudo_cmd("systemctl start rabbitmq-server || true")
+
+                import atexit
+                def teardown_jules():
+                    print("[*] Tearing down local test PostgreSQL...")
+                    import subprocess
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                atexit.register(teardown_jules)
+            elif args.already_provisioned:
+                import glob
+                import atexit
+                pg_data_dir = "/opt/hams/pgdata"
+                pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
+                if pg_bins:
+                    pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
+                    import subprocess
+                    subprocess.run(["sudo", "chmod", "700", pg_data_dir])
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    def teardown_jules():
+                        import subprocess
+                        subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    atexit.register(teardown_jules)
+            else:
+                print("⚠️ Please run with --provision-jules first, or --already-provisioned if already set up.")
+                sys.exit(1)
+
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         venv_python = os.path.join(base_dir, ".venv", "bin", "python")
+        if is_jules_vm:
+            venv_python = "/usr/bin/python3"  # use system python for odoo in Jules VM
         odoo_bin = "/usr/bin/odoo"
 
         ignore_filepath = os.path.join(base_dir, args.config)
@@ -881,7 +1009,8 @@ def main():
                     "--max-cron-threads=0",
                     "--http-interface",
                     "localhost",
-                    "--log-level=warn",
+                    "--log-handler",
+                    "odoo.tools.convert:DEBUG",
                 ]
                 rc_init = run_cmd(init_cmd, extractor)
                 if rc_init != 0:

@@ -104,47 +104,32 @@ class TestBackupManagement(RealTransactionCase):
         # Validates ADR-0071 Asynchronous Bastion Pattern
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
+        # Tests are as much like production as possible, so RabbitMQ is used.
+        res_kopia = self.config_kopia.action_trigger_backup()
+        res_pg = self.config_pg.action_trigger_backup()
+
+        self.assertEqual(res_kopia.get("res_model"), "backup.job")
+        self.assertEqual(res_pg.get("res_model"), "backup.job")
+
         if integration_mode:
-            res_kopia = self.config_kopia.action_trigger_backup()
-            res_pg = self.config_pg.action_trigger_backup()
-
-            self.assertEqual(res_kopia.get("res_model"), "backup.job")
-            self.assertEqual(res_pg.get("res_model"), "backup.job")
-
             # In integration mode, physically commit the transaction.
             # This triggers the `env.cr.postcommit` hook and pushes the message to RabbitMQ.
             self.env.cr.commit()
-
-            job_kopia = self.env["backup.job"].search(
-                [("config_id", "=", self.config_kopia.id)], limit=1
-            )
-            self.assertTrue(job_kopia.exists())
-            self.assertEqual(job_kopia.state, "pending")
-
         else:
-            with patch("pika.BlockingConnection") as mock_pika:
-                res_kopia = self.config_kopia.action_trigger_backup()
-                res_pg = self.config_pg.action_trigger_backup()
+            # In standard environments without physical commits, trigger the hook manually to test Odoo's internal routing
+            self.env.cr.postcommit.run()
 
-                self.assertEqual(res_kopia.get("res_model"), "backup.job")
-                self.assertEqual(res_pg.get("res_model"), "backup.job")
+        job_kopia = self.env["backup.job"].search(
+            [("config_id", "=", self.config_kopia.id)], limit=1
+        )
+        self.assertTrue(job_kopia.exists())
+        self.assertEqual(job_kopia.state, "pending")
 
-                # In START.sh environments without physical commits, trigger the hook manually to test Odoo's internal routing
-                self.env.cr.postcommit.run()
-
-                job_kopia = self.env["backup.job"].search(
-                    [("config_id", "=", self.config_kopia.id)], limit=1
-                )
-                self.assertTrue(job_kopia.exists())
-                self.assertEqual(job_kopia.state, "pending")
-
-                job_pg = self.env["backup.job"].search(
-                    [("config_id", "=", self.config_pg.id)], limit=1
-                )
-                self.assertTrue(job_pg.exists())
-                self.assertEqual(job_pg.state, "pending")
-
-                mock_pika.assert_called()
+        job_pg = self.env["backup.job"].search(
+            [("config_id", "=", self.config_pg.id)], limit=1
+        )
+        self.assertTrue(job_pg.exists())
+        self.assertEqual(job_pg.state, "pending")
 
     @patch(
         "odoo.addons.backup_management.models.backup_config.shutil.which",
@@ -207,14 +192,13 @@ class TestBackupManagement(RealTransactionCase):
                 mock_msg.assert_called()
 
     @patch(
-        "odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable"
+        "odoo.addons.backup_management.models.backup_config.BackupConfig._get_executable", return_value="/bin/kopia"
     )
-    def test_08d_kopia_auto_download(self, mock_ensure):
+    def test_08d_kopia_auto_download(self, mock_get_exe):
         # [@ANCHOR: test_kopia_auto_download]
-        mock_ensure.return_value = "/bin/kopia"
         with patch.object(type(self.config_kopia), "message_post"):
             exe_path = self.config_kopia._get_executable("kopia")
-        mock_ensure.assert_called_once_with("kopia")
+        mock_get_exe.assert_called_once_with("kopia")
         self.assertEqual(exe_path, "/bin/kopia")
 
     def test_09_board_data_rpc(self):

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, mock_open, MagicMock

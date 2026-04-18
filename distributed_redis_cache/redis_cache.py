@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. AGPL-3.0.
 import json
