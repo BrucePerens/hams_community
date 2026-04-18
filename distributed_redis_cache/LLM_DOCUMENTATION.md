@@ -31,3 +31,4 @@ from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, i
 * **`@distributed_cache()`**: Use this decorator on `api.model` functions to automatically generate HMAC-SHA256 cache keys based on serialized arguments and write them to Redis with a 24h TTL.
 * **`invalidate_model_cache(env, model_name)`**: Use this when overriding `.write()` or `.unlink()` to forcibly flush local WSGI memory before executing the `pg_notify` cross-worker alert.
 </api>
+## 4. UI: Distributed Cache View [@ANCHOR: distributed_cache_view]
