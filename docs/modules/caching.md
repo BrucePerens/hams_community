@@ -13,3 +13,4 @@ Implements a global, root-scoped Service Worker (`/sw.js`) that proxies and cach
 * **WebSockets:** `ws://` protocols are hardcoded to bypass the proxy.
 * **Dynamic Large File Prohibition:** The worker mathematically calculates an active quota limit (approx 35MB). Heavy media MUST route via `/web/image` to prevent the cache from ejecting critical UI bundles.
 * **Layout Injection:** The service worker registration script is injected globally into the frontend `website.layout` via XPath `[@ANCHOR: xpath_rendering_caching_layout]`.
+* **Settings Injection:** The sysadmin settings are injected into  via XPath `[@ANCHOR: xpath_rendering_caching_settings]`.

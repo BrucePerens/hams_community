@@ -1,21 +1,23 @@
 import os
+import logging
 from odoo import http, tools
 from odoo.http import request
 from odoo.modules.module import get_module_path
 
+_logger = logging.getLogger(__name__)
 
 class ServiceWorkerController(http.Controller):
 
-    _static_info_cache = None
+    _fs_cache = None
 
-    def _get_global_static_info(self):
+    def _get_fs_stats(self):
         """
         Scans the 'static/' directories of all installed modules.
-        Returns a tuple: (latest_mtime, dynamic_max_file_size).
+        Returns a tuple: (latest_mtime, file_sizes).
         Cached in RAM at the class level so the disk walk only executes once per worker lifecycle.
         """
-        if type(self)._static_info_cache:
-            return type(self)._static_info_cache
+        if type(self)._fs_cache:
+            return type(self)._fs_cache
 
         max_mtime = 0.0
         file_sizes = []
@@ -41,20 +43,31 @@ class ServiceWorkerController(http.Controller):
                             if mtime > max_mtime:
                                 max_mtime = mtime
                             file_sizes.append(os.path.getsize(filepath))
-                        except OSError:
-                            pass
-
-        # Conservative browser quota estimate: 50MB
-        # Reserve 15MB for Odoo's compiled /web/assets/ bundles and overhead
-        SAFE_QUOTA = 35 * 1024 * 1024
+                        except OSError as e:
+                            _logger.warning("Could not access file %s: %s", filepath, e)
 
         file_sizes.sort(reverse=True)
+        res = (max_mtime, file_sizes)
+        type(self)._fs_cache = res
+        return res
+
+    def _get_global_static_info(self):
+        """
+        Returns a tuple: (latest_mtime_string, dynamic_max_file_size_string).
+        Calculates the safe dynamic max file size based on configurable quota.
+        """
+        max_mtime, file_sizes = self._get_fs_stats()
+
+        #
+        quota_mb = int(request.env['ir.config_parameter'].sudo().get_param('caching.safe_quota_mb', '35') or 35) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+
+        # Reserve 15MB for Odoo's compiled /web/assets/ bundles and overhead
+        SAFE_QUOTA = quota_mb * 1024 * 1024
+
         total_size = sum(file_sizes)
 
         if not file_sizes:
-            res = (str(int(max_mtime)), str(10 * 1024 * 1024))  # Default 10MB
-            type(self)._static_info_cache = res
-            return res
+            return (str(int(max_mtime)), str(10 * 1024 * 1024))  # Default 10MB
 
         if total_size <= SAFE_QUOTA:
             # Everything fits. Set max size to just above the largest file.
@@ -71,9 +84,7 @@ class ServiceWorkerController(http.Controller):
                     dynamic_max_size = size - 1
                     break
 
-        res = (str(int(max_mtime)), str(dynamic_max_size))
-        type(self)._static_info_cache = res
-        return res
+        return (str(int(max_mtime)), str(dynamic_max_size))
 
     @http.route("/sw.js", type="http", auth="public", sitemap=False)
     def service_worker(self):
@@ -90,7 +101,9 @@ class ServiceWorkerController(http.Controller):
 
         latest_mtime, max_file_size = self._get_global_static_info()
 
-        content = content.replace("__CACHE_NAME__", f"odoo-assets-cache-{latest_mtime}")
+        invalidation_version = request.env['ir.config_parameter'].sudo().get_param('caching.invalidation_version', '1') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+
+        content = content.replace("__CACHE_NAME__", f"odoo-assets-cache-{latest_mtime}-v{invalidation_version}")
         content = content.replace("__MAX_FILE_SIZE_BYTES__", max_file_size)
 
         headers = [
