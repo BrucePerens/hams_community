@@ -70,8 +70,8 @@ class CloudflareConfigManager(models.AbstractModel):
                             mtime = os.path.getmtime(filepath)
                             if mtime > max_mtime:
                                 max_mtime = mtime
-                        except OSError:
-                            pass
+                        except OSError as e:
+                            _logger.warning(f"Could not read mtime for {filepath}: {e}")
 
         latest_mtime = str(int(max_mtime))
 
