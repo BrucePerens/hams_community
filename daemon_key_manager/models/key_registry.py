@@ -1,7 +1,7 @@
 import os
 import logging
 import datetime
-from odoo import models, fields, api, SUPERUSER_ID, _
+from odoo import models, fields, api, SUPERUSER_ID, tools, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -34,6 +34,12 @@ class DaemonKeyRegistry(models.Model):
         "CHECK(LENGTH(TRIM(env_file_path)) > 0)",
         "The environment file path cannot be empty.",
     )
+
+    @api.constrains('user_id')
+    def _check_user_is_service_account(self):
+        for record in self:
+            if not record.user_id.is_service_account:
+                raise UserError(_("The selected user must be a service account."))
 
     @api.model
     def register_daemon(self, daemon_name, user_xml_id, env_file_path):
@@ -145,8 +151,14 @@ class DaemonKeyRegistry(models.Model):
         )
 
         for reg in registries:
-            reg._rotate_key_and_write_file()
-            self.env.cr.commit()
+            try:
+                reg._rotate_key_and_write_file()
+                if not tools.config['test_enable']:
+                    self.env.cr.commit()
+            except Exception as e:
+                if not tools.config['test_enable']:
+                    self.env.cr.rollback()
+                _logger.error(f"Failed to rotate key for daemon {reg.name}: {e}")
 
         if len(registries) == 10:
             self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys")._trigger()
