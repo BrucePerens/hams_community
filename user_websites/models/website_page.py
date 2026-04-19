@@ -514,7 +514,7 @@ class WebsitePage(models.Model):
                     increment = int(val)
                     updates.append((increment, page_id))
                 except ValueError:
-                    pass
+                    _logger.warning('Failed to parse Redis key or value for view count.')
 
         if updates:
             try:

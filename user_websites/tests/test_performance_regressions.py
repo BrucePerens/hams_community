@@ -157,6 +157,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
         self.authenticate(None, None)
 
+        import logging
         logger = logging.getLogger("odoo.addons.base.models.ir_model")
         with self.assertLogs(logger, level="WARNING") as cm:
             try:

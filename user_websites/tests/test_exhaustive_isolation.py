@@ -219,7 +219,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             logging.getLogger(__name__).warning("An error occurred: %s", e)
             # If the rendering engine crashes entirely due to the illegal syntax (e.g. QWebException),
             # that is also considered a successful defense against extraction.
-            pass
+            logging.getLogger(__name__).info('QWeb rendering exception caught as expected.')
 
     def test_05_blog_post_cross_tenant_mutation(self):
         """
