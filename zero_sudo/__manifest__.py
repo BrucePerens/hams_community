@@ -9,6 +9,7 @@
     "data": [
         "data/security_data.xml",
         "security/ir.model.access.csv",
+        "views/res_users_views.xml"
     ],
     "installable": True,
     "auto_install": False,
