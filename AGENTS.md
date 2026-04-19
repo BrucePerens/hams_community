@@ -42,3 +42,26 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 * **gemini.google.com interface:** LLMs operating via the `gemini.google.com` interface MUST use the Parcel format. See `docs/LLM_PARCEL_FORMAT.md` for complete documentation on this schema.
 * **Jules & Other Interfaces:** The Parcel format is entirely irrelevant to Jules and other LLM interfaces, which may use their own native code generation or block workflows.
 </critical_guardrails>
+
+<per_agent_instructions>
+* **jules.google.com interface:**
+* **Testing:**
+See docs/TESTING_IN_JULES.md . Use the
+`--provision-jules` flag to provision the test environment. Create ~/tmp for
+the user that will run testing, the file filtered_test.txt will be deposited
+there. Use the --already-provisioned flag when running tests.
+
+Testing is required before producing a PR. All tests must pass before the PR is
+produced.
+
+Always perform normal tests. Perform integration tests if any of the normal
+tests for the code that has been modified, or code that uses the modified code
+includes mocks for things that are tested without mocks in the integration tests.
+
+Perform integration tests for code that interacts with any daemon, redis,
+or rabbitmq; and code that is used by code that interacts with those things.
+
+* **Completion:** Upon completion of a task, produce a PR. Don't wait for the
+user to authorize you to finish, go straight to the PR, and if the user then
+wants changes, make them and produce another PR.
+</per_agent_instructions>
