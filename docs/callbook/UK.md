@@ -10,6 +10,9 @@
 The primary domain (`www.ofcom.org.uk`) uses **Cloudflare**, which actively challenges programmatic requests with a `403 Forbidden` response and anti-bot checks (e.g., `cf-mitigated: challenge`).
 Standard HTTP requests using `curl` or `requests` even with a spoofed User-Agent will fail against this CDN firewall.
 
+
+### Bot Compliance
+Per [ADR-0080](../adrs/0080_good_bot_compliance_and_scraping_ethics.md), our automated agents must adhere to the Dual-Mode Bot Architecture. Since Cloudflare protects this source and may block standard requests, we are authorized to use Exception Mode (e.g., headless browsers, proxy rotation) to fulfill our compliance requirements, assuming good-faith efforts to register as a 'Good Bot' are unviable.
 ## Suggested Download Process
 To bypass the Cloudflare challenge autonomously, the implementing daemon will likely need to use a headless browser with stealth capabilities.
 

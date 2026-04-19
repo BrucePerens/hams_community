@@ -56,27 +56,62 @@ When scraping official licensing authorities (e.g., to verify a ham radio licens
 *   **Compliance Guaranteed:** Authorizing evasive techniques as a fallback guarantees we can always verify user licenses, satisfying our core operational requirement.
 
 ### Appendix: CDN Good Bot Specifications
-We have reviewed the top 20 CDNs for any specific "Good Bot" registration or allowlisting programs:
+We have reviewed the top CDNs and WAFs for any specific "Good Bot" registration or allowlisting programs:
 
-1.  **Fastly:** Bot Management categorizes verified bots based on signals and IP tags. Configuration rules can allow requests from these verified bots.
-2.  **Imperva:** Maintains a client database of bot classifications (Good Bot vs Bad Bot) based on detection models and signatures.
-3.  **Google Cloud CDN (Cloud Armor):** Bot Management allows explicit allowlisting via IP addresses or specific request headers.
-4.  **Azure CDN (Azure WAF):** Bot protection rule set uses Microsoft Threat Intelligence to identify known good bots (like search engines). Custom rules can be used for explicit IP/User-Agent allowlisting.
-5.  **Edgio:** Provides a managed good bot allowlist that is continuously updated. Custom bots can be added via Access Control rules.
-6.  **Gcore:** WAAP Bot Management provides a "Known Bots" tab in the Customer Portal to allowlist specific bots.
-7.  **Tencent Cloud CDN:** Bot traffic management allows configuring authorized crawlers and search engine bots based on User-Agent and IP.
-8.  **Alibaba Cloud CDN:** Anti-Bot tools allow configuring authorized crawlers and setting up allowlists.
-9.  **BunnyCDN:** Supports Known Bots IP Whitelists for filtering network traffic.
-10. **Sucuri:** Uses standard WAF rules, relying on User-Agent and IP identification.
-11. **KeyCDN:** No specific verified bot program; follows standard WAF rules (respects User-Agent/IP).
-12. **StackPath:** No explicit verified bot program found; relies on custom WAF rules.
-13. **CDN77:** No explicit verified bot program found; relies on custom WAF rules.
-14. **CacheFly:** No explicit verified bot program found; relies on custom WAF rules.
-15. **Medianova:** No explicit verified bot program found; relies on standard WAF rules.
-16. **BelugaCDN:** No explicit verified bot program found; relies on standard WAF rules.
-17. **Leaseweb:** No explicit verified bot program found; relies on standard WAF rules.
-18. **ArvanCloud:** No explicit verified bot program found; relies on standard WAF rules.
-19. **CDNetworks:** Relies on standard Bot Management identifying IP addresses, headers, and device fingerprints.
-20. **Netlify:** Standard WAF rules, primarily relies on User-Agent and IP rate limiting for bot protection.
+1.  **Cloudflare:**
+    *   **Process for Joining:** Register via Cloudflare's Verified Bot program by generating an Ed25519 key pair, hosting a JWKS Key Directory (`/.well-known/http-message-signatures-directory`), and submitting an application via the Cloudflare dashboard to become a Signed Agent.
+    *   **Good Bot Behavior:** Daemons must sign outbound HTTP requests using `Signature`, `Signature-Input`, and `Signature-Agent` headers. Use a descriptive User-Agent and ensure valid FCrDNS.
+
+2.  **Amazon CloudFront (AWS WAF):**
+    *   **Process for Joining:** AWS WAF Bot Control does not have a self-serve key-based verified bot registration. Instead, work with the target site administrator to add custom AWS WAF rules that explicitly allow your specific User-Agent and static IP range.
+    *   **Good Bot Behavior:** Maintain a public, predictable IP address range, use a descriptive User-Agent, and implement AWS WAF SDK integration (tokens) if the target site supports it.
+
+3.  **Akamai:**
+    *   **Process for Joining:** Akamai validates bots through IP allowlists, Reverse DNS (FCrDNS), and User-Agent matching. No explicit self-serve dashboard, but validation depends on maintaining consistent identity.
+    *   **Good Bot Behavior:** Maintain a public IP list and ensure FCrDNS is perfectly configured so Akamai's categorization engine can classify the traffic as a "Good Bot."
+
+4.  **Fastly:**
+    *   **Process for Joining:** Bot Management categorizes verified bots based on signals and IP tags. Target sites configure rules to allow requests from these verified bots.
+    *   **Good Bot Behavior:** Ensure valid Reverse DNS, respect `robots.txt`, and use a consistent User-Agent.
+
+5.  **Imperva:**
+    *   **Process for Joining:** Imperva maintains its own database. Bot developers can submit their bot details to Imperva support for classification as a Good Bot.
+    *   **Good Bot Behavior:** Consistent IP range, descriptive User-Agent, and honoring `robots.txt`.
+
+6.  **Google Cloud CDN (Cloud Armor):**
+    *   **Process for Joining:** No global verified bot program. Rely on explicit allowlisting via IP addresses or specific request headers configured by the target site.
+    *   **Good Bot Behavior:** Strict adherence to generic Good Bot standards (Rate limiting, FCrDNS, descriptive User-Agent).
+
+7.  **Azure CDN (Azure WAF):**
+    *   **Process for Joining:** Uses Microsoft Threat Intelligence to identify known good bots.
+    *   **Good Bot Behavior:** Publish IP ranges publicly, use consistent User-Agent, and ensure PTR records exist.
+
+8.  **Edgio:**
+    *   **Process for Joining:** Provides a managed good bot allowlist that is continuously updated. Contact Edgio support to be added.
+    *   **Good Bot Behavior:** Descriptive User-Agent and published IP ranges.
+
+9.  **Gcore:**
+    *   **Process for Joining:** WAAP Bot Management provides a "Known Bots" tab in the Customer Portal to allowlist specific bots.
+    *   **Good Bot Behavior:** Requires target site administrators to manually allowlist your bot's IPs and User-Agent.
+
+10. **Tencent Cloud CDN:**
+    *   **Process for Joining:** Bot traffic management allows configuring authorized crawlers and search engine bots based on User-Agent and IP.
+    *   **Good Bot Behavior:** Static IPs and descriptive User-Agent.
+
+11. **Alibaba Cloud CDN:**
+    *   **Process for Joining:** Anti-Bot tools allow configuring authorized crawlers and setting up allowlists. Target site admin intervention required.
+    *   **Good Bot Behavior:** Maintain a public IP list and consistent User-Agent.
+
+12. **BunnyCDN:**
+    *   **Process for Joining:** Supports Known Bots IP Whitelists for filtering network traffic.
+    *   **Good Bot Behavior:** Publish IP addresses for target admins to whitelist.
+
+13. **Sucuri:**
+    *   **Process for Joining:** Uses standard WAF rules, relying on User-Agent and IP identification. Contact Sucuri for global whitelisting.
+    *   **Good Bot Behavior:** Valid FCrDNS and descriptive User-Agent.
+
+14. **KeyCDN, StackPath, CDN77, CacheFly, Medianova, BelugaCDN, Leaseweb, ArvanCloud, CDNetworks, Netlify:**
+    *   **Process for Joining:** These CDNs rely primarily on custom WAF rules and do not operate formal global verified bot programs.
+    *   **Good Bot Behavior:** Default adherence to the "Good Bot" Standard: Descriptive User-Agent, Forward-confirmed reverse DNS (FCrDNS), `robots.txt` compliance, and aggressive rate limiting to avoid triggering heuristics.
 
 *Note: For CDNs without a formal verified bot program, our default adherence to the "Good Bot" Standard (Descriptive User-Agent, FCrDNS, Robots.txt compliance) serves as the primary mechanism to avoid being blocked by default rule sets.*
