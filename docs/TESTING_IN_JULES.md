@@ -6,6 +6,14 @@ Instead, the test runner detects the Jules VM automatically via the `IN_JULES_VM
 
 To facilitate this, new flags have been added to provision the dependencies required for testing natively on the VM.
 
+## Prerequisites
+
+Before running tests, ensure that a `tmp` directory exists in your home folder for log output:
+
+```bash
+mkdir -p ~/tmp
+```
+
 ## 1. Initial Provisioning (First Run)
 
 To bootstrap the local Ubuntu environment with Odoo 19, PostgreSQL, Redis, RabbitMQ, and the required Python dependencies, run the test runner with the `--provision-jules` flag:
@@ -36,6 +44,16 @@ You can append standard test runner arguments alongside this flag:
 ```bash
 IN_JULES_VM=1 python3 tools/test_runner.py -m individual -u user_websites --already-provisioned
 IN_JULES_VM=1 python3 tools/test_runner.py -m integration --already-provisioned
+```
+
+## 3. Testing a Single Odoo Module
+
+To test a single Odoo module specifically without running the entire suite, use the `-m individual` flag combined with `-u <module_name>`.
+
+For example, to test the `user_websites` module:
+
+```bash
+IN_JULES_VM=1 python3 tools/test_runner.py -m individual -u user_websites --already-provisioned
 ```
 
 ## Note on Python Execution

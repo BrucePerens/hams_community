@@ -10,6 +10,7 @@ class TestCloudflareAPIs(TransactionCase):
     def test_01_waf_ban_ip(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()
         mock_response.json.return_value = {"result": {"id": "fake_rule_123"}}
         mock_post.return_value = mock_response
 
@@ -78,6 +79,7 @@ class TestCloudflareAPIs(TransactionCase):
         # Case 3: Success path
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()
         mock_post.return_value = mock_response
 
         urls = ["https://a.com/1", "https://a.com/2"]
@@ -118,6 +120,7 @@ class TestCloudflareAPIs(TransactionCase):
         # Case 3: Success path
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()
         mock_post.return_value = mock_response
 
         tags = ["tag-a", "tag-b"]

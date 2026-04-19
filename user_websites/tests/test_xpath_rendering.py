@@ -193,7 +193,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.assertIn("odoo_group_id", v7["arch"])
 
         v8 = self.env["website.page"].get_view(
-            view_id=self.env.ref("user_websites.view_user_websites_page_tree").id,
+            view_id=self.env.ref("user_websites.view_user_websites_page_list").id,
             view_type="list",
         )
         self.assertIn("website_published", v8["arch"])

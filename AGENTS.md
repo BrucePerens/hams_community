@@ -42,3 +42,11 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 * **gemini.google.com interface:** LLMs operating via the `gemini.google.com` interface MUST use the Parcel format. See `docs/LLM_PARCEL_FORMAT.md` for complete documentation on this schema.
 * **Jules & Other Interfaces:** The Parcel format is entirely irrelevant to Jules and other LLM interfaces, which may use their own native code generation or block workflows.
 </critical_guardrails>
+
+<testing_requirements>
+## 4. Testing Requirements
+
+* **Mandatory Testing:** All Jules agents MUST perform testing as documented in `docs/TESTING_IN_JULES.md` before submitting a PR.
+* **Verification:** This includes running the standard test suite, integration tests, and validating single-module tests when applicable.
+* **Failures:** Any test failures MUST be addressed and fixed prior to finalizing a submission.
+</testing_requirements>

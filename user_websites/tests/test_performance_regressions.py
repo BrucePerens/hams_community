@@ -119,6 +119,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             self.test_users.append(u)
 
     def test_02_acl_overhead_loop_elimination(self):
+        import logging
         # [@ANCHOR: test_acl_overhead_loop_elimination]
         # Tests [@ANCHOR: test_acl_overhead_loop_elimination]
         """
