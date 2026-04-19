@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-17 04:06+0000\n"
-"PO-Revision-Date: 2026-04-17 04:06+0000\n"
+"POT-Creation-Date: 2026-04-19 22:12+0000\n"
+"PO-Revision-Date: 2026-04-19 22:12+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -17,11 +17,11 @@ msgstr ""
 msgid "A record cannot be owned by both a user and a group simultaneously."
 msgstr ""
 
-#: pager_duty/controllers/log_api.py:68
+#: pager_duty/controllers/log_api.py:61
 msgid "Access Denied."
 msgstr ""
 
-#: pager_duty/controllers/log_api.py:32
+#: pager_duty/controllers/log_api.py:31
 msgid "Access Denied: Admins only."
 msgstr ""
 
@@ -33,20 +33,12 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this blog."
 msgstr ""
 
-#: user_websites_seo/models/user_websites_group.py:22
-msgid "Access Denied: You do not have permission to modify this group."
-msgstr ""
-
-#: user_websites/models/website_page.py:387
+#: user_websites/models/website_page.py:389
 msgid "Access Denied: You do not have permission to modify this page."
 msgstr ""
 
-#: user_websites/models/blog_post.py:141
+#: user_websites/models/blog_post.py:146
 msgid "Access Denied: You do not have permission to modify this post."
-msgstr ""
-
-#: user_websites_seo/models/res_users.py:40
-msgid "Access Denied: You do not have permission to modify this profile."
 msgstr ""
 
 #: user_websites/models/content_violation_appeal.py:43
@@ -57,23 +49,27 @@ msgstr ""
 msgid "Appeal rejected. The user remains suspended."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:64
+#: binary_downloader/models/binary_manifest.py:113
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
-#: pager_duty/models/incident.py:175
+#: pager_duty/models/incident.py:177
 msgid "Auto-resolved by NOC monitor recovery sequence."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:626
+#: pager_duty/models/pager_check.py:630
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:525
+#: backup_management/models/backup_config.py:533
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:78
+#: distributed_redis_cache/models/distributed_cache_config.py:26
+msgid "Cache invalidated for model %s"
+msgstr ""
+
+#: daemon_key_manager/models/key_registry.py:84
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -81,7 +77,7 @@ msgstr ""
 msgid "Checks exported to JSON daemon configuration."
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:121
+#: cloudflare/models/res_config_settings.py:120
 msgid "Cloudflare Tunnel Command"
 msgstr ""
 
@@ -89,7 +85,7 @@ msgstr ""
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:640
+#: pager_duty/models/pager_check.py:644
 msgid "Daemon Notified"
 msgstr ""
 
@@ -97,7 +93,7 @@ msgstr ""
 msgid "Database checks updated from JSON file."
 msgstr ""
 
-#: user_websites/models/res_config_settings.py:54
+#: user_websites/models/res_config_settings.py:58
 msgid "Environment Updated"
 msgstr ""
 
@@ -113,28 +109,48 @@ msgstr ""
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:116
+#: binary_downloader/models/binary_manifest.py:171
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:109
+#: cloudflare/models/res_config_settings.py:108
 msgid "Failed to create tunnel: %s"
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:51
+#: cloudflare/models/tunnel.py:36
+msgid "Failed to delete tunnel: %s"
+msgstr ""
+
+#: cloudflare/models/res_config_settings.py:50
 msgid "Failed to deploy WAF rules: %s"
 msgstr ""
 
-#: cloudflare/models/ip_ban.py:112
+#: cloudflare/models/ip_ban.py:111
 msgid "Failed to lift ban via Cloudflare API: %s"
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:79
+#: cloudflare/models/res_config_settings.py:78
 msgid "Failed to pull WAF rules: %s"
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:114
+#: cloudflare/models/purge_wizard.py:52
+msgid "Failed to purge everything from Cloudflare cache."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:91
+msgid "Failed to purge specific Cache-Tags from Cloudflare cache."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:75
+msgid "Failed to purge specific URLs from Cloudflare cache."
+msgstr ""
+
+#: cloudflare/models/res_config_settings.py:113
 msgid "Failed to retrieve tunnel token: %s"
+msgstr ""
+
+#: cloudflare/models/zone_settings_wizard.py:84
+msgid "Failed to update some settings:\n%s"
 msgstr ""
 
 #: pager_duty/models/pager_check.py:323
@@ -145,23 +161,36 @@ msgstr ""
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: backup_management/models/backup_config.py:260
+#: binary_downloader/models/binary_manifest.py:94
+msgid "Invalid binary name."
+msgstr ""
+
+#: backup_management/models/backup_config.py:266
 msgid "Kopia backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:158
+#: backup_management/models/backup_config.py:163
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:320
+#: backup_management/models/backup_config.py:326
 msgid "Kopia policies applied successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:166
+#: backup_management/models/backup_config.py:171
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:56
+#: cloudflare/models/tunnel.py:28
+msgid "Missing Cloudflare API Token or Account ID for the website."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:34
+#: cloudflare/models/zone_settings_wizard.py:63
+msgid "Missing Cloudflare API Token or Zone ID for the selected website."
+msgstr ""
+
+#: binary_downloader/models/binary_manifest.py:105
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
@@ -170,7 +199,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
-#: pager_duty/models/incident.py:152
+#: pager_duty/models/incident.py:154
 msgid "New Incident Created"
 msgstr ""
 
@@ -182,7 +211,23 @@ msgstr ""
 msgid "Optimizations Applied"
 msgstr ""
 
-#: user_websites/models/res_config_settings.py:55
+#: cloudflare/models/purge_wizard.py:56
+msgid "Please provide items to purge."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:46
+msgid "Purged everything from Cloudflare cache successfully."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:85
+msgid "Purged specific Cache-Tags from Cloudflare cache successfully."
+msgstr ""
+
+#: cloudflare/models/purge_wizard.py:69
+msgid "Purged specific URLs from Cloudflare cache successfully."
+msgstr ""
+
+#: user_websites/models/res_config_settings.py:59
 msgid "Python dependencies have been successfully updated. Restart the Odoo service for changes to take effect."
 msgstr ""
 
@@ -190,53 +235,80 @@ msgstr ""
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
+#: distributed_redis_cache/models/distributed_cache_config.py:51
+msgid "Redis Status"
+msgstr ""
+
+#: distributed_redis_cache/models/distributed_cache_config.py:44
+msgid "Redis connection failed: %s"
+msgstr ""
+
+#: distributed_redis_cache/models/distributed_cache_config.py:41
+msgid "Redis connection is healthy."
+msgstr ""
+
+#: distributed_redis_cache/models/distributed_cache_config.py:34
+msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
+msgstr ""
+
 #: zero_sudo/models/security_utils.py:124
 msgid "Requirements file not found at %s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:627
+#: pager_duty/models/pager_check.py:631
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:49
+#: zero_sudo/models/security_utils.py:48
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:94
+#: binary_downloader/models/binary_manifest.py:143
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:111
+#: zero_sudo/models/security_utils.py:110
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:36
+#: zero_sudo/models/security_utils.py:35
 msgid "Security Alert: Service Account '%s' not found."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:68
+#: zero_sudo/models/security_utils.py:67
 msgid "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:46
+#: zero_sudo/models/security_utils.py:45
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:88
+#: daemon_key_manager/models/key_registry.py:94
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:44
-#: cloudflare/models/res_config_settings.py:72
+#: binary_downloader/models/binary_manifest.py:84
+#: cloudflare/models/purge_wizard.py:45
+#: cloudflare/models/purge_wizard.py:68
+#: cloudflare/models/purge_wizard.py:84
+#: cloudflare/models/res_config_settings.py:43
+#: cloudflare/models/res_config_settings.py:71
+#: cloudflare/models/tunnel.py:83
+#: cloudflare/models/zone_settings_wizard.py:90
+#: distributed_redis_cache/models/distributed_cache_config.py:25
 msgid "Success"
 msgstr ""
 
-#: pager_duty/tests/test_incident.py:93
-#: pager_duty/tests/test_incident.py:116
+#: binary_downloader/models/binary_manifest.py:85
+msgid "Successfully installed %s."
+msgstr ""
+
+#: pager_duty/tests/test_incident.py:97
+#: pager_duty/tests/test_incident.py:120
 msgid "Test message"
 msgstr ""
 
-#: user_websites/models/user_websites_groups.py:241
+#: user_websites/models/user_websites_groups.py:247
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
@@ -244,25 +316,37 @@ msgstr ""
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:641
+#: binary_downloader/models/binary_manifest.py:54
+msgid "The binary name cannot contain slashes or backslashes."
+msgstr ""
+
+#: pager_duty/models/pager_check.py:645
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
+#: daemon_key_manager/models/key_registry.py:42
+msgid "The selected user must be a service account."
+msgstr ""
+
 #: user_websites/models/res_users.py:186
-#: user_websites/models/user_websites_groups.py:89
+#: user_websites/models/user_websites_groups.py:92
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
 
-#: user_websites/models/website_page.py:333
+#: user_websites/models/website_page.py:335
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
+#: cloudflare/models/tunnel.py:84
+msgid "Tunnels synced successfully."
+msgstr ""
+
 #: user_websites/models/res_users.py:209
-#: user_websites/models/user_websites_groups.py:126
+#: user_websites/models/user_websites_groups.py:129
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:170
+#: backup_management/models/backup_config.py:175
 msgid "Unknown engine: %s"
 msgstr ""
 
@@ -294,7 +378,7 @@ msgstr ""
 msgid "You cannot create a record owned by another user."
 msgstr ""
 
-#: user_websites/controllers/main.py:672
+#: user_websites/controllers/main.py:678
 msgid "You cannot create posts for this user."
 msgstr ""
 
@@ -302,16 +386,16 @@ msgstr ""
 msgid "You cannot transfer ownership of a record to another user or group."
 msgstr ""
 
-#: user_websites/controllers/main.py:683
+#: user_websites/controllers/main.py:689
 msgid "You do not have permission to create posts for this group."
 msgstr ""
 
-#: user_websites/controllers/main.py:419
-#: user_websites/controllers/main.py:430
+#: user_websites/controllers/main.py:425
+#: user_websites/controllers/main.py:436
 msgid "You do not have permission to create this site."
 msgstr ""
 
-#: user_websites/models/website_page.py:288
+#: user_websites/models/website_page.py:290
 msgid "You have reached your limit of %s website pages."
 msgstr ""
 
@@ -319,15 +403,19 @@ msgstr ""
 msgid "You must assign an owner (user or group) when creating this record."
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:98
+#: cloudflare/models/res_config_settings.py:97
 msgid "You must provide both the Cloudflare API Token and Account ID to create a tunnel."
 msgstr ""
 
-#: backup_management/models/backup_config.py:281
+#: cloudflare/models/zone_settings_wizard.py:91
+msgid "Zone settings updated successfully."
+msgstr ""
+
+#: backup_management/models/backup_config.py:287
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:152
+#: backup_management/models/backup_config.py:157
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 

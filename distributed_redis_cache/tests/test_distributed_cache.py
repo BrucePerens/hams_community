@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import patch, MagicMock
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
 
 
 from odoo.tests.common import HttpCase
@@ -33,8 +33,7 @@ class TestDistributedCache(HttpCase):
             # Under integration tests, we run the native _authenticate loop against the real daemon
             # To avoid LocalProxy exception from request (which happens deeper in Odoo's base code without a real HTTP request),
             # we mock `request` with a MagicMock that has an `httprequest.method` attribute just to satisfy `is_cors_preflight`
-            import unittest.mock
-            from odoo.http import request
+            import unittest.mock  # noqa: E402
             mock_req_inst = unittest.mock.MagicMock()
             mock_req_inst.httprequest.method = "GET"
             mock_req_inst.env.__contains__.return_value = True
@@ -93,7 +92,7 @@ class TestDistributedCache(HttpCase):
             self.assertTrue(True)
             return
 
-        with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, patch("odoo.addons.distributed_redis_cache.models.ir_http.request", MagicMock()) as mock_request:
+        with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, patch("odoo.addons.distributed_redis_cache.models.ir_http.request", MagicMock()):
             mock_redis.Redis.side_effect = Exception("Connection reset by peer")
 
             try:

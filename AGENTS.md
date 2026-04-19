@@ -57,6 +57,8 @@ Parcel is not to be used for other LLM user interfaces, only gemini.google.com .
 
 * **jules.google.com interface:**
 
+* **Context:** Use FileFetcher to get any necessary files.
+
 * **Testing:**
 See docs/TESTING_IN_JULES.md . Use the
 `--provision-jules` flag to provision the test environment. Create ~/tmp for
