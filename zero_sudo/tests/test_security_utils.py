@@ -33,7 +33,7 @@ class TestSecurityUtils(TransactionCase):
     def test_02_bdd_ormcache_query_counting_service_uid(self):
         # [@ANCHOR: test_get_service_uid]
         # Tests [@ANCHOR: get_service_uid]
-        from unittest.mock import patch
+        from unittest.mock import patch  # noqa: E402
 
         utils = self.env["zero_sudo.security.utils"]
 

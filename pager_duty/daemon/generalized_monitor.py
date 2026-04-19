@@ -64,7 +64,7 @@ def get_odoo_client(logger, config):
                 if dbs:
                     db = dbs[0]
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
     if not db:
@@ -160,7 +160,7 @@ def verify_and_install_dependencies(client, checks):
                         },
                     )
                 except Exception as e:
-                    import logging
+                    import logging  # noqa: E402
 
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
                 sys.exit(1)
@@ -182,7 +182,7 @@ def is_in_maintenance(check):
             if start <= now <= end:
                 return True
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
     return False
@@ -238,7 +238,7 @@ def report(client, source, msg, severity="high"):
             with urllib.request.urlopen(req, timeout=5):
                 pass
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
 
@@ -303,7 +303,7 @@ def execute_check(check, client=None):
             return False, f"Load check failed: {e}"
 
     elif ctype == "ftp":
-        import ftplib
+        import ftplib  # noqa: E402
 
         port = int(parse_env(check.get("port", 21)))
         user = parse_env(check.get("user", ""))
@@ -320,7 +320,7 @@ def execute_check(check, client=None):
             return False, f"FTP check failed: {e}"
 
     elif ctype == "imap":
-        import imaplib
+        import imaplib  # noqa: E402
 
         port = int(parse_env(check.get("port", 143)))
         user = parse_env(check.get("user", ""))
@@ -338,7 +338,7 @@ def execute_check(check, client=None):
             return False, f"IMAP check failed: {e}"
 
     elif ctype == "pop3":
-        import poplib
+        import poplib  # noqa: E402
 
         port = int(parse_env(check.get("port", 110)))
         user = parse_env(check.get("user", ""))
@@ -362,7 +362,7 @@ def execute_check(check, client=None):
         password = parse_env(check.get("password", ""))
         dbname = parse_env(check.get("dbname", ""))
         try:
-            import pymysql
+            import pymysql  # noqa: E402
 
             conn = pymysql.connect(
                 host=target,
@@ -385,7 +385,7 @@ def execute_check(check, client=None):
     elif ctype == "ldap":
         port = int(parse_env(check.get("port", 389)))
         try:
-            import ldap3
+            import ldap3  # noqa: E402
 
             server = ldap3.Server(
                 target, port=port, get_info=ldap3.ALL, connect_timeout=5
@@ -399,7 +399,7 @@ def execute_check(check, client=None):
     elif ctype == "ntp":
         port = int(parse_env(check.get("port", 123)))
         try:
-            import ntplib
+            import ntplib  # noqa: E402
 
             client_ntp = ntplib.NTPClient()
             response = client_ntp.request(target, version=3, timeout=5)
@@ -538,7 +538,7 @@ def execute_check(check, client=None):
         port = int(parse_env(check.get("port", 6379)))
         password = parse_env(check.get("password", ""))
         try:
-            import redis as redis_lib
+            import redis as redis_lib  # noqa: E402
 
             r = redis_lib.Redis(
                 host=target, port=port, password=password or None, socket_timeout=2
@@ -563,7 +563,7 @@ def execute_check(check, client=None):
 
     elif ctype == "xmlrpc":
         # Keep XML-RPC for external arbitrary target checks defined by users
-        import xmlrpc.client
+        import xmlrpc.client  # noqa: E402
 
         method = parse_env(check.get("rpc_method", ""))
         params_str = parse_env(check.get("rpc_params", "[]"))
@@ -672,7 +672,7 @@ def execute_check(check, client=None):
         if not script:
             return False, "Synthetic script path missing"
         try:
-            import shlex
+            import shlex  # noqa: E402
 
             res = subprocess.run(
                 shlex.split(script),
@@ -1239,7 +1239,7 @@ if __name__ == "__main__":
     futures = []
 
     def log_anomaly_proxy(cl):
-        import redis as redis_lib
+        import redis as redis_lib  # noqa: E402
 
         r = redis_lib.Redis(
             host=os.getenv("REDIS_HOST") or "redis",
@@ -1259,7 +1259,7 @@ if __name__ == "__main__":
                         payload["severity"],
                     )
             except Exception as e:
-                import logging
+                import logging  # noqa: E402
 
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
                 time.sleep(1)  # audit-ignore-sleep  # fmt: skip

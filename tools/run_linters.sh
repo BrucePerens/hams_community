@@ -51,7 +51,7 @@ if command -v flake8 >/dev/null 2>&1 || [ -f "$DIR/.venv/bin/flake8" ]; then
     FLAKE8_CMD="flake8"
     [ -f "$DIR/.venv/bin/flake8" ] && FLAKE8_CMD="$DIR/.venv/bin/flake8"
     
-    OUT="$("$FLAKE8_CMD" "$DIR" --exclude=venv,env,.venv,__pycache__,node_modules --select=E9,F --per-file-ignores="__init__.py:F401" 2>&1)"
+    OUT="$("$FLAKE8_CMD" "$DIR" --exclude=venv,env,.venv,__pycache__,node_modules --select=E9,F,E402 --per-file-ignores="__init__.py:F401" 2>&1)"
     if [ $? -ne 0 ]; then
         echo "❌ Flake8 Violations:"
         echo "$OUT"

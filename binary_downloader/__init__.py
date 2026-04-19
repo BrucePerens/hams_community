@@ -2,7 +2,7 @@ from . import models  # noqa: F401
 
 
 def post_init_hook(env):
-    import os
+    import os  # noqa: E402
 
     html_path = os.path.join(os.path.dirname(__file__), "data", "documentation.html")
     if not os.path.exists(html_path):

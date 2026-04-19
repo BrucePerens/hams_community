@@ -19,7 +19,7 @@ class TestDistributedCache(TransactionCase):
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
 
-        from odoo.addons.distributed_redis_cache.models.ir_http import (
+        from odoo.addons.distributed_redis_cache.models.ir_http import (  # noqa: E402
             _invalidation_queue,
             _listener_lock,
         )

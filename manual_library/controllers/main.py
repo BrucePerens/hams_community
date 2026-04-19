@@ -66,7 +66,7 @@ class ManualLibraryController(http.Controller):
             article.check_access("read")
             _ = article.name
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
             raise werkzeug.exceptions.NotFound()
@@ -160,7 +160,7 @@ class ManualLibraryController(http.Controller):
                         (article.id,),
                     )
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
             # Silently fail on bad input to prevent brute-force discovery

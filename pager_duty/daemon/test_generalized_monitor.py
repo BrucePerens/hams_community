@@ -6,7 +6,7 @@ import datetime
 from unittest.mock import patch, MagicMock
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import generalized_monitor
+import generalized_monitor  # noqa: E402
 
 
 class TestMonitorExhaustive(unittest.TestCase):
@@ -120,7 +120,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         self.assertTrue(success)
 
         # Test Total Failure
-        import socket
+        import socket  # noqa: E402
 
         mock_gethost.side_effect = socket.gaierror("NXDOMAIN")
         success, msg = generalized_monitor.execute_check(
@@ -534,7 +534,7 @@ class TestMonitorExhaustive(unittest.TestCase):
 
         # MySQL / MariaDB
         with patch.dict("sys.modules", {"pymysql": MagicMock()}):
-            import pymysql
+            import pymysql  # noqa: E402
 
             mock_conn = MagicMock()
             pymysql.connect.return_value = mock_conn
@@ -598,8 +598,8 @@ class TestMonitorExhaustive(unittest.TestCase):
     @patch("builtins.open", new_callable=MagicMock)
     def test_15_synthetic_spool_reads(self, mock_open, mock_mtime, mock_exists):
         """Verify generalized_monitor correctly reads the airgapped synthetic spool JSON."""
-        import json
-        import time
+        import json  # noqa: E402
+        import time  # noqa: E402
 
         mock_exists.return_value = True
         mock_mtime.return_value = time.time() - 10  # Fresh

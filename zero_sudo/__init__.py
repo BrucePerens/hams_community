@@ -22,5 +22,5 @@ def _patched_handle(self, record):
 
 logging.Logger.handle = _patched_handle
 
-from . import models  # noqa: F401
-from . import controllers  # noqa: F401
+from . import models  # noqa: F401, E402
+from . import controllers  # noqa: F401, E402
