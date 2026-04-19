@@ -414,7 +414,7 @@ def rebuild_db(db_name):
 
     env = dict(os.environ)
     if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-        env["PGHOST"] = "/opt/hams/pgsock"
+        pass  # disabled
     subprocess.run(
         [
             "psql",
@@ -438,7 +438,7 @@ def rebuild_db(db_name):
     )
     env = dict(os.environ)
     if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-        env["PGHOST"] = "/opt/hams/pgsock"
+        pass  # disabled
     subprocess.run(["createdb", db_name], check=True, env=env)
 
 
@@ -537,7 +537,7 @@ def check_and_restore_cache(db_name, mod_string):
         rebuild_db(db_name)
         env = dict(os.environ)
         if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-            env["PGHOST"] = "/opt/hams/pgsock"
+            pass  # disabled
         res = subprocess.run(
             ["pg_restore", "-d", db_name, "-O", "-x", "-j", "4", cache_file],
             capture_output=True,

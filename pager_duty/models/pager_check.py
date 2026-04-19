@@ -1,3 +1,5 @@
+import logging
+_logger = logging.getLogger(__name__)
 import uuid
 import json
 import os
@@ -511,9 +513,7 @@ class PagerCheck(models.Model):
                         }
                     )
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).warning("An error occurred: %s", e)
+            _logger.warning("An error occurred: %s", e)
 
         # 3. Common Services
         try:
@@ -591,9 +591,7 @@ class PagerCheck(models.Model):
                     }
                 )
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).warning("An error occurred: %s", e)
+            _logger.warning("An error occurred: %s", e)
 
         # 4. Odoo Web Server
         checks.append(

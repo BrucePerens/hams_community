@@ -1,3 +1,5 @@
+import logging
+_logger = logging.getLogger(__name__)
 import os
 from odoo.tests.common import TransactionCase
 from unittest.mock import patch, MagicMock
@@ -30,9 +32,7 @@ class TestPagerIncident(TransactionCase):
                 )
                 r.delete("pager_rate_limit:test_daemon")
             except Exception as e:
-                import logging
-
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                _logger.warning("An error occurred: %s", e)
 
             # First request passes the cache check
             res1 = self.incident_model.report_incident(vals)
@@ -78,9 +78,7 @@ class TestPagerIncident(TransactionCase):
                 )
                 r.delete("pager_rate_limit:test_daemon_2")
             except Exception as e:
-                import logging
-
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                _logger.warning("An error occurred: %s", e)
 
             incident_id = self.incident_model.report_incident(vals)
             self.assertTrue(

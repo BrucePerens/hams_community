@@ -57,7 +57,19 @@
                                     <group string="Documentation">
                                         <field name="comment" widget="text"/>
                                     </group>
-                                <group string="Protocol Specifics" invisible="check_type not in ('snmp', 'system', 'systemd')">
+                                <group string="Protocol Specifics">
+                                    <field name="port" invisible="check_type not in ('tcp', 'udp', 'redis', 'rabbitmq', 'postgres')"/>
+                                    <field name="dbname" invisible="check_type != 'postgres'"/>
+                                    <field name="dbuser" invisible="check_type != 'postgres'"/>
+                                    <field name="dbpass" password="True" invisible="check_type != 'postgres'"/>
+                                    <field name="query" invisible="check_type not in ('anomaly', 'postgres')"/>
+                                    <field name="payload_send" invisible="check_type not in ('tcp', 'udp')"/>
+                                    <field name="payload_send_hex" invisible="check_type not in ('tcp', 'udp')"/>
+                                    <field name="rpc_method" invisible="check_type not in ('xmlrpc', 'jsonrpc')"/>
+                                    <field name="rpc_params" invisible="check_type not in ('xmlrpc', 'jsonrpc')"/>
+                                    <field name="regex" invisible="check_type not in ('log', 'http', 'http3')"/>
+                                    <field name="script" invisible="check_type != 'synthetic'"/>
+
                                     <field name="snmp_community" invisible="check_type != 'snmp'"/>
                                     <field name="snmp_oid" invisible="check_type != 'snmp'"/>
                                     <field name="partition" invisible="check_type != 'system'"/>
