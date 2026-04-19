@@ -75,7 +75,7 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         _logger.info(f"[*] === Starting Simulation Step {i + 1} / {iterations} ===")
         user = secrets.choice(self.users)
 
-        import time
+        import time  # noqa: E402
 
         def track(op_name, func, *args, **kwargs):
             start = time.time()

@@ -121,8 +121,8 @@ class PgHaWizard(models.TransientModel):
     pgbouncer_ini = fields.Text(string="PgBouncer INI", readonly=True)
 
     def _get_executable(self, cmd_name):
-        import shutil
-        from odoo.exceptions import UserError
+        import shutil  # noqa: E402
+        from odoo.exceptions import UserError  # noqa: E402
 
         path = shutil.which(cmd_name)
         if path:

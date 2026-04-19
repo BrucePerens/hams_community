@@ -70,7 +70,7 @@ class BlogBlog(models.Model):
                         in member_map.get(blog.user_websites_group_id.id, set())
                     )
                     if not is_owner and not is_group_member:
-                        from odoo.exceptions import AccessError
+                        from odoo.exceptions import AccessError  # noqa: E402
 
                         raise AccessError(
                             _(

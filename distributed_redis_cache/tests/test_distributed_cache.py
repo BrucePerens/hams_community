@@ -16,7 +16,7 @@ class TestDistributedCache(TransactionCase):
         When a cache invalidation signal is detected on the pubsub bus
         Then the worker MUST flush its local targeted RAM cache.
         """
-        import json
+        import json  # noqa: E402
 
         mock_redis_client = MagicMock()
         mock_redis.Redis.return_value = mock_redis_client
@@ -31,7 +31,7 @@ class TestDistributedCache(TransactionCase):
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
 
-        from odoo.addons.distributed_redis_cache.models.ir_http import (
+        from odoo.addons.distributed_redis_cache.models.ir_http import (  # noqa: E402
             _invalidation_queue,
             _listener_lock,
         )

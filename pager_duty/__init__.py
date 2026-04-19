@@ -3,7 +3,7 @@ from . import controllers  # noqa: F401
 
 
 def post_init_hook(env):
-    import os
+    import os  # noqa: E402
 
     html_path = os.path.join(os.path.dirname(__file__), "data", "documentation.html")
     if not os.path.exists(html_path):
@@ -21,6 +21,6 @@ def post_init_hook(env):
         try:
             env["pager.check"]._run_autodiscovery()
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)

@@ -66,7 +66,7 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_04_purge_urls(self, mock_post):
-        from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls
+        from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls  # noqa: E402
 
         # Case 1: Missing credentials
         self.assertFalse(purge_urls(["https://a.com"], None, "zone1"))
@@ -106,7 +106,7 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_05_purge_tags(self, mock_post):
-        from odoo.addons.cloudflare.utils.cloudflare_api import purge_tags
+        from odoo.addons.cloudflare.utils.cloudflare_api import purge_tags  # noqa: E402
 
         # Case 1: Missing credentials
         self.assertFalse(purge_tags(["tag1"], None, "zone1"))

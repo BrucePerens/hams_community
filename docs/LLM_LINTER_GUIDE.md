@@ -68,6 +68,12 @@ If testing background loop functions, you MUST conditionally bypass commits usin
 ---
 
 <python_standards>
+## 3.5 📜 Imports
+
+* **Top of File Requirement:** All Python imports MUST be at the top of the file. The linters enforce Flake8 rule `E402`.
+* **Local Imports Banned:** Local imports (imports inside functions, methods, or classes) are completely banned.
+* **Circular Dependency Bypass:** In the rare case a local import is mathematically required to resolve a circular dependency, you MUST append `# noqa: E402` to the import line to bypass the linter.
+
 ## 3. 🐍 Python Odoo 19 Core Deprecations & Formatting
 
 * **Single Statement Per Line & Short Lines:** You MUST NOT use multiple statements on a single line (no semicolons).

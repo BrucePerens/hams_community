@@ -79,13 +79,13 @@ class RealTransactionCase(HttpCase):
         try:
             self.env.cr.commit()
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
-        from odoo.tools import mute_logger
+        from odoo.tools import mute_logger  # noqa: E402
 
         for attempt in range(3):
             pending_deletes = False

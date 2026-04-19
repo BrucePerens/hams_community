@@ -110,7 +110,7 @@ class ResUsersModeration(models.Model):
         user_ids = self.ids
 
         if not odoo.tools.config.get("test_enable"):
-            from concurrent.futures import ThreadPoolExecutor
+            from concurrent.futures import ThreadPoolExecutor  # noqa: E402
 
             db_name = self.env.cr.dbname
             # Fire and forget safely without unbounded thread growth

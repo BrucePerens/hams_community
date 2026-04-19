@@ -43,7 +43,7 @@ def _redis_listener_thread():
                             with _listener_lock:
                                 _invalidation_queue.add(model_name)
                     except Exception as e:
-                        import logging
+                        import logging  # noqa: E402
 
                         logging.getLogger(__name__).warning("An error occurred: %s", e)
     except Exception as e:

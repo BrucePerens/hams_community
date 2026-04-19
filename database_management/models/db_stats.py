@@ -36,8 +36,8 @@ class DatabaseTableStat(models.Model):
         """)
 
     def _get_executable(self, cmd_name):
-        import shutil
-        from odoo.exceptions import UserError
+        import shutil  # noqa: E402
+        from odoo.exceptions import UserError  # noqa: E402
 
         path = shutil.which(cmd_name)
         if path:
@@ -54,9 +54,9 @@ class DatabaseTableStat(models.Model):
 
     def action_vacuum_analyze(self):
         # [@ANCHOR: vacuum_analyze]
-        import subprocess
-        import os
-        from odoo.exceptions import UserError
+        import subprocess  # noqa: E402
+        import os  # noqa: E402
+        from odoo.exceptions import UserError  # noqa: E402
 
         exe = self._get_executable("vacuumdb")
         db_name = self.env.cr.dbname
@@ -105,7 +105,7 @@ class DatabaseTableStat(models.Model):
                     }
                 )
             except Exception as e:
-                import logging
+                import logging  # noqa: E402
 
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
 

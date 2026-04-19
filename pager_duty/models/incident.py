@@ -4,7 +4,7 @@ import os
 import logging
 
 _logger = logging.getLogger(__name__)
-import redis
+import redis  # noqa: E402
 
 redis_host = os.getenv("REDIS_HOST") or "redis"
 redis_port = int(os.getenv("REDIS_PORT") or "6379")
@@ -123,7 +123,7 @@ class PagerIncident(models.Model):
                     return False
                 r_client.setex(redis_key, 60, "1")
             except Exception as e:
-                import logging
+                import logging  # noqa: E402
 
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
 

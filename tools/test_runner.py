@@ -17,7 +17,7 @@ import glob
 
 # Import the centralized infrastructure blueprint
 sys.path.append(os.path.join(os.path.dirname(__file__)))
-import infrastructure
+import infrastructure  # noqa: E402
 
 
 def load_ignore_file(filepath):

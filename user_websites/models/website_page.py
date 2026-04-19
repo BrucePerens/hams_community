@@ -9,8 +9,8 @@ from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
-import json
-from odoo.addons.distributed_redis_cache.redis_cache import (
+import json  # noqa: E402
+from odoo.addons.distributed_redis_cache.redis_cache import (  # noqa: E402
     distributed_cache,
     invalidate_model_cache,
 )
@@ -65,7 +65,7 @@ class WebsitePage(models.Model):
                         list(tags)
                     )
                 except Exception as e:
-                    import logging
+                    import logging  # noqa: E402
 
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
 
@@ -74,7 +74,7 @@ class WebsitePage(models.Model):
         if not arch_content:
             return arch_content, False
         try:
-            from lxml import etree
+            from lxml import etree  # noqa: E402
 
             parser = etree.XMLParser(recover=True)
             root = etree.fromstring(f"<root>{arch_content}</root>", parser=parser)
@@ -383,7 +383,7 @@ class WebsitePage(models.Model):
                         in member_map.get(page.user_websites_group_id.id, set())
                     )
                     if not is_owner and not is_group_member:
-                        from odoo.exceptions import AccessError
+                        from odoo.exceptions import AccessError  # noqa: E402
 
                         raise AccessError(
                             _(
@@ -533,12 +533,12 @@ class WebsitePage(models.Model):
                         del_pipe.decrby(key, int(val))
                 del_pipe.execute()
 
-                import odoo
+                import odoo  # noqa: E402
 
                 if not odoo.tools.config.get("test_enable"):
                     self.env.cr.commit()
             except Exception as e:
-                import odoo
+                import odoo  # noqa: E402
 
                 if not odoo.tools.config.get("test_enable"):
                     self.env.cr.rollback()
