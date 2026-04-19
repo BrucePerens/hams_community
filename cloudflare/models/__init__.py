@@ -11,3 +11,6 @@ from . import config_backup  # noqa: F401
 from . import config_manager  # noqa: F401
 from . import ip_ban  # noqa: F401
 from . import tunnel_wizard  # noqa: F401
+from . import purge_wizard
+from . import zone_settings_wizard
+from . import tunnel
