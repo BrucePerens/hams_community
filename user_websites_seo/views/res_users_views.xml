@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_users_form_user_websites_seo" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_seo_widget_tour] -->
+        <field name="name">res.users.form.user.websites.seo</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_seo_widget_tour] -->
+                <page string="SEO Metadata" name="user_websites_seo_settings">
+                    <group>
+                        <group string="SEO Data">
+                            <field name="seo_name"/>
+                            <field name="website_meta_title"/>
+                            <field name="website_meta_description"/>
+                            <field name="website_meta_keywords"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
