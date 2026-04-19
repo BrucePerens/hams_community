@@ -4,7 +4,6 @@ from odoo import http
 from odoo.http import request  # noqa: F401
 from odoo.addons.user_websites.controllers.main import UserWebsitesController
 
-
 class UserWebsitesSEOController(UserWebsitesController):
 
     @http.route(
@@ -45,14 +44,12 @@ class UserWebsitesSEOController(UserWebsitesController):
             user = response.qcontext.get("profile_user")
             group = response.qcontext.get("profile_group")
 
-            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-                "user_websites.user_user_websites_service_account"
-            )
-
-            # Elevate the recordset to prevent AccessErrors when Odoo extracts SEO metadata
+            # We DO NOT elevate the recordset (SSTI vulnerability mitigation).
+            # The models' check_access_rule methods have been enhanced to allow
+            # legitimate users to read/write SEO fields without sudo.
             if user:
-                response.qcontext["main_object"] = user.with_user(svc_uid)
+                response.qcontext["main_object"] = user
             elif group:
-                response.qcontext["main_object"] = group.with_user(svc_uid)
+                response.qcontext["main_object"] = group
 
         return response
