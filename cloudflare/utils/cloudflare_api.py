@@ -199,3 +199,86 @@ def get_cfd_tunnel_token(account_id, token, tunnel_id):
     except Exception as e:
         _logger.error(f"Cloudflare Tunnel Token API failed: {e}")
         return False, str(e)
+
+def purge_everything(token, zone_id):
+    if not token or not zone_id:
+        return False
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    payload = {"purge_everything": True}
+
+    try:
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        _logger.error(f"Cloudflare Purge Everything API failed: {e}")
+        return False
+
+
+def get_zone_settings(token, zone_id):
+    if not token or not zone_id:
+        return None
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/settings"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=10)
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        return response.json().get("result")
+    except Exception as e:
+        _logger.error(f"Cloudflare Get Zone Settings API failed: {e}")
+        return None
+
+
+def update_zone_setting(setting_name, value, token, zone_id):
+    if not token or not zone_id:
+        return False, "Missing credentials"
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/settings/{setting_name}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    payload = {"value": value}
+
+    try:
+        response = requests.patch(endpoint, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        return True, "Setting updated successfully."
+    except Exception as e:
+        _logger.error(f"Cloudflare Update Zone Setting API failed: {e}")
+        return False, str(e)
+
+
+def list_cfd_tunnels(account_id, token):
+    if not token or not account_id:
+        return []
+
+    endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/cfd_tunnel"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=15)
+        response.raise_for_status()
+        return response.json().get("result", [])
+    except Exception as e:
+        _logger.error(f"Cloudflare List Tunnels API failed: {e}")
+        return []
+
+
+def delete_cfd_tunnel(account_id, token, tunnel_id):
+    if not token or not account_id or not tunnel_id:
+        return False, "Missing credentials or tunnel ID"
+
+    endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/cfd_tunnel/{tunnel_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.delete(endpoint, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, "Tunnel deleted successfully."
+    except Exception as e:
+        _logger.error(f"Cloudflare Delete Tunnel API failed: {e}")
+        return False, str(e)

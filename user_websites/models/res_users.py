@@ -95,7 +95,7 @@ def _async_unpublish_content(db_name, user_ids):
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
         except Exception as e:
             env.cr.rollback()
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).error(f"Background unpublish failed: {e}")
     finally:

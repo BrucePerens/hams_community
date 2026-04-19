@@ -68,9 +68,9 @@
         <field name="arch" type="xml">
             <form string="Violation Report">
                 <header>
-                    <button name="action_mark_under_review" string="Reviewing" type="object" class="oe_highlight" invisible="state != 'new'"/>
-                    <button name="action_take_action_and_strike" string="Take Action &amp; Strike User" type="object" class="btn-danger" invisible="state in ('action_taken', 'dismissed')" confirm="This will add a strike to the user's account. Continue?"/>
-                    <button name="action_dismiss" string="Dismiss Report" type="object" class="btn-secondary" invisible="state in ('action_taken', 'dismissed')"/>
+                    <button name="action_mark_under_review" string="Reviewing" type="object" class="oe_highlight" invisible="state != 'new'" groups="user_websites.group_user_websites_administrator"/>
+                    <button name="action_take_action_and_strike" string="Take Action &amp; Strike User" type="object" class="btn-danger" invisible="state in ('action_taken', 'dismissed')" confirm="This will add a strike to the user's account. Continue?" groups="user_websites.group_user_websites_administrator"/>
+                    <button name="action_dismiss" string="Dismiss Report" type="object" class="btn-secondary" invisible="state in ('action_taken', 'dismissed')" groups="user_websites.group_user_websites_administrator"/>
                     <field name="state" widget="statusbar" statusbar_visible="new,under_review,action_taken,dismissed"/>
                 </header>
                 <sheet>
@@ -121,4 +121,23 @@
               action="action_content_violation_report"
               groups="user_websites.group_user_websites_administrator"
               sequence="30"/>
+
+    <record id="action_my_content_violation_report" model="ir.actions.act_window">
+        <field name="name">My Reports</field>
+        <field name="res_model">content.violation.report</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('reported_by_user_id', '=', uid)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                You have not submitted any reports yet.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_my_content_violation_report"
+              name="My Reports"
+              parent="menu_user_websites_root"
+              action="action_my_content_violation_report"
+              groups="base.group_portal"
+              sequence="31"/>
 </odoo>

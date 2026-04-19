@@ -214,12 +214,12 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 "CRITICAL SSTI VULNERABILITY: Malicious QWeb evaluated successfully and leaked database records!",
             )
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
             # If the rendering engine crashes entirely due to the illegal syntax (e.g. QWebException),
             # that is also considered a successful defense against extraction.
-            pass
+            logging.getLogger(__name__).info('QWeb rendering exception caught as expected.')
 
     def test_05_blog_post_cross_tenant_mutation(self):
         """

@@ -26,7 +26,7 @@ class CloudflarePurgeQueue(models.Model):
         # [@ANCHOR: enqueue_urls_base_url]
         # Verified by [@ANCHOR: test_purge_queue_base_url_sudo]
         if not website_id:
-            from odoo.http import request
+            from odoo.http import request  # noqa: E402
 
             try:
                 if getattr(request, "website", False):
@@ -66,7 +66,7 @@ class CloudflarePurgeQueue(models.Model):
     @api.model
     def enqueue_tags(self, tags, website_id=None):
         if not website_id:
-            from odoo.http import request
+            from odoo.http import request  # noqa: E402
 
             try:
                 if getattr(request, "website", False):

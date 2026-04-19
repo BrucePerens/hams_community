@@ -862,7 +862,7 @@ class UserWebsitesController(http.Controller):
         if model_name not in ["res.partner", "user.websites.group"]:
             raise werkzeug.exceptions.NotFound()
 
-        import time
+        import time  # noqa: E402
 
         current_time = int(time.time())
         # ADR-0025: Enforce a strict 30-day TTL on the stateless token

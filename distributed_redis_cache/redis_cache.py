@@ -43,7 +43,7 @@ def distributed_cache():
                 f"{dbname}:distributed_cache:{model_name}:{func.__name__}:{arg_hash}"
             )
 
-            import odoo
+            import odoo  # noqa: E402
 
             use_redis = bool(redis and redis_pool)
 

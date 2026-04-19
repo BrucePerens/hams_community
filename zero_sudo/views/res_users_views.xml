@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit res.users form view to add is_service_account field -->
+    <!-- audit-ignore-view: UI Tour not strictly needed for basic field addition -->
+    <record id="view_users_form_zero_sudo" model="ir.ui.view">
+        <field name="name">res.users.form.zero_sudo</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='access_rights']//group" position="inside">
+                <field name="is_service_account"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit res.users tree view to add is_service_account field -->
+    <!-- audit-ignore-view: UI Tour not strictly needed for basic field addition -->
+    <record id="view_users_tree_zero_sudo" model="ir.ui.view">
+        <field name="name">res.users.tree.zero_sudo</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_tree"/>
+        <field name="arch" type="xml">
+            <field name="login" position="after">
+                <field name="is_service_account" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Inherit res.users search view to add filter for service accounts -->
+    <!-- audit-ignore-view: UI Tour not strictly needed for basic field addition -->
+    <record id="view_users_search_zero_sudo" model="ir.ui.view">
+        <field name="name">res.users.search.zero_sudo</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='Inactive']" position="after">
+                <separator/>
+                <filter string="Service Accounts" name="service_accounts" domain="[('is_service_account', '=', True)]"/>
+                <filter string="Human Users" name="human_users" domain="[('is_service_account', '=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

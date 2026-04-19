@@ -123,7 +123,7 @@
             <field name="name">Content Violation Report User Rule</field>
             <field name="model_id" ref="model_content_violation_report"/>
             <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
-            <field name="domain_force">['|', ('create_uid', '=', user.id), ('reported_by_user_id', '=', user.id)]</field>
+            <field name="domain_force">[('reported_by_user_id', '=', user.id)]</field>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="False"/>
             <field name="perm_create" eval="True"/>
@@ -212,6 +212,29 @@
             <field name="model_id" ref="website_blog.model_blog_blog"/>
             <field name="groups" eval="[(4, ref('user_websites.group_user_websites_user'))]"/>
             <field name="domain_force">[('user_websites_group_id.odoo_group_id.user_ids', 'in', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+
+        <record id="content_violation_appeal_user_rule" model="ir.rule">
+            <field name="name">Content Violation Appeal User Rule</field>
+            <field name="model_id" ref="model_content_violation_appeal"/>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="domain_force">[('user_id', '=', user.id)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="content_violation_appeal_admin_rule" model="ir.rule">
+            <field name="name">Content Violation Appeal Admin Rule</field>
+            <field name="model_id" ref="model_content_violation_appeal"/>
+            <field name="groups" eval="[(4, ref('user_websites.group_user_websites_administrator')), (4, ref('user_websites.group_user_websites_service_account'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>

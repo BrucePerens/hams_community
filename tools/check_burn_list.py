@@ -504,6 +504,15 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.generic_visit(node)
 
         def visit_Import(self, node):
+
+            if getattr(self, 'current_method', None):
+                line_content = self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""
+                if "noqa: E402" not in line_content:
+                    self.add_error(
+                        node.lineno,
+                        "LOCAL IMPORT: Imports inside functions/methods are forbidden unless they bypass circular dependencies with '# noqa: E402'."
+                    )
+
             for alias in node.names:
                 if alias.name == "pickle":
                     self.add_error(
@@ -526,6 +535,15 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.generic_visit(node)
 
         def visit_ImportFrom(self, node):
+
+            if getattr(self, 'current_method', None):
+                line_content = self.lines[node.lineno - 1] if node.lineno <= len(self.lines) else ""
+                if "noqa: E402" not in line_content:
+                    self.add_error(
+                        node.lineno,
+                        "LOCAL IMPORT: Imports inside functions/methods are forbidden unless they bypass circular dependencies with '# noqa: E402'."
+                    )
+
             if node.module == "pickle":
                 self.add_error(
                     node.lineno, "CRITICAL RCE: The pickle module is vulnerable."

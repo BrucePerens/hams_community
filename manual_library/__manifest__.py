@@ -16,6 +16,7 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
         "web",
         "mail",
         "website",
+        "zero_sudo",
     ],
     "data": [
         "security/manual_library_security.xml",

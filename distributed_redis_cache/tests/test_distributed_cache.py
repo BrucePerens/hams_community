@@ -14,14 +14,14 @@ class TestDistributedCache(HttpCase):
         When a cache invalidation signal is detected on the pubsub bus
         Then the worker MUST flush its local targeted RAM cache.
         """
-        import os
-        import json
+        import os  # noqa: E402
+        import json  # noqa: E402
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
 
-        from odoo.addons.distributed_redis_cache.models.ir_http import (
+        from odoo.addons.distributed_redis_cache.models.ir_http import (  # noqa: E402
             _invalidation_queue,
             _listener_lock,
         )
@@ -83,7 +83,7 @@ class TestDistributedCache(HttpCase):
         Verify that if the Redis connection dies during polling, the middleware
         gracefully catches the exception and allows the HTTP request to proceed without crashing the worker.
         """
-        import os
+        import os  # noqa: E402
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
         if integration_mode:
