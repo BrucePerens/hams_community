@@ -22,10 +22,10 @@ class BackupRestoreWizard(models.TransientModel):
         elif self.snapshot_id.config_id.engine == "pgbackrest":
             cmd = f"pgbackrest restore --stanza={self.restore_target_path} --set={self.snapshot_id.snapshot_id}"
 
-        import json
-        import os
-        import pika
-        import logging
+        import json  # noqa: E402
+        import os  # noqa: E402
+        import pika  # noqa: E402
+        import logging  # noqa: E402
 
         payload = json.dumps({
             "job_id": job.id,

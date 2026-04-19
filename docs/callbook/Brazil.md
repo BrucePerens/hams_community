@@ -10,6 +10,9 @@
 The Brazilian government open data portal (`dados.gov.br`) is currently protected by Cloudfront/WAF rules that return `401 Unauthorized` or Cloudfront errors when accessed via standard command-line tools like `curl` or `wget`.
 It requires cookies/session tokens (`AWSALB`, `AWSALBCORS`, `SESSION`) and a valid browser fingerprint to access the download links.
 
+
+### Bot Compliance
+Per [ADR-0080](../adrs/0080_good_bot_compliance_and_scraping_ethics.md), our automated agents must adhere to the Dual-Mode Bot Architecture. Since Cloudfront protects this source and may block standard requests, we are authorized to use Exception Mode (e.g., headless browsers, proxy rotation) to fulfill our compliance requirements, assuming good-faith efforts to register as a 'Good Bot' are unviable.
 ## Suggested Download Process
 To automate this download, the daemon must use a headless browser to bypass the Cloudfront protection and extract the actual download link for the CSV file.
 
