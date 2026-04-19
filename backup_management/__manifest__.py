@@ -14,8 +14,10 @@
         "security/ir.model.access.csv",
         "data/cron.xml",
         "views/backup_config_views.xml",
+        "views/restore_wizard_views.xml",
         "views/backup_snapshot_views.xml",
         "views/backup_job_views.xml",
+
         "views/backup_board_views.xml",
         "views/menu_views.xml",
     ],

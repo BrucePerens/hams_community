@@ -19,7 +19,11 @@
         <field name="model">backup.snapshot</field>
         <field name="arch" type="xml">
             <form string="Snapshot" create="false" edit="false">
+                <header>
+                    <button name="%(backup_management.action_backup_restore_wizard)d" type="action" string="Restore Snapshot" class="btn-warning" context="{'default_snapshot_id': id}"/>
+                </header>
                 <sheet>
+
                     <group>
                         <group>
                             <field name="config_id"/>
