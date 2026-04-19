@@ -98,6 +98,8 @@ class FailureExtractor:
                 self.safe_log_levels.search(line)
                 or "pika.adapters" in line
                 or "AMQPConnector" in line
+                or "Cloudflare URL purge API failed for chunk: API fail" in line
+                or "Cloudflare Tag purge API failed for chunk: API fail" in line
             ):
                 # Standard info/warning line. Stop capturing if we were.
                 if self.capturing:
@@ -951,6 +953,8 @@ def main():
                     import subprocess
                     subprocess.run(["sudo", "chmod", "700", pg_data_dir])
                     subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["sudo", "systemctl", "start", "redis-server"])
+                    subprocess.run(["sudo", "systemctl", "start", "rabbitmq-server"])
                     def teardown_jules():
                         import subprocess
                         subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

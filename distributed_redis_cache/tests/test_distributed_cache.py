@@ -3,8 +3,10 @@ from unittest.mock import patch, MagicMock
 from odoo.tests.common import TransactionCase, tagged
 
 
+from odoo.tests.common import HttpCase
+
 @tagged("post_install", "-at_install")
-class TestDistributedCache(TransactionCase):
+class TestDistributedCache(HttpCase):
     def test_01_redis_cache_interceptor(self):
         # Tests [@ANCHOR: redis_cache_interceptor]
         """
@@ -31,13 +33,21 @@ class TestDistributedCache(TransactionCase):
             # Under integration tests, we run the native _authenticate loop against the real daemon
             # To avoid LocalProxy exception from request (which happens deeper in Odoo's base code without a real HTTP request),
             # we mock `request` with a MagicMock that has an `httprequest.method` attribute just to satisfy `is_cors_preflight`
-            import unittest.mock  # noqa: E402
+            import unittest.mock
+            from odoo.http import request
             mock_req_inst = unittest.mock.MagicMock()
             mock_req_inst.httprequest.method = "GET"
             mock_req_inst.env.__contains__.return_value = True
             mock_req_inst.env.__getitem__.return_value = self.env["res.users"]
+            mock_req_inst.session = unittest.mock.MagicMock()
+            mock_req_inst.session.uid = self.env.user.id
+            mock_req_inst.session.db = self.env.cr.dbname
+            # We must pass the isinstance(cr, BaseCursor) check in environments.py
+            mock_req_inst.env.cr = self.env.cr
+            mock_req_inst.env.context = self.env.context
 
-            with patch("odoo.http.request", mock_req_inst), patch("odoo.addons.distributed_redis_cache.models.ir_http.request", mock_req_inst):
+            # Don't mock out Odoo's whole _authenticate_explicit anymore, let the redis connection actually happen.
+            with patch("odoo.addons.base.models.ir_http.request", mock_req_inst), patch("odoo.addons.distributed_redis_cache.models.ir_http.request", mock_req_inst), patch("odoo.service.security.check_session", return_value=True):
                 self.env["ir.http"]._authenticate(mock_endpoint)
         else:
             with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, patch("odoo.addons.base.models.ir_http.IrHttp._authenticate", return_value=True):
