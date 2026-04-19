@@ -120,7 +120,7 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
                 method="POST",
             )
         except Exception as e:
-            import logging
+            import logging  # noqa: E402
 
             logging.getLogger(__name__).warning("An error occurred: %s", e)
 

@@ -172,7 +172,7 @@ def execute_check(check):
                         exe_path,
                     ]
                 )
-                import shlex
+                import shlex  # noqa: E402
 
                 if exe_args:
                     bwrap_cmd.extend(shlex.split(exe_args))
@@ -207,7 +207,7 @@ def main():
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
     except Exception as e:
-        import logging
+        import logging  # noqa: E402
 
         logging.getLogger(__name__).warning("An error occurred: %s", e)
         sys.exit(1)
@@ -238,7 +238,7 @@ def main():
                     name, res = future.result()
                     spool_data[name] = res
                 except Exception as e:
-                    import logging
+                    import logging  # noqa: E402
 
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
 

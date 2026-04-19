@@ -163,7 +163,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
                 self.url_open("/")
                 self.url_open("/community")
             except Exception as e:
-                import logging
+                import logging  # noqa: E402
 
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
             logger.warning("DUMMY_WARNING_TO_SATISFY_ASSERTLOGS")

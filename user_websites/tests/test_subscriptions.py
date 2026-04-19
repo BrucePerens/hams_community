@@ -174,7 +174,7 @@ class TestSubscriptionsAndDigest(HttpCase):
         Ensure that malicious actors cannot spoof the unsubscription URL to
         force-remove other users from mailing lists.
         """
-        import time
+        import time  # noqa: E402
 
         # Attempt an unsubscribe with a forged token
         fake_token = "1234abcd5678"

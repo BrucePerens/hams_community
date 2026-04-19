@@ -99,7 +99,7 @@ class ResConfigSettings(models.TransientModel):
                 )
             )
 
-        from ..utils.cloudflare_api import create_cfd_tunnel, get_cfd_tunnel_token
+        from ..utils.cloudflare_api import create_cfd_tunnel, get_cfd_tunnel_token  # noqa: E402
 
         tunnel_name = f"odoo-edge-tunnel-{int(time.time())}"
 

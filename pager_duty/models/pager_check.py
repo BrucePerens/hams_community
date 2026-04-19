@@ -497,7 +497,7 @@ class PagerCheck(models.Model):
 
         # 2. Physical Disks
         try:
-            import psutil
+            import psutil  # noqa: E402
 
             for p in psutil.disk_partitions(all=False):
                 if p.fstype in ("ext4", "xfs", "btrfs", "zfs", "vfat"):
@@ -517,7 +517,7 @@ class PagerCheck(models.Model):
 
         # 3. Common Services
         try:
-            import subprocess
+            import subprocess  # noqa: E402
 
             res = subprocess.run(
                 [

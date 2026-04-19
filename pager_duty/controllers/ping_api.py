@@ -20,7 +20,7 @@ class PagerPingAPI(http.Controller):
         csrf=False,
     )
     def heartbeat(self, hb_uuid, **kw):
-        from odoo import fields
+        from odoo import fields  # noqa: E402
 
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "pager_duty.user_pager_service_internal"

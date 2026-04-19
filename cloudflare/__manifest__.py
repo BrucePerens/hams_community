@@ -16,6 +16,9 @@
         "views/ip_ban_views.xml",
         "views/waf_rule_views.xml",
         "views/config_backup_views.xml",
+        "views/purge_wizard_views.xml",
+        "views/zone_settings_wizard_views.xml",
+        "views/tunnel_views.xml",
     ],
     "assets": {
         "web.assets_tests": [

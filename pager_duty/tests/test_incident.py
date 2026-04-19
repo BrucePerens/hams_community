@@ -23,7 +23,7 @@ class TestPagerIncident(TransactionCase):
 
         if self.integration_mode:
             try:
-                import redis
+                import redis  # noqa: E402
 
                 r = redis.Redis(
                     host=os.getenv("REDIS_HOST") or "redis",
@@ -69,7 +69,7 @@ class TestPagerIncident(TransactionCase):
 
         if self.integration_mode:
             try:
-                import redis
+                import redis  # noqa: E402
 
                 r = redis.Redis(
                     host=os.getenv("REDIS_HOST") or "redis",
@@ -170,8 +170,8 @@ class TestPagerIncident(TransactionCase):
         incident = self.incident_model.create(
             {"source": "esc_test", "severity": "high", "description": "desc"}
         )
-        import datetime
-        from odoo import fields
+        import datetime  # noqa: E402
+        from odoo import fields  # noqa: E402
 
         self.env.cr.execute(
             "UPDATE pager_incident SET create_date = %s WHERE id = %s",

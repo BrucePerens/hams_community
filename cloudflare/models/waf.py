@@ -16,7 +16,7 @@ class CloudflareWAF(models.AbstractModel):
         website_id=None,
     ):
         if not website_id:
-            from odoo.http import request
+            from odoo.http import request  # noqa: E402
 
             try:
                 if request and getattr(request, "website", False):

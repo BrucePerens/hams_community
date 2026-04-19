@@ -2,6 +2,7 @@
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 from odoo import api, SUPERUSER_ID  # noqa: F401
 from odoo.tools import file_open
+import logging
 
 
 def install_knowledge_docs(env):
@@ -21,6 +22,7 @@ def install_knowledge_docs(env):
                 with file_open("compliance/data/documentation.html", "r") as f:
                     doc_body = f.read()
             except Exception as e:
+                logging.getLogger(__name__).error("Failed to load compliance documentation file: %s", e)
                 # Failsafe if the file is missing or unreadable
                 doc_body = f"<p>Error loading documentation file: {e}</p>"
 

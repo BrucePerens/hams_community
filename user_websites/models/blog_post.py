@@ -48,7 +48,7 @@ class BlogPost(models.Model):
                         list(tags)
                     )
                 except Exception as e:
-                    import logging
+                    import logging  # noqa: E402
 
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
 
@@ -140,7 +140,7 @@ class BlogPost(models.Model):
                         in member_map.get(post.user_websites_group_id.id, set())
                     )
                     if not is_owner and not is_group_member:
-                        from odoo.exceptions import AccessError
+                        from odoo.exceptions import AccessError  # noqa: E402
 
                         raise AccessError(
                             _(

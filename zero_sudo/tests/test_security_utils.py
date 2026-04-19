@@ -33,7 +33,7 @@ class TestSecurityUtils(TransactionCase):
     def test_02_bdd_ormcache_query_counting_service_uid(self):
         # [@ANCHOR: test_get_service_uid]
         # Tests [@ANCHOR: get_service_uid]
-        from unittest.mock import patch
+        from unittest.mock import patch  # noqa: E402
 
         utils = self.env["zero_sudo.security.utils"]
 
@@ -89,3 +89,58 @@ class TestSecurityUtils(TransactionCase):
             msg="Must block Service Accounts with group_system from escalating privileges.",
         ):
             utils._get_service_uid("rogue_module.sneaky_admin_service")
+
+    def test_05_notify_cache_invalidation_list(self):
+        """Test _notify_cache_invalidation with a list payload."""
+        utils = self.env["zero_sudo.security.utils"]
+        with patch.object(self.env.cr, "execute") as mock_execute:
+            utils._notify_cache_invalidation("test.model", ["key1", "key2", "key1"])
+
+            # Extract the arguments passed to execute
+            args, _ = mock_execute.call_args
+            query = args[0]
+            params = args[1]
+
+            self.assertEqual(query, "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload")
+            self.assertEqual(params[0], "cache_invalidation")
+            # We must sort the payloads because set conversion makes the order non-deterministic
+            self.assertListEqual(sorted(params[1]), sorted(["test.model:key1", "test.model:key2"]))
+
+    def test_06_get_deterministic_hash(self):
+        """Verify _get_deterministic_hash generates consistent integer hashes."""
+        utils = self.env["zero_sudo.security.utils"]
+
+        hash1 = utils._get_deterministic_hash("test_string_1")
+        hash2 = utils._get_deterministic_hash("test_string_1")
+        hash3 = utils._get_deterministic_hash("test_string_2")
+        hash4 = utils._get_deterministic_hash(12345)
+
+        self.assertIsInstance(hash1, int)
+        self.assertEqual(hash1, hash2, "Same input should yield same hash")
+        self.assertNotEqual(hash1, hash3, "Different inputs should yield different hashes")
+        self.assertIsInstance(hash4, int, "Should handle non-string inputs gracefully")
+        self.assertTrue(0 <= hash1 <= 2147483647, "Hash should be within 32-bit integer range")
+
+    @patch("subprocess.run")
+    @patch("os.path.exists")
+    def test_07_update_python_venv(self, mock_exists, mock_run):
+        """Test the _update_python_venv method."""
+        from odoo.exceptions import UserError
+        utils = self.env["zero_sudo.security.utils"]
+
+        # Test 1: requirements.txt not found
+        mock_exists.return_value = False
+        with self.assertRaises(UserError):
+            utils._update_python_venv()
+
+        # Test 2: requirements.txt exists, subprocess succeeds
+        mock_exists.return_value = True
+        mock_run.return_value.returncode = 0
+        self.assertTrue(utils._update_python_venv())
+
+        # Test 3: subprocess fails
+        import subprocess
+        mock_run.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="pip error")
+        with self.assertRaises(UserError) as cm:
+            utils._update_python_venv()
+        self.assertIn("pip error", str(cm.exception))

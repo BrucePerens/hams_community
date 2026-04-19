@@ -14,3 +14,7 @@ access_cloudflare_config_manager_admin,cloudflare.config.manager admin,model_clo
 access_cloudflare_ip_ban_svc,cloudflare.ip.ban svc,model_cloudflare_ip_ban,cloudflare.group_cloudflare_service,1,1,1,1
 access_cloudflare_ip_ban_admin,cloudflare.ip.ban admin,model_cloudflare_ip_ban,base.group_system,1,1,1,1
 access_cloudflare_tunnel_wizard_admin,cloudflare.tunnel.wizard admin,model_cloudflare_tunnel_wizard,base.group_system,1,1,1,1
+access_cloudflare_purge_wizard_admin,cloudflare.purge.wizard admin,model_cloudflare_purge_wizard,base.group_system,1,1,1,1
+access_cloudflare_zone_settings_wizard_admin,cloudflare.zone.settings.wizard admin,model_cloudflare_zone_settings_wizard,base.group_system,1,1,1,1
+access_cloudflare_tunnel_admin,cloudflare.tunnel admin,model_cloudflare_tunnel,base.group_system,1,1,1,1
+access_cloudflare_tunnel_svc,cloudflare.tunnel svc,model_cloudflare_tunnel,cloudflare.group_cloudflare_service,1,1,1,1

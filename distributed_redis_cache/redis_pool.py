@@ -5,7 +5,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-import redis
+import redis  # noqa: E402
 
 redis_host = os.getenv("REDIS_HOST") or "redis"
 redis_port = int(os.getenv("REDIS_PORT") or "6379")
