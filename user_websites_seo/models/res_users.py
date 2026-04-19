@@ -3,7 +3,6 @@
 from odoo import models, api, _
 from odoo.exceptions import AccessError
 
-
 class ResUsersSEO(models.Model):
     _name = "res.users"
     _inherit = ["res.users", "website.seo.metadata"]
@@ -24,21 +23,16 @@ class ResUsersSEO(models.Model):
 
     def check_access_rule(self, operation):
         """
-        Silently suppress write access errors for SEO checks to prevent log spam.
-        Odoo's frontend evaluates `check_access_rule('write')` to see if it should
-        render the "Optimize SEO" menu. Failing natively logs an INFO message.
+        Silently suppress access errors for SEO checks to prevent log spam and allow
+        the frontend widget to render and save. Odoo checks 'read' and 'write'.
         """
-        if operation in ("write", "unlink") and not self.env.su and self:
+        if operation in ("read", "write", "unlink") and not self.env.su and self:
             if not self.env.user.has_group(
                 "base.group_system"
             ) and not self.env.user.has_group(
                 "user_websites.group_user_websites_administrator"
             ):
-                for record in self:
-                    if record.id != self.env.user.id:
-                        raise AccessError(
-                            _(
-                                "Access Denied: You do not have permission to modify this profile."
-                            )
-                        )
+                # Suppress access errors if a user is acting exclusively on their own profile
+                if all(record.id == self.env.user.id for record in self):
+                    return None
         return super(ResUsersSEO, self).check_access_rule(operation)

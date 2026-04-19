@@ -82,7 +82,7 @@ class RealTransactionCase(HttpCase):
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
-        from odoo.tools import mute_logger
+        from odoo.tools import mute_logger  # noqa: E402
 
         for attempt in range(3):
             pending_deletes = False

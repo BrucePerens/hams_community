@@ -3,8 +3,8 @@ def post_init_hook(env):
     Inject documentation and register daemon keys upon installation.
     """
     # Inject Knowledge Base Documentation
-    import os
-    from odoo.tools import misc
+    import os  # noqa: E402
+    from odoo.tools import misc  # noqa: E402
 
     html_path = misc.file_path("pager_duty/data/documentation.html")
     if os.path.exists(html_path):

@@ -19,7 +19,7 @@ class TestDistributedCache(TransactionCase):
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
 
-        from odoo.addons.distributed_redis_cache.models.ir_http import (
+        from odoo.addons.distributed_redis_cache.models.ir_http import (  # noqa: E402
             _invalidation_queue,
             _listener_lock,
         )
@@ -101,3 +101,17 @@ class TestDistributedCache(TransactionCase):
                 crashed,
                 "The Redis interceptor MUST fail-open and never crash the WSGI worker.",
             )
+
+    def test_03_distributed_cache_ui(self):
+        # Tests [@ANCHOR: distributed_cache_view]
+        """
+        Verify the UI logic for manually invalidating the cache.
+        """
+        self.env['distributed.cache.config'].get_view()
+        wiz = self.env['distributed.cache.config'].create({'model_id': self.env.ref('base.model_res_users').id})
+        res = wiz.action_invalidate_model_cache()
+        self.assertEqual(res['type'], 'ir.actions.client')
+        self.assertEqual(res['params']['type'], 'success')
+
+        res_redis = wiz.check_redis_status()
+        self.assertEqual(res_redis['type'], 'ir.actions.client')

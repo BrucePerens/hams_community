@@ -210,7 +210,7 @@ class TestModeration(HttpCase):
         Verify that action_take_action_and_strike issues a FOR NO KEY UPDATE lock
         to prevent 'Lost Update' race conditions during concurrent moderation.
         """
-        from unittest.mock import patch
+        from unittest.mock import patch  # noqa: E402
 
         # 1. Test Individual User Lock
         report = self.env["content.violation.report"].create(

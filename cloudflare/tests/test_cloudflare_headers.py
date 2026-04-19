@@ -33,9 +33,9 @@ class TestCloudflareHeaders(HttpCase):
         # 2. Test Core Asset (MUST CACHE)
         # We isolate the method execution to completely bypass Werkzeug's LocalProxy environment
         # which crashes when testing raw middleware without an active HTTP thread.
-        from odoo.addons.cloudflare.models.ir_http import IrHttp as CloudflareIrHttp
-        from odoo.http import Response
-        from unittest.mock import patch
+        from odoo.addons.cloudflare.models.ir_http import IrHttp as CloudflareIrHttp  # noqa: E402
+        from odoo.http import Response  # noqa: E402
+        from unittest.mock import patch  # noqa: E402
 
         class DummyBase:
             @classmethod
