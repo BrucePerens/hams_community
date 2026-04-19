@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 {
     "name": "Manual Library",
     "summary": "Hierarchical documentation and knowledge-base system",

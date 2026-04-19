@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import hashlib
+import logging
 import os
 import platform
 import shutil
@@ -9,8 +9,9 @@ import tarfile
 import tempfile
 import urllib.request
 from odoo import models, fields, api, tools, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
+_logger = logging.getLogger(__name__)
 
 class BinaryManifest(models.Model):
     _name = "binary.manifest"
@@ -31,6 +32,10 @@ class BinaryManifest(models.Model):
         string="Extract Member", help="Specific file to extract from the archive."
     )
 
+    is_installed = fields.Boolean(
+        string="Installed", compute="_compute_is_installed"
+    )
+
     _name_uniq = models.Constraint("UNIQUE(name)", "The binary name must be unique!")
     _name_not_empty = models.Constraint(
         "CHECK(LENGTH(TRIM(name)) > 0)", "The binary name cannot be empty."
@@ -42,8 +47,52 @@ class BinaryManifest(models.Model):
         "CHECK(LENGTH(TRIM(checksum)) > 0)", "The checksum cannot be empty."
     )
 
+    @api.constrains("name")
+    def _check_name_no_slashes(self):
+        for record in self:
+            if "/" in record.name or "\\" in record.name:
+                raise ValidationError(_("The binary name cannot contain slashes or backslashes."))
+
+    @api.depends('name')
+    def _compute_is_installed(self):
+        data_dir = tools.config.get("data_dir", "/var/lib/odoo")
+        bin_dir = os.path.join(data_dir, "hams_bin")
+        for record in self:
+            if not record.name:
+                record.is_installed = False
+                continue
+
+            # Check system path
+            if shutil.which(record.name):
+                record.is_installed = True
+                continue
+
+            # Check hams_bin
+            target_bin = os.path.join(bin_dir, record.name)
+            if os.path.exists(target_bin) and os.access(target_bin, os.X_OK):
+                record.is_installed = True
+            else:
+                record.is_installed = False
+
+    def action_install(self):
+        self.ensure_one()
+        self.ensure_executable(self.name)
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Success"),
+                "message": _("Successfully installed %s.") % self.name,
+                "sticky": False,
+                "type": "success",
+            }
+        }
+
     @api.model
     def ensure_executable(self, cmd_name):
+        if "/" in cmd_name or "\\" in cmd_name:
+            raise ValidationError(_("Invalid binary name."))
+
         path = shutil.which(cmd_name)
         if path:
             return path
@@ -103,8 +152,13 @@ class BinaryManifest(models.Model):
                             member.name.endswith(f"/{extract_target}")
                             or member.name == extract_target
                         ):
-                            member.name = cmd_name
-                            tar.extract(member, path=bin_dir)
+                            # Ensure we don't extract anywhere else
+                            member.name = os.path.basename(cmd_name)
+                            # Provide `data` filter if available in python version to prevent slip
+                            if hasattr(tarfile, 'data_filter'):
+                                tar.extract(member, path=bin_dir, filter='data')
+                            else:
+                                tar.extract(member, path=bin_dir)
                             break
             else:
                 shutil.copy2(tmp.name, target_bin)
@@ -113,4 +167,5 @@ class BinaryManifest(models.Model):
             os.unlink(tmp.name)
             return target_bin
         except Exception as e:
+            _logger.exception("Failed to auto-install %s", cmd_name)
             raise UserError(_("Failed to auto-install %s: %s") % (cmd_name, str(e)))

@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
 from unittest.mock import patch, MagicMock
 from odoo.tests.common import TransactionCase, tagged
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 @tagged("post_install", "-at_install")
@@ -97,3 +96,35 @@ class TestBinaryManifest(TransactionCase):
 
         v2 = self.env["binary.manifest"].get_view(view_type="form")
         self.assertIn("url", v2["arch"])
+
+    @patch("shutil.which")
+    def test_06_is_installed_compute(self, mock_which):
+        """Verify the is_installed compute field logic."""
+        mock_which.return_value = "/usr/bin/testbin"
+        self.assertTrue(self.manifest.is_installed)
+
+        self.manifest.invalidate_recordset(['is_installed'])
+        mock_which.return_value = None
+        with patch("os.path.exists", return_value=False):
+            self.assertFalse(self.manifest.is_installed)
+
+    @patch("odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable")
+    def test_07_action_install(self, mock_ensure):
+        """Verify the action_install method calls ensure_executable and returns a notification."""
+        result = self.manifest.action_install()
+        mock_ensure.assert_called_once_with("testbin")
+        self.assertEqual(result["type"], "ir.actions.client")
+        self.assertEqual(result["tag"], "display_notification")
+
+    def test_08_path_traversal_validation(self):
+        """Verify that slashes in the name are rejected to prevent path traversal."""
+        with self.assertRaises(ValidationError):
+            self.env["binary.manifest"].create({
+                "name": "../badbin",
+                "url": "http://example.com/badbin",
+                "checksum": "fakehash",
+                "archive_type": "binary",
+            })
+
+        with self.assertRaises(ValidationError):
+            self.manifest.write({"name": "bad/bin"})

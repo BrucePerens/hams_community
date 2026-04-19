@@ -207,3 +207,8 @@ These documentation references MUST be placed inline, immediately adjacent to th
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link.
 4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
 </semantic_anchors>
+
+## 7. Shebang Usage & `__manifest__.py` Formatting
+Shebangs (`#!/usr/bin/env python3`) are strictly prohibited in standard Odoo module files (e.g., `models/`, `controllers/`, `__init__.py`, `__manifest__.py`). They can interfere with packaging and execution expectations inside standard Odoo modules. This restriction does not apply to isolated daemon scripts in the `daemons/` or `tools/` directories.
+
+Additionally, `__manifest__.py` files must strictly conform to dictionary structures without shebangs. Odoo's `ast.literal_eval` parser requires valid, strict Python dictionary syntax, and any extraneous bash-style shebang lines will cause fatal `ParseError: while parsing None:101` exceptions during test or registry initialization.

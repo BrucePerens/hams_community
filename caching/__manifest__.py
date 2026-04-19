@@ -8,6 +8,7 @@
     "depends": ["base", "website"],
     "data": [
         "views/layout_inherit.xml",
+        "views/res_config_settings_views.xml",
     ],
     "installable": True,
     "application": False,

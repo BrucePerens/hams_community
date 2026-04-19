@@ -1,6 +1,8 @@
 import logging
 import warnings
 
+_logger = logging.getLogger(__name__)
+
 # Silence standard Python warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -14,9 +16,7 @@ def _patched_handle(self, record):
         if ("deprecated" in msg and "directive" in msg) or "pypdf2" in msg:
             return
     except Exception as e:
-        import logging  # noqa: E402
-
-        logging.getLogger(__name__).warning("An error occurred: %s", e)
+        _logger.warning("An error occurred: %s", e)
     return _orig_handle(self, record)
 
 

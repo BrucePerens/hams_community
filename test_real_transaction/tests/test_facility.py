@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from odoo.tests.common import tagged
 from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase
