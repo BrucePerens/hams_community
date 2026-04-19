@@ -63,7 +63,7 @@ class TestSettingsAndCache(HttpCase):
         # [@ANCHOR: test_xpath_rendering_caching_settings]
         # Tests [@ANCHOR: xpath_rendering_caching_settings]
         """Verify the Caching settings are injected into the website configuration view."""
-        from lxml import etree
+        from lxml import etree  # noqa: E402
 
         view = self.env.ref("website.res_config_settings_view_form")
         arch = view.with_context(lang=None)._get_combined_arch()

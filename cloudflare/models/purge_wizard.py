@@ -33,7 +33,7 @@ class CloudflarePurgeWizard(models.TransientModel):
         if not token or not zone_id:
             raise UserError(_("Missing Cloudflare API Token or Zone ID for the selected website."))
 
-        from ..utils.cloudflare_api import purge_everything, purge_urls, purge_tags
+        from ..utils.cloudflare_api import purge_everything, purge_urls, purge_tags  # noqa: E402
 
         if self.purge_type == "everything":
             success = purge_everything(token, zone_id)

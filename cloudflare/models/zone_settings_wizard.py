@@ -42,7 +42,7 @@ class CloudflareZoneSettingsWizard(models.TransientModel):
         token, zone_id = website._get_cloudflare_credentials()
 
         if token and zone_id:
-            from ..utils.cloudflare_api import get_zone_settings
+            from ..utils.cloudflare_api import get_zone_settings  # noqa: E402
 
             settings = get_zone_settings(token, zone_id)
             if settings:
@@ -62,7 +62,7 @@ class CloudflareZoneSettingsWizard(models.TransientModel):
         if not token or not zone_id:
             raise UserError(_("Missing Cloudflare API Token or Zone ID for the selected website."))
 
-        from ..utils.cloudflare_api import update_zone_setting
+        from ..utils.cloudflare_api import update_zone_setting  # noqa: E402
 
         errors = []
         if self.security_level:

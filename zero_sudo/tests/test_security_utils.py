@@ -125,7 +125,7 @@ class TestSecurityUtils(TransactionCase):
     @patch("os.path.exists")
     def test_07_update_python_venv(self, mock_exists, mock_run):
         """Test the _update_python_venv method."""
-        from odoo.exceptions import UserError
+        from odoo.exceptions import UserError  # noqa: E402
         utils = self.env["zero_sudo.security.utils"]
 
         # Test 1: requirements.txt not found
@@ -139,7 +139,7 @@ class TestSecurityUtils(TransactionCase):
         self.assertTrue(utils._update_python_venv())
 
         # Test 3: subprocess fails
-        import subprocess
+        import subprocess  # noqa: E402
         mock_run.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="pip error")
         with self.assertRaises(UserError) as cm:
             utils._update_python_venv()
