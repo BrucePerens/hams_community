@@ -151,9 +151,9 @@ class TestBinaryManifest(TransactionCase):
         # Find the article created by the hook (it might already exist if tests run in certain order)
         article_model = self.env.get("knowledge.article")
         if not article_model:
-            return # Skip if manual_library isn't fully loaded or mockable here
+            return  # Skip if manual_library isn't fully loaded or mockable here
 
-        article = article_model.search([("name", "=", "Binary Downloader")], limit=1)
+        article = article_model.search([("name", "=", "Binary Downloader Facility")], limit=1)
         self.assertTrue(article, "Documentation article should have been created by post_init_hook")
         self.assertIn("Binary Downloader Facility", article.body)
 
