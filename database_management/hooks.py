@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import api, SUPERUSER_ID
-from odoo.tools import file_open
+from odoo import api, SUPERUSER_ID # noqa: F401
+from odoo.tools import file_open # noqa: F401
 
 
 def install_knowledge_docs(env):

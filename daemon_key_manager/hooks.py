@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import os
-from odoo import api, SUPERUSER_ID, _
-from odoo.tools import misc
+import os # noqa: F401
+from odoo import api, SUPERUSER_ID, _ # noqa: F401
+from odoo.tools import misc # noqa: F401
 
 def post_init_hook(env):
     """

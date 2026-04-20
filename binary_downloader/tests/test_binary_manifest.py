@@ -163,7 +163,7 @@ class TestBinaryManifest(TransactionCase):
     @patch("urllib.request.urlretrieve")
     def test_10_tar_slip_prevention(self, mock_urlretrieve, mock_machine, mock_system, mock_which):
         """Verify that tar slip attempts are blocked."""
-        manifest_tar = self.env["binary.manifest"].create({
+        self.env["binary.manifest"].create({
             "name": "slippy",
             "url": "http://example.com/slippy.tar.gz",
             "checksum": "fakehash_tar",
