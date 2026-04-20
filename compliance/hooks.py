@@ -10,6 +10,8 @@ def install_knowledge_docs(env):
     Checks if the knowledge.article or manual.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
     """
+    # [@ANCHOR: compliance_install_knowledge_docs]
+    # Verified by [@ANCHOR: test_compliance_post_init_documentation]
     # ADR-0055: Support soft dependencies on manual_library or enterprise knowledge.
     article_model_name = None
     if "knowledge.article" in env:
@@ -68,6 +70,8 @@ def post_init_hook(env):
     1. Enforces the use of Odoo's native cookie consent banner.
     2. Installs the regulatory documentation via the Knowledge API.
     """
+    # [@ANCHOR: compliance_post_init_cookie_bar]
+    # Verified by [@ANCHOR: test_compliance_post_init_cookie_bar]
     # ADR-0002: Zero-Sudo Architecture. We must not use .sudo() or stay as SUPERUSER.
     # We switch to a dedicated micro-privilege service account.
     svc_uid = env["zero_sudo.security.utils"]._get_service_uid("compliance.user_compliance_service")

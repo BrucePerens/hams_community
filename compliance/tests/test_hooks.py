@@ -13,6 +13,8 @@ class TestComplianceHooks(TransactionCase):
         Verify that the post_init_hook successfully reads the HTML file
         and installs the documentation into the knowledge.article API.
         """
+        # [@ANCHOR: test_compliance_post_init_documentation]
+        # Tests [@ANCHOR: compliance_install_knowledge_docs]
         if "knowledge.article" not in self.env:
             raise unittest.SkipTest(
                 "knowledge.article API is not installed. Skipping documentation hook test."
@@ -46,6 +48,8 @@ class TestComplianceHooks(TransactionCase):
         Verify that the post_init_hook successfully enables the cookies_bar
         on all websites.
         """
+        # [@ANCHOR: test_compliance_post_init_cookie_bar]
+        # Tests [@ANCHOR: compliance_post_init_cookie_bar]
         if "cookies_bar" not in self.env["website"]._fields:
             raise unittest.SkipTest(
                 "'cookies_bar' field is not present on the website model. Skipping cookie bar hook test."

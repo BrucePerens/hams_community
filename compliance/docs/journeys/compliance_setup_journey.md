@@ -1,0 +1,20 @@
+# Journey: New Site Compliance Setup
+
+This journey describes the end-to-end experience of a site owner achieving regulatory compliance.
+
+## Steps
+
+1. **Module Installation**: The administrator installs the `compliance` module.
+   - *Internal*: The `post_init_hook` triggers [@ANCHOR: compliance_post_init_cookie_bar].
+2. **Cookie Bar Activation**: The Odoo native cookie bar is enabled for all websites.
+   - *Verification*: `test_02_post_init_hook_cookie_bar` [@ANCHOR: test_compliance_post_init_cookie_bar].
+3. **Legal Content Generation**: Default legal pages are created if they don't exist.
+   - *Templates*:
+     - Privacy Policy [@ANCHOR: compliance_privacy_policy_template]
+     - Cookie Policy [@ANCHOR: compliance_cookie_policy_template]
+     - Terms of Service [@ANCHOR: compliance_terms_of_service_template]
+   - *Verification*: `test_pages_presence` and `test_03_views_rendering` [@ANCHOR: test_compliance_views].
+4. **Documentation Injection**: A comprehensive guide is added to the internal Knowledge base.
+   - *Internal*: `install_knowledge_docs` is called [@ANCHOR: compliance_install_knowledge_docs].
+   - *Verification*: `test_01_post_init_hook_documentation` [@ANCHOR: test_compliance_post_init_documentation].
+5. **Continuous Protection**: During subsequent server boots, `_register_hook` ensures the documentation remains available.
