@@ -4,6 +4,7 @@
         <record id="cron_check_bloat" model="ir.cron"> <!-- audit-ignore-cron: Tested by [@ANCHOR: test_dba_cron] -->
             <field name="name">DBA: Check Autovacuum Bloat</field>
             <field name="model_id" ref="model_database_table_stat"/>
+            <field name="user_id" ref="user_database_management_service"/>
             <field name="state">code</field>
             <field name="code">model.cron_check_bloat()</field>
             <field name="interval_number">1</field>
