@@ -10,8 +10,8 @@ Control plane for the CDN edge. Manages Cache-Tags, WAF bans, and Turnstile CAPT
 ## 2. API Interfaces
 * **WAF IP Banning:** `env['cloudflare.waf'].ban_ip(...)` dynamically injects firewall rules `[@ANCHOR: cf_execute_ban]`. Automatically lifts expired bans via `[@ANCHOR: cf_action_lift_ban]`.
 * **Cache Purging:** `env['cloudflare.purge.queue'].enqueue_tags(...)`. Processes asynchronous cache invalidation queues via cron `[@ANCHOR: ir_cron_process_cf_purge_queue]`. Base URLs are accurately resolved and injected via `[@ANCHOR: enqueue_urls_base_url]`.
-* **Turnstile API:** `env['cloudflare.turnstile'].verify_token(...)` securely evaluates CAPTCHA handshakes against the API.
-* **Edge Context:** `env['cloudflare.utils'].get_request_context()` (Extracts trusted IP/Geodata).
+* **Turnstile API:** `env['cloudflare.turnstile'].verify_token(...)` securely evaluates CAPTCHA handshakes against the API `[@ANCHOR: cf_turnstile_verify]`.
+* **Edge Context:** `env['cloudflare.utils'].get_request_context()` (Extracts trusted IP/Geodata) `[@ANCHOR: cf_get_request_context]`.
 * **Tunnel Setup:** Wizard dynamically generates the `cloudflared` execution token command for edge network bridging `[@ANCHOR: cf_tunnel_setup]`.
 * **Tunnel Management:** Modules can sync existing tunnels `[@ANCHOR: cf_sync_tunnels]` and delete them `[@ANCHOR: cf_delete_tunnel]`.
 
