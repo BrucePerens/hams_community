@@ -49,5 +49,3 @@ access_blog_post_public,blog.post public,website_blog.model_blog_post,base.group
 access_blog_post_portal,blog.post portal,website_blog.model_blog_post,base.group_portal,1,0,0,0
 access_blog_blog_public,blog.blog public,website_blog.model_blog_blog,base.group_public,1,0,0,0
 access_blog_blog_portal,blog.blog portal,website_blog.model_blog_blog,base.group_portal,1,0,0,0
-access_content_violation_report_user,content.violation.report user,model_content_violation_report,base.group_portal,1,0,1,0
-access_content_violation_appeal_user,content.violation.appeal user,model_content_violation_appeal,base.group_portal,1,0,1,0

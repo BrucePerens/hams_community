@@ -10,7 +10,7 @@ class TestWafManagement(TransactionCase):
     def setUp(self):
         super().setUp()
         self.svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_waf"
         )
         self.website = self.env["website"].get_current_website()
         self.website.write(

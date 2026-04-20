@@ -65,7 +65,7 @@ class TestPurgeQueue(TransactionCase):
         the website_id.domain field without triggering an AccessError.
         """
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_purge"
         )
 
         # Create a pending queue item

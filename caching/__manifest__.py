@@ -5,8 +5,10 @@
     "category": "Website",
     "summary": "Global Service Worker for aggressive frontend asset caching",
     "description": "Intercepts network requests to cache Odoo JS/CSS bundles and static files on the client edge. Zero-config integration for other modules.",
-    "depends": ["base", "website"],
+    "depends": ["base", "website", "zero_sudo"],
     "data": [
+        "data/security_data.xml",
+        "security/ir.model.access.csv",
         "views/layout_inherit.xml",
         "views/res_config_settings_views.xml",
     ],

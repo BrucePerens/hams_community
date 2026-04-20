@@ -88,7 +88,7 @@ class CloudflareConfigManager(models.AbstractModel):
                         "cloudflare.last_static_mtime", latest_mtime
                     )
 
-                svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_service")
+                svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_purge")
                 self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
                     ["odoo-static-assets"]
                 )
@@ -114,7 +114,10 @@ class CloudflareConfigManager(models.AbstractModel):
                 _logger.info(
                     f"[+] Existing rules detected for {website.name}. Backing up and syncing."
                 )
-                self.env["cloudflare.config.backup"].create(
+                # ADR-0001: Headless Mutation Context
+                self.env["cloudflare.config.backup"].with_context(
+                    mail_notrack=True, prefetch_fields=False
+                ).create(
                     {
                         "name": f"Pre-Odoo Backup ({website.name})",
                         "raw_json": json.dumps(existing_ruleset, indent=4),
@@ -127,7 +130,10 @@ class CloudflareConfigManager(models.AbstractModel):
             for rule_vals in DEFAULT_WAF_RULES:
                 vals = dict(rule_vals)
                 vals["website_id"] = website.id
-                self.env["cloudflare.waf.rule"].create(vals)
+                # ADR-0001: Headless Mutation Context
+                self.env["cloudflare.waf.rule"].with_context(
+                    mail_notrack=True, prefetch_fields=False
+                ).create(vals)
 
             self.action_push_waf_rules(website_id=website.id)
 
@@ -149,13 +155,19 @@ class CloudflareConfigManager(models.AbstractModel):
                 f"No custom firewall ruleset found in Cloudflare for {website.name}.",
             )
 
-        self.env["cloudflare.waf.rule"].search(
+        # ADR-0001: Headless Mutation Context
+        self.env["cloudflare.waf.rule"].with_context(
+            mail_notrack=True, prefetch_fields=False
+        ).search(
             [("website_id", "=", website.id)], limit=1000
         ).unlink()
 
         rules = existing_ruleset.get("rules", [])
         for i, r in enumerate(rules):
-            self.env["cloudflare.waf.rule"].create(
+            # ADR-0001: Headless Mutation Context
+            self.env["cloudflare.waf.rule"].with_context(
+                mail_notrack=True, prefetch_fields=False
+            ).create(
                 {
                     "sequence": (i + 1) * 10,
                     "name": r.get(

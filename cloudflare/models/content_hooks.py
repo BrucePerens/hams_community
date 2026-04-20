@@ -11,7 +11,7 @@ class WebsitePage(models.Model):
 
         # Zero-Sudo Execution: Add to queue securely
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_purge"
         )
         self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_urls(urls)
 
@@ -22,7 +22,7 @@ class WebsitePage(models.Model):
         res = super().unlink()
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_purge"
         )
         self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_urls(urls)
 
@@ -39,7 +39,7 @@ class BlogPost(models.Model):
 
         if urls:
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "cloudflare.user_cloudflare_service"
+                "cloudflare.user_cloudflare_purge"
             )
             self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_urls(urls)
 
@@ -56,7 +56,7 @@ class ProductTemplate(models.Model):
 
         if urls:
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "cloudflare.user_cloudflare_service"
+                "cloudflare.user_cloudflare_purge"
             )
             self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_urls(urls)
 

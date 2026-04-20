@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import patch, MagicMock
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
 
 
 from odoo.tests.common import HttpCase
@@ -93,7 +93,7 @@ class TestDistributedCache(HttpCase):
             self.assertTrue(True)
             return
 
-        with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, patch("odoo.addons.distributed_redis_cache.models.ir_http.request", MagicMock()) as mock_request:
+        with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, patch("odoo.addons.distributed_redis_cache.models.ir_http.request", MagicMock()):
             mock_redis.Redis.side_effect = Exception("Connection reset by peer")
 
             try:

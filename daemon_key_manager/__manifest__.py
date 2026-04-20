@@ -7,6 +7,7 @@
     "license": "AGPL-3",
     "depends": ["base", "zero_sudo"],
     "data": [
+        "security/security.xml",
         "security/ir.model.access.csv",
         "data/cron.xml",
         "views/registry_views.xml",

@@ -178,7 +178,6 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
         arch_string = f"""<t name="Home" t-name="user_websites.home_{self.malice.website_slug}">
             <t t-call="website.layout">
                 <div id="stolen_data">
-                    <!-- Attempt to read the admin's hashed password or email via QWeb -->
                     <t t-esc="request.env['res.users'].sudo().search([('id', '=', 1)]).email"/>
                 </div>
             </t>
@@ -242,27 +241,20 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
         Risk: Malice submits a violation report via RPC but forces the `reported_by_user_id`
         to be the Victim, framing them.
         Action: Malice creates a content.violation.report.
-        Expected: The system should allow the creation, but the `create_uid` or controller
-        logic must override/ignore the spoofed ID, OR the record rules must prevent viewing it.
+        Expected: The record rules must strictly prevent the creation because
+        the reported_by_user_id does not match the session's user.id.
         """
-        report = (
-            self.env["content.violation.report"]
-            .with_user(self.malice)
-            .create(
+        with self.assertRaises(
+            AccessError,
+            msg="Record rules must prevent users from spoofing the reported_by_user_id on creation.",
+        ):
+            self.env["content.violation.report"].with_user(self.malice).create(
                 {
                     "target_url": "/some/bad/page",
                     "description": "Framing the victim",
                     "reported_by_user_id": self.victim.id,
                 }
             )
-        )
-
-        # We assert that the system tracks the true creator regardless of the spoofed field.
-        self.assertEqual(
-            report.create_uid.id,
-            self.malice.id,
-            "The true creator UID must be permanently stamped.",
-        )
 
     def test_07_public_read_access(self):
         """

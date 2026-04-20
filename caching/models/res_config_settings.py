@@ -19,8 +19,10 @@ class ResConfigSettings(models.TransientModel):
 
     def action_force_cache_invalidation(self):
         self.ensure_one()
-        current_version = int(self.env['ir.config_parameter'].sudo().get_param('caching.invalidation_version', '1') or 1) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
-        self.env['ir.config_parameter'].sudo().set_param('caching.invalidation_version', str(current_version + 1)) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        env_svc = self.with_user(svc_uid).env
+        current_version = int(env_svc['ir.config_parameter'].get_param('caching.invalidation_version', '1') or 1) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        env_svc['ir.config_parameter'].set_param('caching.invalidation_version', str(current_version + 1)) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         # This forces the page to reload so they can see the updated version if they reopen settings
         return {
             'type': 'ir.actions.client',
