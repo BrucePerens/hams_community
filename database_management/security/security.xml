@@ -22,7 +22,7 @@
             <field name="login">user_database_management_service</field>
             <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
-            <field name="group_ids" eval="[(6, 0, [ref('database_management.group_database_management_manager'), ref('manual_library.group_manual_library_service_account')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('database_management.group_database_management_manager')])]"/>
         </record>
     </data>
 </odoo>
