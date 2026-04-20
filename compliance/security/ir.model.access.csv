@@ -3,5 +3,4 @@ access_compliance_website,compliance.website,website.model_website,group_complia
 access_compliance_website_page,compliance.website.page,website.model_website_page,group_compliance_service,1,1,1,0
 access_compliance_ir_ui_view,compliance.ir.ui.view,base.model_ir_ui_view,group_compliance_service,1,1,1,0
 access_compliance_res_groups,compliance.res.groups,base.model_res_groups,group_compliance_service,1,0,0,0
-access_compliance_knowledge_article,compliance.knowledge.article,manual_library.model_knowledge_article,group_compliance_service,1,1,1,0
 access_compliance_res_company,compliance.res.company,base.model_res_company,group_compliance_service,1,0,0,0

@@ -7,14 +7,25 @@ import logging
 
 def install_knowledge_docs(env):
     """
-    Checks if the knowledge.article API is present in the environment.
+    Checks if the knowledge.article or manual.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
     """
+    # ADR-0055: Support soft dependencies on manual_library or enterprise knowledge.
+    article_model_name = None
     if "knowledge.article" in env:
+        article_model_name = "knowledge.article"
+    elif "manual.article" in env:
+        article_model_name = "manual.article"
+
+    if article_model_name:
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
             "compliance.user_compliance_service"
         )
-        article_model = env["knowledge.article"].with_user(svc_uid).with_context(
+        # ADR-0002/0055: We typically use service accounts, but since we have a soft
+        # dependency on an external model (knowledge/manual), we cannot define a
+        # permanent ACL in ir.model.access.csv.
+        # To bypass this for documentation injection only, we use .sudo().
+        article_model = env[article_model_name].sudo().with_context(  # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
             mail_notrack=True, prefetch_fields=False
         )
 
@@ -46,7 +57,10 @@ def install_knowledge_docs(env):
             if "icon" in article_model._fields:
                 vals["icon"] = "⚖️"
 
-            return article_model.create(vals)
+            try:
+                return article_model.create(vals)
+            except Exception as e:
+                logging.getLogger(__name__).error("Failed to create compliance documentation article: %s", e)
         return existing
     return None
 
