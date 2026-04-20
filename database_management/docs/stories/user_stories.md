@@ -1,0 +1,51 @@
+# User Stories: Database Management
+
+## Performance Monitoring
+### Monitor Table and Index Health
+**As a** Database Administrator
+**I want** to see real-time statistics on table bloat and index usage `[@ANCHOR: db_index_stats]`
+**So that** I can identify tables that need vacuuming and indexes that are unused or oversized.
+
+### Track Slow Queries
+**As a** System Engineer
+**I want** to see a list of the most time-consuming SQL queries `[@ANCHOR: db_slow_queries]`
+**So that** I can optimize the application code or add missing indexes.
+
+## Incident Remediation
+### Manually Reclaim Disk Space
+**As a** System Administrator
+**I want** to trigger a `VACUUM ANALYZE` `[@ANCHOR: vacuum_analyze]` on specific bloated tables from the Odoo UI
+**So that** I can reclaim space and update table statistics without needing direct SSH access to the database server.
+
+### Terminate Runaway Sessions
+**As a** Database Administrator
+**I want** to view active database sessions `[@ANCHOR: db_active_sessions]` and terminate specific backends `[@ANCHOR: db_terminate_backend]`
+**So that** I can stop long-running or locked queries that are impacting system performance.
+
+## System Optimization
+### Tune PostgreSQL Parameters
+**As a** DevOps Engineer
+**I want** a wizard `[@ANCHOR: pg_optimize_wizard]`, audit views `[@ANCHOR: db_settings_audit]`, and specialized dashboards `[@ANCHOR: test_pg_config_views]` that suggest PostgreSQL settings based on my server's RAM and CPU
+**So that** I can maximize the performance of the database engine for my specific hardware.
+
+### Configure High Availability
+**As a** Site Reliability Engineer
+**I want** to generate configuration templates for Patroni and PgBouncer `[@ANCHOR: pg_ha_wizard]`
+**So that** I can quickly set up a resilient, failover-ready database cluster.
+
+## Automated Governance
+### Automated Bloat Alerts
+**As a** Site Reliability Engineer
+**I want** the system to automatically notify PagerDuty when table bloat exceeds safe thresholds `[@ANCHOR: bloat_alert_synergy]`
+**So that** I am alerted to performance degradation before it becomes a critical outage.
+
+## Verification
+### Ensure DBA Tools are Reliable
+**As a** Developer
+**I want** automated tests for the DBA cron jobs `[@ANCHOR: test_dba_cron]`, stat views `[@ANCHOR: test_dba_view]`, and configuration dashboards `[@ANCHOR: test_pg_config_views]`
+**So that** I can be confident that the management tools are reporting accurate data and functioning correctly after every update.
+
+### Seamless Documentation Access
+**As a** New User
+**I want** the module's documentation to be automatically available in the Odoo Knowledge base upon installation `[@ANCHOR: db_doc_injection]`
+**So that** I can learn how to use the DBA tools without searching external repositories.

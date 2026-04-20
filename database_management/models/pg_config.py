@@ -5,6 +5,7 @@ from psycopg2 import sql
 
 
 class DatabasePgSetting(models.Model):
+    # [@ANCHOR: db_settings_audit]
     _name = "database.pg.setting"
     _description = "PostgreSQL Configuration Parameter"
     _auto = False
