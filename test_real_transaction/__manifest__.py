@@ -10,7 +10,7 @@
         This allows developers to write tests that perform true database commits, 
         which is critical for testing One2many inverse cache anomalies and cross-worker behaviors.
     """,
-    "depends": ["base", "zero_sudo", "manual_library"],
+    "depends": ["base", "zero_sudo"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -20,5 +20,4 @@
     "license": "AGPL-3",
     "installable": True,
     "auto_install": False,
-    "post_init_hook": "post_init_hook",
 }
