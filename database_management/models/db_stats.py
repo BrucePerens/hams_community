@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo import models, fields, api, tools, _
 
 
@@ -44,6 +45,16 @@ class DatabaseTableStat(models.Model):
             return path
 
         pkg_map = {"vacuumdb": "postgresql-client"}
+        if cmd_name == "vacuumdb" and "binary.manifest" in self.env:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "database_management.user_database_management_service"
+            )
+            return (
+                self.env["binary.manifest"]
+                .with_user(svc_uid)
+                .ensure_executable("vacuumdb")
+            )
+
         pkg = pkg_map.get(cmd_name, cmd_name)
         raise UserError(
             _(

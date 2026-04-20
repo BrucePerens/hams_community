@@ -1,0 +1,14 @@
+<h1>Database Management</h1>
+<p>Provides an enterprise-grade Application Performance Monitoring (APM) and DBA suite directly within Odoo.</p>
+<h2>Architecture</h2>
+<ul>
+    <li><strong>Stat Tracking:</strong> Connects to native PostgreSQL stat views to track bloat, cache hits, and slow queries.</li>
+    <li><strong>Active Orchestration:</strong> Exposes <code>pg_terminate_backend</code> and <code>VACUUM ANALYZE</code> commands to the GUI.</li>
+    <li><strong>Configuration &amp; Tuning:</strong> Evaluates <code>pg_settings</code> and provides wizards to dynamically write to <code>postgresql.auto.conf</code>.</li>
+    <li><strong>HA Generation:</strong> Orchestrates configuration templates for Patroni and PgBouncer.</li>
+</ul>
+<h2>Security</h2>
+<ul>
+    <li><strong>Strict Access:</strong> Access is hard-locked to the System Administrator role.</li>
+    <li><strong>SQLi Defense:</strong> Utilizes <code>psycopg2.sql</code> for safe query formatting.</li>
+</ul>
