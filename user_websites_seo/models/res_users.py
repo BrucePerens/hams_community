@@ -41,6 +41,8 @@ class ResUsersSEO(models.Model):
                 res = res and super(ResUsersSEO, self).write(seo_vals)
             else:
                 if all(record.id == self.env.user.id for record in self):
+                    # [@ANCHOR: res_users_seo_write_elevation]
+                    # Verified by [@ANCHOR: test_seo_widget_tour]
                     # Escalate strictly for the write operation using the domain service account
                     # ADR-0001: Use with_context(mail_notrack=True, prefetch_fields=False)
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")

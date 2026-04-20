@@ -11,4 +11,5 @@ This module is a lightweight domain extension for `user_websites`. It connects o
 * **Model Injection:** It fuses the `website.seo.metadata` mixin into the `res.users` and `user.websites.group` models.
 * **Authorization:** It appends the SEO metadata fields to the `SELF_WRITEABLE_FIELDS` property.
 * **Controller Interception:** Overrides the `/blog` route to inject the SEO-aware profile object into the QWeb context. Verified by `[@ANCHOR: controller_user_blog_index_seo_override]`.
-* **Soft Dependency Documentation:** The module uses a `post_init_hook` and `_register_hook` to dynamically install documentation if `knowledge.article` is present in the environment, without requiring a hard dependency on `manual_library` or `knowledge`.
+* **Secure Elevation:** Escalate strictly for the write operation using the domain service account for users `[@ANCHOR: res_users_seo_write_elevation]` and groups `[@ANCHOR: user_websites_group_seo_write_elevation]`.
+* **Soft Dependency Documentation:** The module uses a `post_init_hook` and `_register_hook` to dynamically install documentation `[@ANCHOR: soft_dependency_docs_installation]` if `knowledge.article` is present in the environment, without requiring a hard dependency on `manual_library` or `knowledge`.
