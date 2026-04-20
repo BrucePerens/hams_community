@@ -15,12 +15,22 @@ class TestPgConfig(TransactionCase):
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")
+        self.db_manager = self.env["res.users"].create(
+            {
+                "name": "DB Manager",
+                "login": "db_manager_config",
+                "group_ids": [
+                    (4, self.env.ref("database_management.group_database_management_manager").id),
+                    (4, self.env.ref("base.group_user").id),
+                ],
+            }
+        )
 
     def test_01_optimization_wizard(self):
         # Tests [@ANCHOR: pg_optimize_wizard]
         wizard = (
             self.env["pg.optimize.wizard"]
-            .with_user(self.admin)
+            .with_user(self.db_manager)
             .create(
                 {
                     "ram_gb": 16,
@@ -44,7 +54,7 @@ class TestPgConfig(TransactionCase):
         # Tests [@ANCHOR: pg_ha_wizard]
         wizard = (
             self.env["pg.ha.wizard"]
-            .with_user(self.admin)
+            .with_user(self.db_manager)
             .create(
                 {
                     "primary_ip": "192.168.1.10",
@@ -65,7 +75,7 @@ class TestPgConfig(TransactionCase):
 
         wizard = (
             self.env["pg.optimize.wizard"]
-            .with_user(self.admin)
+            .with_user(self.db_manager)
             .create({"ram_gb": 0, "cpu_cores": 8})
         )
         with self.assertRaises(UserError):
@@ -77,7 +87,7 @@ class TestPgConfig(TransactionCase):
 
         wizard = (
             self.env["pg.ha.wizard"]
-            .with_user(self.admin)
+            .with_user(self.db_manager)
             .create({"primary_ip": "10.0.0.1"})
         )
 
@@ -100,7 +110,7 @@ class TestPgConfig(TransactionCase):
         mock_ensure.return_value = "/bin/etcd"
         wizard = (
             self.env["pg.ha.wizard"]
-            .with_user(self.admin)
+            .with_user(self.db_manager)
             .create({"primary_ip": "10.0.0.1"})
         )
         exe_path = wizard._get_executable("etcd")

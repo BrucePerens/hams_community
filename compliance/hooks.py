@@ -51,11 +51,15 @@ def post_init_hook(env):
     1. Enforces the use of Odoo's native cookie consent banner.
     2. Installs the regulatory documentation via the Knowledge API.
     """
-    websites = env["website"].search([], limit=10000)
+    # ADR-0002: Zero-Sudo Architecture. We must not use .sudo() or stay as SUPERUSER.
+    # We switch to a dedicated micro-privilege service account.
+    svc_uid = env["zero_sudo.security.utils"]._get_service_uid("compliance.user_compliance_service")
+
+    websites = env["website"].with_user(svc_uid).search([], limit=10000)
 
     # Safely check if the target field exists in the current Odoo version
     if "cookies_bar" in env["website"]._fields:
         websites.write({"cookies_bar": True})
 
     # Install documentation
-    install_knowledge_docs(env)
+    install_knowledge_docs(env["res.users"].with_context(active_test=True).with_user(svc_uid).env)

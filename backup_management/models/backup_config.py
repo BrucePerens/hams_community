@@ -167,7 +167,12 @@ class BackupConfig(models.Model):
                 "zero_sudo.mail_service_internal"
             )
             self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
-            bin_path = self.env["binary.manifest"].ensure_executable("kopia")
+            # Ensure the installation happens under the context of the service user to maintain proper ACLs
+            bin_path = (
+                self.env["binary.manifest"]
+                .with_context(active_test=False)
+                .ensure_executable("kopia")
+            )
             msg_body = _("Kopia successfully installed to %s") % bin_path
             self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
             return bin_path

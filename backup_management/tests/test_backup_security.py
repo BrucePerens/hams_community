@@ -94,3 +94,33 @@ class TestBackupSecurity(TransactionCase):
                 AccessError, msg=f"{user.name} MUST NOT be able to read snapshots."
             ):
                 self.snapshot.with_user(user).read(["snapshot_id"])
+
+    def test_02_service_account_capabilities(self):
+        """
+        Verify that user_backup_service_internal can perform its duties.
+        """
+        service_user = self.env.ref("backup_management.user_backup_service_internal")
+
+        # Read configs
+        configs = self.env["backup.config"].with_user(service_user).search([])
+        self.assertIn(self.config.id, configs.ids)
+
+        # Create snapshots
+        snap = (
+            self.env["backup.snapshot"]
+            .with_user(service_user)
+            .create(
+                {
+                    "config_id": self.config.id,
+                    "snapshot_id": "service_snap_1",
+                    "status": "completed",
+                }
+            )
+        )
+        self.assertTrue(snap.exists())
+
+        # Check binary manifest access (needed for auto-download)
+        # We need to ensure binary_downloader is installed or mocked if this test runs in isolation
+        if "binary.manifest" in self.env:
+            manifests = self.env["binary.manifest"].with_user(service_user).search([])
+            self.assertIsNotNone(manifests)

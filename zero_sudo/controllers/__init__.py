@@ -1,1 +1,2 @@
-from . import main  # noqa: F401
+# -*- coding: utf-8 -*-
+from . import main

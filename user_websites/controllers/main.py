@@ -49,9 +49,17 @@ def _async_gdpr_erasure(db_name, user_id):
     registry = Registry(db_name)
     cr = registry.cursor()
     try:
+        # ADR-0001: Execute operations under a dedicated service account instead of SUPERUSER_ID
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
-            user = env["res.users"].with_context(active_test=False).browse(user_id)
+            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+            env_svc = env.with_user(svc_uid).with_context(
+                mail_notrack=True, prefetch_fields=False
+            )
+
+            user = env_svc["res.users"].with_context(active_test=False).browse(user_id)
             if user.exists():
                 user._execute_gdpr_erasure()
 
@@ -65,11 +73,12 @@ def _async_gdpr_erasure(db_name, user_id):
                         "active": False,
                     }
                 )
-                env.cr.commit()
+                env_svc.cr.commit()
         except Exception as e:
             env.cr.rollback()
             _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
             try:
+                # Notifications should fall back to superuser (env) if service account initialization failed
                 admin = env.ref("base.user_admin").with_context(active_test=False)
                 admin_uid = admin.id
                 error_details = traceback.format_exc()
@@ -79,7 +88,7 @@ def _async_gdpr_erasure(db_name, user_id):
                     summary=f"FAILED GDPR Erasure for User ID {user_id}",
                     note=f"The background GDPR erasure process failed. Exception: {e}<br/><pre>{error_details}</pre>",
                 )
-                env.cr.commit()
+                env_svc.cr.commit()
             except Exception as inner_e:
                 _logger.critical(
                     f"Failed to notify admin of GDPR erasure failure: {inner_e}"

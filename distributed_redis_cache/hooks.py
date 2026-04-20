@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def post_init_hook(env):
     """
     Inject documentation and register daemon keys upon installation.
@@ -13,7 +14,9 @@ def post_init_hook(env):
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.odoo_facility_service_internal"
         )
-        env["knowledge.article"].with_user(svc_uid).create(
+        env["knowledge.article"].with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        ).create(
             {
                 "name": "Distributed Redis Cache",
                 "body": body_html,

@@ -129,7 +129,14 @@ class PgHaWizard(models.TransientModel):
             return path
 
         if cmd_name == "etcd":
-            return self.env["binary.manifest"].ensure_executable("etcd")
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "database_management.user_database_management_service"
+            )
+            return (
+                self.env["binary.manifest"]
+                .with_user(svc_uid)
+                .ensure_executable("etcd")
+            )
 
         pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer"}
         pkg = pkg_map.get(cmd_name, cmd_name)

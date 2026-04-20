@@ -95,7 +95,11 @@ class BlogPost(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        posts = super(BlogPost, self.with_user(svc_uid)).create(vals_list)
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        posts = super(BlogPost, self_svc).create(vals_list)
 
         utils = self.env["zero_sudo.security.utils"]
         for url in posts._get_blog_urls():
@@ -179,7 +183,11 @@ class BlogPost(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        res = super(BlogPost, self.with_user(svc_uid)).write(vals)
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        res = super(BlogPost, self_svc).write(vals)
 
         if "is_published" in vals or "name" in vals or "content" in vals:
             new_urls = self._get_blog_urls()
@@ -200,7 +208,11 @@ class BlogPost(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        res = super(BlogPost, self.with_user(svc_uid)).unlink()
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        res = super(BlogPost, self_svc).unlink()
 
         utils = self.env["zero_sudo.security.utils"]
         if urls_to_invalidate:
