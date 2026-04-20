@@ -7,6 +7,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 def install_knowledge_docs(env):
+    # [@ANCHOR: caching_docs_bootstrap]
     """
     Checks if the knowledge.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.

@@ -25,6 +25,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // [@ANCHOR: caching_sw_fetch_interceptor]
     const request = event.request;
     const url = new URL(request.url);
 

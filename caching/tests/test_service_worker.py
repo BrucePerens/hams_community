@@ -6,6 +6,7 @@ from odoo.tests.common import HttpCase, tagged
 class TestServiceWorker(HttpCase):
 
     def test_01_sw_headers(self):
+        # Tests [@ANCHOR: caching_sw_serve_route]
         """
         Verify that the /sw.js route serves the JavaScript file
         with strict no-cache headers. This guarantees that when

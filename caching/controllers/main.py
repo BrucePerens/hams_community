@@ -12,6 +12,7 @@ class ServiceWorkerController(http.Controller):
     _fs_cache = None
 
     def _get_fs_stats(self):
+        # [@ANCHOR: caching_fs_scan_logic]
         """
         Scans the 'static/' directories of all installed modules.
         Returns a tuple: (latest_mtime, file_sizes).
@@ -55,6 +56,7 @@ class ServiceWorkerController(http.Controller):
         return res
 
     def _get_global_static_info(self):
+        # [@ANCHOR: caching_quota_calculation]
         """
         Returns a tuple: (latest_mtime_string, dynamic_max_file_size_string).
         Calculates the safe dynamic max file size based on configurable quota.
@@ -91,6 +93,7 @@ class ServiceWorkerController(http.Controller):
 
     @http.route("/sw.js", type="http", auth="public", sitemap=False)
     def service_worker(self):
+        # [@ANCHOR: caching_sw_serve_route]
         """
         Serves the Service Worker script from the root scope.
         Dynamically injects the latest filesystem mtime (for cache invalidation)
