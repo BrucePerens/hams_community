@@ -13,6 +13,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _get_deterministic_hash(self, input_string):
+        # [@ANCHOR: deterministic_hash]
+        # Verified by [@ANCHOR: test_deterministic_hash]
         """
         Generates a high-speed, deterministic 32-bit integer hash.
         Used primarily for PostgreSQL advisory locks (pg_advisory_xact_lock).
@@ -26,8 +28,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     @tools.ormcache("xml_id")
-    def _get_service_uid(self, xml_id):
-        # [@ANCHOR: get_service_uid]
+    def _get_service_uid(self, xml_id):  # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
         uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
         if not uid:
@@ -91,6 +92,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _get_system_param(self, key, default=None):
+        # [@ANCHOR: get_system_param]
+        # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         # THE MECHANICAL SECRET BLOCK
         # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
         # This implementation uses a dual-protection strategy:
@@ -147,6 +150,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     def _update_python_venv(self):
+        # [@ANCHOR: update_python_venv]
+        # Verified by [@ANCHOR: test_update_python_venv]
         if not self.env.user.has_group("base.group_system"):
             raise AccessError(_("Only administrators can update the Python environment."))
 
