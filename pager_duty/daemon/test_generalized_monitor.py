@@ -17,6 +17,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         {"PAGER_FALLBACK_EMAIL": "admin@test.com", "SMTP_HOST": "smtp.test.com"},
     )
     def test_01_smtp_fallback(self, mock_smtp):
+        # Tests [@ANCHOR: daemon_report_incident]
         """Verify that if the Odoo client crashes, the report gracefully triggers the SMTP fallback."""
         mock_client = MagicMock()
         mock_client.execute.side_effect = Exception("Connection Refused (Odoo Down)")
@@ -49,6 +50,7 @@ class TestMonitorExhaustive(unittest.TestCase):
 
     @patch("generalized_monitor.psutil")
     def test_03_system_checks(self, mock_psutil):
+        # Tests [@ANCHOR: daemon_execute_check]
         """Exhaustively verify Disk, Memory, CPU, IO Wait, and Steal metrics."""
         # Disk
         mock_psutil.disk_usage.return_value.percent = 95
@@ -294,6 +296,7 @@ class TestMonitorExhaustive(unittest.TestCase):
     @patch("generalized_monitor.subprocess.run")
     @patch("generalized_monitor.urllib.request.urlopen")
     def test_10_certbot_check(self, mock_urlopen, mock_run, mock_which):
+        # Tests [@ANCHOR: daemon_verify_dependencies]
         """Verify the Certbot 3-stage readiness pipeline (API, DNS IP Match, Dry-Run)."""
         # Pass API Check
         mock_api_resp = MagicMock()
@@ -595,6 +598,7 @@ class TestMonitorExhaustive(unittest.TestCase):
     @patch("generalized_monitor.os.path.getmtime")
     @patch("builtins.open", new_callable=MagicMock)
     def test_15_synthetic_spool_reads(self, mock_open, mock_mtime, mock_exists):
+        # Tests [@ANCHOR: daemon_main_loop]
         """Verify generalized_monitor correctly reads the airgapped synthetic spool JSON."""
         import json  # noqa: E402
         import time  # noqa: E402
