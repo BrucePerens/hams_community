@@ -1,2 +1,3 @@
-from . import res_users  # noqa: F401
-from . import security_utils  # noqa: F401  # noqa: F401
+# -*- coding: utf-8 -*-
+from . import security_utils
+from . import res_users

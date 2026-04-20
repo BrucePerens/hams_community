@@ -92,8 +92,21 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @api.model
     def _get_system_param(self, key, default=None):
         # THE MECHANICAL SECRET BLOCK
-        # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys
-        # without requiring a centralized whitelist.
+        # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
+        # This implementation uses a dual-protection strategy:
+        # 1. A hardcoded PARAM_WHITELIST (ADR-0002)
+        # 2. A mechanical block on sensitive substrings for dynamic keys.
+
+        PARAM_WHITELIST = [
+            "web.base.url",
+            "cloudflare.last_static_mtime",
+            "user_websites.company_abuse_email",
+            "user_websites.max_sites_per_user",
+            "user_websites.enable_blog_comments",
+            "caching.safe_quota_mb",
+            "caching.invalidation_version",
+        ]
+
         banned_substrings = [
             "secret",
             "key",
@@ -105,18 +118,35 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         ]
         lower_key = key.lower()
 
-        if any(banned in lower_key for banned in banned_substrings):
+        if key not in PARAM_WHITELIST:
+            # If not in whitelist, we check if it's a dynamic key or if it contains banned substrings.
+            # For strict compliance with ADR-0002, we should ideally ONLY allow whitelisted keys.
+            if any(banned in lower_key for banned in banned_substrings):
+                raise AccessError(
+                    _(
+                        "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
+                    )
+                    % key
+                )
+
+            # In some cases, we might want to allow non-whitelisted but safe keys for decentralization,
+            # but the documentation explicitly states "The requested key MUST be hardcoded in the PARAM_WHITELIST".
+            # To be safe and compliant, we enforce the whitelist strictly.
             raise AccessError(
                 _(
-                    "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
+                    "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
                 )
                 % key
             )
+
         # burn-ignore-sudo: Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
 
     @api.model
     def _update_python_venv(self):
+        if not self.env.user.has_group("base.group_system"):
+            raise AccessError(_("Only administrators can update the Python environment."))
+
         req_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")
         )

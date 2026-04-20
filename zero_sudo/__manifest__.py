@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 {
     "name": "Zero-Sudo Security Core",
     "summary": "Foundational security utilities, service account patterns, and web isolation.",
