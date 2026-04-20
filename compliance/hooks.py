@@ -12,7 +12,7 @@ def install_knowledge_docs(env):
     """
     if "knowledge.article" in env:
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.odoo_facility_service_internal"
+            "compliance.user_compliance_service"
         )
         article_model = env["knowledge.article"].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
