@@ -340,7 +340,11 @@ class WebsitePage(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        records = super(WebsitePage, self.with_user(svc_uid)).create(vals_list)
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        records = super(WebsitePage, self_svc).create(vals_list)
         records._invalidate_cloudflare_cache()
         return records
 
@@ -439,7 +443,11 @@ class WebsitePage(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        res = super(WebsitePage, self.with_user(svc_uid)).write(vals)
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        res = super(WebsitePage, self_svc).write(vals)
 
         # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
         if "url" in vals or "website_published" in vals or "is_published" in vals:
@@ -468,7 +476,11 @@ class WebsitePage(models.Model):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
         )
-        res = super(WebsitePage, self.with_user(svc_uid)).unlink()
+        # ADR-0001: All service account mutations must include appropriate context
+        self_svc = self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+        res = super(WebsitePage, self_svc).unlink()
 
         utils = self.env["zero_sudo.security.utils"]
         if pages_to_invalidate:
@@ -545,8 +557,13 @@ class WebsitePage(models.Model):
                 _logger.error(f"Error updating PostgreSQL view counts: {e}")
 
         if cursor != 0:
-            cron = self.env.ref(
-                "user_websites.ir_cron_flush_view_counters", raise_if_not_found=False
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+            cron = (
+                self.env.with_user(svc_uid)
+                .with_context(mail_notrack=True, prefetch_fields=False)
+                .ref("user_websites.ir_cron_flush_view_counters", raise_if_not_found=False)
             )
             if cron:
                 cron._trigger()
