@@ -4,12 +4,12 @@
         The <strong>Binary Downloader</strong> is a highly secure, database-backed orchestration module designed to provide static executable dependencies (such as <code>kopia</code>, <code>etcd</code>, and <code>cloudflared</code>) to other Odoo subsystems at runtime without exposing the underlying OS to Arbitrary File Write vulnerabilities.
     </p>
 
-    <h2>1. The Security Problem</h2>
+    <h2 id="binary_security" data-trace="[@ANCHOR: UX_BINARY_INSTALL]">1. The Security Problem</h2>
     <p>
         Traditional dependency provisioners rely on flat JSON or YAML files stored on disk. If an attacker discovers a Directory Traversal or File Write vulnerability in another application, they could subtly alter the flat file to point the download URL to a malicious payload. When Odoo attempts to download the dependency, it installs and executes the malware as the Odoo service user.
     </p>
 
-    <h2>2. The DB-Backed Solution</h2>
+    <h2 id="binary_resolution" data-trace="[@ANCHOR: binary_ensure_executable]">2. The DB-Backed Solution</h2>
     <p>
         This module eliminates flat-file manifests entirely. Download targets, cryptographic SHA-256 checksums, and extraction rules are stored securely within PostgreSQL via the <code>binary.manifest</code> model.
     </p>
@@ -19,7 +19,7 @@
         <li><strong>Permission Locking:</strong> Extracted binaries are strictly locked to <code>0o750</code> (rwxr-x---) to prevent horizontal privilege escalation from other OS users.</li>
     </ul>
 
-    <h2>3. Usage</h2>
+    <h2 id="binary_usage" data-trace="[@ANCHOR: binary_ensure_executable]">3. Usage</h2>
     <p>
         Other modules can safely request a dependency by invoking the central method:
     </p>

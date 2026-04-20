@@ -38,6 +38,7 @@ class TestBinaryManifest(TransactionCase):
 
     @patch("shutil.which")
     def test_01_already_installed(self, mock_which):
+        # Tests [@ANCHOR: binary_ensure_executable]
         """Verify it returns the system path immediately if the binary is found."""
         mock_which.return_value = "/usr/bin/testbin"
         path = self.env["binary.manifest"].ensure_executable("testbin")
@@ -116,6 +117,7 @@ class TestBinaryManifest(TransactionCase):
 
     @patch("shutil.which")
     def test_06_is_installed_compute(self, mock_which):
+        # Tests [@ANCHOR: binary_compute_installed]
         """Verify the is_installed compute field logic."""
         mock_which.return_value = "/usr/bin/testbin"
         self.assertTrue(self.manifest.is_installed)
@@ -127,6 +129,7 @@ class TestBinaryManifest(TransactionCase):
 
     @patch("odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable")
     def test_07_action_install(self, mock_ensure):
+        # Tests [@ANCHOR: binary_action_install]
         """Verify the action_install method calls ensure_executable and returns a notification."""
         result = self.manifest.action_install()
         mock_ensure.assert_called_once_with("testbin")
@@ -147,6 +150,7 @@ class TestBinaryManifest(TransactionCase):
             self.manifest.write({"name": "bad/bin"})
 
     def test_09_post_init_hook_documentation(self):
+        # Tests [@ANCHOR: binary_doc_bootstrap]
         """Verify that the post_init_hook correctly creates documentation."""
         # Find the article created by the hook (it might already exist if tests run in certain order)
         article_model = self.env.get("knowledge.article")

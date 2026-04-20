@@ -6,6 +6,7 @@ from odoo.tools import file_open
 _logger = logging.getLogger(__name__)
 
 def install_knowledge_docs(env):
+    # [@ANCHOR: binary_doc_bootstrap]
     """
     Checks if the knowledge.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
