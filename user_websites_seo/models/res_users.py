@@ -33,8 +33,9 @@ class ResUsersSEO(models.Model):
             else:
                 if all(record.id == self.env.user.id for record in self):
                     # Escalate strictly for the write operation using the domain service account
+                    # ADR-0001: Use with_context(mail_notrack=True, prefetch_fields=False)
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                    res = res and super(ResUsersSEO, self.with_user(svc_uid)).write(seo_vals)
+                    res = res and super(ResUsersSEO, self.with_user(svc_uid).with_context(mail_notrack=True, prefetch_fields=False)).write(seo_vals)
                 else:
                     raise AccessError(_("You can only modify your own SEO metadata."))
 

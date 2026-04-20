@@ -11,11 +11,13 @@
         "base",
         "website",
         "user_websites",
+        "manual_library",
     ],
     "data": [
         "views/res_users_views.xml",
         "views/user_websites_group_views.xml",
     ],
+    "post_init_hook": "post_init_hook",
     "assets": {
         "web.assets_tests": [
             "user_websites_seo/static/src/js/tours/user_websites_seo_tour.js",
