@@ -14,6 +14,7 @@ _local_cache = {}
 
 
 def _get_hash(*args, **kwargs):
+    # [@ANCHOR: distributed_cache_key_generation]
     def _serialize(obj):
         if isinstance(obj, models.Model):
             sorted_ids = sorted(obj.ids) if obj.ids else []
@@ -28,6 +29,7 @@ def _get_hash(*args, **kwargs):
 
 
 def distributed_cache():
+    # [@ANCHOR: distributed_cache_decorator]
     """
     Fine-grained, distributed Redis-backed cache decorator.
     Replaces @tools.ormcache to support precise cross-worker invalidation.
@@ -85,6 +87,7 @@ def distributed_cache():
 
 
 def invalidate_model_cache(env, model_name):
+    # [@ANCHOR: invalidate_model_cache_logic]
     """
     Invalidates all fine-grained cache entries for a specific model
     without triggering a global ORM stampede.

@@ -11,6 +11,7 @@ class DistributedCacheConfig(models.TransientModel):
     model_id = fields.Many2one('ir.model', string="Model to Invalidate", help="Select a model to flush its specific cache.")
 
     def action_invalidate_model_cache(self):
+        # [@ANCHOR: manual_cache_invalidation]
         self.ensure_one()
         if self.model_id:
             invalidate_model_cache(self.env, self.model_id.model)
@@ -30,6 +31,7 @@ class DistributedCacheConfig(models.TransientModel):
             }
 
     def check_redis_status(self):
+        # [@ANCHOR: check_redis_status_logic]
         use_redis = bool(redis and redis_pool)
         status_msg = _("Redis connection is not configured or unavailable. Local fallback cache is active.")
         msg_type = 'warning'
