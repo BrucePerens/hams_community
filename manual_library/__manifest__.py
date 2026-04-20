@@ -6,8 +6,8 @@ A clean-room, open-source implementation of a hierarchical documentation
 system for Odoo Community. Provides API interoperability for the 
 knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
     """,
-    "author": "Community",
-    "website": "https://example.com",
+    "author": "Bruce Perens K6BP",
+    "website": "https://perens.com",
     "category": "Website",
     "version": "1.1",
     "license": "AGPL-3",
@@ -18,6 +18,9 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
         "website",
         "zero_sudo",
     ],
+    "external_dependencies": {
+        "python": [],
+    },
     "data": [
         "security/manual_library_security.xml",
         "security/ir.model.access.csv",
