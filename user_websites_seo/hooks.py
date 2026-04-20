@@ -4,6 +4,8 @@ from odoo.tools import file_open
 import logging
 
 def install_knowledge_docs(env):
+    # [@ANCHOR: soft_dependency_docs_installation]
+    # Verified by [@ANCHOR: test_soft_dependency_docs_installation]
     """
     Checks if the knowledge.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
