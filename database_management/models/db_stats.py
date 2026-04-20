@@ -36,6 +36,74 @@ class DatabaseTableStat(models.Model):
             )
         """)
 
+    def _register_hook(self):
+        """
+        Wait until all modules are loaded, then install documentation if
+        manual_library or knowledge is present.
+        """
+        super()._register_hook()
+        # Only run if we are in a proper request or registry loading context
+        # to avoid duplicate work during transient registry states.
+        if not self.env.context.get("install_mode") and not self.env.context.get("module_uninstall"):
+             self._install_knowledge_docs(self.env)
+
+    @api.model
+    def _install_knowledge_docs(self, env):
+        """
+        Checks if the knowledge.article API is present in the environment.
+        If it is, reads the standalone HTML documentation file and installs it.
+        """
+        if "knowledge.article" not in env:
+            return
+
+        # Use the specialized service account for Database Management
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "database_management.user_database_management_service"
+        )
+        if not svc_uid:
+            return
+
+        # Dynamically add to manual_library group if present (soft dependency)
+        manual_group = env.ref(
+            "manual_library.group_manual_library_service_account",
+            raise_if_not_found=False,
+        )
+        if manual_group:
+            user = env["res.users"].browse(svc_uid)
+            if manual_group not in user.groups_id:
+                user.sudo().write({"groups_id": [(4, manual_group.id)]})
+
+        article_model = (
+            env["knowledge.article"]
+            .with_user(svc_uid)
+            .with_context(mail_notrack=True, prefetch_fields=False)
+        )
+
+        existing = article_model.search(
+            [("name", "=", "Database Management Guide")], limit=1
+        )
+
+        if not existing:
+            from odoo.tools import file_open
+            try:
+                with file_open("database_management/data/documentation.html", "r") as f:
+                    doc_body = f.read()
+            except Exception as e:
+                doc_body = f"<h1>Database Management Guide</h1><p>Welcome to the Database Management module.</p><p>Error loading documentation file: {e}</p>"
+
+            vals = {
+                "name": "Database Management Guide",
+                "body": doc_body,
+            }
+            if "is_published" in article_model._fields:
+                vals["is_published"] = True
+            if "internal_permission" in article_model._fields:
+                vals["internal_permission"] = "read"
+            if "icon" in article_model._fields:
+                vals["icon"] = "🛢"
+
+            article_model.create(vals)
+
     def _get_executable(self, cmd_name):
         import shutil  # noqa: E402
         from odoo.exceptions import UserError  # noqa: E402
