@@ -11,4 +11,3 @@ This module is a lightweight domain extension for `user_websites`. It connects o
 * **Model Injection:** It fuses the `website.seo.metadata` mixin into the `res.users` and `user.websites.group` models.
 * **Authorization:** It appends the SEO metadata fields to the `_get_writeable_fields` whitelist, adhering to ADR-0015.
 * **Controller Interception:** Overrides the `/blog` route to inject the SEO-aware profile object into the QWeb context. Verified by `[@ANCHOR: controller_user_blog_index_seo_override]`.
-* **UI Verification:** The frontend SEO widget functionality is verified by a dedicated UI tour. Verified by `[@ANCHOR: test_seo_widget_tour]`.

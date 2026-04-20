@@ -73,10 +73,3 @@ When a daemon or unprivileged user strictly requires native ERP framework intera
 ## 4. Global Cache Signaling
 * **Postgres NOTIFY Bus:** The `_notify_cache_invalidation` function `[@ANCHOR: coherent_cache_signal]` provides an entry point to trigger cross-worker cache flushes via the distributed event bus, guaranteeing consistency in clustered setups. This behavior is covered by `[@ANCHOR: test_coherent_cache_signal]`.
 </global_cache>
-
-<security_verification>
-## 5. Security Verification Anchors
-
-* **Mechanical Secret Block:** Verification of restricted parameter extraction `[@ANCHOR: test_01_mechanical_secret_block_enforcement]`.
-* **User View Security:** Verification of Service Account field visibility and protection in the UI `[@ANCHOR: test_res_users_views]`.
-</security_verification>
