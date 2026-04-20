@@ -8,7 +8,15 @@ def install_knowledge_docs(env):
     If it is, reads the standalone HTML documentation file and installs it.
     """
     if "knowledge.article" in env:
-        article_model = env["knowledge.article"]
+        # ADR-0001: Execute setup operations under the dedicated service account context
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "user_websites.user_user_websites_service_account"
+        )
+        env_svc = env.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+
+        article_model = env_svc["knowledge.article"]
         existing = article_model.search(
             [("name", "=", "User Websites Documentation")], limit=1
         )
@@ -46,9 +54,17 @@ def post_init_hook(env):
     """
     install_knowledge_docs(env)
 
+    # ADR-0001: Execute setup operations under the dedicated service account context
+    svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+        "user_websites.user_user_websites_service_account"
+    )
+    env_svc = env.with_user(svc_uid).with_context(
+        mail_notrack=True, prefetch_fields=False
+    )
+
     # Enroll all existing users into the module's baseline security group
     # allowing them to interact with their Virtual Slug placeholders instantly.
-    user_group = env.ref(
+    user_group = env_svc.ref(
         "user_websites.group_user_websites_user", raise_if_not_found=False
     )
     if user_group:
@@ -58,12 +74,12 @@ def post_init_hook(env):
         ]
 
         # Explicitly exclude the unauthenticated public guest user
-        public_user = env.ref("base.public_user", raise_if_not_found=False)
+        public_user = env_svc.ref("base.public_user", raise_if_not_found=False)
         if public_user:
             domain.append(("id", "!=", public_user.id))
 
         users = (
-            env["res.users"]
+            env_svc["res.users"]
             .with_context(active_test=False)
             .search(domain, limit=100000)
         )
@@ -78,6 +94,6 @@ def post_init_hook(env):
     )
 
     # Soft-Dependency: Retroactively lock down the Cloudflare service account if it was installed first
-    cf_svc = env.ref("cloudflare.user_cloudflare_service", raise_if_not_found=False)
+    cf_svc = env_svc.ref("cloudflare.user_cloudflare_service", raise_if_not_found=False)
     if cf_svc and "is_service_account" in cf_svc._fields:
         cf_svc.write({"is_service_account": True})

@@ -35,15 +35,19 @@ def _async_unpublish_content(db_name, user_ids):
     registry = Registry(db_name)
     cr = registry.cursor()
     try:
+        # ADR-0001: Execute operations under a dedicated service account instead of SUPERUSER_ID
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
             svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
+            env_svc = env.with_user(svc_uid).with_context(
+                mail_notrack=True, prefetch_fields=False
+            )
+
             while True:
                 pages = (
-                    env["website.page"]
-                    .with_user(svc_uid)
+                    env_svc["website.page"]
                     .search(
                         [
                             ("owner_user_id", "in", user_ids),
@@ -55,15 +59,14 @@ def _async_unpublish_content(db_name, user_ids):
                 if not pages:
                     break
                 pages.write({"website_published": False})
-                env.cr.commit()
+                env_svc.cr.commit()
                 if len(pages) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 posts = (
-                    env["blog.post"]
-                    .with_user(svc_uid)
+                    env_svc["blog.post"]
                     .search(
                         [
                             ("owner_user_id", "in", user_ids),
@@ -75,21 +78,20 @@ def _async_unpublish_content(db_name, user_ids):
                 if not posts:
                     break
                 posts.write({"is_published": False})
-                env.cr.commit()
+                env_svc.cr.commit()
                 if len(posts) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 blogs = (
-                    env["blog.blog"]
-                    .with_user(svc_uid)
+                    env_svc["blog.blog"]
                     .search([("owner_user_id", "in", user_ids)], limit=5000)
                 )
                 if not blogs:
                     break
                 blogs.write({"active": False})
-                env.cr.commit()
+                env_svc.cr.commit()
                 if len(blogs) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
@@ -702,7 +704,10 @@ class ResUsers(models.Model):
             if not os.environ.get("HAMS_DISABLE_SLEEPS"):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
-        self.with_user(svc_uid).write({"privacy_show_in_directory": False})
+        # ADR-0001: All service account mutations must include appropriate context
+        self.with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        ).write({"privacy_show_in_directory": False})
 
         if hasattr(super(), "_execute_gdpr_erasure"):
             super()._execute_gdpr_erasure()
