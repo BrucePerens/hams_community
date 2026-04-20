@@ -24,7 +24,20 @@ The **Binary Downloader** is a secure, database-backed orchestration module desi
 The primary interface for dependency resolution.
 
 #### `ensure_executable(cmd_name)`
+`[@ANCHOR: binary_ensure_executable]`
 Resolves and ensures a binary is available and executable.
+
+#### `_compute_is_installed()`
+`[@ANCHOR: binary_compute_installed]`
+Tracks whether a binary is available and executable.
+
+#### `action_install()`
+`[@ANCHOR: binary_action_install]`
+Triggers installation via the UI.
+
+#### `install_knowledge_docs(env)`
+`[@ANCHOR: binary_doc_bootstrap]`
+Bootstraps documentation into the Knowledge system.
 * **Parameters:** `cmd_name` (string) - The name of the binary (e.g., "kopia").
 * **Returns:** `path` (string) - The absolute path to the verified executable.
 * **Logic:**
@@ -43,4 +56,14 @@ Resolves and ensures a binary is available and executable.
 bin_path = self.env["binary.manifest"].ensure_executable("kopia")
 subprocess.run([bin_path, "--version"], check=True)
 ```
+
+## 5. Stories & Journeys
+For detailed logic flows and user journeys, refer to the following files in the module's `docs/` directory:
+* **Stories:**
+    * [Binary Resolution](binary_downloader/docs/stories/binary_resolution.md)
+    * [UI Installation](binary_downloader/docs/stories/ui_installation.md)
+    * [Installation Status Check](binary_downloader/docs/stories/is_installed_check.md)
+    * [Documentation Bootstrap](binary_downloader/docs/stories/doc_bootstrap.md)
+* **Journeys:**
+    * [Automated Provisioning Flow](binary_downloader/docs/journeys/auto_provisioning_flow.md)
 </usage>
