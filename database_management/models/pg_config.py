@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo import models, fields, tools, _
 from odoo.exceptions import UserError
 from psycopg2 import sql
