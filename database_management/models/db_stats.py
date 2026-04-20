@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, tools, _
+import logging
+import os
+import shutil
+import subprocess
 
+from odoo import models, fields, api, tools, _
+from odoo.exceptions import UserError
+from odoo.tools import file_open
+
+_logger = logging.getLogger(__name__)
 
 class DatabaseTableStat(models.Model):
     _name = "database.table.stat"
@@ -70,8 +78,11 @@ class DatabaseTableStat(models.Model):
         )
         if manual_group:
             user = env["res.users"].browse(svc_uid)
-            if manual_group not in user.groups_id:
-                user.sudo().write({"groups_id": [(4, manual_group.id)]})
+            if manual_group not in user.group_ids:
+                facility_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                    "zero_sudo.odoo_facility_service_internal"
+                )
+                user.with_user(facility_uid).with_context(mail_notrack=True, prefetch_fields=False).write({"group_ids": [(4, manual_group.id)]})
 
         article_model = (
             env["knowledge.article"]
@@ -84,7 +95,6 @@ class DatabaseTableStat(models.Model):
         )
 
         if not existing:
-            from odoo.tools import file_open
             try:
                 with file_open("database_management/data/documentation.html", "r") as f:
                     doc_body = f.read()
@@ -105,9 +115,6 @@ class DatabaseTableStat(models.Model):
             article_model.create(vals)
 
     def _get_executable(self, cmd_name):
-        import shutil  # noqa: E402
-        from odoo.exceptions import UserError  # noqa: E402
-
         path = shutil.which(cmd_name)
         if path:
             return path
@@ -133,10 +140,6 @@ class DatabaseTableStat(models.Model):
 
     def action_vacuum_analyze(self):
         # [@ANCHOR: vacuum_analyze]
-        import subprocess  # noqa: E402
-        import os  # noqa: E402
-        from odoo.exceptions import UserError  # noqa: E402
-
         exe = self._get_executable("vacuumdb")
         db_name = self.env.cr.dbname
         env_vars = os.environ.copy()
@@ -184,9 +187,7 @@ class DatabaseTableStat(models.Model):
                     }
                 )
             except Exception as e:
-                import logging  # noqa: E402
-
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                _logger.warning("An error occurred: %s", e)
 
 
 class DatabaseQueryStat(models.Model):

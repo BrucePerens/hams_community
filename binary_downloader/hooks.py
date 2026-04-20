@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-import os
 import logging
-from odoo import api, SUPERUSER_ID, _
+from odoo import _
 from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
@@ -37,16 +36,8 @@ def install_knowledge_docs(env):
 
         if not existing:
             try:
-                # Try to load from LLM_DOCUMENTATION.md first if we want consistency with ADR-0055
-                # But the prompt mentions data/documentation.html specifically in hooks.py current state.
-                # Let's keep data/documentation.html for now but make it robust.
-                html_path = os.path.join(os.path.dirname(__file__), "data", "documentation.html")
-                if os.path.exists(html_path):
-                    with open(html_path, "r", encoding="utf-8") as f:
-                        doc_body = f.read()
-                else:
-                    _logger.error("Documentation file not found at %s", html_path)
-                    doc_body = _("<p>Documentation file not found.</p>")
+                with file_open("binary_downloader/data/documentation.html", "r", encoding="utf-8") as f:
+                    doc_body = f.read()
             except Exception as e:
                 _logger.error("Failed to load documentation file: %s", e)
                 doc_body = _("<p>Error loading documentation file: %s</p>") % e

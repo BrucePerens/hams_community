@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields
 from ..hooks import install_knowledge_docs
 
 class NoisyTable(models.Model):

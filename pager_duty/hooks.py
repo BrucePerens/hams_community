@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
+import logging
+from odoo.tools import file_open
+
+_logger = logging.getLogger(__name__)
+
 def post_init_hook(env):
     """
     Inject documentation and register daemon keys upon installation.
     """
-    # Inject Knowledge Base Documentation
-    import os  # noqa: E402
-    from odoo.tools import misc, file_open  # noqa: E402
-
     # We use knowledge.article as the target for both manual_library and Enterprise knowledge
     if "knowledge.article" in env and "zero_sudo.security.utils" in env:
         # Try to use manual_library's service account if available, fallback to odoo_facility_service_internal
@@ -39,16 +40,14 @@ def post_init_hook(env):
 
                     article_model.create(vals)
                 except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).warning("Could not install Pager Duty documentation: %s", e)
+                    _logger.warning("Could not install Pager Duty documentation: %s", e)
 
     # Trigger autodiscovery if the system is completely empty
     if "pager.check" in env and not env["pager.check"].search_count([]):
         try:
             env["pager.check"]._run_autodiscovery()
         except Exception as e:
-            import logging  # noqa: E402
-            logging.getLogger(__name__).warning("An error occurred during autodiscovery: %s", e)
+            _logger.warning("An error occurred during autodiscovery: %s", e)
 
     # Register Daemons for Automated Key Vault Provisioning
     if "daemon.key.registry" in env:
@@ -59,5 +58,4 @@ def post_init_hook(env):
                 env_file_path="/var/lib/odoo/daemon_keys/pager_duty.env",
             )
         except Exception as e:
-            import logging  # noqa: E402
-            logging.getLogger(__name__).warning("An error occurred during daemon registration: %s", e)
+            _logger.warning("An error occurred during daemon registration: %s", e)
