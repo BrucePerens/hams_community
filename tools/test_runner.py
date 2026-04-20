@@ -766,6 +766,7 @@ exit $RET
 
 
 def main():
+    import subprocess
     try:
         # Silence Odoo's core framework noise (Cybercrud Policy)
         os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
