@@ -39,6 +39,7 @@ class TestBinaryManifest(TransactionCase):
     @patch("shutil.which")
     def test_01_already_installed(self, mock_which):
         # Tests [@ANCHOR: binary_ensure_executable]
+        # Tests [@ANCHOR: binary_resolution]
         """Verify it returns the system path immediately if the binary is found."""
         mock_which.return_value = "/usr/bin/testbin"
         path = self.env["binary.manifest"].ensure_executable("testbin")
@@ -107,7 +108,7 @@ class TestBinaryManifest(TransactionCase):
                         mock_copy.assert_called_once()
 
     def test_05_views_render(self):
-        # [@ANCHOR: test_binary_manifest_views]
+        # Tests [@ANCHOR: test_binary_manifest_views]
         """Verify that standard backend views compile without error."""
         v1 = self.env["binary.manifest"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])

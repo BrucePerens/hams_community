@@ -9,13 +9,15 @@
 <architecture>
 ## 1. Architecture
 The **Binary Downloader** is a secure, database-backed orchestration module designed to provide static executable dependencies (e.g., `kopia`, `etcd`, `cloudflared`) to other Odoo subsystems. It avoids flat-file manifests to mitigate Arbitrary File Write vulnerabilities.
+</architecture>
 
+<security_design>
 ## 2. Security Design
 * **DB-Backed Manifests:** Download targets and cryptographic SHA-256 checksums are stored in the `binary.manifest` model.
 * **Least Privilege:** Executes downloads and installations under the dedicated `user_binary_downloader_service` service account.
 * **Integrity Enforcement:** Verifies SHA-256 hashes before moving binaries to the execution path (`hams_bin`).
 * **Tar Slip Protection:** Implements strict path validation and member name sanitization during archive extraction.
-</architecture>
+</security_design>
 
 <api>
 ## 3. API Reference
@@ -56,14 +58,19 @@ Bootstraps documentation into the Knowledge system.
 bin_path = self.env["binary.manifest"].ensure_executable("kopia")
 subprocess.run([bin_path, "--version"], check=True)
 ```
-
-## 5. Stories & Journeys
-For detailed logic flows and user journeys, refer to the following files in the module's `docs/` directory:
-* **Stories:**
-    * [Binary Resolution](binary_downloader/docs/stories/binary_resolution.md)
-    * [UI Installation](binary_downloader/docs/stories/ui_installation.md)
-    * [Installation Status Check](binary_downloader/docs/stories/is_installed_check.md)
-    * [Documentation Bootstrap](binary_downloader/docs/stories/doc_bootstrap.md)
-* **Journeys:**
-    * [Automated Provisioning Flow](binary_downloader/docs/journeys/auto_provisioning_flow.md)
 </usage>
+
+<stories_and_journeys>
+## 5. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Binary Resolution](binary_downloader/docs/stories/binary_resolution.md)
+* [UI Installation](binary_downloader/docs/stories/ui_installation.md)
+* [Installation Status Check](binary_downloader/docs/stories/is_installed_check.md)
+* [Documentation Bootstrap](binary_downloader/docs/stories/doc_bootstrap.md)
+
+### Journeys
+* [Automated Provisioning Flow](binary_downloader/docs/journeys/auto_provisioning_flow.md)
+</stories_and_journeys>

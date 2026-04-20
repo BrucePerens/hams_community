@@ -11,6 +11,11 @@
         "data/binary_manifest_data.xml",
         "views/binary_manifest_views.xml",
     ],
+    "assets": {
+        "web.assets_tests": [
+            "binary_downloader/static/tests/tours/binary_install_tour.js",
+        ],
+    },
     "post_init_hook": "post_init_hook",
     "installable": True,
     "application": False,
