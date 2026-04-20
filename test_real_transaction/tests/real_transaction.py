@@ -5,6 +5,7 @@ import odoo
 from odoo.tests.common import HttpCase, get_db_name
 from odoo.modules.registry import Registry
 from psycopg2 import sql
+from odoo.tools import mute_logger
 
 _logger = logging.getLogger(__name__)
 
@@ -82,8 +83,6 @@ class RealTransactionCase(HttpCase):
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
-        from odoo.tools import mute_logger
-
         for attempt in range(3):
             pending_deletes = False
             for model_name, ids in list(self._tracked_records.items()):

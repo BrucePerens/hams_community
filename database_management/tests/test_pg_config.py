@@ -3,6 +3,7 @@ import shutil
 import os
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch
+from odoo.exceptions import UserError
 
 if not hasattr(shutil, "_orig_which"):
     shutil._orig_which = shutil.which
@@ -61,8 +62,6 @@ class TestPgConfig(TransactionCase):
         self.assertIn("pgbouncer", wizard.pgbouncer_ini)
 
     def test_01b_optimization_wizard_errors(self):
-        from odoo.exceptions import UserError
-
         wizard = (
             self.env["pg.optimize.wizard"]
             .with_user(self.admin)
@@ -73,8 +72,6 @@ class TestPgConfig(TransactionCase):
 
     @patch("shutil.which")
     def test_02b_ha_wizard_missing_binaries(self, mock_which):
-        from odoo.exceptions import UserError
-
         wizard = (
             self.env["pg.ha.wizard"]
             .with_user(self.admin)

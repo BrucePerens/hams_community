@@ -1,0 +1,24 @@
+Perform a deep review and fix any issues discovered.
+The topics of the review are:
+
+* Compliance with the zero-sudo and micro-privilege architecture,
+and use of service user-ids so that each module executes with the
+minimum privilege required at all times.
+
+* A deep security review, looking for all possible security issues.
+
+* A review of completeness and fitness for use. Consider the possible audience
+for each module, and make sure the module does all that such users would expect,
+given its statement of purpose.
+
+* A review of the module documentation for completeness. The documentation should
+be installed using manual_library and should completely inform users and
+developers about the module.
+
+* Completeness of tests, both standard and integration. Add any new tests you
+think of.
+
+* Any other issues you think of or discover.
+
+At the end of the review, test all changes under both standard and integration
+testing, and submit a PR.
