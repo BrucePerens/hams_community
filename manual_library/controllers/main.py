@@ -16,6 +16,7 @@ class ManualLibraryController(http.Controller):
     def manual_article_view(self, article_slug=None, **kwargs):
         # [@ANCHOR: controller_manual_article_view]
         # See [@ANCHOR: story_article_view] and [@ANCHOR: journey_user_browsing]
+        # Verified by [@ANCHOR: test_controller_manual_article_view]
         """
         Public/Frontend controller to render articles.
         Enforces access securely through the ORM environment.

@@ -62,6 +62,7 @@ class DaemonKeyRegistry(models.Model):
         API for other modules to request a bearer token/API key for their daemon.
         This registers the daemon for automated 60-day rotations and provisions synchronously.
         """
+        # Verified by [@ANCHOR: test_register_daemon_api]
         # [@ANCHOR: register_daemon_api]
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(user_xml_id)
         user = self.env["res.users"].browse(svc_uid)
@@ -136,6 +137,7 @@ class DaemonKeyRegistry(models.Model):
         # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
         # a 90-day key for the service account without exposing the entire ERP.
         # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
+        # Verified by [@ANCHOR: test_key_ownership]
         raw_key = (
             self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date)
         )
@@ -179,6 +181,7 @@ class DaemonKeyRegistry(models.Model):
         Retroactively install documentation if it hasn't been done yet.
         This handles cases where the documentation model was installed after this module.
         """
+        # Verified by [@ANCHOR: test_documentation_installed]
         super()._register_hook()
         install_knowledge_docs(self.env)
 

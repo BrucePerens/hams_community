@@ -3,30 +3,33 @@ import os
 import re
 
 def get_module(path):
-    parts = path.split(os.sep)
-    if parts[0] == '.': parts = parts[1:]
+    abs_path = os.path.abspath(path)
+    current_dir = os.path.dirname(abs_path)
 
-    if len(parts) >= 3 and parts[0] == "docs" and parts[1] == "modules" and parts[2].endswith(".md"):
-        mod = parts[2][:-3]
-        if os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    while current_dir and current_dir != os.path.dirname(current_dir):
+        if os.path.exists(os.path.join(current_dir, "__manifest__.py")):
+            return os.path.basename(current_dir)
+        current_dir = os.path.dirname(current_dir)
 
-    if len(parts) >= 1:
-        mod = parts[0]
-        if os.path.isdir(mod) and os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    parts = abs_path.split(os.sep)
+    if len(parts) >= 3 and parts[-3] == "docs" and parts[-2] == "modules" and parts[-1].endswith(".md"):
+        return parts[-1][:-3]
+
     return "non-module"
 
-def find_anchors_in_docs(docs_dir, root_dir):
+def find_anchors_in_docs(root_dir):
     doc_anchors = set()
     contract_anchors = set()
     pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
 
-    for root, _, files in os.walk(docs_dir):
+    for root, _, files in os.walk(root_dir):
+        if "docs" not in root.split(os.sep):
+            continue
+
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
-            if file.endswith(".md") or file.endswith(".html") or file.endswith(".py"):
+            if file.endswith((".md", ".html", ".py")):
                 full_path = os.path.join(root, file)
                 mod = get_module(full_path)
                 is_contract = False
@@ -77,6 +80,10 @@ def _process_file_for_anchors(
                 verified_by_links.add(anchor)
             elif prefix.endswith("Triggers") or prefix.endswith("Triggered by"):
                 cross_references.add(anchor)
+            elif anchor_name.startswith(("story_", "journey_", "doc_")):
+                pass
+            elif re.search(r'\b(See|and|also|or|to)\b$', prefix, re.IGNORECASE):
+                pass
             else:
                 if (
                     anchor in anchor_locations
@@ -244,7 +251,7 @@ def _report_documentation_gaps(
         a
         for a in docs_anchors
         if a.split(":")[1] not in code_names and a.split(":")[1] not in contract_names
-        and not a.split(":")[1].startswith("example_")
+        and not a.split(":")[1].startswith(("example_", "story_", "journey_", "doc_"))
         and a.split(":")[1] not in ("unique_name", "name", "feature_name")
     }
 
@@ -301,10 +308,7 @@ def main():
     duplicates = []
 
     for target_dir in args:
-        docs_dir = os.path.join(target_dir, "docs")
-        scan_docs_dir = docs_dir if os.path.exists(docs_dir) else target_dir
-
-        da, ca = find_anchors_in_docs(scan_docs_dir, target_dir)
+        da, ca = find_anchors_in_docs(target_dir)
         docs_anchors.update(da)
         contract_anchors.update(ca)
 

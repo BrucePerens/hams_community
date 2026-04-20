@@ -12,6 +12,11 @@
         "security/ir.model.access.csv",
         "views/res_users_views.xml"
     ],
+    "assets": {
+        "web.assets_backend": [
+            "zero_sudo/static/src/tours/**/*",
+        ],
+    },
     "installable": True,
     "auto_install": False,
 }
