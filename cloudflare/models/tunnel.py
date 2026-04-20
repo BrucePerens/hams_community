@@ -31,7 +31,8 @@ class CloudflareTunnel(models.Model):
 
             success, msg = delete_cfd_tunnel(account_id, token, tunnel.cf_tunnel_id)
             if success:
-                tunnel.unlink()
+                # ADR-0001: Headless Mutation Context
+                tunnel.with_context(mail_notrack=True, prefetch_fields=False).unlink()
             else:
                 raise UserError(_("Failed to delete tunnel: %s") % msg)
 
@@ -69,12 +70,16 @@ class CloudflareTunnel(models.Model):
 
                 existing = existing_tunnels.get(tunnel_id)
                 if existing:
-                    existing.write(vals)
+                    # ADR-0001: Headless Mutation Context
+                    existing.with_context(mail_notrack=True, prefetch_fields=False).write(vals)
                 else:
                     tunnels_to_create.append(vals)
 
         if tunnels_to_create:
-            self.env["cloudflare.tunnel"].create(tunnels_to_create)
+            # ADR-0001: Headless Mutation Context
+            self.env["cloudflare.tunnel"].with_context(
+                mail_notrack=True, prefetch_fields=False
+            ).create(tunnels_to_create)
 
         return {
             "type": "ir.actions.client",
@@ -86,5 +91,3 @@ class CloudflareTunnel(models.Model):
                 "sticky": False,
             },
         }
-
-

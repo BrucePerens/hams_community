@@ -1,15 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <record id="group_cloudflare_service" model="res.groups">
-            <field name="name">Cloudflare Edge Service Account</field>
+        <!-- Purge Service -->
+        <record id="group_cloudflare_purge" model="res.groups">
+            <field name="name">Cloudflare Edge: Purge Service</field>
         </record>
-        <record id="user_cloudflare_service" model="res.users">
-            <field name="name">Cloudflare Queue Service</field>
-            <field name="login">cloudflare_service_internal</field>
+        <record id="user_cloudflare_purge" model="res.users">
+            <field name="name">Cloudflare Purge Service</field>
+            <field name="login">cloudflare_purge_internal</field>
             <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
-            <field name="group_ids" eval="[(6, 0, [ref('cloudflare.group_cloudflare_service')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('cloudflare.group_cloudflare_purge')])]"/>
+        </record>
+
+        <!-- WAF Service -->
+        <record id="group_cloudflare_waf" model="res.groups">
+            <field name="name">Cloudflare Edge: WAF Service</field>
+        </record>
+        <record id="user_cloudflare_waf" model="res.users">
+            <field name="name">Cloudflare WAF Service</field>
+            <field name="login">cloudflare_waf_internal</field>
+            <field name="is_service_account" eval="True"/>
+            <field name="active" eval="True"/>
+            <field name="group_ids" eval="[(6, 0, [ref('cloudflare.group_cloudflare_waf')])]"/>
+        </record>
+
+        <!-- Tunnel Service -->
+        <record id="group_cloudflare_tunnel" model="res.groups">
+            <field name="name">Cloudflare Edge: Tunnel Service</field>
+        </record>
+        <record id="user_cloudflare_tunnel" model="res.users">
+            <field name="name">Cloudflare Tunnel Service</field>
+            <field name="login">cloudflare_tunnel_internal</field>
+            <field name="is_service_account" eval="True"/>
+            <field name="active" eval="True"/>
+            <field name="group_ids" eval="[(6, 0, [ref('cloudflare.group_cloudflare_tunnel')])]"/>
+        </record>
+
+        <!-- Deprecated monolithic service group (kept for legacy ref compatibility but emptied) -->
+        <record id="group_cloudflare_service" model="res.groups">
+            <field name="name">Cloudflare Edge Service Account (Deprecated)</field>
+        </record>
+        <record id="user_cloudflare_service" model="res.users">
+            <field name="name">Cloudflare Queue Service (Deprecated)</field>
+            <field name="login">cloudflare_service_internal</field>
+            <field name="is_service_account" eval="True"/>
+            <field name="active" eval="False"/>
+            <field name="group_ids" eval="[(6, 0, [])]"/>
         </record>
     </data>
 </odoo>

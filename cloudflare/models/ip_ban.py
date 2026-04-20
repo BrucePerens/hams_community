@@ -68,7 +68,10 @@ class CloudflareIPBan(models.Model):
         success, result = ban_ip(ip_address, mode, notes, token, zone_id)
 
         if success:
-            self.env["cloudflare.ip.ban"].create(
+            # ADR-0001: Headless Mutation Context
+            self.env["cloudflare.ip.ban"].with_context(
+                mail_notrack=True, prefetch_fields=False
+            ).create(
                 {
                     "ip_address": ip_address,
                     "mode": mode,
@@ -80,7 +83,10 @@ class CloudflareIPBan(models.Model):
             )
             return True
         else:
-            self.env["cloudflare.ip.ban"].create(
+            # ADR-0001: Headless Mutation Context
+            self.env["cloudflare.ip.ban"].with_context(
+                mail_notrack=True, prefetch_fields=False
+            ).create(
                 {
                     "ip_address": ip_address,
                     "mode": mode,
@@ -105,7 +111,8 @@ class CloudflareIPBan(models.Model):
                 )
                 success, msg = unban_ip(rec.cf_rule_id, token, zone_id)
                 if success:
-                    rec.state = "lifted"
+                    # ADR-0001: Headless Mutation Context
+                    rec.with_context(mail_notrack=True, prefetch_fields=False).state = "lifted"
                 else:
                     raise UserError(
                         _("Failed to lift ban via Cloudflare API: %s") % msg
