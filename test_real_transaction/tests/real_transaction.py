@@ -5,7 +5,7 @@ import odoo
 from odoo.tests.common import HttpCase, get_db_name
 from odoo.modules.registry import Registry
 from psycopg2 import sql
-from odoo.tools import mute_logger
+from odoo.tools import mute_logger, _
 
 _logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class RealTransactionCase(HttpCase):
         try:
             self.env.cr.commit()
         except Exception as e:
-            _logger.warning("An error occurred: %s", e)
+            _logger.warning(_("An error occurred during final commit in tearDown: %s"), e)
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
@@ -163,5 +163,5 @@ class RealTransactionCase(HttpCase):
 
         if leaks:
             raise AssertionError(
-                f"Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: {', '.join(leaks)}"
+                _("Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s") % ", ".join(leaks)
             )

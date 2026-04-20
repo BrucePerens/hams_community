@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 def post_init_hook(env):
     """
     Inject documentation and register daemon keys upon installation.
@@ -23,10 +24,22 @@ def post_init_hook(env):
             }
         )
 
+    # Trigger autodiscovery if the system is completely empty
+    if "pager.check" in env and not env["pager.check"].search_count([]):
+        try:
+            env["pager.check"]._run_autodiscovery()
+        except Exception as e:
+            import logging  # noqa: E402
+            logging.getLogger(__name__).warning("An error occurred during autodiscovery: %s", e)
+
     # Register Daemons for Automated Key Vault Provisioning
     if "daemon.key.registry" in env:
-        env["daemon.key.registry"].register_daemon(
-            daemon_name="Pager Duty - Generalized Monitor",
-            user_xml_id="pager_duty.pager_service_internal",
-            env_file_path="/var/lib/odoo/daemon_keys/pager_duty.env",
-        )
+        try:
+            env["daemon.key.registry"].register_daemon(
+                daemon_name="Pager Duty - Generalized Monitor",
+                user_xml_id="pager_duty.user_pager_service_internal",
+                env_file_path="/var/lib/odoo/daemon_keys/pager_duty.env",
+            )
+        except Exception as e:
+            import logging  # noqa: E402
+            logging.getLogger(__name__).warning("An error occurred during daemon registration: %s", e)

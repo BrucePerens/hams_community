@@ -113,3 +113,14 @@ class TestRealTransactionFacility(RealTransactionCase):
             leaks,
             "The leak detector MUST ignore tables present in the noisy_table model.",
         )
+
+    def test_05_documentation_installed(self):
+        """
+        Verify that the module's documentation was correctly installed into knowledge.article.
+        """
+        if "knowledge.article" in self.env:
+            article = self.env["knowledge.article"].search(
+                [("name", "=", "Real Transaction Testing Facility Guide")], limit=1
+            )
+            self.assertTrue(article, "Documentation article should have been created.")
+            self.assertIn("Real Transaction Testing Facility", article.body)

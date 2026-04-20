@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from . import test_incident
 from . import test_schedule
 from . import test_controllers

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import binascii
 import concurrent.futures
 import datetime
@@ -571,6 +572,9 @@ def execute_check(check, client=None):
         try:
             params = json.loads(params_str) if params_str else []
             proxy = xmlrpc.client.ServerProxy(target)
+            # Prevent calling magic methods or internal attributes
+            if method.startswith("_"):
+                return False, f"Illegal RPC method: {method}"
             res = getattr(proxy, method)(*params)
             if expect and expect not in str(res):
                 return False, "XML-RPC output mismatch"

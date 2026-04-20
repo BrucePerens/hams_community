@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
@@ -94,3 +95,11 @@ class TestDatabaseManagement(TransactionCase):
 
         v4 = self.env["database.index.stat"].get_view(view_type="list")
         self.assertIn("index_name", v4["arch"])
+
+    def test_05_documentation_installed(self):
+        # Verify that the post_init_hook (or similar) installed the documentation
+        doc = self.env["knowledge.article"].search(
+            [("name", "=", "Database Management Guide")], limit=1
+        )
+        self.assertTrue(doc, "Module documentation was not installed!")
+        self.assertIn("Database Management", doc.body)
