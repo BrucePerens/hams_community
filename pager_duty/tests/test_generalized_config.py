@@ -14,7 +14,7 @@ class TestGeneralizedConfig(TransactionCase):
             {
               "name": "Test DNS Check",
               "type": "dns",
-              "target": "hams.com",
+              "target": "example.com",
               "interval": 60,
               "parent": "Parent Check",
               "maint_start": "2026-03-01 00:00:00",
@@ -54,7 +54,7 @@ class TestGeneralizedConfig(TransactionCase):
             check.exists(), "The JSON must be successfully parsed into DB records."
         )
         self.assertEqual(check.check_type, "dns")
-        self.assertEqual(check.target, "hams.com")
+        self.assertEqual(check.target, "example.com")
         self.assertEqual(check.interval, 60)
         self.assertTrue(check.maintenance_start)
         self.assertTrue(check.maintenance_end)

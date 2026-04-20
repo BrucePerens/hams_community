@@ -14,7 +14,7 @@ class TestPagerIncident(TransactionCase):
         super(TestPagerIncident, self).setUp()
         self.incident_model = self.env["pager.incident"]
         self.service_user = self.env.ref("pager_duty.user_pager_service_internal")
-        self.integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
+        self.integration_mode = os.environ.get("PAGER_INTEGRATION_MODE") == "1"
 
     def test_01_rate_limiting_blocks_spam(self):
         # Tests [@ANCHOR: report_incident_rate_limit]

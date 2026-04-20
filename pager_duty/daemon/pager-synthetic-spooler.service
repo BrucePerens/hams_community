@@ -1,5 +1,5 @@
 [Unit]
-Description=Hams.com Synthetic & Sandbox Execution Spooler
+Description=Pager Synthetic & Sandbox Execution Spooler
 After=network.target
 
 [Service]
