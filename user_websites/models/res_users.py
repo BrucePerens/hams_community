@@ -61,7 +61,7 @@ def _async_unpublish_content(db_name, user_ids):
                 env.cr.commit()
                 if len(pages) < 5000:
                     break
-                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                if not os.environ.get('ODOO_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 posts = (
@@ -82,7 +82,7 @@ def _async_unpublish_content(db_name, user_ids):
                 env.cr.commit()
                 if len(posts) < 5000:
                     break
-                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                if not os.environ.get('ODOO_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 blogs = (
@@ -97,7 +97,7 @@ def _async_unpublish_content(db_name, user_ids):
                 env.cr.commit()
                 if len(blogs) < 5000:
                     break
-                if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                if not os.environ.get('ODOO_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
         except Exception as e:
             env.cr.rollback()
             import logging  # noqa: E402
@@ -113,6 +113,18 @@ class ResUsers(models.Model):
     """
 
     _inherit = "res.users"
+
+    def _register_hook(self):
+        """
+        Ensures documentation is installed if the required models are available.
+        This runs after all modules are loaded.
+        """
+        super()._register_hook()
+        # ADR-0055: Guard against transient registry states
+        if self.env.context.get("install_mode") or self.env.context.get("module_uninstall"):
+            return
+        from ..hooks import install_knowledge_docs  # noqa: E402
+        install_knowledge_docs(self.env)
 
     @api.model
     def _get_writeable_fields(self):
@@ -544,7 +556,7 @@ class ResUsers(models.Model):
                 self.env.cr.commit()
             if len(pages) < 5000:
                 break
-            if not os.environ.get("HAMS_DISABLE_SLEEPS"):
+            if not os.environ.get("ODOO_DISABLE_SLEEPS"):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
         while True:
@@ -558,7 +570,7 @@ class ResUsers(models.Model):
                 self.env.cr.commit()
             if len(posts) < 5000:
                 break
-            if not os.environ.get("HAMS_DISABLE_SLEEPS"):
+            if not os.environ.get("ODOO_DISABLE_SLEEPS"):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
         while True:
@@ -572,7 +584,7 @@ class ResUsers(models.Model):
                 self.env.cr.commit()
             if len(blogs) < 5000:
                 break
-            if not os.environ.get("HAMS_DISABLE_SLEEPS"):
+            if not os.environ.get("ODOO_DISABLE_SLEEPS"):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
         # ADR-0001: All service account mutations must include appropriate context
