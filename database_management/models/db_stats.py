@@ -45,6 +45,7 @@ class DatabaseTableStat(models.Model):
         """)
 
     def _register_hook(self):
+        # [@ANCHOR: db_doc_injection]
         """
         Wait until all modules are loaded, then install documentation if
         manual_library or knowledge is present.
@@ -191,6 +192,7 @@ class DatabaseTableStat(models.Model):
 
 
 class DatabaseQueryStat(models.Model):
+    # [@ANCHOR: db_slow_queries]
     _name = "database.query.stat"
     _description = "Slow Query Tracking"
     _auto = False
@@ -227,6 +229,7 @@ class DatabaseQueryStat(models.Model):
 
 
 class DatabaseActivity(models.Model):
+    # [@ANCHOR: db_active_sessions]
     _name = "database.activity"
     _description = "Active Database Sessions"
     _auto = False
