@@ -8,6 +8,7 @@ from unittest.mock import patch
 class TestSecurityUtils(TransactionCase):
 
     def test_01_mechanical_secret_block_enforcement(self):
+        # [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         """Verify that parameters matching cryptographic patterns are blocked."""
         utils = self.env["zero_sudo.security.utils"]
 
@@ -29,6 +30,13 @@ class TestSecurityUtils(TransactionCase):
                 msg=f"Extracting dangerous param '{key}' MUST raise an AccessError.",
             ):
                 utils._get_system_param(key)
+
+        # Non-whitelisted safe parameters MUST also be rejected
+        with self.assertRaises(
+            AccessError,
+            msg="Extracting non-whitelisted param MUST raise an AccessError.",
+        ):
+            utils._get_system_param("some.unregistered.safe.param")
 
     def test_02_bdd_ormcache_query_counting_service_uid(self):
         # [@ANCHOR: test_get_service_uid]
@@ -144,3 +152,11 @@ class TestSecurityUtils(TransactionCase):
         with self.assertRaises(UserError) as cm:
             utils._update_python_venv()
         self.assertIn("pip error", str(cm.exception))
+
+        # Test 4: AccessError for non-admin
+        non_admin = self.env["res.users"].create({
+            "name": "Non Admin",
+            "login": "non_admin_no_groups",
+        })
+        with self.assertRaises(AccessError):
+            utils.with_user(non_admin)._update_python_venv()
