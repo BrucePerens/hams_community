@@ -67,6 +67,7 @@ class KnowledgeArticle(models.Model):
     @api.constrains("parent_id")
     def _check_hierarchy(self):
         # [@ANCHOR: manual_check_hierarchy]
+        # See [@ANCHOR: story_manual_hierarchy] and [@ANCHOR: journey_admin_managing]
         # Verified by [@ANCHOR: test_manual_check_hierarchy]
         """Prevent circular references in the article tree."""
         if self._has_cycle():
@@ -76,6 +77,7 @@ class KnowledgeArticle(models.Model):
     @api.depends("name")
     def _compute_website_url(self):
         # [@ANCHOR: manual_compute_website_url]
+        # See [@ANCHOR: story_manual_url_generation] and [@ANCHOR: journey_admin_managing]
         # Verified by [@ANCHOR: test_manual_url_slug_generation]
         """Override from website.published.mixin to provide a proper slug."""
         super(KnowledgeArticle, self)._compute_website_url()

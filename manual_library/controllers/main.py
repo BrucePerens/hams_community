@@ -14,6 +14,8 @@ class ManualLibraryController(http.Controller):
         website=True,
     )
     def manual_article_view(self, article_slug=None, **kwargs):
+        # [@ANCHOR: controller_manual_article_view]
+        # See [@ANCHOR: story_article_view] and [@ANCHOR: journey_user_browsing]
         """
         Public/Frontend controller to render articles.
         Enforces access securely through the ORM environment.
@@ -88,6 +90,7 @@ class ManualLibraryController(http.Controller):
     @http.route(["/manual/search"], type="http", auth="public", website=True)
     def manual_search(self, search="", **kwargs):
         # [@ANCHOR: controller_manual_search]
+        # See [@ANCHOR: story_manual_search] and [@ANCHOR: journey_user_browsing]
         # Verified by [@ANCHOR: test_tour_manual_search]
         """
         Provides full-text search across accessible articles.
@@ -135,6 +138,7 @@ class ManualLibraryController(http.Controller):
         self, article_id, is_helpful, website_feedback_honeypot=None, **kwargs
     ):
         # [@ANCHOR: controller_manual_feedback]
+        # See [@ANCHOR: story_manual_feedback] and [@ANCHOR: journey_user_browsing]
         # Verified by [@ANCHOR: test_tour_manual_feedback]
         """
         Handles article helpfulness ratings via Service Account isolation.
