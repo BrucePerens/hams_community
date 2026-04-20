@@ -64,6 +64,40 @@ class TestCloudflareAPIs(TransactionCase):
         wizard = self.env["cloudflare.tunnel.wizard"].browse(action["res_id"])
         self.assertIn("mock_token_xyz", wizard.command)
 
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.list_cfd_tunnels")
+    def test_04_sync_tunnels(self, mock_list):
+        # [@ANCHOR: test_cf_sync_tunnels]
+        # Tests [@ANCHOR: cf_sync_tunnels]
+        mock_list.return_value = [
+            {"id": "t1", "name": "Tunnel 1", "status": "healthy", "created_at": "2021-01-01T00:00:00Z"}
+        ]
+        website = self.env["website"].get_current_website()
+        website.write(
+            {"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"}
+        )
+
+        self.env["cloudflare.tunnel"].action_sync_tunnels()
+        tunnel = self.env["cloudflare.tunnel"].search([("cf_tunnel_id", "=", "t1")])
+        self.assertTrue(tunnel)
+        self.assertEqual(tunnel.name, "Tunnel 1")
+
+    @patch("odoo.addons.cloudflare.utils.cloudflare_api.delete_cfd_tunnel")
+    def test_05_delete_tunnel(self, mock_delete):
+        # [@ANCHOR: test_cf_delete_tunnel]
+        # Tests [@ANCHOR: cf_delete_tunnel]
+        mock_delete.return_value = (True, "Success")
+        website = self.env["website"].get_current_website()
+        website.write(
+            {"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"}
+        )
+        tunnel = self.env["cloudflare.tunnel"].create({
+            "cf_tunnel_id": "t1",
+            "name": "Tunnel 1",
+            "website_id": website.id
+        })
+        tunnel.action_delete_tunnel()
+        self.assertFalse(tunnel.exists())
+
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_04_purge_urls(self, mock_post):
         from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls  # noqa: E402

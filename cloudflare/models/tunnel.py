@@ -20,8 +20,10 @@ class CloudflareTunnel(models.Model):
     )
 
     def action_delete_tunnel(self):
+        # [@ANCHOR: cf_delete_tunnel]
+        # Verified by [@ANCHOR: test_cf_delete_tunnel]
         for tunnel in self:
-            token = tunnel.website_id.cloudflare_api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
+            token, dummy = tunnel.website_id._get_cloudflare_credentials()
             account_id = tunnel.website_id.cloudflare_account_id or os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 
             if not token or not account_id:
@@ -39,6 +41,8 @@ class CloudflareTunnel(models.Model):
 
     @api.model
     def action_sync_tunnels(self):
+        # [@ANCHOR: cf_sync_tunnels]
+        # Verified by [@ANCHOR: test_cf_sync_tunnels]
         websites = self.env["website"].search([], limit=1000)
         synced_tunnel_ids = []
 
@@ -47,7 +51,7 @@ class CloudflareTunnel(models.Model):
         tunnels_to_create = []
 
         for website in websites:
-            token = website.cloudflare_api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
+            token, dummy = website._get_cloudflare_credentials()
             account_id = website.cloudflare_account_id or os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 
             if not token or not account_id:
@@ -60,11 +64,17 @@ class CloudflareTunnel(models.Model):
                 tunnel_id = t.get("id")
                 synced_tunnel_ids.append(tunnel_id)
 
+                created_at_raw = t.get("created_at", "")
+                created_at = False
+                if created_at_raw:
+                    # Cloudflare returns ISO 8601 like 2021-01-01T00:00:00Z
+                    created_at = created_at_raw[:19].replace('T', ' ')
+
                 vals = {
                     "cf_tunnel_id": tunnel_id,
                     "name": t.get("name"),
                     "status": t.get("status"),
-                    "created_at": t.get("created_at")[:19].replace('T', ' '),
+                    "created_at": created_at,
                     "website_id": website.id,
                 }
 

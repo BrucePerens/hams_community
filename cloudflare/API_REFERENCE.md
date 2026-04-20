@@ -13,7 +13,7 @@ Adds specific relative URLs to the purge queue.
 * **Arguments:** `urls` (list of str): e.g., `['/my-page/home', '/about']`
 * **Usage:**
   ```python
-  svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_service')
+  svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('cloudflare.user_cloudflare_purge')
   self.env['cloudflare.purge.queue'].with_user(svc_uid).enqueue_urls(['/route'])
   ```
 
