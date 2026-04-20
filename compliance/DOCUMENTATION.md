@@ -64,7 +64,16 @@ To operate legally, your website must publicly display specific policy documents
 **How the `compliance` module complies with the above regulations:**
 
 * **ePrivacy:** Directly enforces the activation of the core `cookies_bar` upon installation via the `post_init_hook`.
-* **Transparency:** Automatically provisions the required legal boilerplate pages (Privacy Policy, Cookie Policy, Terms of Service) utilizing standard Odoo website pages.
+* **Transparency:** Automatically provisions the required legal boilerplate pages (Privacy Policy, Cookie Policy, Service Level Agreement) utilizing standard Odoo website pages.
 * **WCAG:** The generated QWeb templates for the legal pages utilize semantic HTML structures and respect standard theme contrasts.
 * **Documentation Integration:** Installs this exact guide directly into the `knowledge.article` API so administrators can reference it without leaving the Odoo backend.
 
+---
+
+## 7. Developer Information
+
+### Micro-Privilege Architecture
+Automated post-install configuration is executed via the `compliance.user_compliance_service` service account.
+
+### Semantic Anchors
+- `[@ANCHOR: test_compliance_views]`: Verified by `TestComplianceHooks.test_03_views_rendering`.
