@@ -3,18 +3,18 @@ import os
 import re
 
 def get_module(path):
-    parts = path.split(os.sep)
-    if parts[0] == '.': parts = parts[1:]
+    abs_path = os.path.abspath(path)
+    current_dir = os.path.dirname(abs_path)
 
-    if len(parts) >= 3 and parts[0] == "docs" and parts[1] == "modules" and parts[2].endswith(".md"):
-        mod = parts[2][:-3]
-        if os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    while current_dir and current_dir != os.path.dirname(current_dir):
+        if os.path.exists(os.path.join(current_dir, "__manifest__.py")):
+            return os.path.basename(current_dir)
+        current_dir = os.path.dirname(current_dir)
 
-    if len(parts) >= 1:
-        mod = parts[0]
-        if os.path.isdir(mod) and os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    parts = abs_path.split(os.sep)
+    if len(parts) >= 3 and parts[-3] == "docs" and parts[-2] == "modules" and parts[-1].endswith(".md"):
+        return parts[-1][:-3]
+
     return "non-module"
 
 def find_anchors_in_docs(docs_dir, root_dir):
