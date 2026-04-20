@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import http, _
+from odoo import http
 from odoo.http import request
 from odoo.addons.web.controllers.home import Home
 

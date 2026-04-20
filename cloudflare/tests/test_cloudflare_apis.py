@@ -8,6 +8,7 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_01_waf_ban_ip(self, mock_post):
+        # Tests [@ANCHOR: cf_ban_ip_api]
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()

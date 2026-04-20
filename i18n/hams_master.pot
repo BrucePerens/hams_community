@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 23:12+0000\n"
-"PO-Revision-Date: 2026-04-20 23:12+0000\n"
+"POT-Creation-Date: 2026-04-20 23:26+0000\n"
+"PO-Revision-Date: 2026-04-20 23:26+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -35,7 +35,7 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this blog."
 msgstr ""
 
-#: user_websites/models/website_page.py:394
+#: user_websites/models/website_page.py:395
 msgid "Access Denied: You do not have permission to modify this page."
 msgstr ""
 
@@ -43,7 +43,7 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this post."
 msgstr ""
 
-#: backup_management/models/utils.py:12
+#: backup_management/models/utils.py:14
 msgid "Access to the path %s is prohibited for security reasons."
 msgstr ""
 
@@ -71,7 +71,7 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:546
+#: backup_management/models/backup_config.py:553
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
@@ -187,7 +187,7 @@ msgstr ""
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:280
+#: backup_management/models/backup_config.py:282
 msgid "Kopia backup completed successfully."
 msgstr ""
 
@@ -195,7 +195,7 @@ msgstr ""
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:340
+#: backup_management/models/backup_config.py:342
 msgid "Kopia policies applied successfully."
 msgstr ""
 
@@ -379,7 +379,7 @@ msgstr ""
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
 
-#: user_websites/models/website_page.py:336
+#: user_websites/models/website_page.py:337
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
@@ -449,7 +449,7 @@ msgstr ""
 msgid "You do not have permission to create this site."
 msgstr ""
 
-#: user_websites/models/website_page.py:291
+#: user_websites/models/website_page.py:292
 msgid "You have reached your limit of %s website pages."
 msgstr ""
 
@@ -465,7 +465,7 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:301
+#: backup_management/models/backup_config.py:303
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 

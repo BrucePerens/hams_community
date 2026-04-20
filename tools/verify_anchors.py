@@ -251,7 +251,7 @@ def _report_documentation_gaps(
         a
         for a in docs_anchors
         if a.split(":")[1] not in code_names and a.split(":")[1] not in contract_names
-        and not a.split(":")[1].startswith("example_")
+        and not a.split(":")[1].startswith(("example_", "story_", "journey_", "doc_"))
         and a.split(":")[1] not in ("unique_name", "name", "feature_name")
     }
 
