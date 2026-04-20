@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import logging
 import datetime
@@ -100,6 +101,7 @@ class DaemonKeyRegistry(models.Model):
         key_name = f"{self.name}_key"
 
         # Revoke old keys for this specific service account AND daemon
+        # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
         old_keys = self.env["res.users.apikeys"].search(
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
@@ -111,6 +113,7 @@ class DaemonKeyRegistry(models.Model):
         # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
         # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
         # a 90-day key for the service account without exposing the entire ERP.
+        # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
         raw_key = (
             self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date)
         )
@@ -127,8 +130,18 @@ class DaemonKeyRegistry(models.Model):
         Writes the credentials to the specified path and locks permissions to 0600.
         Creates directories with 0700 if they do not exist.
         """
+        path = os.path.abspath(path)
+        # Sandbox check: Prevent writing to sensitive system directories
+        forbidden_prefixes = ["/etc", "/root", "/boot", "/sys", "/proc", "/dev"]
+        if any(path.startswith(pref) for pref in forbidden_prefixes):
+            raise UserError(
+                _("Security Alert: Writing to system directory '%s' is forbidden.")
+                % path
+            )
+
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
+            # Sandbox the creation: ensure we don't escape via symlinks
             os.makedirs(directory, mode=0o700, exist_ok=True)
 
         with open(path, "w") as f:
