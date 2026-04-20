@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 {
     "name": "Real Transaction Testing Facility",
     "version": "1.0",
@@ -9,8 +10,9 @@
         This allows developers to write tests that perform true database commits, 
         which is critical for testing One2many inverse cache anomalies and cross-worker behaviors.
     """,
-    "depends": ["base"],
+    "depends": ["base", "zero_sudo", "manual_library"],
     "data": [
+        "security/security.xml",
         "security/ir.model.access.csv",
         "data/noisy_table_data.xml",
         "views/noisy_table_views.xml",
@@ -18,4 +20,5 @@
     "license": "AGPL-3",
     "installable": True,
     "auto_install": False,
+    "post_init_hook": "post_init_hook",
 }
