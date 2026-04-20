@@ -30,7 +30,7 @@ class OdooClient:
             "Authorization": f"bearer {password}",
             "X-Odoo-Database": db,
             "Content-Type": "application/json",
-            "User-Agent": "Hams-Daemon/1.0",
+            "User-Agent": "Pager-Daemon/1.0",
         }
 
     def execute(self, model, method, **kwargs):
@@ -195,7 +195,7 @@ def fallback_notify(source, msg, severity):
     smtp_port = int(os.environ.get("SMTP_PORT") or 587)
     smtp_user = os.environ.get("SMTP_USER")
     smtp_pass = os.environ.get("SMTP_PASS")
-    from_email = os.environ.get("SMTP_FROM") or "pager-daemon@hams.com"
+    from_email = os.environ.get("SMTP_FROM") or "pager-daemon@example.com"
 
     if not fallback_email or not smtp_host:
         logger.critical(
@@ -208,7 +208,7 @@ def fallback_notify(source, msg, severity):
         em.set_content(
             f"CRITICAL INCIDENT: {source}\nSeverity: {severity}\nDetails: {msg}\n\n(Sent via Daemon SMTP Fallback because Odoo RPC failed.)"
         )
-        em["Subject"] = f"[Hams.com PAGER] {source} Alert"
+        em["Subject"] = f"[Pager Alert] {source}"
         em["From"] = from_email
         em["To"] = fallback_email
 
@@ -228,7 +228,7 @@ def report(client, source, msg, severity="high"):
     if webhook_url:
         try:
             payload = {
-                "content": f"🚨 **[Hams.com ALERT]**\n**Source:** {source}\n**Severity:** {severity}\n**Details:** {msg}"
+                "content": f"🚨 **[PAGER ALERT]**\n**Source:** {source}\n**Severity:** {severity}\n**Details:** {msg}"
             }
             req = urllib.request.Request(
                 webhook_url,
@@ -450,7 +450,7 @@ def execute_check(check, client=None):
 
     elif ctype == "http":
         try:
-            headers = {"User-Agent": "HamMonitor/1.0"}
+            headers = {"User-Agent": "Pager-Daemon/1.0"}
             req = urllib.request.Request(target, headers=headers)
             with urllib.request.urlopen(req, timeout=5) as response:
                 if response.status == 200:
@@ -695,7 +695,7 @@ def execute_check(check, client=None):
             return False, f"Synthetic execution error: {e}"
 
     elif ctype == "certbot":
-        headers = {"User-Agent": "HamMonitor/1.0"}
+        headers = {"User-Agent": "Pager-Daemon/1.0"}
         try:
             req = urllib.request.Request(
                 "https://acme-v02.api.letsencrypt.org/directory", headers=headers
