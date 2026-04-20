@@ -20,6 +20,7 @@ publicWidget.registry.ManualTOC = publicWidget.Widget.extend({
         }
         
         // [@ANCHOR: manual_toc_logic]
+        // See [@ANCHOR: story_manual_toc] and [@ANCHOR: journey_user_browsing]
         // Verified by [@ANCHOR: test_tour_manual_toc]
         // Scan only the manual body for relevant headings
         const headings = this.el.querySelectorAll('h2, h3');
