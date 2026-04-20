@@ -1,0 +1,26 @@
+<section>
+    <h1>⚡ Caching Module (<code>caching</code>)</h1>
+    <p><em>Copyright © Bruce Perens K6BP. AGPL-3.0.</em></p>
+
+    <h2>1. Overview</h2>
+    <p>The Caching module implements a global, root-scoped Service Worker (<code>/sw.js</code>) that proxies and caches frontend assets locally in the browser to provide near-instant load times.</p>
+
+    <h2>2. Integration Rules</h2>
+    <ul>
+        <li><strong>Automatic Caching:</strong> Assets placed in your module's <code>static/</code> directory are cached automatically.</li>
+        <li><strong>No Competing Workers:</strong> DO NOT attempt to register another Service Worker.</li>
+        <li><strong>WebSockets:</strong> <code>ws://</code> and <code>wss://</code> protocols are hardcoded to bypass the proxy.</li>
+        <li><strong>Dynamic Large File Prohibition:</strong> The worker mathematically calculates an active quota limit (approx 35MB). Heavy media MUST route via <code>/web/image</code> or <code>/web/content</code> to prevent the cache from ejecting critical UI bundles.</li>
+        <li><strong>Layout Injection:</strong> The service worker registration script is injected globally into the frontend <code>website.layout</code>.</li>
+    </ul>
+
+    <h2>3. Configuration</h2>
+    <p>Administrators can configure the caching behavior through the Website Settings:</p>
+    <ul>
+        <li><strong>Safe Quota (MB):</strong> Configure the browser storage limit for the service worker.</li>
+        <li><strong>Force Cache Invalidation:</strong> Increment the version to force users' browsers to immediately wipe their cache.</li>
+    </ul>
+
+    <h2>4. Technical Details</h2>
+    <p>The Service Worker intercepts requests matching <code>/web/assets/</code> and <code>/*/static/</code>. It uses a Cache-First strategy for these assets, falling back to the network and then caching the result if it's within the size limit.</p>
+</section>

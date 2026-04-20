@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import logging
 from odoo import http, tools
@@ -22,7 +23,9 @@ class ServiceWorkerController(http.Controller):
         max_mtime = 0.0
         file_sizes = []
 
-        # Raw SQL to get installed modules quickly without ORM/sudo overhead
+        # Raw SQL to get installed modules quickly without ORM/sudo overhead.
+        # This only retrieves module names that are already public knowledge
+        # and is required to calculate the SW footprint before it is served.
         request.env.cr.execute(
             "SELECT name FROM ir_module_module WHERE state = 'installed'"
         )
