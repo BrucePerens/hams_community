@@ -72,7 +72,7 @@ def main():
     processes = []
     for module in modules:
         prompt = f"Process the module {module} according to these instructions: {base_prompt}"
-        cmd = ['jules', '--repo', repo, prompt]
+        cmd = ['jules', 'new', '--repo', repo, prompt]
         print(f"Starting job for module: {module}")
         try:
             p = subprocess.Popen(cmd)
