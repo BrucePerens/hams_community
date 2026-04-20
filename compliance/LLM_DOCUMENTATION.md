@@ -10,9 +10,18 @@
 ## 1. Overview
 A non-interactive configuration module that enforces baseline regulatory compliance across the Odoo instance upon installation.
 
+### 📚 User Stories & Journeys
+* [Automatic Legal Pages Generation](./docs/stories/automatic_legal_pages.md)
+* [Enforced Cookie Consent](./docs/stories/cookie_consent.md)
+* [Site Owner Documentation](./docs/stories/compliance_documentation.md)
+* [Compliance Setup Journey](./docs/journeys/compliance_setup_journey.md)
+
 ## 2. Enforcement Details
-* Programmatically enables the Odoo `website` native `cookies_bar` boolean.
+* Programmatically enables the Odoo `website` native `cookies_bar` boolean. `[@ANCHOR: compliance_post_init_cookie_bar]`
 * Provisions AGPL-3 compatible legal pages (`/privacy`, `/cookie-policy`, `/terms`) safely via `noupdate="1"` XML records.
+    * Privacy Policy Template `[@ANCHOR: compliance_privacy_policy_template]`
+    * Cookie Policy Template `[@ANCHOR: compliance_cookie_policy_template]`
+    * Terms of Service Template `[@ANCHOR: compliance_terms_of_service_template]`
 * **CRITICAL:** Custom modules MUST NOT implement custom cookie banners. They must utilize the core framework's consent state.
 </enforcement_details>
 
@@ -27,7 +36,7 @@ This module adheres to **ADR-0002 (Zero-Sudo)** and **ADR-0005 (Service Account 
 ## 4. Documentation Installation
 This module implements a **soft dependency** on documentation providers (`manual_library` or Odoo Enterprise `knowledge`).
 
-* **Mechanism:** Documentation is installed via `post_init_hook` and dynamically verified on every registry reload via `compliance.config._register_hook`.
+* **Mechanism:** Documentation is installed via `post_init_hook` and dynamically verified on every registry reload via `compliance.config._register_hook`. `[@ANCHOR: compliance_install_knowledge_docs]`
 * **Elevation:** Since these are soft dependencies, article creation is executed via `.sudo()` to bypass the absence of static ACLs for external models.
 * **Models Supported:** `knowledge.article`, `manual.article`.
 * **Article Title:** "Site Owner's Guide to Regulatory Compliance"
