@@ -100,6 +100,7 @@ def ensure_executable(cmd_name):
 
 
 def verify_and_install_dependencies(client, checks):
+    # [@ANCHOR: daemon_verify_dependencies]
     type_to_cmd = {
         "dns": "dig",
         "snmp": "snmpget",
@@ -224,6 +225,7 @@ def fallback_notify(source, msg, severity):
 
 
 def report(client, source, msg, severity="high"):
+    # [@ANCHOR: daemon_report_incident]
     webhook_url = os.environ.get("PAGER_WEBHOOK_URL")
     if webhook_url:
         try:
@@ -263,6 +265,7 @@ def auto_resolve(client, source):
 
 
 def execute_check(check, client=None):
+    # [@ANCHOR: daemon_execute_check]
     ctype = check.get("type")
     target = parse_env(check.get("target", ""))
 
@@ -1277,6 +1280,7 @@ if __name__ == "__main__":
             futures.append(executor.submit(polling_thread, client, check))
 
     try:
+        # [@ANCHOR: daemon_main_loop]
         while True:
             time.sleep(10)  # audit-ignore-sleep  # fmt: skip
             now = time.time()
