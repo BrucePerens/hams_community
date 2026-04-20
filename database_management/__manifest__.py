@@ -15,4 +15,9 @@
         "views/pg_config_views.xml",
         "views/menu_views.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "database_management/static/src/tours/**/*",
+        ],
+    },
 }

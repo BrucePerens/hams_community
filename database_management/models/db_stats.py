@@ -46,6 +46,7 @@ class DatabaseTableStat(models.Model):
 
     def _register_hook(self):
         # [@ANCHOR: db_doc_injection]
+        # Tests [@ANCHOR: db_doc_injection]
         """
         Wait until all modules are loaded, then install documentation if
         manual_library or knowledge is present.
@@ -141,6 +142,7 @@ class DatabaseTableStat(models.Model):
 
     def action_vacuum_analyze(self):
         # [@ANCHOR: vacuum_analyze]
+        # Tests [@ANCHOR: vacuum_analyze]
         exe = self._get_executable("vacuumdb")
         db_name = self.env.cr.dbname
         env_vars = os.environ.copy()
@@ -169,6 +171,7 @@ class DatabaseTableStat(models.Model):
     @api.model
     def cron_check_bloat(self):
         # [@ANCHOR: bloat_alert_synergy]
+        # Tests [@ANCHOR: bloat_alert_synergy]
         high_bloat = self.env["database.table.stat"].search(
             [("dead_percent", ">", 20.0), ("dead_tuples", ">", 10000)], limit=1000
         )
@@ -193,6 +196,7 @@ class DatabaseTableStat(models.Model):
 
 class DatabaseQueryStat(models.Model):
     # [@ANCHOR: db_slow_queries]
+    # Tests [@ANCHOR: db_slow_queries]
     _name = "database.query.stat"
     _description = "Slow Query Tracking"
     _auto = False
@@ -230,6 +234,7 @@ class DatabaseQueryStat(models.Model):
 
 class DatabaseActivity(models.Model):
     # [@ANCHOR: db_active_sessions]
+    # Tests [@ANCHOR: db_active_sessions]
     _name = "database.activity"
     _description = "Active Database Sessions"
     _auto = False
@@ -259,6 +264,7 @@ class DatabaseActivity(models.Model):
 
     def action_terminate_backend(self):
         # [@ANCHOR: db_terminate_backend]
+        # Tests [@ANCHOR: db_terminate_backend]
         for rec in self:
             # Parameterized execution protects against SQL injection
             self.env.cr.execute("SELECT pg_terminate_backend(%s)", (rec.pid,))
@@ -267,6 +273,7 @@ class DatabaseActivity(models.Model):
 
 class DatabaseIndexStat(models.Model):
     # [@ANCHOR: db_index_stats]
+    # Tests [@ANCHOR: db_index_stats]
     _name = "database.index.stat"
     _description = "Database Index Health"
     _auto = False

@@ -44,6 +44,8 @@ self.env['daemon.key.registry'].register_daemon(daemon_name, user_xml_id, env_fi
       odoo-bin shell -c odoo.conf -d my_database --no-http -e "env['daemon.key.registry'].action_force_provision_all(); env.cr.commit()"
       ```
 
+---
+
 ## 5. Security & File Output
 
 The generated `.env` file will contain:
@@ -59,7 +61,27 @@ The `__system__` user ID (`SUPERUSER_ID` 1) is strictly forbidden from provision
 ### Self-Healing Rotation
 Daemons utilizing these files must implement a `try/except` loop around their JSON-RPC calls. Upon detecting an `AccessError` (indicating the `ir.cron` job has rotated the keys), the daemon should simply re-read the `.env` file from the disk to acquire the new key and retry the transaction seamlessly. [@ANCHOR: daemon_self_healing]
 
-## 6. Verification & Tests
+---
+
+<stories_and_journeys>
+## 6. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Registering a New External Daemon](daemon_key_manager/docs/stories/daemon_registration.md)
+* [Manual Force Provisioning](daemon_key_manager/docs/stories/force_provisioning.md)
+* [Automated 60-Day Key Rotation](daemon_key_manager/docs/stories/key_rotation.md)
+
+### Journeys
+* [Lifecycle of a Daemon API Key](daemon_key_manager/docs/journeys/api_key_lifecycle.md)
+* [Bootstrapping a Containerized Environment](daemon_key_manager/docs/journeys/container_bootstrapping.md)
+</stories_and_journeys>
+
+---
+
+## 7. Verification & Tests
 The following anchors verify the functionality of the Daemon Key Manager:
 * **register_daemon_api**: Verified by [@ANCHOR: test_register_daemon_api]
 * **documentation_installed**: Verified by [@ANCHOR: test_documentation_installed]
+* **daemon_self_healing**: Verified by [@ANCHOR: test_register_daemon_api] (via idempotent re-generation logic)

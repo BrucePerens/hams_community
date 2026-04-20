@@ -67,7 +67,7 @@ class TestKeyRegistry(TransactionCase):
             })
 
     def test_register_daemon_api(self):
-        """Test the register_daemon API. [@ANCHOR: test_register_daemon_api] # Tests [@ANCHOR: register_daemon_api] # Tests [@ANCHOR: register_daemon_logic] # Tests [@ANCHOR: register_daemon_idempotency] # Tests [@ANCHOR: write_secure_env_file_logic]"""
+        """Test the register_daemon API. [@ANCHOR: test_register_daemon_api] # Tests [@ANCHOR: register_daemon_api] # Tests [@ANCHOR: register_daemon_logic] # Tests [@ANCHOR: register_daemon_idempotency] # Tests [@ANCHOR: write_secure_env_file_logic] # Tests [@ANCHOR: daemon_self_healing]"""
         daemon_name = "API Test Daemon"
         user_xml_id = "daemon_key_manager.user_daemon_key_manager_service"
         env_file_path = "/var/lib/odoo/daemon_keys/api_test.env"
