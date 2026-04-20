@@ -10,6 +10,11 @@
         which is critical for testing One2many inverse cache anomalies and cross-worker behaviors.
     """,
     "depends": ["base"],
+    "data": [
+        "security/ir.model.access.csv",
+        "data/noisy_table_data.xml",
+        "views/noisy_table_views.xml",
+    ],
     "license": "AGPL-3",
     "installable": True,
     "auto_install": False,

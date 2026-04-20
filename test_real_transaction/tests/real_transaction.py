@@ -78,9 +78,7 @@ class RealTransactionCase(HttpCase):
         try:
             self.env.cr.commit()
         except Exception as e:
-            import logging  # noqa: E402
-
-            logging.getLogger(__name__).warning("An error occurred: %s", e)
+            _logger.warning("An error occurred: %s", e)
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
@@ -121,25 +119,8 @@ class RealTransactionCase(HttpCase):
 
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
         leaks = []
-        noisy_tables = {
-            "bus_bus",
-            "ir_logging",
-            "base_registry_signaling",
-            "ir_cron",
-            "mail_message",
-            "mail_notification",
-            "mail_followers",
-            "mail_tracking_value",
-            "res_groups_users_rel",
-            "res_company_users_rel",
-            "res_users_log",
-            "http_session",
-            "database_pg_setting",
-            "database_table_stat",
-            "database_query_stat",
-            "database_activity",
-            "database_index_stat",
-        }
+        noisy_tables_records = self.env['test_real_transaction.noisy_table'].search([])
+        noisy_tables = {record.name for record in noisy_tables_records}
 
         for t in self._tables:
             if t in noisy_tables:
