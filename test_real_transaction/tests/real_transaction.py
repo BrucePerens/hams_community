@@ -33,6 +33,7 @@ class RealTransactionCase(HttpCase):
         # 1. Safely hijack the Mock object injected by Odoo's test framework.
         # By changing the side_effect rather than deleting the attribute, we prevent
         # Werkzeug deadlocks without crashing unittest.mock during tearDown.
+        # [@ANCHOR: cursor_hijacking]
         def _real_cursor_factory(readonly=False):
             return odoo.sql_db.db_connect(self.registry.db_name).cursor()
 
@@ -48,6 +49,7 @@ class RealTransactionCase(HttpCase):
         self.env = odoo.api.Environment(self.cr, odoo.SUPERUSER_ID, {})
 
         # 2. Snapshot exact table counts
+        # [@ANCHOR: leak_snapshotting]
         self.cr.execute(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
         )
@@ -62,6 +64,7 @@ class RealTransactionCase(HttpCase):
         self._tracked_records = collections.defaultdict(set)
 
         # 3. Instrument ORM Creation
+        # [@ANCHOR: orm_instrumentation]
         def tracking_create(model_self, *args, **kwargs):
             records = _original_create(model_self, *args, **kwargs)
             if records:
@@ -83,6 +86,7 @@ class RealTransactionCase(HttpCase):
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
+        # [@ANCHOR: automated_cleanup]
         for attempt in range(3):
             pending_deletes = False
             for model_name, ids in list(self._tracked_records.items()):
@@ -117,6 +121,7 @@ class RealTransactionCase(HttpCase):
         self.env.cr.commit()
 
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
+        # [@ANCHOR: leak_verification]
         leaks = []
         noisy_tables = {
             "bus_bus",
