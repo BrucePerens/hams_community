@@ -8,6 +8,7 @@ class CloudflareWAF(models.AbstractModel):
 
     @api.model
     def ban_ip(
+        # [@ANCHOR: cf_ban_ip_api]
         self,
         ip_address,
         mode="block",

@@ -9,6 +9,7 @@ class CloudflareTurnstile(models.AbstractModel):
 
     @api.model
     def verify_token(self, token, remote_ip=None, website_id=None):
+        # [@ANCHOR: cf_turnstile_verify]
         if not website_id:
             from odoo.http import request  # noqa: E402
 

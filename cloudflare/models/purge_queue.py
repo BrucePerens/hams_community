@@ -68,6 +68,7 @@ class CloudflarePurgeQueue(models.Model):
 
     @api.model
     def enqueue_tags(self, tags, website_id=None):
+        # [@ANCHOR: cf_enqueue_tags_api]
         if not website_id:
             from odoo.http import request  # noqa: E402
 
@@ -92,6 +93,7 @@ class CloudflarePurgeQueue(models.Model):
 
     @api.model
     def process_queue(self):
+        # [@ANCHOR: cf_process_queue_logic]
         limit = 30
         max_batches = 10
         batches_processed = 0
