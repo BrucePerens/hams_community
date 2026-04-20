@@ -39,12 +39,14 @@ class DaemonKeyRegistry(models.Model):
 
     @api.constrains('user_id')
     def _check_user_is_service_account(self):
+        # [@ANCHOR: security_constraints_user]
         for record in self:
             if not record.user_id.is_service_account:
                 raise UserError(_("The selected user must be a service account."))
 
     @api.constrains('env_file_path')
     def _check_env_file_path(self):
+        # [@ANCHOR: security_constraints_path]
         mandatory_prefix = "/var/lib/odoo/daemon_keys/"
         for record in self:
             path = os.path.abspath(record.env_file_path)
@@ -60,9 +62,11 @@ class DaemonKeyRegistry(models.Model):
         API for other modules to request a bearer token/API key for their daemon.
         This registers the daemon for automated 60-day rotations and provisions synchronously.
         """
+        # [@ANCHOR: register_daemon_api]
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(user_xml_id)
         user = self.env["res.users"].browse(svc_uid)
 
+        # [@ANCHOR: register_daemon_logic]
         registry = self.env["daemon.key.registry"].search(
             [("name", "=", daemon_name)], limit=1
         )
@@ -75,6 +79,7 @@ class DaemonKeyRegistry(models.Model):
                 }
             )
         else:
+            # [@ANCHOR: register_daemon_idempotency]
             registry.write({"user_id": user.id, "env_file_path": env_file_path})
 
         registry._rotate_key_and_write_file()
@@ -82,17 +87,20 @@ class DaemonKeyRegistry(models.Model):
 
     @api.model
     def action_force_provision_all(self):
+        # [@ANCHOR: action_force_provision_all_api]
         """
         Synchronously provisions API keys for all registered daemons.
         Designed to be called via `odoo-bin shell` during systemd bootstrapping
         to prevent race conditions before daemon startup.
         """
+        # [@ANCHOR: force_provision_logic]
         registries = self.env["daemon.key.registry"].search([], limit=1000)
         for reg in registries:
             _logger.info("Synchronously provisioning key for daemon: %s", reg.name)
             try:
                 reg._rotate_key_and_write_file()
             except OSError:
+                # [@ANCHOR: force_provision_error_handling]
                 raise UserError(
                     _("Cannot write key file for '%s' " "at '%s'. Check permissions.")
                     % (reg.name, reg.env_file_path)
@@ -113,6 +121,7 @@ class DaemonKeyRegistry(models.Model):
         key_name = f"{self.name}_key"
 
         # Revoke old keys for this specific service account AND daemon
+        # [@ANCHOR: revoke_old_keys_logic]
         # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
         old_keys = self.env["res.users.apikeys"].search(
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
@@ -120,6 +129,7 @@ class DaemonKeyRegistry(models.Model):
         old_keys.unlink()
 
         # Generate new key
+        # [@ANCHOR: generate_new_key_logic]
         expiration_date = fields.Datetime.now() + datetime.timedelta(days=90)
 
         # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
@@ -142,6 +152,7 @@ class DaemonKeyRegistry(models.Model):
         Writes the credentials to the specified path and locks permissions to 0600.
         Creates directories with 0700 if they do not exist.
         """
+        # [@ANCHOR: write_secure_env_file_logic]
         path = os.path.abspath(path)
         # Sandbox check: Prevent writing to sensitive system directories
         forbidden_prefixes = ["/etc", "/root", "/boot", "/sys", "/proc", "/dev"]
@@ -177,6 +188,7 @@ class DaemonKeyRegistry(models.Model):
         Executes via ir.cron. Rotates keys for all registered daemons.
         Uses stateless batching and programmatic re-triggering.
         """
+        # [@ANCHOR: cron_rotation_logic]
         threshold = fields.Datetime.now() - datetime.timedelta(days=59)
         registries = self.env["daemon.key.registry"].search(
             ["|", ("last_rotated", "=", False), ("last_rotated", "<", threshold)],
