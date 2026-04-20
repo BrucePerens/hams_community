@@ -9,6 +9,11 @@ def install_knowledge_docs(env):
     If it is, reads the standalone HTML documentation file and installs it.
     """
     if "knowledge.article" in env:
+        # Check if already installed via system parameter to avoid redundant searches
+        utils = env["zero_sudo.security.utils"]
+        if utils._get_system_param("user_websites_seo.docs_installed"):
+            return None
+
         # Use the odoo_facility_service_internal for general maintenance tasks
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.odoo_facility_service_internal"
@@ -42,7 +47,12 @@ def install_knowledge_docs(env):
             if "icon" in article_model._fields:
                 vals["icon"] = "🔍"
 
-            return article_model.create(vals)
+            res = article_model.create(vals)
+            if res:
+                env["ir.config_parameter"].sudo().set_param("user_websites_seo.docs_installed", "1") # burn-ignore-sudo
+            return res
+        else:
+            env["ir.config_parameter"].sudo().set_param("user_websites_seo.docs_installed", "1") # burn-ignore-sudo
         return existing
     return None
 
