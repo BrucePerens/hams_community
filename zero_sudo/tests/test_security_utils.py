@@ -9,6 +9,7 @@ class TestSecurityUtils(TransactionCase):
 
     def test_01_mechanical_secret_block_enforcement(self):
         # [@ANCHOR: test_01_mechanical_secret_block_enforcement]
+        # Tests [@ANCHOR: get_system_param]
         """Verify that parameters matching cryptographic patterns are blocked."""
         utils = self.env["zero_sudo.security.utils"]
 
@@ -115,6 +116,8 @@ class TestSecurityUtils(TransactionCase):
             self.assertListEqual(sorted(params[1]), sorted(["test.model:key1", "test.model:key2"]))
 
     def test_06_get_deterministic_hash(self):
+        # [@ANCHOR: test_deterministic_hash]
+        # Tests [@ANCHOR: deterministic_hash]
         """Verify _get_deterministic_hash generates consistent integer hashes."""
         utils = self.env["zero_sudo.security.utils"]
 
@@ -132,6 +135,8 @@ class TestSecurityUtils(TransactionCase):
     @patch("subprocess.run")
     @patch("os.path.exists")
     def test_07_update_python_venv(self, mock_exists, mock_run):
+        # [@ANCHOR: test_update_python_venv]
+        # Tests [@ANCHOR: update_python_venv]
         """Test the _update_python_venv method."""
         from odoo.exceptions import UserError  # noqa: E402
         utils = self.env["zero_sudo.security.utils"]

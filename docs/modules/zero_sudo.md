@@ -42,7 +42,7 @@ You are strictly FORBIDDEN from using `.sudo()` inline. To escalate privileges:
 ## 2. System Parameter Whitelisting
 
 If you need to fetch a configuration parameter securely:
-`value = self.env['zero_sudo.security.utils']._get_system_param('my.key')`
+`value = self.env['zero_sudo.security.utils']._get_system_param('my.key')` `[@ANCHOR: get_system_param]`
 
 **CRITICAL:** The key MUST be explicitly added to the `PARAM_WHITELIST` array in `zero_sudo/models/security_utils.py`. Cryptographic keys (like `database.secret`) are permanently banned from this whitelist to prevent Server-Side Template Injection (SSTI) exposure.
 </system_parameters>
@@ -73,3 +73,43 @@ When a daemon or unprivileged user strictly requires native ERP framework intera
 ## 4. Global Cache Signaling
 * **Postgres NOTIFY Bus:** The `_notify_cache_invalidation` function `[@ANCHOR: coherent_cache_signal]` provides an entry point to trigger cross-worker cache flushes via the distributed event bus, guaranteeing consistency in clustered setups. This behavior is covered by `[@ANCHOR: test_coherent_cache_signal]`.
 </global_cache>
+
+---
+
+<stories_and_journeys>
+## 5. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Secure Privilege Escalation](zero_sudo/docs/stories/secure_escalation.md)
+* [Blocking Service Account Login](zero_sudo/docs/stories/login_blocking.md)
+* [Parameter Whitelisting](zero_sudo/docs/stories/parameter_whitelisting.md)
+* [Coherent Cache Signaling](zero_sudo/docs/stories/cache_signaling.md)
+* [Deterministic Hashing](zero_sudo/docs/stories/deterministic_hashing.md)
+* [Python VENV Management](zero_sudo/docs/stories/venv_management.md)
+
+### Journeys
+* [Service Account Lifecycle](zero_sudo/docs/journeys/service_account_lifecycle.md)
+* [Securing Configuration Parameters](zero_sudo/docs/journeys/securing_configuration.md)
+</stories_and_journeys>
+
+---
+
+<additional_features>
+## 5. Additional Utilities
+
+### Deterministic Hashing
+* **Function:** `_get_deterministic_hash` `[@ANCHOR: deterministic_hash]`
+* **Use Case:** Generating stable integer hashes for PostgreSQL advisory locks.
+
+### VENV Management
+* **Function:** `_update_python_venv` `[@ANCHOR: update_python_venv]`
+* **Use Case:** Triggering `pip install` for module dependencies (restricted to Administrators).
+
+### Web Login Security
+* **Field:** `is_service_account` `[@ANCHOR: is_service_account_field]` on `res.users`.
+* **Interceptor:** `web_login` `[@ANCHOR: web_login_interceptor]` in `Home` controller.
+* **Security Check:** Performs direct SQL check `[@ANCHOR: web_login_interceptor_check]` for isolation.
+* **Effect:** Prevents interactive web logins for any user flagged as a service account.
+</additional_features>
