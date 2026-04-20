@@ -9,7 +9,7 @@ class NoisyTable(models.Model):
     name = fields.Char(string='Table Name', required=True, help='Name of the PostgreSQL table to ignore in leak detection.')
     active = fields.Boolean(default=True, help='If unchecked, it will allow leak detection for this table.')
 
-    _name_uniq = models.Constraint('unique (name)', 'The table name must be unique!')
+    _name_uniq = models.Constraint('UNIQUE(name)', 'The table name must be unique!')
 
     def _register_hook(self):
         """
@@ -17,4 +17,5 @@ class NoisyTable(models.Model):
         before attempting to install documentation.
         """
         super()._register_hook()
-        install_knowledge_docs(self.env)
+        if self.env.registry.ready:
+            install_knowledge_docs(self.env)

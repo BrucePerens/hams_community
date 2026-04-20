@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import logging
-from odoo import api, tools, _
+from odoo import tools
 
 _logger = logging.getLogger(__name__)
 

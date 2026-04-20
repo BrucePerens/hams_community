@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 19:24+0000\n"
-"PO-Revision-Date: 2026-04-20 19:24+0000\n"
+"POT-Creation-Date: 2026-04-20 20:29+0000\n"
+"PO-Revision-Date: 2026-04-20 20:29+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:96
+#: daemon_key_manager/models/key_registry.py:97
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -325,15 +325,15 @@ msgstr ""
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:106
+#: daemon_key_manager/models/key_registry.py:107
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:52
+#: daemon_key_manager/models/key_registry.py:53
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:149
+#: daemon_key_manager/models/key_registry.py:150
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
@@ -374,7 +374,7 @@ msgstr ""
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:43
+#: daemon_key_manager/models/key_registry.py:44
 msgid "The selected user must be a service account."
 msgstr ""
 
