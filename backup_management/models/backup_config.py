@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import json
 import subprocess
@@ -7,6 +8,7 @@ import shutil
 import pika
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from .utils import validate_backup_path
 
 from cryptography.fernet import Fernet
 
@@ -143,6 +145,15 @@ class BackupConfig(models.Model):
                 )
             else:
                 rec.secret_key_crypt = False
+
+    @api.constrains("target_path", "restore_drill_script")
+    def _check_security_paths(self):
+        for rec in self:
+            if rec.engine == "kopia" and rec.storage_type == "local":
+                validate_backup_path(rec.target_path)
+            # pgBackRest target_path is a stanza name, not a direct path,
+            # but we still validate the restore drill script path.
+            validate_backup_path(rec.restore_drill_script)
 
     def _get_executable(self, engine):
         cmd_path = shutil.which(engine)

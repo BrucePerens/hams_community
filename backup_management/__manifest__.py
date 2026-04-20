@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 {
     "name": "Backup Management",
     "summary": "Unified Backup Management Facility (Kopia & pgBackRest)",
@@ -5,7 +6,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "zero_sudo", "test_real_transaction", "binary_downloader"],
+    "depends": ["base", "mail", "zero_sudo", "test_real_transaction", "binary_downloader", "manual_library"],
     "external_dependencies": {
         "python": ["pika", "cryptography"],
     },
