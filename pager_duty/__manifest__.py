@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 {
     "name": "Pager Duty",
     "summary": "Pager duty scheduling and incident management.",

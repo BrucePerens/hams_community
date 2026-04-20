@@ -103,7 +103,7 @@ class PagerCheck(models.Model):
 
     dbname = fields.Char(string="DB Name")
     dbuser = fields.Char(string="Username (DB/SMTP)")
-    dbpass = fields.Char(string="Password (DB/SMTP)")
+    dbpass = fields.Char(string="Password (DB/SMTP)", password=True)
     query = fields.Text(string="SQL Query (Returns Integer)")
     script = fields.Char(string="Shell Script Command")
     rpc_method = fields.Char(string="RPC Method", help="e.g. execute_kw")
@@ -198,7 +198,9 @@ class PagerCheck(models.Model):
         return check.id if check else False
 
     def write(self, vals):
-        res = super().write(vals)
+        res = super(
+            PagerCheck, self.with_context(mail_notrack=True, prefetch_fields=False)
+        ).write(vals)
         invalidate_model_cache(self.env, self._name)
         payload = json.dumps({"model": self._name})
         self.env.cr.execute(
@@ -212,7 +214,13 @@ class PagerCheck(models.Model):
         self.env.cr.execute(
             "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
         )
-        return super().unlink()
+        return super(
+            PagerCheck, self.with_context(mail_notrack=True, prefetch_fields=False)
+        ).unlink()
+
+    @api.model
+    def _valid_field_parameter(self, field, name):
+        return name == "password" or super()._valid_field_parameter(field, name)
 
     @api.model
     def rpc_ensure_executable(self, cmd_name):
