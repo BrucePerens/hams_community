@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 """
-import logging
 Unified Odoo Test Runner for Hams.com
 Combines test execution, integration modes, and real-time failure extraction.
 """
 
-import os
-import sys
-import re
-import subprocess
 import argparse
+import atexit
+import copy
+import glob
+import logging
+import os
+import psycopg2
+import re
 import signal
 import socket
+import subprocess
+import sys
 import tempfile
-import glob
+import threading
+import time
+from psycopg2.errors import UndefinedTable
+from psycopg2 import sql
 
 # Import the centralized infrastructure blueprint
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -75,7 +82,6 @@ class FailureExtractor:
         self._written = False
 
         if not disable_atexit:
-            import atexit
 
             atexit.register(self.finish_and_write)
 
@@ -253,7 +259,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     initial_errors = len(extractor.captured_blocks) if extractor else 0
 
     if env is None:
-        import os
         env = dict(os.environ)
     if "RABBITMQ_HOST" not in env:
         env["RABBITMQ_HOST"] = "localhost"
@@ -576,7 +581,6 @@ def save_db_cache(db_name, cache_file, mod_string):
     try:
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     except Exception as e:
-        import logging
         logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
         pass
 
@@ -766,7 +770,6 @@ exit $RET
 
 
 def main():
-    import subprocess
     try:
         # Silence Odoo's core framework noise (Cybercrud Policy)
         os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
@@ -895,15 +898,11 @@ def main():
                 print("[*] Provisioning local Jules environment (apt packages, services)...")
                 def _run_sudo_cmd(cmd, env=None):
                     if isinstance(cmd, str):
-                        import subprocess
                         subprocess.run(["sudo", "bash", "-c", cmd], check=True, env=env)
                     else:
-                        import subprocess
                         subprocess.run(["sudo"] + cmd, check=True, env=env)
 
                 print("[*] Installing APT packages for early_prod...")
-                import copy
-                import glob
                 old_apt = copy.deepcopy(infrastructure.MANIFEST.get("apt_packages", []))
                 infrastructure.MANIFEST["apt_packages"] = [
                     pkg for pkg in infrastructure.MANIFEST.get("apt_packages", [])
@@ -930,7 +929,6 @@ def main():
                 _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
 
                 # Check if already initialized to avoid initdb error
-                import subprocess
                 res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
                 if not res.stdout.strip():
                     _run_sudo_cmd(f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
@@ -942,26 +940,20 @@ def main():
                 _run_sudo_cmd("systemctl start redis-server || true")
                 _run_sudo_cmd("systemctl start rabbitmq-server || true")
 
-                import atexit
                 def teardown_jules():
                     print("[*] Tearing down local test PostgreSQL...")
-                    import subprocess
                     subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 atexit.register(teardown_jules)
             elif args.already_provisioned:
-                import glob
-                import atexit
                 pg_data_dir = "/opt/hams/pgdata"
                 pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
                 if pg_bins:
                     pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
-                    import subprocess
                     subprocess.run(["sudo", "chmod", "700", pg_data_dir])
                     subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     subprocess.run(["sudo", "systemctl", "start", "redis-server"])
                     subprocess.run(["sudo", "systemctl", "start", "rabbitmq-server"])
                     def teardown_jules():
-                        import subprocess
                         subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     atexit.register(teardown_jules)
             else:
@@ -1330,20 +1322,16 @@ def main():
                     start_new_session=True,
                 )
 
-                import atexit
-
                 def cleanup_odoo():
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                         odoo_proc.wait(timeout=2)
                     except Exception as e:
-                        import logging
                         logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
 
                 atexit.register(cleanup_odoo)
 
-                import threading
 
                 odoo_extractor = FailureExtractor(args.error_log, disable_atexit=True)
 
@@ -1371,7 +1359,6 @@ def main():
                 odoo_thread.start()
 
                 print(f"[*] Waiting for Odoo to bind to port {free_port}...")
-                import time
 
                 for _ in range(30):
                     if is_odoo_running(free_port):
@@ -1383,18 +1370,8 @@ def main():
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     except Exception as e:
-                        import logging
                         logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
-                    sys.exit(1)
-
-                try:
-                    import psycopg2
-                    from psycopg2 import sql
-                    from psycopg2.errors import UndefinedTable
-                except ImportError:
-                    print("❌ ERROR: psycopg2 is required for this test.")
-                    os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
 
                 env_path = os.path.join(base_dir, "deploy", "env")
@@ -1495,7 +1472,6 @@ def main():
                                                 args_list.extend(["--url", ncvec_url])
                                             daemons.append((daemon_name, args_list))
                                 except Exception as e:
-                                    import logging
                                     logging.getLogger('tools.test_runner').warning(
                                         "An error occurred: %s", e
                                     )
