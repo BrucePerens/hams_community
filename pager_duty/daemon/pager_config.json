@@ -1,57 +1,14 @@
 {
   "checks": [
     {
-      "name": "Disk Space (/)",
+      "name": "Disk Space (/rom/overlay)",
       "type": "system",
       "target": "disk",
       "interval": 300,
       "critical": 90,
       "snmp_community": "public",
-      "comment": "Autodiscovered disk space monitor for /",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Disk Space (/boot/efi)",
-      "type": "system",
-      "target": "disk",
-      "interval": 300,
-      "critical": 90,
-      "snmp_community": "public",
-      "partition": "/boot/efi",
-      "comment": "Autodiscovered disk space monitor for /boot/efi",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Disk Space (/home)",
-      "type": "system",
-      "target": "disk",
-      "interval": 300,
-      "critical": 90,
-      "snmp_community": "public",
-      "partition": "/home",
-      "comment": "Autodiscovered disk space monitor for /home",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Disk Space (/tmp)",
-      "type": "system",
-      "target": "disk",
-      "interval": 300,
-      "critical": 90,
-      "snmp_community": "public",
-      "partition": "/tmp",
-      "comment": "Autodiscovered disk space monitor for /tmp",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Disk Space (/var)",
-      "type": "system",
-      "target": "disk",
-      "interval": 300,
-      "critical": 90,
-      "snmp_community": "public",
-      "partition": "/var",
-      "comment": "Autodiscovered disk space monitor for /var",
+      "partition": "/rom/overlay",
+      "comment": "Autodiscovered disk space monitor for /rom/overlay",
       "sandbox_network_access": "loopback"
     },
     {
@@ -84,30 +41,9 @@
       "sandbox_network_access": "loopback"
     },
     {
-      "name": "Nginx Config Readiness",
-      "type": "nginx",
-      "target": false,
-      "interval": 3600,
-      "snmp_community": "public",
-      "comment": "Autodiscovered Nginx syntax check",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "PostgreSQL DB (Ping)",
-      "type": "postgres",
-      "target": "127.0.0.1",
-      "interval": 60,
-      "port": 5432,
-      "dbname": "postgres",
-      "user": "postgres",
-      "snmp_community": "public",
-      "comment": "Autodiscovered PostgreSQL instance",
-      "sandbox_network_access": "loopback"
-    },
-    {
       "name": "RabbitMQ AMQP",
       "type": "rabbitmq",
-      "target": "ENV:RABBITMQ_HOST",
+      "target": "rabbitmq",
       "interval": 60,
       "port": 5672,
       "snmp_community": "public",
@@ -117,7 +53,7 @@
     {
       "name": "Redis Ping",
       "type": "redis",
-      "target": "ENV:REDIS_HOST",
+      "target": "redis",
       "interval": 60,
       "port": 6379,
       "snmp_community": "public",
@@ -132,16 +68,6 @@
       "critical": 90,
       "snmp_community": "public",
       "comment": "Autodiscovered CPU monitor",
-      "sandbox_network_access": "loopback"
-    },
-    {
-      "name": "Systemd Failed Services Tracker",
-      "type": "systemd",
-      "target": "*",
-      "interval": 300,
-      "snmp_community": "public",
-      "ignored_services": "fwupd-refresh.service, NetworkManager-wait-online.service",
-      "comment": "Autodiscovered global systemd failure tracker",
       "sandbox_network_access": "loopback"
     },
     {
@@ -165,9 +91,19 @@
       "sandbox_network_access": "loopback"
     },
     {
+      "name": "Systemd Failed Services Tracker",
+      "type": "systemd",
+      "target": "*",
+      "interval": 300,
+      "snmp_community": "public",
+      "ignored_services": "fwupd-refresh.service, NetworkManager-wait-online.service",
+      "comment": "Autodiscovered global systemd failure tracker",
+      "sandbox_network_access": "loopback"
+    },
+    {
       "name": "WSGI HTTP Ping",
       "type": "http",
-      "target": "ENV:ODOO_URL",
+      "target": "http://odoo:8069/api/v1/pager/ping",
       "interval": 60,
       "expect": "{\"status\": \"ok\"}",
       "snmp_community": "public",
