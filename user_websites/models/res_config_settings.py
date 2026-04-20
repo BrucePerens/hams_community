@@ -12,6 +12,19 @@ class ResConfigSettings(models.TransientModel):
         help="Users with full access to manage all user websites and groups.",
     )
 
+    global_website_page_limit = fields.Integer(
+        string="Global Page Limit",
+        config_parameter="user_websites.global_website_page_limit",
+        default=100,
+        help="Default maximum number of web pages a standard user can create.",
+    )
+
+    company_abuse_email = fields.Char(
+        string="Abuse Reporting Email",
+        config_parameter="user_websites.company_abuse_email",
+        help="Email address where content violation reports will be sent.",
+    )
+
     @api.model
     def get_values(self):
         res = super(ResConfigSettings, self).get_values()
