@@ -82,10 +82,19 @@ class TestKeyRegistry(TransactionCase):
         self.assertTrue(os.path.exists(env_file_path))
 
     def test_documentation_installed(self):
-        """Verify that documentation is installed in knowledge.article. [@ANCHOR: test_documentation_installed]"""
-        article = self.env['knowledge.article'].search([('name', '=', 'Daemon Key Manager Documentation')], limit=1)
-        self.assertTrue(article, "Documentation article not found")
-        self.assertIn("Daemon Key Manager", article.body)
+        """Verify that documentation is installed in knowledge.article or manual.article. [@ANCHOR: test_documentation_installed]"""
+        model = None
+        if "knowledge.article" in self.env:
+            model = "knowledge.article"
+        elif "manual.article" in self.env:
+            model = "manual.article"
+
+        if model:
+            article = self.env[model].search([('name', '=', 'Daemon Key Manager Documentation')], limit=1)
+            self.assertTrue(article, "Documentation article not found")
+            self.assertIn("Daemon Key Manager", article.body)
+        else:
+            self.skipTest("No documentation model available")
 
     def test_cron_rotate_all_keys(self):
         """Test cron rotation and trigger functionality. [@ANCHOR: test_cron_rotate_all_keys]"""

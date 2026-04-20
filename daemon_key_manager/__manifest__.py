@@ -5,7 +5,7 @@
     "category": "Security",
     "author": "Bruce Perens K6BP",
     "license": "AGPL-3",
-    "depends": ["base", "zero_sudo", "manual_library"],
+    "depends": ["base", "zero_sudo"],
     "post_init_hook": "post_init_hook",
     "data": [
         "security/security.xml",
