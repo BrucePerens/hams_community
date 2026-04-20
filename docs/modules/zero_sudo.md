@@ -82,16 +82,16 @@ When a daemon or unprivileged user strictly requires native ERP framework intera
 For detailed narratives and end-to-end workflows, refer to the following:
 
 ### Stories
-* [Secure Privilege Escalation](zero_sudo/docs/stories/secure_escalation.md)
-* [Blocking Service Account Login](zero_sudo/docs/stories/login_blocking.md)
-* [Parameter Whitelisting](zero_sudo/docs/stories/parameter_whitelisting.md)
-* [Coherent Cache Signaling](zero_sudo/docs/stories/cache_signaling.md)
-* [Deterministic Hashing](zero_sudo/docs/stories/deterministic_hashing.md)
-* [Python VENV Management](zero_sudo/docs/stories/venv_management.md)
+* **Secure Privilege Escalation** `[@ANCHOR: story_secure_escalation]`: Narrative on how developers securely escalate privileges using service accounts instead of `.sudo()`. [Read Story](docs/stories/zero_sudo/secure_escalation.md)
+* **Blocking Service Account Login** `[@ANCHOR: story_login_blocking]`: How the system prevents service accounts from accessing the interactive web interface. [Read Story](docs/stories/zero_sudo/login_blocking.md)
+* **Parameter Whitelisting** `[@ANCHOR: story_parameter_whitelisting]`: Protection of sensitive system parameters from unauthorized access. [Read Story](docs/stories/zero_sudo/parameter_whitelisting.md)
+* **Coherent Cache Signaling** `[@ANCHOR: story_cache_signaling]`: Ensuring cache consistency across multiple Odoo workers using Postgres NOTIFY. [Read Story](docs/stories/zero_sudo/cache_signaling.md)
+* **Deterministic Hashing** `[@ANCHOR: story_deterministic_hash]`: Generation of stable integer hashes for PostgreSQL advisory locks. [Read Story](docs/stories/zero_sudo/deterministic_hashing.md)
+* **Python VENV Management** `[@ANCHOR: story_venv_management]`: How administrators can trigger updates of system Python dependencies safely. [Read Story](docs/stories/zero_sudo/venv_management.md)
 
 ### Journeys
-* [Service Account Lifecycle](zero_sudo/docs/journeys/service_account_lifecycle.md)
-* [Securing Configuration Parameters](zero_sudo/docs/journeys/securing_configuration.md)
+* **Service Account Lifecycle** `[@ANCHOR: journey_service_account_lifecycle]`: The end-to-end flow of a service account from provisioning to secure execution. [Read Journey](docs/journeys/zero_sudo/service_account_lifecycle.md)
+* **Securing Configuration Parameters** `[@ANCHOR: journey_securing_configuration]`: The workflow for safely integrating and accessing new configuration parameters. [Read Journey](docs/journeys/zero_sudo/securing_configuration.md)
 </stories_and_journeys>
 
 ---

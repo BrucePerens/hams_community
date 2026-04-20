@@ -9,6 +9,8 @@ class TestZeroSudoControllers(HttpCase):
         # [@ANCHOR: test_web_login_interceptor]
         # Tests [@ANCHOR: web_login_interceptor]
         # Tests [@ANCHOR: web_login_interceptor_check]
+        # Tests [@ANCHOR: story_login_blocking]
+        # Tests [@ANCHOR: journey_service_account_lifecycle]
         """Verify that service accounts cannot log into the web interface."""
         # [@ANCHOR: test_is_service_account_field]
         # Tests [@ANCHOR: is_service_account_field]
