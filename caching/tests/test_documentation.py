@@ -5,6 +5,7 @@ from odoo.tests.common import TransactionCase, tagged
 class TestDocumentation(TransactionCase):
 
     def test_documentation_installed(self):
+        # Tests [@ANCHOR: caching_docs_bootstrap]
         """Verify that the caching documentation is correctly installed in knowledge.article."""
         if "knowledge.article" not in self.env:
             self.skipTest("knowledge.article model not available")

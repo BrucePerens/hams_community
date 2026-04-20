@@ -15,3 +15,13 @@ Implements a global, root-scoped Service Worker (`/sw.js`) that proxies and cach
 * **Layout Injection:** The service worker registration script is injected globally into the frontend `website.layout` via XPath `[@ANCHOR: xpath_rendering_caching_layout]`.
 
 * **Settings Layout Injection**: The settings UI is injected into `website.layout` via XPath `[@ANCHOR: xpath_rendering_caching_settings]`.
+
+## 3. Stories & Journeys
+Detailed architectural narratives and process flows are documented in the `docs/` directory:
+* **Stories**:
+    * [Cache Quota Management](docs/stories/cache_quota_management.md) ([@ANCHOR: caching_quota_calculation])
+    * [Cache Invalidation Strategy](docs/stories/cache_invalidation_strategy.md) ([@ANCHOR: caching_fs_scan_logic])
+    * [Documentation Bootstrap](docs/stories/documentation_bootstrap.md) ([@ANCHOR: caching_docs_bootstrap])
+* **Journeys**:
+    * [Asset Request Flow](docs/journeys/asset_request_flow.md) ([@ANCHOR: caching_sw_fetch_interceptor])
+    * [Server Startup Scan](docs/journeys/server_startup_scan.md) ([@ANCHOR: caching_sw_serve_route])

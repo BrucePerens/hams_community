@@ -5,6 +5,8 @@ from odoo.tests.common import HttpCase, tagged
 class TestSettingsAndCache(HttpCase):
 
     def test_01_quota_config_updates_sw(self):
+        # Tests [@ANCHOR: caching_quota_calculation]
+        # Tests [@ANCHOR: caching_fs_scan_logic]
         """
         Verify that changing the safe quota in settings dynamically
         updates the MAX_FILE_SIZE_BYTES in the /sw.js payload.
