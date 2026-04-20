@@ -9,6 +9,8 @@ class ZeroSudoHome(Home):
     def web_login(self, *args, **kw):
         # [@ANCHOR: web_login_interceptor]
         # Verified by [@ANCHOR: test_web_login_interceptor]
+        # Tests [@ANCHOR: story_login_blocking]
+        # Tests [@ANCHOR: journey_service_account_lifecycle]
         response = super().web_login(*args, **kw)
         if request.session.uid:
             # [@ANCHOR: web_login_interceptor_check]
@@ -16,6 +18,7 @@ class ZeroSudoHome(Home):
             # This bypasses ACLs for the isolation check (ADR-0005) without triggering Zero-Sudo linter violations.
             # FUTURE DEVELOPERS: DO NOT CHANGE THIS TO .sudo(). Direct SQL is the intentional, audited pattern here.
             # Verified by [@ANCHOR: test_web_login_interceptor]
+            # Tests [@ANCHOR: story_login_blocking]
             request.env.cr.execute(
                 "SELECT is_service_account FROM res_users WHERE id = %s",
                 (request.session.uid,)
