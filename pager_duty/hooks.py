@@ -8,6 +8,7 @@ def post_init_hook(env):
     """
     Inject documentation and register daemon keys upon installation.
     """
+    # [@ANCHOR: doc_inject_pager_duty]
     # We use knowledge.article as the target for both manual_library and Enterprise knowledge
     if "knowledge.article" in env and "zero_sudo.security.utils" in env:
         # Try to use manual_library's service account if available, fallback to odoo_facility_service_internal
