@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from odoo import models, api, _
+import os
 import logging
+
+from odoo import models, api
+from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
@@ -27,6 +30,7 @@ class IrModuleModule(models.Model):
         """
         # Determine if we have a knowledge-base provider
         article_model = None
+
         if "knowledge.article" in self.env:
             article_model = "knowledge.article"
         elif "manual.article" in self.env:
@@ -37,6 +41,7 @@ class IrModuleModule(models.Model):
 
         # Use the standard service account for documentation injection
         utils = self.env.get("zero_sudo.security.utils")
+
         if not utils:
             return
 
@@ -52,7 +57,9 @@ class IrModuleModule(models.Model):
 
         env = self.env(user=svc_uid, context={"mail_notrack": True})
 
-        installed_modules = self.search([("state", "=", "installed")])
+        installed_modules = self.env["ir.module.module"].search(
+            [("state", "=", "installed")], limit=10000
+        )
         for module in installed_modules:
             module._install_module_documentation(env, article_model)
 
@@ -60,9 +67,6 @@ class IrModuleModule(models.Model):
         """
         Checks for documentation.html in the module and installs it.
         """
-        from odoo.tools import file_open
-        import os
-
         # We look for documentation.html in the data/ directory of the module
         # or fall back to LLM_DOCUMENTATION.md in the module root
         doc_path = os.path.join(self.name, "data", "documentation.html")
