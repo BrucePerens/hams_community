@@ -1,4 +1,5 @@
 import logging
+import os
 from odoo.tests import TransactionCase, tagged
 from odoo.exceptions import UserError
 
@@ -25,6 +26,11 @@ class TestKeyRegistry(TransactionCase):
 
     def test_security_constraints(self):
         """Test that only service accounts can be used."""
+        try:
+            os.remove('/tmp/test.env')
+        except OSError:
+            pass
+
         with self.assertRaises(UserError):
             self.registry_model.create({
                 'name': 'Test Daemon',
@@ -34,6 +40,11 @@ class TestKeyRegistry(TransactionCase):
 
     def test_cron_rotate_all_keys(self):
         """Test cron rotation and trigger functionality. [@ANCHOR: test_cron_rotate_all_keys]"""
+        try:
+            os.remove('/tmp/cron_test.env')
+        except OSError:
+            pass
+
         # Create a mock daemon
         registry = self.registry_model.create({
             'name': 'Cron Test Daemon',

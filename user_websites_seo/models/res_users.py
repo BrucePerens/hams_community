@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-from odoo import models, api
+from odoo import models
+from odoo.exceptions import AccessError
 
 class ResUsersSEO(models.Model):
     _name = "res.users"
     _inherit = ["res.users", "website.seo.metadata"]
 
-    @api.model
-    def _get_writeable_fields(self):
-        """
-        Allows users to securely save their own SEO metadata via the frontend
-        widget without triggering mass-assignment AccessErrors (ADR-0015).
-        """
-        return super()._get_writeable_fields() + [
+    @property
+    def SELF_WRITEABLE_FIELDS(self):
+        return super().SELF_WRITEABLE_FIELDS + [
             "website_meta_title",
             "website_meta_description",
             "website_meta_keywords",
@@ -20,18 +17,25 @@ class ResUsersSEO(models.Model):
             "seo_name",
         ]
 
-    def check_access_rule(self, operation):
-        """
-        Silently suppress access errors for SEO checks to prevent log spam and allow
-        the frontend widget to render and save. Odoo checks 'read' and 'write'.
-        """
-        if operation in ("read", "write", "unlink") and not self.env.su and self:
-            if not self.env.user.has_group(
-                "base.group_system"
-            ) and not self.env.user.has_group(
-                "user_websites.group_user_websites_administrator"
-            ):
-                # Suppress access errors if a user is acting exclusively on their own profile
+    def write(self, vals):
+        seo_fields = {"website_meta_title", "website_meta_description", "website_meta_keywords", "website_meta_og_img", "seo_name"}
+        seo_vals = {k: v for k, v in vals.items() if k in seo_fields}
+        other_vals = {k: v for k, v in vals.items() if k not in seo_fields}
+
+        res = True
+        if other_vals:
+            # Let standard Odoo ACLs handle non-SEO writes natively
+            res = super(ResUsersSEO, self).write(other_vals)
+
+        if seo_vals:
+            if self.env.su or self.env.user.has_group("user_websites.group_user_websites_administrator"):
+                res = res and super(ResUsersSEO, self).write(seo_vals)
+            else:
                 if all(record.id == self.env.user.id for record in self):
-                    return None
-        return super(ResUsersSEO, self).check_access_rule(operation)
+                    # Escalate strictly for the write operation using the domain service account
+                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
+                    res = res and super(ResUsersSEO, self.with_user(svc_uid)).write(seo_vals)
+                else:
+                    raise AccessError("You can only modify your own SEO metadata.")
+
+        return res
