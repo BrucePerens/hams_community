@@ -33,8 +33,8 @@ class TestDistributedCache(HttpCase):
             # Under integration tests, we run the native _authenticate loop against the real daemon
             # To avoid LocalProxy exception from request (which happens deeper in Odoo's base code without a real HTTP request),
             # we mock `request` with a MagicMock that has an `httprequest.method` attribute just to satisfy `is_cors_preflight`
-            import unittest.mock  # noqa: E402
-            from odoo.http import request  # noqa: E402
+            import unittest.mock # noqa: E402
+            from odoo.http import request # noqa: E402
             mock_req_inst = unittest.mock.MagicMock()
             mock_req_inst.httprequest.method = "GET"
             mock_req_inst.env.__contains__.return_value = True

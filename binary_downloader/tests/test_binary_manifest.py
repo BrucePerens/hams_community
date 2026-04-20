@@ -10,6 +10,9 @@ class TestBinaryManifest(TransactionCase):
 
     def setUp(self):
         super().setUp()
+        # The service account is already created by security.xml data
+        self.service_user = self.env.ref("binary_downloader.user_binary_downloader_service")
+
         self.manifest = self.env["binary.manifest"].create(
             {
                 "name": "testbin",

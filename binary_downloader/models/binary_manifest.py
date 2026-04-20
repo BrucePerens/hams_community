@@ -97,8 +97,14 @@ class BinaryManifest(models.Model):
         if path:
             return path
 
-        manifest_record = self.env["binary.manifest"].search(
-            [("name", "=", cmd_name)], limit=1
+        # Use micro-privilege service account for manifest resolution and download
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "binary_downloader.user_binary_downloader_service"
+        )
+        manifest_record = (
+            self.env["binary.manifest"]
+            .with_user(svc_uid)
+            .search([("name", "=", cmd_name)], limit=1)
         )
         if not manifest_record:
             raise UserError(

@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_binary_manifest_admin,binary manifest admin,model_binary_manifest,base.group_system,1,1,1,1
+access_binary_manifest_manager,binary manifest manager,model_binary_manifest,binary_downloader.group_binary_downloader_manager,1,1,1,1
 access_binary_manifest_user,binary manifest user,model_binary_manifest,base.group_user,1,0,0,0
