@@ -96,7 +96,10 @@ def invalidate_model_cache(env, model_name):
     if use_redis:
         try:
             r = redis.Redis(connection_pool=redis_pool)
-            keys = r.keys(prefix)
+            # Use SCAN instead of KEYS for production safety
+            keys = []
+            for key in r.scan_iter(match=prefix, count=1000):
+                keys.append(key)
             if keys:
                 r.delete(*keys)
         except Exception as e:

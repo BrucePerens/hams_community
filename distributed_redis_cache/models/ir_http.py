@@ -4,6 +4,7 @@ import json
 import logging
 import threading
 import concurrent.futures
+import atexit
 
 from odoo import models
 from odoo.http import request
@@ -18,6 +19,15 @@ _invalidation_queue = set()
 _listener_started = False
 _listener_lock = threading.Lock()
 _executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+
+
+def _stop_listener():
+    global _listener_started
+    _listener_started = False
+    _executor.shutdown(wait=False)
+
+
+atexit.register(_stop_listener)
 
 
 def _redis_listener_thread():
@@ -77,7 +87,8 @@ class IrHttp(models.AbstractModel):
                 _invalidation_queue.clear()
 
             for m in models_to_clear:
-                if m in request.env:
+                # Security: Validate model name before accessing env
+                if m and isinstance(m, str) and m in request.env:
                     invalidate_model_cache(request.env, m)
                     _logger.info("Distributed cache cleared for model: %s", m)
 

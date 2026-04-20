@@ -1,36 +1,31 @@
-# Distributed Redis Cache for Odoo
+# Distributed Redis Cache
 
-*Copyright © Bruce Perens K6BP. AGPL-3.0.*
+Fine-grained distributed caching and phase coherence for horizontally scaled Odoo clusters.
 
-## Overview
-This module provides the `@distributed_cache()` decorator—a fine-grained, Redis-backed replacement for `@tools.ormcache`. It implements strict cache phase coherence across horizontally scaled Odoo environments.
+## Features
+- Distributed Redis-backed cache to replace/augment Odoo's local cache.
+- Prevents cache drift across multiple Odoo nodes.
+- Fail-open design: falls back to local memory if Redis is unavailable.
+- Fine-grained invalidation: only flushes specific models, not the entire cache.
+- Management UI for status checks and manual invalidation.
 
-When an Odoo WSGI worker mutates a cached model, the system immediately emits a PostgreSQL `NOTIFY`. An external daemon pushes this invalidation event to a central Redis pub/sub queue, allowing all other Odoo workers to intercept the broadcast and flush their respective local RAM caches instantly, preventing stale data from being served.
+## Installation
+This module requires a Redis server.
+Ensure the `redis` and `asyncpg` Python packages are installed.
 
-## Usage
-Import the decorator and apply it to any model method:
-```python
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+## Configuration
+The following environment variables can be used to configure the Redis connection:
+- `REDIS_HOST`: Defaults to `redis` or `127.0.0.1`.
+- `REDIS_PORT`: Defaults to `6379`.
 
-class MyModel(models.Model):
-    _name = "my.model"
+## Architecture
+- **Postgres NOTIFY**: Triggered when a model's cache needs invalidation.
+- **Cache Manager Daemon**: A standalone Python service that bridges Postgres NOTIFY to Redis Pub/Sub.
+- **Redis Pub/Sub**: Distributes invalidation signals to all Odoo workers.
+- **Middleware Interceptor**: Odoo workers check for signals in `ir.http` and flush local caches accordingly.
 
-    @api.model
-    @distributed_cache()
-    def _get_heavy_computation(self, identifier):
-        return self.search([('name', '=', identifier)]).read()
+## Security
+Built with the **Zero-Sudo** architecture. Operations are performed by dedicated service accounts with minimal privileges.
 
-    def write(self, vals):
-        res = super().write(vals)
-        # Trigger invalidation across all nodes
-        invalidate_model_cache(self.env, self._name)
-        import json
-        payload = json.dumps({"model": self._name})
-        self.env.cr.execute(
-            "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
-        )
-        return res
-```
-
-## Setup
-Ensure your `odoo.conf` has access to the Redis server and execute the provided `cache_manager.py` daemon as a background service.
+## Documentation
+Comprehensive documentation is available via the **Manual Library** module after installation.
