@@ -42,6 +42,17 @@ class DaemonKeyRegistry(models.Model):
             if not record.user_id.is_service_account:
                 raise UserError(_("The selected user must be a service account."))
 
+    @api.constrains('env_file_path')
+    def _check_env_file_path(self):
+        mandatory_prefix = "/var/lib/odoo/daemon_keys/"
+        for record in self:
+            path = os.path.abspath(record.env_file_path)
+            if not path.startswith(mandatory_prefix):
+                raise UserError(
+                    _("Security Alert: The environment file path must start with '%s'.")
+                    % mandatory_prefix
+                )
+
     @api.model
     def register_daemon(self, daemon_name, user_xml_id, env_file_path):
         """

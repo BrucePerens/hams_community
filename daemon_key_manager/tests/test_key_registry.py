@@ -49,13 +49,43 @@ class TestKeyRegistry(TransactionCase):
                 pass
 
     def test_security_constraints(self):
-        """Test that only service accounts can be used."""
+        """Test that only service accounts and valid paths can be used."""
+        # Test non-service account
         with self.assertRaises(UserError):
             self.registry_model.create({
                 'name': 'Test Daemon',
                 'user_id': self.regular_user.id,
                 'env_file_path': self.test_env_paths[0],
             })
+
+        # Test invalid path
+        with self.assertRaises(UserError):
+            self.registry_model.create({
+                'name': 'Test Daemon Path',
+                'user_id': self.service_user.id,
+                'env_file_path': '/home/jules/test.env',
+            })
+
+    def test_register_daemon_api(self):
+        """Test the register_daemon API. [@ANCHOR: test_register_daemon_api]"""
+        daemon_name = "API Test Daemon"
+        user_xml_id = "daemon_key_manager.user_daemon_key_manager_service"
+        env_file_path = "/var/lib/odoo/daemon_keys/api_test.env"
+        self.test_env_paths.append(env_file_path)
+
+        result = self.registry_model.register_daemon(daemon_name, user_xml_id, env_file_path)
+        self.assertTrue(result)
+
+        registry = self.registry_model.search([('name', '=', daemon_name)])
+        self.assertTrue(registry)
+        self.assertEqual(registry.env_file_path, env_file_path)
+        self.assertTrue(os.path.exists(env_file_path))
+
+    def test_documentation_installed(self):
+        """Verify that documentation is installed in knowledge.article. [@ANCHOR: test_documentation_installed]"""
+        article = self.env['knowledge.article'].search([('name', '=', 'Daemon Key Manager Documentation')], limit=1)
+        self.assertTrue(article, "Documentation article not found")
+        self.assertIn("Daemon Key Manager", article.body)
 
     def test_cron_rotate_all_keys(self):
         """Test cron rotation and trigger functionality. [@ANCHOR: test_cron_rotate_all_keys]"""

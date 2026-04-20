@@ -12,5 +12,12 @@
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
             <field name="comment">Users with this privilege can manage API keys for background daemons.</field>
         </record>
+
+        <record id="user_daemon_key_manager_service" model="res.users">
+            <field name="name">Daemon Key Manager Service</field>
+            <field name="login">daemon_key_manager_service</field>
+            <field name="is_service_account" eval="True"/>
+            <field name="group_ids" eval="[(4, ref('daemon_key_manager.group_daemon_key_manager'))]"/>
+        </record>
     </data>
 </odoo>
