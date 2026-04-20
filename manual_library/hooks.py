@@ -41,6 +41,15 @@ def install_knowledge_docs(env):
 def post_init_hook(env):
     """
     Hook executed upon module installation.
-    Injects docs into the knowledge base.
+    Injects docs into the knowledge base under the service account context.
     """
-    install_knowledge_docs(env)
+    # Use the dedicated service account for initialization to follow least-privilege principles.
+    svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+        "manual_library.user_manual_library_service_account"
+    )
+    # Headless execution context to prevent tracking and unnecessary overhead.
+    # Using the .with_user(uid).env idiom as per Zero-Sudo mandates.
+    env_svc = env.user.with_user(svc_uid).with_context(
+        mail_notrack=True, prefetch_fields=False
+    ).env
+    install_knowledge_docs(env_svc)

@@ -20,7 +20,7 @@ class TestManualAccessRights(TransactionCase):
                         6,
                         0,
                         [
-                            self.env.ref("base.group_portal").id,
+                            self.env.ref("base.group_user").id,
                             self.env.ref("manual_library.group_manual_manager").id,
                         ],
                     )
@@ -33,7 +33,7 @@ class TestManualAccessRights(TransactionCase):
                 "name": "Standard Internal",
                 "login": "internal_user",
                 "email": "internal@manual.com",
-                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
             }
         )
 
@@ -42,7 +42,7 @@ class TestManualAccessRights(TransactionCase):
                 "name": "Other Internal",
                 "login": "other_internal_user",
                 "email": "other@manual.com",
-                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
+                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
             }
         )
 
