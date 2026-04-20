@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 from odoo import fields
 
@@ -219,6 +220,15 @@ class TestBackupManagement(RealTransactionCase):
             exe_path = self.config_kopia._get_executable("kopia")
         mock_get_exe.assert_called_once_with("kopia")
         self.assertEqual(exe_path, "/bin/kopia")
+
+    def test_08e_security_path_validation(self):
+        # Tests path validation added for security
+        from odoo.exceptions import UserError  # noqa: E402
+        with self.assertRaises(UserError):
+            self.config_kopia.write({"target_path": "/etc/shadow"})
+
+        with self.assertRaises(UserError):
+            self.config_kopia.write({"restore_drill_script": "/root/hack.sh"})
 
     def test_09_board_data_rpc(self):
         # Tests [@ANCHOR: backup_board_data]

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo import models, fields
 
 class BackupRestoreWizard(models.TransientModel):
@@ -8,6 +9,10 @@ class BackupRestoreWizard(models.TransientModel):
     restore_target_path = fields.Char(string="Restore Directory / Stanza Target", required=True, help="Path where the backup should be restored, or stanza to target.")
 
     def action_restore(self):
+        from .utils import validate_backup_path  # noqa: E402
+        if self.snapshot_id.config_id.engine == "kopia":
+            validate_backup_path(self.restore_target_path)
+
         jobs = self.env["backup.job"]
         job = jobs.create({
             "config_id": self.snapshot_id.config_id.id,
