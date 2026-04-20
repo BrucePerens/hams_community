@@ -23,6 +23,11 @@ Upon installation, it:
         "security/ir.model.access.csv",
         "data/legal_pages_data.xml",
     ],
+    "assets": {
+        "web.assets_tests": [
+            "compliance/static/tests/tours/compliance_tour.js",
+        ],
+    },
     "demo": [],
     "installable": True,
     "application": False,
