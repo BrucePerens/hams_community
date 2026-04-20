@@ -21,11 +21,16 @@ logging.basicConfig(
 logger = logging.getLogger("cache_manager")
 
 # --- Configuration ---
+# [@ANCHOR: cache_manager_config]
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "odoo")
 DB_USER = os.getenv("DB_USER", "odoo")
 DB_PASS = os.getenv("DB_PASS", "odoo")
+
+# Use PGHOST if provided (e.g. for pgsock in VM)
+if os.getenv("PGHOST"):
+    DB_HOST = os.getenv("PGHOST")
 
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))

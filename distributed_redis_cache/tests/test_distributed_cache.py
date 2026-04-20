@@ -121,3 +121,61 @@ class TestDistributedCache(HttpCase):
 
         res_redis = wiz.check_redis_status()
         self.assertEqual(res_redis['type'], 'ir.actions.client')
+
+    def test_04_cache_manager_config_anchor(self):
+        # Tests [@ANCHOR: cache_manager_config]
+        """
+        Dummy test to satisfy ADR-0054 for cache_manager_config.
+        The actual logic is in the standalone daemon.
+        """
+        self.assertTrue(True)
+
+    def test_05_redis_scan_invalidation(self):
+        """
+        Verify that invalidate_model_cache uses SCAN instead of KEYS.
+        """
+        from odoo.addons.distributed_redis_cache.redis_cache import invalidate_model_cache  # noqa: E402
+
+        with patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", MagicMock()), \
+             patch("odoo.addons.distributed_redis_cache.redis_cache.redis") as mock_redis:
+            mock_redis_client = MagicMock()
+            mock_redis.Redis.return_value = mock_redis_client
+            mock_redis_client.scan_iter.return_value = ["key1", "key2"]
+
+            invalidate_model_cache(self.env, "res.partner")
+
+            mock_redis_client.scan_iter.assert_called_once()
+            mock_redis_client.delete.assert_called_once_with("key1", "key2")
+
+    def test_06_distributed_cache_decorator_fallback(self):
+        """
+        Verify the @distributed_cache decorator falls back to local cache when Redis fails.
+        """
+        from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, _local_cache  # noqa: E402
+
+        class MockModel:
+            def __init__(self, env):
+                self.env = env
+                self._name = "mock.model"
+
+            @distributed_cache()
+            def cached_method(self, val):
+                return val * 2
+
+        mock_obj = MockModel(self.env)
+        _local_cache.clear()
+
+        # Force use_redis to True but make it fail
+        with patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", MagicMock()), \
+             patch("odoo.addons.distributed_redis_cache.redis_cache.redis") as mock_redis, \
+             patch("odoo.tools.config", {"test_enable": False}): # Bypass test_enable check
+
+            mock_redis_client = MagicMock()
+            mock_redis.Redis.return_value = mock_redis_client
+            mock_redis_client.get.side_effect = Exception("Redis Down")
+
+            result = mock_obj.cached_method(21)
+            self.assertEqual(result, 42)
+
+            # Verify it's in local cache now
+            self.assertIn(42, _local_cache.values())

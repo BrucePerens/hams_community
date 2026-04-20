@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Distributed Redis Cache Documentation</title>
+</head>
+<body>
+<h1>Distributed Redis Cache</h1>
+<p>Fine-grained distributed caching and phase coherence for horizontally scaled Odoo clusters.</p>
+
+<h2>Overview</h2>
+<p>Standard Odoo <code>@tools.ormcache</code> relies on a local worker registry cache, which can drift out of sync in horizontally scaled, multi-node environments. This module provides a fine-grained, distributed Redis-backed cache that enforces strict phase coherence across the entire cluster.</p>
+
+<h2>Architecture</h2>
+<p>The invalidation pipeline works as follows:</p>
+<ol>
+    <li>An Odoo worker mutates a cached model and fires a PostgreSQL <code>NOTIFY</code> on the <code>distributed_cache_invalidation</code> channel.</li>
+    <li>The standalone <code>cache_manager.py</code> daemon receives the <code>NOTIFY</code> and publishes the payload to the Redis <code>odoo_cache_invalidation_bus</code> pub/sub channel.</li>
+    <li>A background thread running inside every Odoo WSGI worker's <code>ir.http</code> middleware intercepts the Redis broadcast and instantly queues the model for local cache flushing before serving its next HTTP request.</li>
+</ol>
+
+<h2>Usage</h2>
+<h3>Decorator</h3>
+<p>Use the <code>@distributed_cache()</code> decorator on <code>api.model</code> functions to automatically generate cache keys and write them to Redis with a 24h TTL.</p>
+<pre>
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache
+
+class MyModel(models.Model):
+    _name = 'my.model'
+
+    @distributed_cache()
+    def my_cached_method(self, arg1):
+        # ... logic ...
+        return result
+</pre>
+
+<h3>Manual Invalidation</h3>
+<p>Use <code>invalidate_model_cache(env, model_name)</code> to forcibly flush local WSGI memory before executing the <code>pg_notify</code> cross-worker alert.</p>
+
+<h2>Security</h2>
+<p>This module follows the <b>Zero-Sudo</b> architecture. It uses a dedicated service account <code>Redis Cache Manager</code> (<code>cache_manager_sys</code>) for background operations. Access to the configuration UI is restricted to the <code>Cache Manager</code> group.</p>
+
+<h2>Fail-Open Resilience</h2>
+<p>If Redis is unavailable, the system automatically falls back to a local memory cache (<code>_local_cache</code>) to ensure continuous operation, albeit without cross-worker phase coherence.</p>
+</body>
+</html>
