@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 from odoo import models, fields, api, _
 import os
@@ -69,7 +70,9 @@ class PagerIncident(models.Model):
         elif vals.get("status") == "resolved":
             vals["time_resolved"] = now
 
-        res = super().write(vals)
+        res = super(
+            PagerIncident, self.with_context(mail_notrack=True, prefetch_fields=False)
+        ).write(vals)
 
         # ADR 0078: O(1) Memory Mapping / Event Bus Optimization
         for rec in self:
@@ -179,7 +182,9 @@ class PagerIncident(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        records = super().create(vals_list)
+        records = super(
+            PagerIncident, self.with_context(mail_notrack=True, prefetch_fields=False)
+        ).create(vals_list)
         if records:
             self.env["bus.bus"]._sendone("pager_duty", "update_board", {})
         return records

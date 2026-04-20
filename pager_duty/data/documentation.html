@@ -4,10 +4,10 @@
     <p class="text-muted small"><em>Patents Pending. Copyright &copy; Bruce Perens K6BP. All Rights Reserved.</em></p>
 
     <h2>1. Architecture Overview (CQRS)</h2>
-    <p>The Pager Duty module operates on a Command Query Responsibility Segregation (CQRS) model. Odoo acts as the control plane to manage configurations, while an isolated, standalone Python daemon (<code>generalized_monitor.py</code>) executes the actual polling and health checks outside of Odoo's web workers.</p>
+    <p>The Pager Duty module operates on a Command Query Responsibility Segregation (CQRS) model. Odoo acts as the control plane to manage configurations, while an isolated, standalone Python daemon (<code>generalized_monitor.py</code>) executes the actual polling and health checks outside of Odoo's web workers. <code>[@ANCHOR: doc_inject_pager_duty]</code></p>
 
     <h2>2. Configuration Wizard</h2>
-    <p>Administrators can configure all monitoring endpoints graphically. Navigate to <strong>Admin &gt; System Health &gt; Monitoring Checks</strong>. Click <em>Edit YAML Config File</em> to synchronize the database records with the daemon's physical <code>pager_config.yaml</code> file.</p>
+    <p>Administrators can configure all monitoring endpoints graphically. Navigate to <strong>Admin &gt; System Health &gt; Monitoring Checks</strong>. Click <em>Edit YAML Config File</em> to synchronize the database records with the daemon's physical <code>pager_config.json</code> file. <code>[@ANCHOR: generalized_pager_config]</code> <code>[@ANCHOR: test_pager_view]</code></p>
 
     <h2>3. Supported Check Types</h2>
     <ul>
@@ -35,22 +35,22 @@
     <p>When deployed on a new node, the module features a one-click <strong>Autodiscovery</strong> engine. It actively scans the host operating system's process tree (Systemd) and physical mount points to automatically provision optimal baseline monitoring for PostgreSQL, Redis, RabbitMQ, Docker, local HTTP routing, and Disk Space usage.</p>
 
     <h2>5. Intelligent Calendar Routing</h2>
-    <p>The module natively ties into the Odoo Calendar. By checking the "Is Pager Duty Shift" box on an event, the system automatically knows exactly who is on-call at any given minute. It fully supports complex recurrence rules (like "the first Tuesday of the month") and manages shift-handoffs seamlessly without requiring manual configuration files.</p>
+    <p>The module natively ties into the Odoo Calendar. By checking the "Is Pager Duty Shift" box on an event, the system automatically knows exactly who is on-call at any given minute. It fully supports complex recurrence rules (like "the first Tuesday of the month") and manages shift-handoffs seamlessly without requiring manual configuration files. <code>[@ANCHOR: test_pager_notification]</code></p>
 
     <h2>6. Fail-Safes &amp; Self-Healing</h2>
     <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
-    <p>Furthermore, the daemon features a self-healing dependency scanner. For example, if it is instructed to test a Zero Trust tunnel but the <code>cloudflared</code> binary is missing from the system, it will automatically download the static binary from GitHub and continue execution without requiring manual intervention.</p>
+    <p>Furthermore, the daemon features a self-healing dependency scanner. For example, if it is instructed to test a Zero Trust tunnel but the <code>cloudflared</code> binary is missing from the system, it will automatically download the static binary from GitHub and continue execution without requiring manual intervention. <code>[@ANCHOR: synthetic_i18n]</code> <code>[@ANCHOR: test_synthetic_i18n]</code></p>
 
-    <h2>7. Advanced SRE Capabilities</h2>
-    <p>Checks can be configured with a <strong>Startup Grace Period</strong> (e.g., 120 seconds) to prevent false-positive alerts while Odoo is initially booting. If Odoo crashes entirely, the daemon utilizes an <strong>Airgapped SMTP Fallback</strong> and Discord/Slack Webhooks to bypass the ERP and alert the administrator directly.</p>
+    <h2>7. Log Analysis &amp; SRE Forensics</h2>
+    <p>The module includes a chrooted Log Analyzer daemon that tails system logs in real-time. Administrators can define regex patterns to detect anomalies like filesystem corruption or kernel panics. The system also features a Splunk-like interactive search UI, allowing for rapid forensics across distributed log files directly from the Odoo backend. <code>[@ANCHOR: test_log_analyzer_views]</code> <code>[@ANCHOR: test_log_api_i18n]</code></p>
 
-    <h2>6. Advanced SRE Capabilities</h2>
+    <h2>8. Advanced SRE Capabilities</h2>
     <ul>
-        <li><strong>Cascading Failure Suppression:</strong> Link checks together via "Parent Check" dependencies. If the master database goes offline, downstream HTTP checks will be automatically silenced to prevent alarm fatigue.</li>
+        <li><strong>Cascading Failure Suppression:</strong> Link checks together via "Parent Check" dependencies. If the master database goes offline, downstream HTTP checks will be automatically silenced to prevent alarm fatigue. <code>[@ANCHOR: auto_resolve_incidents]</code></li>
         <li><strong>Maintenance Windows:</strong> Schedule explicit silences via Maintenance Start/End dates to mute alerts during planned infrastructure work.</li>
-        <li><strong>Push Monitoring (Heartbeat):</strong> Use the <code>/api/v1/pager/heartbeat/&lt;uuid&gt;</code> endpoint to actively listen for successful "pings" from external backup scripts. If a ping is missed, the daemon raises an incident.</li>
-        <li><strong>Multi-Tier Escalation:</strong> A background cron job constantly evaluates open incidents. If a critical incident remains unacknowledged for over 15 minutes, it automatically escalates the alert directly to the entire administrative group, bypassing the scheduled shift.</li>
-        <li><strong>Analytics:</strong> Incident records automatically track Mean Time To Acknowledge (MTTA) and Mean Time To Resolve (MTTR) metrics for operational review.</li>
+        <li><strong>Push Monitoring (Heartbeat):</strong> Use the <code>/api/v1/pager/heartbeat/&lt;uuid&gt;</code> endpoint to actively listen for successful "pings" from external backup scripts. If a ping is missed, the daemon raises an incident. <code>[@ANCHOR: report_incident_rate_limit]</code></li>
+        <li><strong>Multi-Tier Escalation:</strong> A background cron job constantly evaluates open incidents. If a critical incident remains unacknowledged for over 15 minutes, it automatically escalates the alert directly to the entire administrative group, bypassing the scheduled shift. <code>[@ANCHOR: test_pager_escalation]</code></li>
+        <li><strong>Analytics:</strong> Incident records automatically track Mean Time To Acknowledge (MTTA) and Mean Time To Resolve (MTTR) metrics for operational review. <code>[@ANCHOR: action_acknowledge_incident]</code> <code>[@ANCHOR: pager_board_data]</code> <code>[@ANCHOR: test_pager_board_url]</code></li>
     </ul>
 </div>
 
