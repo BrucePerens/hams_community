@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
+import os
+import json
+import unittest.mock
 from unittest.mock import patch, MagicMock
-from odoo.tests.common import tagged
 
+from odoo.tests.common import tagged, HttpCase
+from odoo.addons.distributed_redis_cache.models.ir_http import (
+    _invalidation_queue,
+    _listener_lock,
+)
 
-from odoo.tests.common import HttpCase
 
 @tagged("post_install", "-at_install")
 class TestDistributedCache(HttpCase):
@@ -14,17 +20,10 @@ class TestDistributedCache(HttpCase):
         When a cache invalidation signal is detected on the pubsub bus
         Then the worker MUST flush its local targeted RAM cache.
         """
-        import os  # noqa: E402
-        import json  # noqa: E402
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
         mock_endpoint = MagicMock()
         mock_endpoint.routing = {"auth": "none"}
-
-        from odoo.addons.distributed_redis_cache.models.ir_http import (  # noqa: E402
-            _invalidation_queue,
-            _listener_lock,
-        )
 
         with _listener_lock:
             _invalidation_queue.add("res.users")
@@ -33,8 +32,6 @@ class TestDistributedCache(HttpCase):
             # Under integration tests, we run the native _authenticate loop against the real daemon
             # To avoid LocalProxy exception from request (which happens deeper in Odoo's base code without a real HTTP request),
             # we mock `request` with a MagicMock that has an `httprequest.method` attribute just to satisfy `is_cors_preflight`
-            import unittest.mock # noqa: E402
-            from odoo.http import request # noqa: E402
             mock_req_inst = unittest.mock.MagicMock()
             mock_req_inst.httprequest.method = "GET"
             mock_req_inst.env.__contains__.return_value = True
@@ -62,7 +59,7 @@ class TestDistributedCache(HttpCase):
                 ]
 
                 class MockRequest:
-                    env = __import__("unittest.mock").mock.MagicMock()
+                    env = MagicMock()
 
                 mock_req_inst = MockRequest()
 
@@ -83,7 +80,6 @@ class TestDistributedCache(HttpCase):
         Verify that if the Redis connection dies during polling, the middleware
         gracefully catches the exception and allows the HTTP request to proceed without crashing the worker.
         """
-        import os  # noqa: E402
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
         if integration_mode:

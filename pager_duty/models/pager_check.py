@@ -1,8 +1,11 @@
-import logging
-_logger = logging.getLogger(__name__)
+# -*- coding: utf-8 -*-
 import uuid
 import json
 import os
+import psutil
+import subprocess
+import logging
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from odoo.addons.distributed_redis_cache.redis_cache import (
@@ -10,6 +13,7 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
     invalidate_model_cache,
 )
 
+_logger = logging.getLogger(__name__)
 
 class PagerCheck(models.Model):
     _name = "pager.check"
@@ -86,7 +90,7 @@ class PagerCheck(models.Model):
         string="Ignored Services",
         help="Comma-separated list of systemd services to ignore when monitoring all failures (e.g., 'fwupd-refresh.service').",
     )
-    warning_threshold = fields.Integer(string="Warning Threshold %25")
+    warning_threshold = fields.Integer(string="Warning Threshold %")
 
     target = fields.Char(
         string="Target (Host/URL/File)",
@@ -497,8 +501,6 @@ class PagerCheck(models.Model):
 
         # 2. Physical Disks
         try:
-            import psutil  # noqa: E402
-
             for p in psutil.disk_partitions(all=False):
                 if p.fstype in ("ext4", "xfs", "btrfs", "zfs", "vfat"):
                     checks.append(
@@ -513,12 +515,10 @@ class PagerCheck(models.Model):
                         }
                     )
         except Exception as e:
-            _logger.warning("An error occurred: %s", e)
+            _logger.warning("An error occurred getting disk partitions: %s", e)
 
         # 3. Common Services
         try:
-            import subprocess  # noqa: E402
-
             res = subprocess.run(
                 [
                     "systemctl",
@@ -591,7 +591,7 @@ class PagerCheck(models.Model):
                     }
                 )
         except Exception as e:
-            _logger.warning("An error occurred: %s", e)
+            _logger.warning("An error occurred interacting with systemd: %s", e)
 
         # 4. Odoo Web Server
         checks.append(

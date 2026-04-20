@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-from odoo import models
+from odoo import models, _
 from odoo.exceptions import AccessError
 
 class UserWebsitesGroupSEO(models.Model):
@@ -24,10 +24,8 @@ class UserWebsitesGroupSEO(models.Model):
                 if all(self.env.user.id in group.member_ids.ids for group in self):
                     # Escalate strictly for the write operation using the domain service account
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                    # ADR-0001: Explicit context for headless service account execution
-                    res = res and super(UserWebsitesGroupSEO, self.with_user(svc_uid).with_context(mail_notrack=True, prefetch_fields=False)).write(seo_vals)
+                    res = res and super(UserWebsitesGroupSEO, self.with_user(svc_uid)).write(seo_vals)
                 else:
-                    from odoo import _
                     raise AccessError(_("You can only modify SEO metadata for groups you are a member of."))
 
         return res

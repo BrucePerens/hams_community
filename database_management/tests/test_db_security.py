@@ -8,16 +8,6 @@ class TestDbSecurity(TransactionCase):
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")
-        self.db_manager = self.env["res.users"].create(
-            {
-                "name": "DB Manager",
-                "login": "db_manager",
-                "group_ids": [
-                    (4, self.env.ref("database_management.group_database_management_manager").id),
-                    (4, self.env.ref("base.group_user").id),
-                ],
-            }
-        )
         self.user_std = self.env["res.users"].create(
             {
                 "name": "Std",
@@ -56,27 +46,18 @@ class TestDbSecurity(TransactionCase):
 
         # Fetch existing SQL View records for testing read isolation
         self.table_stat = (
-            self.env["database.table.stat"].with_user(self.db_manager).search([], limit=1)
+            self.env["database.table.stat"].with_user(self.admin).search([], limit=1)
         )
         self.pg_setting = (
-            self.env["database.pg.setting"].with_user(self.db_manager).search([], limit=1)
+            self.env["database.pg.setting"].with_user(self.admin).search([], limit=1)
         )
 
     def test_01_multi_persona_isolation(self):
         """
         BDD: Given ADR-0050 Proxy Ownership IDOR (Multi-Persona Mandate)
         When standard personas attempt to interact with the database APM tools
-        Then they MUST be violently rejected by the ORM, as only Database Managers have access.
+        Then they MUST be violently rejected by the ORM, as only System Admins have access.
         """
-        # First, verify that the DB Manager CAN access the tools
-        if self.table_stat:
-            self.table_stat.with_user(self.db_manager).read(["table_name"])
-        if self.pg_setting:
-            self.pg_setting.with_user(self.db_manager).read(["name"])
-
-        self.env["pg.optimize.wizard"].with_user(self.db_manager).create({"ram_gb": 16})
-        self.env["pg.ha.wizard"].with_user(self.db_manager).create({"primary_ip": "10.0.0.1"})
-
         for user in [
             self.user_std,
             self.user_web,

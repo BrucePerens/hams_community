@@ -119,7 +119,6 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             self.test_users.append(u)
 
     def test_02_acl_overhead_loop_elimination(self):
-        import logging # noqa: E402
         # [@ANCHOR: test_acl_overhead_loop_elimination]
         # Tests [@ANCHOR: test_acl_overhead_loop_elimination]
         """
@@ -158,7 +157,6 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
         self.authenticate(None, None)
 
-        import logging # noqa: E402
         logger = logging.getLogger("odoo.addons.base.models.ir_model")
         with self.assertLogs(logger, level="WARNING") as cm:
             try:

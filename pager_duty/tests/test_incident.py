@@ -1,10 +1,13 @@
-import logging
-_logger = logging.getLogger(__name__)
+# -*- coding: utf-8 -*-
 import os
+import redis
+import logging
+import datetime
 from odoo.tests.common import TransactionCase
 from unittest.mock import patch, MagicMock
-from odoo import _
+from odoo import fields, _
 
+_logger = logging.getLogger(__name__)
 
 class TestPagerIncident(TransactionCase):
     def setUp(self):
@@ -23,8 +26,6 @@ class TestPagerIncident(TransactionCase):
 
         if self.integration_mode:
             try:
-                import redis  # noqa: E402
-
                 r = redis.Redis(
                     host=os.getenv("REDIS_HOST") or "redis",
                     port=int(os.getenv("REDIS_PORT") or "6379"),
@@ -32,7 +33,7 @@ class TestPagerIncident(TransactionCase):
                 )
                 r.delete("pager_rate_limit:test_daemon")
             except Exception as e:
-                _logger.warning("An error occurred: %s", e)
+                _logger.warning("An error occurred communicating with Redis: %s", e)
 
             # First request passes the cache check
             res1 = self.incident_model.report_incident(vals)
@@ -69,8 +70,6 @@ class TestPagerIncident(TransactionCase):
 
         if self.integration_mode:
             try:
-                import redis  # noqa: E402
-
                 r = redis.Redis(
                     host=os.getenv("REDIS_HOST") or "redis",
                     port=int(os.getenv("REDIS_PORT") or "6379"),
@@ -78,7 +77,7 @@ class TestPagerIncident(TransactionCase):
                 )
                 r.delete("pager_rate_limit:test_daemon_2")
             except Exception as e:
-                _logger.warning("An error occurred: %s", e)
+                _logger.warning("An error occurred communicating with Redis: %s", e)
 
             incident_id = self.incident_model.report_incident(vals)
             self.assertTrue(
@@ -170,8 +169,6 @@ class TestPagerIncident(TransactionCase):
         incident = self.incident_model.create(
             {"source": "esc_test", "severity": "high", "description": "desc"}
         )
-        import datetime  # noqa: E402
-        from odoo import fields  # noqa: E402
 
         self.env.cr.execute(
             "UPDATE pager_incident SET create_date = %s WHERE id = %s",

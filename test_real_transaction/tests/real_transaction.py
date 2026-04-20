@@ -82,7 +82,7 @@ class RealTransactionCase(HttpCase):
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
-        from odoo.tools import mute_logger  # noqa: E402
+        from odoo.tools import mute_logger
 
         for attempt in range(3):
             pending_deletes = False
@@ -119,8 +119,25 @@ class RealTransactionCase(HttpCase):
 
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
         leaks = []
-        noisy_tables_records = self.env['test_real_transaction.noisy_table'].search([])
-        noisy_tables = {record.name for record in noisy_tables_records}
+        noisy_tables = {
+            "bus_bus",
+            "ir_logging",
+            "base_registry_signaling",
+            "ir_cron",
+            "mail_message",
+            "mail_notification",
+            "mail_followers",
+            "mail_tracking_value",
+            "res_groups_users_rel",
+            "res_company_users_rel",
+            "res_users_log",
+            "http_session",
+            "database_pg_setting",
+            "database_table_stat",
+            "database_query_stat",
+            "database_activity",
+            "database_index_stat",
+        }
 
         for t in self._tables:
             if t in noisy_tables:
