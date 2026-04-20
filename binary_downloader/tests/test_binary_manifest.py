@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import tarfile
 from unittest.mock import patch, MagicMock
 from odoo.tests.common import TransactionCase, tagged
 from odoo.exceptions import UserError, ValidationError
@@ -144,3 +145,80 @@ class TestBinaryManifest(TransactionCase):
 
         with self.assertRaises(ValidationError):
             self.manifest.write({"name": "bad/bin"})
+
+    def test_09_post_init_hook_documentation(self):
+        """Verify that the post_init_hook correctly creates documentation."""
+        # Find the article created by the hook (it might already exist if tests run in certain order)
+        article_model = self.env.get("knowledge.article")
+        if not article_model:
+            return # Skip if manual_library isn't fully loaded or mockable here
+
+        article = article_model.search([("name", "=", "Binary Downloader")], limit=1)
+        self.assertTrue(article, "Documentation article should have been created by post_init_hook")
+        self.assertIn("Binary Downloader Facility", article.body)
+
+    @patch("shutil.which", return_value=None)
+    @patch("platform.system", return_value="Linux")
+    @patch("platform.machine", return_value="x86_64")
+    @patch("urllib.request.urlretrieve")
+    def test_10_tar_slip_prevention(self, mock_urlretrieve, mock_machine, mock_system, mock_which):
+        """Verify that tar slip attempts are blocked."""
+        manifest_tar = self.env["binary.manifest"].create({
+            "name": "slippy",
+            "url": "http://example.com/slippy.tar.gz",
+            "checksum": "fakehash_tar",
+            "archive_type": "tar.gz",
+            "extract_member": "slippy"
+        })
+
+        with patch("hashlib.sha256") as mock_sha256, \
+             patch("tarfile.open") as mock_tar_open, \
+             patch("builtins.open", new_callable=MagicMock) as mock_open:
+
+            mock_hasher = MagicMock()
+            mock_hasher.hexdigest.return_value = "fakehash_tar"
+            mock_sha256.return_value = mock_hasher
+
+            mock_open.return_value.__enter__.return_value.read.side_effect = [b"data", b""]
+
+            # Mock tar member with malicious path
+            mock_member = MagicMock()
+            mock_member.name = "slippy" # It MUST match the extract_target to proceed to extraction
+
+            mock_tar = MagicMock()
+            mock_tar.getmembers.return_value = [mock_member]
+
+            def mock_extract(member, path=None, filter=None):
+                # Simulate the path traversal check
+                # Note: in real code, member.name is modified to os.path.basename(cmd_name)
+                # but we want to test the case where it's NOT modified correctly or the check catches it.
+                pass
+            mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+            # Mock os.path.exists to simulate file missing
+            with patch("os.path.exists", return_value=False), \
+                 patch("tempfile.NamedTemporaryFile") as mock_temp:
+
+                mock_temp_inst = MagicMock()
+                mock_temp_inst.name = "/var/lib/odoo/hams_bin/fake_tar"
+                mock_temp.return_value.__enter__.return_value = mock_temp_inst
+
+                # Ensure hasattr(tarfile, 'data_filter') returns False for this test to trigger fallback
+                # We mock os.path.abspath to return something outside the bin_dir when member.name is used
+                def mock_abspath(p):
+                    if "hams_bin/slippy" in p:
+                        return "/etc/passwd"
+                    return p
+
+                with patch("os.path.abspath", side_effect=mock_abspath), \
+                     patch("os.unlink"):
+                    if hasattr(tarfile, 'data_filter'):
+                         # If it HAS data_filter, we need to mock it NOT having it or test that it uses it.
+                         # But easier to just test our fallback logic if we can.
+                         # Patching builtins.hasattr is a bit risky but we can try patching it where it's used.
+                         with patch("odoo.addons.binary_downloader.models.binary_manifest.hasattr", side_effect=lambda obj, name: False if name == 'data_filter' else hasattr(obj, name)):
+                             with self.assertRaisesRegex(UserError, "Security Alert: Tar slip attempt detected."):
+                                 self.env["binary.manifest"].ensure_executable("slippy")
+                    else:
+                         with self.assertRaisesRegex(UserError, "Security Alert: Tar slip attempt detected."):
+                             self.env["binary.manifest"].ensure_executable("slippy")

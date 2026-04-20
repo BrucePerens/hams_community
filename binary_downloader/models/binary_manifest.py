@@ -131,11 +131,20 @@ class BinaryManifest(models.Model):
         target_bin = os.path.join(bin_dir, cmd_name)
 
         if os.path.exists(target_bin):
-            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-            return target_bin
+            # Checksum verification for existing binary
+            hasher = hashlib.sha256()
+            with open(target_bin, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hasher.update(chunk)
+            if hasher.hexdigest() == manifest_record.checksum:
+                os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+                return target_bin
+            else:
+                _logger.info("Checksum mismatch for %s, re-downloading...", cmd_name)
+                os.unlink(target_bin)
 
         try:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
                 urllib.request.urlretrieve(manifest_record.url, tmp.name)
 
             hasher = hashlib.sha256()
@@ -144,7 +153,8 @@ class BinaryManifest(models.Model):
                     hasher.update(chunk)
 
             if hasher.hexdigest() != manifest_record.checksum:
-                os.unlink(tmp.name)
+                if os.path.exists(tmp.name):
+                    os.unlink(tmp.name)
                 raise UserError(
                     _("Security Alert: Checksum mismatch for downloaded %s binary.")
                     % cmd_name
@@ -152,6 +162,7 @@ class BinaryManifest(models.Model):
 
             if manifest_record.archive_type == "tar.gz":
                 with tarfile.open(tmp.name, "r:gz") as tar:
+                    found = False
                     for member in tar.getmembers():
                         extract_target = manifest_record.extract_member or cmd_name
                         if (
@@ -164,14 +175,24 @@ class BinaryManifest(models.Model):
                             if hasattr(tarfile, 'data_filter'):
                                 tar.extract(member, path=bin_dir, filter='data')
                             else:
+                                # Fallback for older python: manual path check
+                                target_path = os.path.abspath(os.path.join(bin_dir, member.name))
+                                if not target_path.startswith(os.path.abspath(bin_dir)):
+                                    raise UserError(_("Security Alert: Tar slip attempt detected."))
                                 tar.extract(member, path=bin_dir)
+                            found = True
                             break
+                    if not found:
+                        raise UserError(_("Member %s not found in archive.") % extract_target)
             else:
                 shutil.copy2(tmp.name, target_bin)
 
             os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
-            os.unlink(tmp.name)
+            if os.path.exists(tmp.name):
+                os.unlink(tmp.name)
             return target_bin
+        except (UserError, ValidationError):
+            raise
         except Exception as e:
             _logger.exception("Failed to auto-install %s", cmd_name)
             raise UserError(_("Failed to auto-install %s: %s") % (cmd_name, str(e)))
