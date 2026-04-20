@@ -73,11 +73,11 @@ class CloudflareConfigManager(models.AbstractModel):
                         except OSError as e:
                             _logger.warning(f"Could not read mtime for {filepath}: {e}")
 
-        latest_mtime = str(int(max_mtime))
+        latest_mtime = int(max_mtime)
 
         try:
             utils = self.env["zero_sudo.security.utils"]
-            last_mtime = utils._get_system_param("cloudflare.last_static_mtime", "0")
+            last_mtime = int(utils._get_system_param("cloudflare.last_static_mtime", "0"))
 
             if latest_mtime > last_mtime:
                 # Update the system parameter to track the new state.
@@ -85,7 +85,7 @@ class CloudflareConfigManager(models.AbstractModel):
                 # we can safely update ir.config_parameter without explicitly calling .sudo()
                 if self.env.su:
                     self.env["ir.config_parameter"].set_param(
-                        "cloudflare.last_static_mtime", latest_mtime
+                        "cloudflare.last_static_mtime", str(latest_mtime)
                     )
 
                 svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_purge")

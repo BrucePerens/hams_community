@@ -58,7 +58,8 @@ class CloudflarePurgeWizard(models.TransientModel):
         if self.purge_type == "urls":
             # Normalizing URLs based on website domain if they are relative
             base_url = self.website_id.domain.rstrip('/') if self.website_id.domain else self.env["zero_sudo.security.utils"]._get_system_param("web.base.url", "https://localhost").rstrip("/")
-            normalized_urls = [f"{base_url}{u}" if u.startswith("/") else u for u in items]
+            # ADR-0001: Standardized URL resolution
+            normalized_urls = [f"{base_url}{u}" if str(u).startswith("/") else u for u in items]
             success = purge_urls(normalized_urls, token, zone_id)
             if success:
                 return {

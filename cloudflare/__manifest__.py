@@ -5,7 +5,7 @@
     "category": "Website",
     "version": "1.3",
     "license": "AGPL-3",
-    "depends": ["base", "web", "zero_sudo", "website"],
+    "depends": ["base", "web", "zero_sudo", "website", "manual_library"],
     "data": [
         "security/security_data.xml",
         "security/ir.model.access.csv",
