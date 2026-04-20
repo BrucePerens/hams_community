@@ -13,6 +13,7 @@ Control plane for the CDN edge. Manages Cache-Tags, WAF bans, and Turnstile CAPT
 * **Turnstile API:** `env['cloudflare.turnstile'].verify_token(...)` securely evaluates CAPTCHA handshakes against the API.
 * **Edge Context:** `env['cloudflare.utils'].get_request_context()` (Extracts trusted IP/Geodata).
 * **Tunnel Setup:** Wizard dynamically generates the `cloudflared` execution token command for edge network bridging `[@ANCHOR: cf_tunnel_setup]`.
+* **Tunnel Management:** Modules can sync existing tunnels `[@ANCHOR: cf_sync_tunnels]` and delete them `[@ANCHOR: cf_delete_tunnel]`.
 
 ## 3. Automated Subsystems
 * Injects `Cloudflare-CDN-Cache-Control` headers natively via `ir.http._post_dispatch`.

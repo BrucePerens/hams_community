@@ -38,11 +38,6 @@ self.env['daemon.key.registry'].register_daemon(daemon_name, user_xml_id, env_fi
 * **`action_force_provision_all()`** [@ANCHOR: action_force_provision_all]:
     * **Behavior:** Synchronously iterates through all registered daemons, purges legacy keys, and securely provisions fresh keys to disk.
     * **Use Case:** Designed to be executed programmatically via `odoo-bin shell` during systemd CI/CD bootstrapping sequences. This resolves start-up race conditions where headless containers boot and check for `.env` keys faster than Odoo's automated cron pipeline cycles.
-
-## 6. Verification & Tests
-The following anchors verify the functionality of the Daemon Key Manager:
-* **register_daemon_api**: Verified by [@ANCHOR: test_register_daemon_api]
-* **documentation_installed**: Verified by [@ANCHOR: test_documentation_installed]
     * **Example Execution:**
       ```bash
       odoo-bin shell -c odoo.conf -d hams --no-http -e "env['daemon.key.registry'].action_force_provision_all(); env.cr.commit()"
@@ -62,3 +57,8 @@ The `__system__` user ID (`SUPERUSER_ID` 1) is strictly forbidden from provision
 
 ### Self-Healing Rotation
 Daemons utilizing these files must implement a `try/except` loop around their JSON-RPC calls. Upon detecting an `AccessError` (indicating the `ir.cron` job has rotated the keys), the daemon should simply re-read the `.env` file from the disk to acquire the new key and retry the transaction seamlessly.
+
+## 6. Verification & Tests
+The following anchors verify the functionality of the Daemon Key Manager:
+* **register_daemon_api**: Verified by [@ANCHOR: test_register_daemon_api]
+* **documentation_installed**: Verified by [@ANCHOR: test_documentation_installed]
