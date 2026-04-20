@@ -59,7 +59,7 @@ class ServiceWorkerController(http.Controller):
         max_mtime, file_sizes = self._get_fs_stats()
 
         #
-        quota_mb = int(request.env['ir.config_parameter'].sudo().get_param('caching.safe_quota_mb', '35') or 35) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        quota_mb = int(request.env['zero_sudo.security.utils']._get_system_param('caching.safe_quota_mb', '35') or 35) # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
 
         # Reserve 15MB for Odoo's compiled /web/assets/ bundles and overhead
         SAFE_QUOTA = quota_mb * 1024 * 1024
@@ -101,7 +101,7 @@ class ServiceWorkerController(http.Controller):
 
         latest_mtime, max_file_size = self._get_global_static_info()
 
-        invalidation_version = request.env['ir.config_parameter'].sudo().get_param('caching.invalidation_version', '1') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        invalidation_version = request.env['zero_sudo.security.utils']._get_system_param('caching.invalidation_version', '1') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
 
         content = content.replace("__CACHE_NAME__", f"odoo-assets-cache-{latest_mtime}-v{invalidation_version}")
         content = content.replace("__MAX_FILE_SIZE_BYTES__", max_file_size)

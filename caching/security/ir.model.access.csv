@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_caching_service_config_param,caching.service.config.param,base.model_ir_config_parameter,caching.group_caching_service,1,1,1,0

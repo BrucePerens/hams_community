@@ -9,19 +9,22 @@ class TestSettingsAndCache(HttpCase):
         updates the MAX_FILE_SIZE_BYTES in the /sw.js payload.
         """
         # Get baseline response
-        self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '35') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        env_svc = self.with_user(svc_uid).env
+
+        env_svc['ir.config_parameter'].set_param('caching.safe_quota_mb', '35') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_35 = self.url_open("/sw.js")
         self.assertEqual(response_35.status_code, 200)
 
         # Change quota
-        self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '10') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        env_svc['ir.config_parameter'].set_param('caching.safe_quota_mb', '10') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_10 = self.url_open("/sw.js")
         self.assertEqual(response_10.status_code, 200)
 
         # They should be different (assuming file size sums hit these thresholds)
         # But at the very least, they evaluate dynamically.
         # We can test that it evaluates dynamically by setting it extremely low
-        self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '0') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        env_svc['ir.config_parameter'].set_param('caching.safe_quota_mb', '0') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_0 = self.url_open("/sw.js")
 
         # If quota is 0, the max file size should be 0 or slightly less than the smallest file
@@ -34,7 +37,9 @@ class TestSettingsAndCache(HttpCase):
         and that this change is reflected in the /sw.js CACHE_NAME.
         """
         # Ensure we have a starting state
-        self.env['ir.config_parameter'].sudo().set_param('caching.invalidation_version', '1') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        env_svc = self.with_user(svc_uid).env
+        env_svc['ir.config_parameter'].set_param('caching.invalidation_version', '1') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
 
         response_1 = self.url_open("/sw.js")
         content_1 = response_1.text
@@ -55,7 +60,7 @@ class TestSettingsAndCache(HttpCase):
         [@ANCHOR: test_caching_sudo_params]
         """
         # This test acts as the anchor verifying that the params are intentionally safe
-        val = self.env['ir.config_parameter'].sudo().get_param('caching.safe_quota_mb') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
+        val = self.env['zero_sudo.security.utils']._get_system_param('caching.safe_quota_mb') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         self.assertTrue(val is not None or val is None)
 
     def test_04_xpath_rendering_settings(self):
