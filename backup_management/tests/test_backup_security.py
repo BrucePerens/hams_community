@@ -78,6 +78,8 @@ class TestBackupSecurity(TransactionCase):
         )
 
     def test_01_multi_persona_isolation(self):
+        # Tests [@ANCHOR: test_backup_security]
+        # Tests [@ANCHOR: backup_path_validation]
         """
         BDD: Given ADR-0050 Proxy Ownership IDOR (Multi-Persona Mandate)
         When standard personas attempt to interact with the backup tables
