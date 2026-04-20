@@ -13,6 +13,6 @@ def post_init_hook(env):
 
     # Execute Zero-Sudo invocation of the config manager
     svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-        "cloudflare.user_cloudflare_service"
+        "cloudflare.user_cloudflare_waf"
     )
     env["cloudflare.config.manager"].with_user(svc_uid).initialize_cloudflare_state()

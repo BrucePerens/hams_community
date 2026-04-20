@@ -23,7 +23,7 @@ class ResConfigSettings(models.TransientModel):
 
     def action_deploy_cf_waf(self):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_waf"
         )
         website_id = (
             self.website_id.id
@@ -51,7 +51,7 @@ class ResConfigSettings(models.TransientModel):
 
     def action_pull_cf_waf(self):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "cloudflare.user_cloudflare_service"
+            "cloudflare.user_cloudflare_waf"
         )
         website_id = (
             self.website_id.id
