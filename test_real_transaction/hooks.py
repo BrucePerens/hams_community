@@ -10,6 +10,7 @@ def install_knowledge_docs(env):
     If it is, reads the standalone HTML documentation file and installs it.
     """
     # Support both manual_library and standard Odoo knowledge modules
+    # [@ANCHOR: documentation_injection]
     if "knowledge.article" in env:
         # Use the odoo_facility_service_internal from zero_sudo for general maintenance tasks
         # This ensures we don't depend on manual_library's service account.

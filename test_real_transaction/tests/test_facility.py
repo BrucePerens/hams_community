@@ -5,6 +5,12 @@ from odoo.addons.test_real_transaction.tests.real_transaction import RealTransac
 
 @tagged("post_install", "-at_install")
 class TestRealTransactionFacility(RealTransactionCase):
+    # Tests [@ANCHOR: cursor_hijacking]
+    # Tests [@ANCHOR: leak_snapshotting]
+    # Tests [@ANCHOR: orm_instrumentation]
+    # Tests [@ANCHOR: automated_cleanup]
+    # Tests [@ANCHOR: leak_verification]
+
     def test_01_auto_cleanup_tracking(self):
         """
         Prove that the facility accurately tracks and auto-deletes standard ORM creations.
@@ -118,6 +124,8 @@ class TestRealTransactionFacility(RealTransactionCase):
         """
         Verify that the module's documentation was correctly installed into knowledge.article.
         """
+        # Tests [@ANCHOR: documentation_bootstrap]
+        # Tests [@ANCHOR: documentation_injection]
         if "knowledge.article" in self.env:
             article = self.env["knowledge.article"].search(
                 [("name", "=", "Real Transaction Testing Facility Guide")], limit=1

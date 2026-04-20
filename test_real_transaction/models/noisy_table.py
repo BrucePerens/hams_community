@@ -16,6 +16,7 @@ class NoisyTable(models.Model):
         Wait until all modules are installed and the registry is fully loaded
         before attempting to install documentation.
         """
+        # [@ANCHOR: documentation_bootstrap]
         super()._register_hook()
         if self.env.registry.ready:
             install_knowledge_docs(self.env)
