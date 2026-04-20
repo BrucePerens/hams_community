@@ -6,5 +6,6 @@ This module is a lightweight domain extension for `user_websites`. It connects o
 
 ## Technical Implementation
 * **Model Injection:** It fuses the `website.seo.metadata` mixin into the `res.users` and `user.websites.group` models.
-* **Authorization:** It appends the SEO metadata fields to the `_get_writeable_fields` whitelist, adhering to ADR-0015. This allows standard users to save their customized Meta Title and Description via the frontend widget without requiring backend Administrator rights.
+* **Authorization:** It appends the SEO metadata fields to the `SELF_WRITEABLE_FIELDS` property. This allows standard users to save their customized Meta Title and Description via the frontend widget.
 * **Controller Interception:** It overrides the `/<slug>/blog` route. After the base controller prepares the data, this module injects the SEO-aware user or group record as the `main_object`, seamlessly activating the "Optimize SEO" UI menu for the blog owner while hiding it from guests.
+* **Documentation:** Automatically installs its guide into the Knowledge/Manual Library if either module is present. It uses a soft dependency approach, ensuring it works in environments with or without a documentation module.

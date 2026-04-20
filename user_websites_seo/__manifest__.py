@@ -11,7 +11,6 @@
         "base",
         "website",
         "user_websites",
-        "manual_library",
     ],
     "data": [
         "views/res_users_views.xml",
