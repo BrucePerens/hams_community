@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 {
     "name": "Distributed Redis Cache",
     "summary": "Fine-grained distributed caching and phase coherence for horizontally scaled Odoo clusters.",
@@ -14,10 +15,11 @@ Distributed Redis Cache
     "category": "Technical",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base"],
+    "depends": ["base", "zero_sudo", "manual_library"],
     "data": [
-        "views/distributed_cache_views.xml",
+        "security/distributed_redis_cache_security.xml",
         "security/ir.model.access.csv",
+        "views/distributed_cache_views.xml",
     ],
     "installable": True,
     "application": False,
