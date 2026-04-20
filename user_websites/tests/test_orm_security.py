@@ -85,6 +85,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
                 {
                     "target_url": f"/{self.user_b.website_slug}/page",
                     "description": "Fake report to cause trouble.",
+                    "reported_by_user_id": self.user_a.id,
                 }
             )
         )

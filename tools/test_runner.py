@@ -580,6 +580,10 @@ def save_db_cache(db_name, cache_file, mod_string):
         logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
         pass
 
+    env = dict(os.environ)
+    if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
+        env["PGHOST"] = "/opt/hams/pgsock"
+
     try:
         with open(cache_file, "wb") as f:
             res = subprocess.run(

@@ -11,19 +11,18 @@ class TestSettingsAndCache(HttpCase):
         # Get baseline response
         self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '35') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_35 = self.url_open("/sw.js")
-        content_35 = response_35.text
+        self.assertEqual(response_35.status_code, 200)
 
         # Change quota
         self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '10') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_10 = self.url_open("/sw.js")
-        content_10 = response_10.text
+        self.assertEqual(response_10.status_code, 200)
 
         # They should be different (assuming file size sums hit these thresholds)
         # But at the very least, they evaluate dynamically.
         # We can test that it evaluates dynamically by setting it extremely low
         self.env['ir.config_parameter'].sudo().set_param('caching.safe_quota_mb', '0') # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params] # burn-ignore-sudo: Tested by [@ANCHOR: test_caching_sudo_params]
         response_0 = self.url_open("/sw.js")
-        content_0 = response_0.text
 
         # If quota is 0, the max file size should be 0 or slightly less than the smallest file
         # We can just verify that it doesn't crash

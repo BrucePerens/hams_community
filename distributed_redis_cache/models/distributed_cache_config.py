@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, _
+from odoo import models, fields, _
 from odoo.addons.distributed_redis_cache.redis_cache import invalidate_model_cache
 from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
 import json

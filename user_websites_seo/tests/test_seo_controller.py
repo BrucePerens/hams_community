@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase
-from odoo.http import request
-from unittest.mock import patch, MagicMock
+from odoo.http import request, Response # noqa: F401
+from unittest.mock import patch, MagicMock # noqa: F401
 
 # Import the controller to test the method directly
 from odoo.addons.user_websites_seo.controllers.main import UserWebsitesSEOController
@@ -26,7 +26,7 @@ class TestSEOController(TransactionCase):
         to avoid SSTI vulnerabilities.
         """
         # Mock the response from the base controller
-        mock_response = MagicMock()
+        mock_response = Response()
         mock_response.qcontext = {
             'profile_user': self.regular_user
         }

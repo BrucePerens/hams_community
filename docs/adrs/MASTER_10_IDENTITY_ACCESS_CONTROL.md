@@ -13,7 +13,7 @@ Balancing an open community platform with stringent anti-spam and anti-hijacking
 * This allows users to assign themselves as the proxy `owner_user_id`. Controllers temporarily escalate to a Service Account strictly to execute the database write, constrained mathematically by the mixin validating ownership context.
 * **CMS vs. App Segregation:** Because `website.page` creation triggers these Proxy Ownership intercepts, system facilities and interactive apps MUST be built as standard HTTP controllers returning `<template>` views. Do not create `website.page` records for static or dynamic app views unless the paradigm explicitly requires end-user drag-and-drop CMS editing.
 
-### 2. The "Self-Writeable Fields" Idiom (0015)
+### 2. The "Self-Writable Fields" Idiom (0015)
 * To allow users to modify their personal settings on the locked `res.users` table without `.sudo()`, models MUST override `_get_writeable_fields` and explicitly append the allowed preference fields.
 
 ### 3. Public Guest User Idiom (0036)

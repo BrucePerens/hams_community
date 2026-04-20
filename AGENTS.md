@@ -57,7 +57,15 @@ Parcel is not to be used for other LLM user interfaces, only gemini.google.com .
 
 * **jules.google.com interface:**
 
+* **Context:** Use FileFetcher to get any necessary files.
+
 * **Testing:**
+Tests must correspond to the production environment as much as possible. Do
+not create file names or other features that are specific to tests. Use the
+exact ones used in the production environment. DO NOT EVER CREATE TEST-SPECIFIC
+FEATURES. USE THE SAME ONES USED IN PRODUCTION. THIS IS A MANDATORY RULE. DO NOT
+VIOLATE IT.
+
 See docs/TESTING_IN_JULES.md . Use the
 `--provision-jules` flag to provision the test environment. Create ~/tmp for
 the user that will run testing, the file filtered_test.txt will be deposited

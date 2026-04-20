@@ -27,9 +27,9 @@ class TestSEOModels(TransactionCase):
             'member_ids': [(6, 0, [cls.regular_user1.id])]
         })
 
-    def test_get_writeable_fields(self):
+    def test_self_writeable_fields(self):
         """Test that SEO fields are added to writeable fields for users."""
-        fields = self.env['res.users']._get_writeable_fields()
+        fields = self.env['res.users'].SELF_WRITEABLE_FIELDS
         seo_fields = [
             "website_meta_title",
             "website_meta_description",

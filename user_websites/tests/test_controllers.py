@@ -66,6 +66,7 @@ class TestUserWebsitesControllers(RealTransactionCase):
             {
                 "target_url": "/some-bad-page",
                 "description": "Found a violation",
+                "reported_by_user_id": self.user_a.id,
             }
         )
 
