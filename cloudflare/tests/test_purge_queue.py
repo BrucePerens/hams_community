@@ -91,7 +91,6 @@ class TestPurgeQueue(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_04_purge_queue_tags_processing(self, mock_post):
-        # [@ANCHOR: test_purge_queue_tags_processing]
         # Tests [@ANCHOR: cf_enqueue_tags_api]
         """Verify that tag purges in the queue are processed correctly."""
         mock_response = MagicMock()

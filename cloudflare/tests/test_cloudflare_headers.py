@@ -17,6 +17,9 @@ class TestCloudflareHeaders(HttpCase):
         )
 
     def test_01_static_asset_caching(self):
+        # [@ANCHOR: test_cf_static_asset_caching]
+        # Tests [@ANCHOR: ir_http_post_dispatch_headers]
+        # # Verified by [@ANCHOR: test_cf_static_asset_caching]
         """Verify media and assets receive the correct cache headers."""
 
         company_id = self.env.company.id
