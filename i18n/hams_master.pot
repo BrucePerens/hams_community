@@ -3,14 +3,20 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 05:24+0000\n"
-"PO-Revision-Date: 2026-04-20 05:24+0000\n"
+"POT-Creation-Date: 2026-04-20 19:24+0000\n"
+"PO-Revision-Date: 2026-04-20 19:24+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
+
+#: binary_downloader/hooks.py:43
+#: distributed_redis_cache/hooks.py:41
+#: test_real_transaction/hooks.py:33
+msgid "<p>Error loading documentation file: %s</p>"
+msgstr ""
 
 #: user_websites/models/user_websites_owned_mixin.py:78
 #: user_websites/models/user_websites_owned_mixin.py:144
@@ -41,6 +47,14 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this post."
 msgstr ""
 
+#: backup_management/models/utils.py:12
+msgid "Access to the path %s is prohibited for security reasons."
+msgstr ""
+
+#: test_real_transaction/tests/real_transaction.py:82
+msgid "An error occurred during final commit in tearDown: %s"
+msgstr ""
+
 #: user_websites/models/content_violation_appeal.py:43
 msgid "Appeal approved. You pardoned the user and lifted their suspension."
 msgstr ""
@@ -53,15 +67,15 @@ msgstr ""
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
-#: pager_duty/models/incident.py:175
+#: pager_duty/models/incident.py:178
 msgid "Auto-resolved by NOC monitor recovery sequence."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:628
+#: pager_duty/models/pager_check.py:636
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:535
+#: backup_management/models/backup_config.py:546
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
@@ -69,35 +83,39 @@ msgstr ""
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:85
+#: daemon_key_manager/models/key_registry.py:96
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:440
+#: pager_duty/models/pager_check.py:448
 msgid "Checks exported to JSON daemon configuration."
 msgstr ""
 
-#: cloudflare/models/res_config_settings.py:120
+#: cloudflare/models/res_config_settings.py:125
 msgid "Cloudflare Tunnel Command"
 msgstr ""
 
-#: database_management/models/pg_config.py:93
+#: database_management/models/pg_config.py:94
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:642
+#: pager_duty/models/pager_check.py:650
 msgid "Daemon Notified"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:330
+#: pager_duty/models/pager_check.py:338
 msgid "Database checks updated from JSON file."
 msgstr ""
 
-#: user_websites/models/res_config_settings.py:58
+#: test_real_transaction/tests/real_transaction.py:166
+msgid "Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s"
+msgstr ""
+
+#: user_websites/models/res_config_settings.py:71
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:83
+#: database_management/models/db_stats.py:165
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -105,11 +123,11 @@ msgstr ""
 msgid "Error! You cannot create recursive articles."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:439
+#: pager_duty/models/pager_check.py:447
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:177
+#: binary_downloader/models/binary_manifest.py:198
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -117,7 +135,7 @@ msgstr ""
 msgid "Failed to create tunnel: %s"
 msgstr ""
 
-#: cloudflare/models/tunnel.py:37
+#: cloudflare/models/tunnel.py:39
 msgid "Failed to delete tunnel: %s"
 msgstr ""
 
@@ -129,6 +147,14 @@ msgstr ""
 msgid "Failed to lift ban via Cloudflare API: %s"
 msgstr ""
 
+#: distributed_redis_cache/hooks.py:40
+msgid "Failed to load Distributed Redis Cache documentation file: %s"
+msgstr ""
+
+#: test_real_transaction/hooks.py:32
+msgid "Failed to load real transaction documentation file: %s"
+msgstr ""
+
 #: cloudflare/models/res_config_settings.py:78
 msgid "Failed to pull WAF rules: %s"
 msgstr ""
@@ -137,11 +163,11 @@ msgstr ""
 msgid "Failed to purge everything from Cloudflare cache."
 msgstr ""
 
-#: cloudflare/models/purge_wizard.py:91
+#: cloudflare/models/purge_wizard.py:92
 msgid "Failed to purge specific Cache-Tags from Cloudflare cache."
 msgstr ""
 
-#: cloudflare/models/purge_wizard.py:75
+#: cloudflare/models/purge_wizard.py:76
 msgid "Failed to purge specific URLs from Cloudflare cache."
 msgstr ""
 
@@ -153,11 +179,11 @@ msgstr ""
 msgid "Failed to update some settings:\n%s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:329
+#: pager_duty/models/pager_check.py:337
 msgid "Import Successful"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:251
+#: pager_duty/models/pager_check.py:259
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
@@ -165,23 +191,27 @@ msgstr ""
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:269
+#: backup_management/models/backup_config.py:280
 msgid "Kopia backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:160
+#: backup_management/models/backup_config.py:171
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:329
+#: backup_management/models/backup_config.py:340
 msgid "Kopia policies applied successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:173
+#: backup_management/models/backup_config.py:184
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: cloudflare/models/tunnel.py:28
+#: binary_downloader/models/binary_manifest.py:186
+msgid "Member %s not found in archive."
+msgstr ""
+
+#: cloudflare/models/tunnel.py:30
 msgid "Missing Cloudflare API Token or Account ID for the website."
 msgstr ""
 
@@ -194,24 +224,24 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: database_management/models/db_stats.py:49
-#: database_management/models/pg_config.py:144
+#: database_management/models/db_stats.py:135
+#: database_management/models/pg_config.py:145
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
-#: pager_duty/models/incident.py:152
+#: pager_duty/models/incident.py:155
 msgid "New Incident Created"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:246
+#: pager_duty/models/pager_check.py:254
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:150
+#: zero_sudo/models/security_utils.py:151
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
-#: database_management/models/pg_config.py:92
+#: database_management/models/pg_config.py:93
 msgid "Optimizations Applied"
 msgstr ""
 
@@ -223,19 +253,19 @@ msgstr ""
 msgid "Purged everything from Cloudflare cache successfully."
 msgstr ""
 
-#: cloudflare/models/purge_wizard.py:85
+#: cloudflare/models/purge_wizard.py:86
 msgid "Purged specific Cache-Tags from Cloudflare cache successfully."
 msgstr ""
 
-#: cloudflare/models/purge_wizard.py:69
+#: cloudflare/models/purge_wizard.py:70
 msgid "Purged specific URLs from Cloudflare cache successfully."
 msgstr ""
 
-#: user_websites/models/res_config_settings.py:59
+#: user_websites/models/res_config_settings.py:72
 msgid "Python dependencies have been successfully updated. Restart the Odoo service for changes to take effect."
 msgstr ""
 
-#: database_management/models/pg_config.py:56
+#: database_management/models/pg_config.py:57
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
@@ -255,11 +285,11 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:156
+#: zero_sudo/models/security_utils.py:157
 msgid "Requirements file not found at %s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:629
+#: pager_duty/models/pager_check.py:637
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
@@ -267,15 +297,15 @@ msgstr ""
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:149
+#: binary_downloader/models/binary_manifest.py:159
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:138
+#: zero_sudo/models/security_utils.py:139
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:128
+#: zero_sudo/models/security_utils.py:129
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
@@ -291,21 +321,29 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:95
+#: binary_downloader/models/binary_manifest.py:181
+msgid "Security Alert: Tar slip attempt detected."
+msgstr ""
+
+#: daemon_key_manager/models/key_registry.py:106
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:138
+#: daemon_key_manager/models/key_registry.py:52
+msgid "Security Alert: The environment file path must start with '%s'."
+msgstr ""
+
+#: daemon_key_manager/models/key_registry.py:149
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
 #: binary_downloader/models/binary_manifest.py:84
 #: cloudflare/models/purge_wizard.py:45
-#: cloudflare/models/purge_wizard.py:68
-#: cloudflare/models/purge_wizard.py:84
+#: cloudflare/models/purge_wizard.py:69
+#: cloudflare/models/purge_wizard.py:85
 #: cloudflare/models/res_config_settings.py:43
 #: cloudflare/models/res_config_settings.py:71
-#: cloudflare/models/tunnel.py:88
+#: cloudflare/models/tunnel.py:98
 #: cloudflare/models/zone_settings_wizard.py:90
 #: distributed_redis_cache/models/distributed_cache_config.py:25
 msgid "Success"
@@ -332,7 +370,7 @@ msgstr ""
 msgid "The binary name cannot contain slashes or backslashes."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:643
+#: pager_duty/models/pager_check.py:651
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
@@ -349,7 +387,7 @@ msgstr ""
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
-#: cloudflare/models/tunnel.py:89
+#: cloudflare/models/tunnel.py:99
 msgid "Tunnels synced successfully."
 msgstr ""
 
@@ -358,19 +396,19 @@ msgstr ""
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:177
+#: backup_management/models/backup_config.py:188
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:168
+#: zero_sudo/models/security_utils.py:169
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:78
+#: database_management/models/db_stats.py:160
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:81
+#: database_management/models/db_stats.py:163
 msgid "Vacuum timed out for %s."
 msgstr ""
 
@@ -382,11 +420,11 @@ msgstr ""
 msgid "You applied a strike to the owner. Current strike count: %s"
 msgstr ""
 
-#: user_websites_seo/models/user_websites_group.py:29
+#: user_websites_seo/models/user_websites_group.py:30
 msgid "You can only modify SEO metadata for groups you are a member of."
 msgstr ""
 
-#: user_websites_seo/models/res_users.py:39
+#: user_websites_seo/models/res_users.py:49
 msgid "You can only modify your own SEO metadata."
 msgstr ""
 
@@ -431,11 +469,11 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:290
+#: backup_management/models/backup_config.py:301
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:154
+#: backup_management/models/backup_config.py:165
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 
@@ -447,7 +485,7 @@ msgstr ""
 msgid "🚨 **AUTOMATED ACTION:** The system suspended this user for accumulating 3 or more violation strikes and unpublished their personal content."
 msgstr ""
 
-#: pager_duty/models/incident.py:109
+#: pager_duty/models/incident.py:112
 msgid "🚨 ESCALATION: Incident open for > 15 minutes!"
 msgstr ""
 

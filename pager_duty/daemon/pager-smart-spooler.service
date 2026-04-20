@@ -1,5 +1,5 @@
 [Unit]
-Description=Hams.com SMART Disk Health Spooler
+Description=Pager SMART Disk Health Spooler
 After=network.target
 
 [Service]

@@ -1,13 +1,13 @@
 [Unit]
-Description=Hams.com Generalized Pager Monitor
+Description=Generalized Pager Monitor
 After=network.target
 
 [Service]
 Type=simple
-User=bruce
-Group=bruce
+User=odoo
+Group=odoo
 WorkingDirectory=/opt/odoo/addons/pager_duty/daemon
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=/etc/pager_daemons.env
 Environment="ODOO_USER=pager_service_internal"
 ExecStart=/usr/bin/env python3 generalized_monitor.py
 

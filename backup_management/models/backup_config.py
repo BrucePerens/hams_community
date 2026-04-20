@@ -92,7 +92,7 @@ class BackupConfig(models.Model):
     )
 
     def _get_fernet(self):
-        key = os.environ.get("HAMS_CRYPTO_KEY")
+        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get("HAMS_CRYPTO_KEY")
         if key and Fernet:
             return Fernet(key.encode("utf-8"))
         return None

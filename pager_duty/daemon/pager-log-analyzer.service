@@ -1,5 +1,5 @@
 [Unit]
-Description=Hams.com Chrooted Log Analyzer (Splunk Engine)
+Description=Pager Chrooted Log Analyzer
 After=network.target redis-server.service
 Requires=redis-server.service
 
@@ -7,7 +7,7 @@ Requires=redis-server.service
 Type=simple
 User=root
 WorkingDirectory=/opt/odoo/addons/pager_duty/daemon
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=/etc/pager_daemons.env
 ExecStart=/usr/bin/env python3 pager_log_analyzer.py
 Restart=always
 RestartSec=10

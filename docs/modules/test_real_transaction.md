@@ -12,8 +12,13 @@ It completely bypasses Odoo's test cursor wrapping, allowing tests to perform ac
 ## 2. Features
 * **Auto-Cleanup:** Instruments `BaseModel.create()` to track created records and unlinks them across multiple cascade passes in `tearDown()`.
 * **Leak Detection:** Takes a SQL snapshot of all tables before and after the test to guarantee pristine state.
+* **Open Source Documentation:** Automatically installs documentation if either `manual_library` or Odoo's native `knowledge` module is present.
 
 ## 3. Usage & Import Path
 To use this facility, you MUST import it using the exact following path:
 `from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase`
 Do not assume the class is in a file named `test_real_transaction.py` or inside `ham_testing`.
+
+## 4. Dependencies
+* **Hard:** `base`, `zero_sudo`.
+* **Soft:** `manual_library` or `knowledge` (for documentation).

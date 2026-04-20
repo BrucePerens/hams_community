@@ -23,4 +23,5 @@ A clean-room, 100% drop-in API replacement for the proprietary Odoo Enterprise K
 * **URL Resolution:** Computes the public website URL path for articles dynamically based on their hierarchy `[@ANCHOR: manual_compute_website_url]`.
 * **Structural Integrity:** Strictly enforces parent-child hierarchy checks to prevent recursive or invalid tree structures `[@ANCHOR: manual_check_hierarchy]`.
 * **Dynamic TOC:** Automatically parses article HTML on the frontend to generate a dynamic Table of Contents `[@ANCHOR: manual_toc_logic]`.
+* **Automated Documentation Installation:** Implements a global `_register_hook` on `ir.module.module` to automatically discover and install documentation from `data/documentation.html` or `LLM_DOCUMENTATION.md` for all installed modules once the registry is ready, supporting soft dependencies on `knowledge.article` or `manual.article`.
 </features>

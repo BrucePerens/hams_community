@@ -25,7 +25,7 @@ class TestPurgeQueue(TransactionCase):
         QueueModel = self.env["cloudflare.purge.queue"]
         vals = [
             {
-                "target_item": f"https://hams.com/page-{i}",
+                "target_item": f"https://example.com/page-{i}",
                 "purge_type": "url",
                 "website_id": self.website.id,
             }
