@@ -15,8 +15,8 @@ from odoo.addons.distributed_redis_cache.redis_cache import (  # noqa: E402
     invalidate_model_cache,
 )
 
-REDIS_HOST = os.environ.get("REDIS_HOST") or "redis"
-REDIS_PORT = int(os.environ.get("REDIS_PORT") or 6379)
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 redis_pool = redis.ConnectionPool(
     host=REDIS_HOST,
     port=REDIS_PORT,
@@ -560,10 +560,8 @@ class WebsitePage(models.Model):
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
-            cron = (
-                self.env.with_user(svc_uid)
-                .with_context(mail_notrack=True, prefetch_fields=False)
-                .ref("user_websites.ir_cron_flush_view_counters", raise_if_not_found=False)
-            )
+            cron = self.env.ref("user_websites.ir_cron_flush_view_counters", raise_if_not_found=False)
             if cron:
-                cron._trigger()
+                cron.with_user(svc_uid).with_context(
+                    mail_notrack=True, prefetch_fields=False
+                )._trigger()

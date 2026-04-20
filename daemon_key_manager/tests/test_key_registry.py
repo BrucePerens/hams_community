@@ -13,6 +13,16 @@ class TestKeyRegistry(TransactionCase):
         super().setUp()
         self.registry_model = self.env["daemon.key.registry"]
 
+        # Centralize test paths to ensure they match the production environment directory structure
+        self.test_env_paths = [
+            '/var/lib/odoo/daemon_keys/test_daemon.env',
+            '/var/lib/odoo/daemon_keys/cron_test_daemon.env',
+            '/var/lib/odoo/daemon_keys/ownership_test_daemon.env'
+        ]
+
+        # Ensure a clean slate before each test runs to prevent state collision
+        self._cleanup_test_files()
+
         self.service_user = self.env['res.users'].create({
             'name': 'Test Service Account',
             'login': 'test_service_account',
@@ -25,33 +35,35 @@ class TestKeyRegistry(TransactionCase):
             'is_service_account': False,
         })
 
+    def tearDown(self):
+        # Ensure files are removed after the test completes as well
+        self._cleanup_test_files()
+        super().tearDown()
+
+    def _cleanup_test_files(self):
+        for path in self.test_env_paths:
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
 
     def test_security_constraints(self):
         """Test that only service accounts can be used."""
-        try:
-            os.remove('/tmp/test.env')
-        except OSError:
-            pass
-
         with self.assertRaises(UserError):
             self.registry_model.create({
                 'name': 'Test Daemon',
                 'user_id': self.regular_user.id,
-                'env_file_path': '/tmp/test.env',
+                'env_file_path': self.test_env_paths[0],
             })
 
     def test_cron_rotate_all_keys(self):
         """Test cron rotation and trigger functionality. [@ANCHOR: test_cron_rotate_all_keys]"""
-        try:
-            os.remove('/tmp/cron_test.env')
-        except OSError:
-            pass
-
         # Create a mock daemon
         registry = self.registry_model.create({
             'name': 'Cron Test Daemon',
             'user_id': self.service_user.id,
-            'env_file_path': '/tmp/cron_test.env',
+            'env_file_path': self.test_env_paths[1],
         })
 
         # Test cron execution wrapper
@@ -72,7 +84,7 @@ class TestKeyRegistry(TransactionCase):
         registry = self.registry_model.create({
             'name': 'Ownership Test Daemon',
             'user_id': service_user.id,
-            'env_file_path': '/tmp/test_ownership.env',
+            'env_file_path': self.test_env_paths[2],
         })
         registry._rotate_key_and_write_file()
 

@@ -1,12 +1,34 @@
 # -*- coding: utf-8 -*-
+import os
+import shutil
+
 from odoo.tests.common import TransactionCase, tagged
 from odoo.exceptions import AccessError
 
 
 @tagged("post_install", "-at_install")
 class TestBackupSecurity(TransactionCase):
+    def tearDown(self):
+        if os.path.exists("/var/lib/odoo/backup_repo"):
+            if os.path.isdir("/var/lib/odoo/backup_repo"):
+                shutil.rmtree("/var/lib/odoo/backup_repo", ignore_errors=True)
+            else:
+                try:
+                    os.remove("/var/lib/odoo/backup_repo")
+                except OSError:
+                    pass
+        super().tearDown()
+
     def setUp(self):
         super().setUp()
+        if os.path.exists("/var/lib/odoo/backup_repo"):
+            if os.path.isdir("/var/lib/odoo/backup_repo"):
+                shutil.rmtree("/var/lib/odoo/backup_repo", ignore_errors=True)
+            else:
+                try:
+                    os.remove("/var/lib/odoo/backup_repo")
+                except OSError:
+                    pass
         self.admin = self.env.ref("base.user_admin")
         self.user_std = self.env["res.users"].create(
             {
@@ -47,7 +69,7 @@ class TestBackupSecurity(TransactionCase):
         self.config = (
             self.env["backup.config"]
             .with_user(self.admin)
-            .create({"name": "Sec Test", "engine": "kopia", "target_path": "/tmp"})
+            .create({"name": "Sec Test", "engine": "kopia", "target_path": "/var/lib/odoo/backup_repo"})
         )
         self.snapshot = (
             self.env["backup.snapshot"]

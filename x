@@ -1,3 +1,7 @@
+@@BOUNDARY_FIX_ENV_HOOKS@@
+Path: user_websites/hooks.py
+Operation: overwrite
+
 # -*- coding: utf-8 -*-
 from odoo.tools import file_open
 
@@ -10,7 +14,7 @@ def install_knowledge_docs(env):
     if "knowledge.article" in env:
         # ADR-0001: Execute setup operations under the dedicated service account context
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.odoo_facility_service_internal"
+            "user_websites.user_user_websites_service_account"
         )
         article_model = env["knowledge.article"].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
@@ -99,3 +103,4 @@ def post_init_hook(env):
         cf_svc.with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         ).write({"is_service_account": True})
+@@BOUNDARY_FIX_ENV_HOOKS@@--

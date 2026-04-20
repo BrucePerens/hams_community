@@ -23,8 +23,8 @@ _logger = logging.getLogger(__name__)
 BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 # ADR-0024: Global Connection Pooling for Non-ORM Datastores
-REDIS_HOST = os.environ.get("REDIS_HOST") or "redis"
-REDIS_PORT = int(os.environ.get("REDIS_PORT") or 6379)
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 redis_pool = redis.ConnectionPool(
     host=REDIS_HOST,
     port=REDIS_PORT,
@@ -55,11 +55,10 @@ def _async_gdpr_erasure(db_name, user_id):
             svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
-            env_svc = env.with_user(svc_uid).with_context(
-                mail_notrack=True, prefetch_fields=False
-            )
 
-            user = env_svc["res.users"].with_context(active_test=False).browse(user_id)
+            user = env["res.users"].with_user(svc_uid).with_context(
+                active_test=False, mail_notrack=True, prefetch_fields=False
+            ).browse(user_id)
             if user.exists():
                 user._execute_gdpr_erasure()
 
@@ -73,7 +72,7 @@ def _async_gdpr_erasure(db_name, user_id):
                         "active": False,
                     }
                 )
-                env_svc.cr.commit()
+                env.cr.commit()
         except Exception as e:
             env.cr.rollback()
             _logger.error(f"GDPR Erasure failed for user {user_id}: {e}")
@@ -88,7 +87,7 @@ def _async_gdpr_erasure(db_name, user_id):
                     summary=f"FAILED GDPR Erasure for User ID {user_id}",
                     note=f"The background GDPR erasure process failed. Exception: {e}<br/><pre>{error_details}</pre>",
                 )
-                env_svc.cr.commit()
+                env.cr.commit()
             except Exception as inner_e:
                 _logger.critical(
                     f"Failed to notify admin of GDPR erasure failure: {inner_e}"
@@ -979,14 +978,14 @@ class UserWebsitesController(http.Controller):
 
             yield "\n}"
 
-        headers = [
-            ("Content-Type", "application/json"),
-            (
-                "Content-Disposition",
-                content_disposition(f"{user.website_slug}_data_export.json"),
-            ),
-        ]
-        return request.make_response("".join(generate_json_stream()), headers=headers)
+        headers = {
+            "Content-Disposition": content_disposition(f"{user.website_slug}_data_export.json"),
+        }
+        return werkzeug.wrappers.Response(
+            generate_json_stream(),
+            headers=headers,
+            content_type="application/json"
+        )
 
     @http.route(
         ["/my/privacy/delete_content"],

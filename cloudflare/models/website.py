@@ -8,19 +8,19 @@ class WebsiteCloudflare(models.Model):
 
     cloudflare_api_token = fields.Char(
         string="CF API Token",
-        groups="base.group_system,cloudflare.group_cloudflare_service",
+        groups="base.group_system,cloudflare.group_cloudflare_purge,cloudflare.group_cloudflare_waf,cloudflare.group_cloudflare_tunnel",
     )
     cloudflare_zone_id = fields.Char(
         string="CF Zone ID",
-        groups="base.group_system,cloudflare.group_cloudflare_service",
+        groups="base.group_system,cloudflare.group_cloudflare_purge,cloudflare.group_cloudflare_waf,cloudflare.group_cloudflare_tunnel",
     )
     cloudflare_account_id = fields.Char(
         string="CF Account ID",
-        groups="base.group_system,cloudflare.group_cloudflare_service",
+        groups="base.group_system,cloudflare.group_cloudflare_purge,cloudflare.group_cloudflare_waf,cloudflare.group_cloudflare_tunnel",
     )
     cloudflare_turnstile_secret = fields.Char(
         string="Turnstile Secret",
-        groups="base.group_system,cloudflare.group_cloudflare_service",
+        groups="base.group_system,cloudflare.group_cloudflare_purge,cloudflare.group_cloudflare_waf,cloudflare.group_cloudflare_tunnel",
     )
 
     def _get_cloudflare_credentials(self):

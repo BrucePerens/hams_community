@@ -41,13 +41,12 @@ def _async_unpublish_content(db_name, user_ids):
             svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
-            env_svc = env.with_user(svc_uid).with_context(
-                mail_notrack=True, prefetch_fields=False
-            )
 
             while True:
                 pages = (
-                    env_svc["website.page"]
+                    env["website.page"]
+                    .with_user(svc_uid)
+                    .with_context(mail_notrack=True, prefetch_fields=False)
                     .search(
                         [
                             ("owner_user_id", "in", user_ids),
@@ -59,14 +58,16 @@ def _async_unpublish_content(db_name, user_ids):
                 if not pages:
                     break
                 pages.write({"website_published": False})
-                env_svc.cr.commit()
+                env.cr.commit()
                 if len(pages) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 posts = (
-                    env_svc["blog.post"]
+                    env["blog.post"]
+                    .with_user(svc_uid)
+                    .with_context(mail_notrack=True, prefetch_fields=False)
                     .search(
                         [
                             ("owner_user_id", "in", user_ids),
@@ -78,20 +79,22 @@ def _async_unpublish_content(db_name, user_ids):
                 if not posts:
                     break
                 posts.write({"is_published": False})
-                env_svc.cr.commit()
+                env.cr.commit()
                 if len(posts) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
                 blogs = (
-                    env_svc["blog.blog"]
+                    env["blog.blog"]
+                    .with_user(svc_uid)
+                    .with_context(mail_notrack=True, prefetch_fields=False)
                     .search([("owner_user_id", "in", user_ids)], limit=5000)
                 )
                 if not blogs:
                     break
                 blogs.write({"active": False})
-                env_svc.cr.commit()
+                env.cr.commit()
                 if len(blogs) < 5000:
                     break
                 if not os.environ.get('HAMS_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
@@ -415,222 +418,90 @@ class ResUsers(models.Model):
         db_name = self.env.cr.dbname
         is_test = odoo.tools.config.get("test_enable")
 
-        def generate_pages():
-            offset = 0
-            while True:
-                items = []
-                if is_test:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
-                    )
-                    batch = (
-                        self.env["website.page"]
-                        .with_user(svc_uid)
-                        .search(
-                            [("owner_user_id", "=", user_id)], limit=1000, offset=offset
-                        )
-                    )
-                    items = [
-                        {"name": p.name, "url": p.url, "content": p.arch} for p in batch
-                    ]
-                else:
-                    with Registry(db_name).cursor() as cr:
-                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                            "user_websites.user_user_websites_service_account"
-                        )
-                        batch = (
-                            env["website.page"]
-                            .with_user(svc_uid)
-                            .search(
-                                [("owner_user_id", "=", user_id)],
-                                limit=1000,
-                                offset=offset,
-                            )
-                        )
-                        items = [
-                            {"name": p.name, "url": p.url, "content": p.arch}
-                            for p in batch
-                        ]
-                if not items:
-                    break
-                for item in items:
-                    yield item
-                if len(items) < 1000:
-                    break
-                offset += 1000
+        if is_test:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_user_websites_service_account"
+            )
+            pages_batch = self.env["website.page"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=10000)
+            pages_data = [{"name": p.name, "url": p.url, "content": p.arch} for p in pages_batch]
 
-        def generate_blogs():
-            offset = 0
-            while True:
-                items = []
-                if is_test:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
-                    )
-                    batch = (
-                        self.env["blog.post"]
-                        .with_user(svc_uid)
-                        .search(
-                            [("owner_user_id", "=", user_id)], limit=1000, offset=offset
-                        )
-                    )
-                    items = [
-                        {
-                            "name": b.name,
-                            "content": b.content,
-                            "published_date": str(b.post_date),
-                        }
-                        for b in batch
-                    ]
-                else:
-                    with Registry(db_name).cursor() as cr:
-                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                            "user_websites.user_user_websites_service_account"
-                        )
-                        batch = (
-                            env["blog.post"]
-                            .with_user(svc_uid)
-                            .search(
-                                [("owner_user_id", "=", user_id)],
-                                limit=1000,
-                                offset=offset,
-                            )
-                        )
-                        items = [
-                            {
-                                "name": b.name,
-                                "content": b.content,
-                                "published_date": str(b.post_date),
-                            }
-                            for b in batch
-                        ]
-                if not items:
-                    break
-                for item in items:
-                    yield item
-                if len(items) < 1000:
-                    break
-                offset += 1000
+            blogs_batch = self.env["blog.post"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=10000)
+            blogs_data = [{"name": b.name, "content": b.content, "published_date": str(b.post_date)} for b in blogs_batch]
 
-        def generate_reports():
-            offset = 0
-            while True:
-                items = []
-                if is_test:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
-                    )
-                    batch = (
-                        self.env["content.violation.report"]
-                        .with_user(svc_uid)
-                        .search(
-                            [("reported_by_user_id", "=", user_id)],
-                            limit=1000,
-                            offset=offset,
-                        )
-                    )
-                    items = [
-                        {
-                            "target_url": r.target_url,
-                            "description": r.description,
-                            "status": r.state,
-                            "submitted_date": str(r.create_date),
-                        }
-                        for r in batch
-                    ]
-                else:
-                    with Registry(db_name).cursor() as cr:
-                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                            "user_websites.user_user_websites_service_account"
-                        )
-                        batch = (
-                            env["content.violation.report"]
-                            .with_user(svc_uid)
-                            .search(
-                                [("reported_by_user_id", "=", user_id)],
-                                limit=1000,
-                                offset=offset,
-                            )
-                        )
-                        items = [
-                            {
-                                "target_url": r.target_url,
-                                "description": r.description,
-                                "status": r.state,
-                                "submitted_date": str(r.create_date),
-                            }
-                            for r in batch
-                        ]
-                if not items:
-                    break
-                for item in items:
-                    yield item
-                if len(items) < 1000:
-                    break
-                offset += 1000
+            reports_batch = self.env["content.violation.report"].with_user(svc_uid).search([("reported_by_user_id", "=", user_id)], limit=10000)
+            reports_data = [{"target_url": r.target_url, "description": r.description, "status": r.state, "submitted_date": str(r.create_date)} for r in reports_batch]
 
-        def generate_appeals():
-            offset = 0
-            while True:
-                items = []
-                if is_test:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
-                    )
-                    batch = (
-                        self.env["content.violation.appeal"]
-                        .with_user(svc_uid)
-                        .search([("user_id", "=", user_id)], limit=1000, offset=offset)
-                    )
-                    items = [
-                        {
-                            "reason": a.reason,
-                            "status": a.state,
-                            "submitted_date": str(a.create_date),
-                        }
-                        for a in batch
-                    ]
-                else:
+            appeals_batch = self.env["content.violation.appeal"].with_user(svc_uid).search([("user_id", "=", user_id)], limit=10000)
+            appeals_data = [{"reason": a.reason, "status": a.state, "submitted_date": str(a.create_date)} for a in appeals_batch]
+
+            def generate_pages():
+                for item in pages_data: yield item
+            def generate_blogs():
+                for item in blogs_data: yield item
+            def generate_reports():
+                for item in reports_data: yield item
+            def generate_appeals():
+                for item in appeals_data: yield item
+        else:
+            def generate_pages():
+                offset = 0
+                while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                            "user_websites.user_user_websites_service_account"
-                        )
-                        batch = (
-                            env["content.violation.appeal"]
-                            .with_user(svc_uid)
-                            .search(
-                                [("user_id", "=", user_id)], limit=1000, offset=offset
-                            )
-                        )
-                        items = [
-                            {
-                                "reason": a.reason,
-                                "status": a.state,
-                                "submitted_date": str(a.create_date),
-                            }
-                            for a in batch
-                        ]
-                if not items:
-                    break
-                for item in items:
-                    yield item
-                if len(items) < 1000:
-                    break
-                offset += 1000
+                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
+                        batch = env["website.page"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
+                        items = [{"name": p.name, "url": p.url, "content": p.arch} for p in batch]
+                    if not items: break
+                    for item in items: yield item
+                    if len(items) < 1000: break
+                    offset += 1000
+
+            def generate_blogs():
+                offset = 0
+                while True:
+                    with Registry(db_name).cursor() as cr:
+                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
+                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
+                        batch = env["blog.post"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
+                        items = [{"name": b.name, "content": b.content, "published_date": str(b.post_date)} for b in batch]
+                    if not items: break
+                    for item in items: yield item
+                    if len(items) < 1000: break
+                    offset += 1000
+
+            def generate_reports():
+                offset = 0
+                while True:
+                    with Registry(db_name).cursor() as cr:
+                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
+                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
+                        batch = env["content.violation.report"].with_user(svc_uid).search([("reported_by_user_id", "=", user_id)], limit=1000, offset=offset)
+                        items = [{"target_url": r.target_url, "description": r.description, "status": r.state, "submitted_date": str(r.create_date)} for r in batch]
+                    if not items: break
+                    for item in items: yield item
+                    if len(items) < 1000: break
+                    offset += 1000
+
+            def generate_appeals():
+                offset = 0
+                while True:
+                    with Registry(db_name).cursor() as cr:
+                        env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
+                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
+                        batch = env["content.violation.appeal"].with_user(svc_uid).search([("user_id", "=", user_id)], limit=1000, offset=offset)
+                        items = [{"reason": a.reason, "status": a.state, "submitted_date": str(a.create_date)} for a in batch]
+                    if not items: break
+                    for item in items: yield item
+                    if len(items) < 1000: break
+                    offset += 1000
 
         res = getattr(super(), "_get_gdpr_streamed_keys", lambda: {})()
-        res.update(
-            {
-                "pages": generate_pages,
-                "blog_posts": generate_blogs,
-                "submitted_reports": generate_reports,
-                "appeals": generate_appeals,
-            }
-        )
+        res.update({
+            "pages": generate_pages,
+            "blog_posts": generate_blogs,
+            "submitted_reports": generate_reports,
+            "appeals": generate_appeals,
+        })
         return res
 
     def _get_gdpr_export_data(self):

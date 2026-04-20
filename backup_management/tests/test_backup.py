@@ -17,11 +17,30 @@ from unittest.mock import patch, MagicMock
 
 @tagged("post_install", "-at_install")
 class TestBackupManagement(RealTransactionCase):
+    def tearDown(self):
+        if os.path.exists("/var/lib/odoo/backup_repo"):
+            if os.path.isdir("/var/lib/odoo/backup_repo"):
+                shutil.rmtree("/var/lib/odoo/backup_repo", ignore_errors=True)
+            else:
+                try:
+                    os.remove("/var/lib/odoo/backup_repo")
+                except OSError:
+                    pass
+        super().tearDown()
+
     def setUp(self):
         super().setUp()
+        if os.path.exists("/var/lib/odoo/backup_repo"):
+            if os.path.isdir("/var/lib/odoo/backup_repo"):
+                shutil.rmtree("/var/lib/odoo/backup_repo", ignore_errors=True)
+            else:
+                try:
+                    os.remove("/var/lib/odoo/backup_repo")
+                except OSError:
+                    pass
         self.admin = self.env.ref("base.user_admin")
         self.config_kopia = self.env["backup.config"].create(
-            {"name": "Test Kopia", "engine": "kopia", "target_path": "/tmp/repo"}
+            {"name": "Test Kopia", "engine": "kopia", "target_path": "/var/lib/odoo/backup_repo"}
         )
         self.config_pg = self.env["backup.config"].create(
             {"name": "Test PG", "engine": "pgbackrest", "target_path": "main"}

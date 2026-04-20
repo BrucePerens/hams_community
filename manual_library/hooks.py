@@ -9,7 +9,13 @@ def install_knowledge_docs(env):
     If it is, reads the standalone HTML documentation file and installs it.
     """
     if "knowledge.article" in env:
-        article_model = env["knowledge.article"]
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.odoo_facility_service_internal"
+        )
+        article_model = env["knowledge.article"].with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
+        )
+
         existing = article_model.search(
             [("name", "=", "Manual Library Documentation")], limit=1
         )

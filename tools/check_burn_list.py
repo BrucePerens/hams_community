@@ -175,6 +175,11 @@ ERROR_RULES = [
         re.compile(r"127\.0\.0\.1"),
         "CRITICAL NETWORK HARDCODING: local loop-back prohibited, use a name that can be resolved using Docker or /etc/hosts .",
     ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"['\"]/tmp(?:/|['\"])"),
+        "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
+    ),
 ]
 
 WARNING_RULES = []
@@ -750,6 +755,18 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 self.add_error(
                     node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`"
                 )
+            elif attr in ("with_user", "with_context"):
+                caller = node.func.value
+                if isinstance(caller, ast.Name) and caller.id == "env":
+                    self.add_error(
+                        node.lineno,
+                        f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `env['model'].{attr}(...)`)."
+                    )
+                elif isinstance(caller, ast.Attribute) and caller.attr == "env" and getattr(caller.value, "id", "") == "self":
+                    self.add_error(
+                        node.lineno,
+                        f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `self.env['model'].{attr}(...)`)."
+                    )
             elif attr == "_check_recursion":
                 self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
             elif attr in ("message_post", "message_subscribe") and (
@@ -976,7 +993,15 @@ def scan_file(filepath):
             "model_account_journal",
         ]
         for i, line in enumerate(lines, 1):
-            if not line.strip() or line.startswith("id,"):
+            stripped_line = line.strip()
+            if not stripped_line:
+                if i < len(lines):
+                    errors_found.append(f"Line {i}: CRITICAL CSV FORMAT: Blank lines are forbidden in Odoo CSV files.")
+                continue
+            if stripped_line.startswith("#"):
+                errors_found.append(f"Line {i}: CRITICAL CSV FORMAT: Comments (#) are forbidden in Odoo CSV files.")
+
+            if line.startswith("id,"):
                 continue
             parts = line.split(",")
             if len(parts) >= 3:
@@ -1158,9 +1183,18 @@ def scan_file(filepath):
                         None,
                     )
                     model = record_anc.attrs.get("model") if record_anc else None
-                    if model == "res.groups" and node.attrs.get("name") == "users":
+                    field_name = node.attrs.get("name")
+                    if model == "res.groups" and field_name == "users":
                         errors_found.append(
                             f"Line {node.lineno}: CRITICAL BIAS TRAP: use user_ids."
+                        )
+                    if model == "res.groups" and field_name == "category_id":
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL SECURITY CATEGORY: category_id is banned for res.groups. Use privilege_id."
+                        )
+                    if model == "res.users" and field_name == "groups_id":
+                        errors_found.append(
+                            f"Line {node.lineno}: CRITICAL BIAS TRAP: groups_id is banned for res.users. Use group_ids."
                         )
 
                 for k, v in node.attrs.items():

@@ -8,8 +8,21 @@ from odoo.exceptions import UserError, ValidationError
 @tagged("post_install", "-at_install")
 class TestBinaryManifest(TransactionCase):
 
+    def tearDown(self):
+        if os.path.exists("/var/lib/odoo/hams_bin/fake"):
+            try:
+                os.remove("/var/lib/odoo/hams_bin/fake")
+            except OSError:
+                pass
+        super().tearDown()
+
     def setUp(self):
         super().setUp()
+        if os.path.exists("/var/lib/odoo/hams_bin/fake"):
+            try:
+                os.remove("/var/lib/odoo/hams_bin/fake")
+            except OSError:
+                pass
         # The service account is already created by security.xml data
         self.service_user = self.env.ref("binary_downloader.user_binary_downloader_service")
 
@@ -83,7 +96,7 @@ class TestBinaryManifest(TransactionCase):
             with patch("os.path.exists", side_effect=mock_exists):
                 with patch("tempfile.NamedTemporaryFile") as mock_temp:
                     mock_temp_inst = MagicMock()
-                    mock_temp_inst.name = "/tmp/fake"
+                    mock_temp_inst.name = "/var/lib/odoo/hams_bin/fake"
                     mock_temp.return_value.__enter__.return_value = mock_temp_inst
                     with patch("shutil.copy2") as mock_copy, patch("os.unlink"):
                         path = self.env["binary.manifest"].ensure_executable("testbin")

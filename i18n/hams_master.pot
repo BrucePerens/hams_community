@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 01:53+0000\n"
-"PO-Revision-Date: 2026-04-20 01:53+0000\n"
+"POT-Creation-Date: 2026-04-20 05:14+0000\n"
+"PO-Revision-Date: 2026-04-20 05:14+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -61,7 +61,7 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:538
+#: backup_management/models/backup_config.py:535
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
@@ -165,19 +165,19 @@ msgstr ""
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:271
+#: backup_management/models/backup_config.py:269
 msgid "Kopia backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:163
+#: backup_management/models/backup_config.py:160
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:331
+#: backup_management/models/backup_config.py:329
 msgid "Kopia policies applied successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:176
+#: backup_management/models/backup_config.py:173
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
@@ -207,7 +207,7 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:148
+#: zero_sudo/models/security_utils.py:150
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -255,7 +255,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:154
+#: zero_sudo/models/security_utils.py:156
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -271,11 +271,11 @@ msgstr ""
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:136
+#: zero_sudo/models/security_utils.py:138
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:126
+#: zero_sudo/models/security_utils.py:128
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
@@ -324,7 +324,7 @@ msgstr ""
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
-#: user_websites/models/res_users.py:345
+#: user_websites/models/res_users.py:348
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
@@ -340,7 +340,7 @@ msgstr ""
 msgid "The selected user must be a service account."
 msgstr ""
 
-#: user_websites/models/res_users.py:188
+#: user_websites/models/res_users.py:191
 #: user_websites/models/user_websites_groups.py:92
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
@@ -353,16 +353,16 @@ msgstr ""
 msgid "Tunnels synced successfully."
 msgstr ""
 
-#: user_websites/models/res_users.py:211
+#: user_websites/models/res_users.py:214
 #: user_websites/models/user_websites_groups.py:129
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:180
+#: backup_management/models/backup_config.py:177
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:166
+#: zero_sudo/models/security_utils.py:168
 msgid "VENV update failed:\n%s"
 msgstr ""
 
@@ -398,7 +398,7 @@ msgstr ""
 msgid "You cannot create a record owned by another user."
 msgstr ""
 
-#: user_websites/controllers/main.py:687
+#: user_websites/controllers/main.py:686
 msgid "You cannot create posts for this user."
 msgstr ""
 
@@ -406,12 +406,12 @@ msgstr ""
 msgid "You cannot transfer ownership of a record to another user or group."
 msgstr ""
 
-#: user_websites/controllers/main.py:698
+#: user_websites/controllers/main.py:697
 msgid "You do not have permission to create posts for this group."
 msgstr ""
 
-#: user_websites/controllers/main.py:434
-#: user_websites/controllers/main.py:445
+#: user_websites/controllers/main.py:433
+#: user_websites/controllers/main.py:444
 msgid "You do not have permission to create this site."
 msgstr ""
 
@@ -431,11 +431,11 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:292
+#: backup_management/models/backup_config.py:290
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:157
+#: backup_management/models/backup_config.py:154
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 

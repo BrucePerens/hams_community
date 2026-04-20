@@ -105,6 +105,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             "user_websites.enable_blog_comments",
             "caching.safe_quota_mb",
             "caching.invalidation_version",
+            "user_websites.global_website_page_limit",
+            "user_websites.last_digest_id",
         ]
 
         banned_substrings = [

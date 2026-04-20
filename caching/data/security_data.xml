@@ -3,7 +3,7 @@
     <data noupdate="1">
         <record id="group_caching_service" model="res.groups">
             <field name="name">Caching Service Account Group</field>
-            <field name="category_id" ref="base.module_category_hidden"/>
+            <field name="privilege_id" ref="base.module_category_hidden"/>
         </record>
 
         <record id="user_caching_service" model="res.users">

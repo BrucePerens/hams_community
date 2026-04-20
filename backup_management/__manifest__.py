@@ -5,7 +5,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "zero_sudo", "test_real_transaction"],
+    "depends": ["base", "mail", "zero_sudo", "test_real_transaction", "binary_downloader"],
     "external_dependencies": {
         "python": ["pika", "cryptography"],
     },

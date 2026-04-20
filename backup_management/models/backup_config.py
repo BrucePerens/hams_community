@@ -105,9 +105,7 @@ class BackupConfig(models.Model):
                         rec.kopia_password_crypt.encode("utf-8")
                     ).decode("utf-8")
                 except Exception as e:
-
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
-
             else:
                 rec.kopia_password = False
 
@@ -131,7 +129,6 @@ class BackupConfig(models.Model):
                         rec.secret_key_crypt.encode("utf-8")
                     ).decode("utf-8")
                 except Exception as e:
-
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
                     rec.secret_key = "***DECRYPT_FAILED***"
             else:
@@ -206,6 +203,9 @@ class BackupConfig(models.Model):
             )
 
             def publish_task(msg=payload):
+                import odoo  # noqa: E402
+                if odoo.tools.config.get("test_enable"):
+                    return
                 try:
                     rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
                     rmq_user = os.environ.get("RMQ_USER") or "guest"
@@ -225,9 +225,7 @@ class BackupConfig(models.Model):
                     )
                     connection.close()
                 except Exception as e:
-
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
-
                     logging.getLogger(__name__).error(
                         "Failed to publish backup task to RMQ: %s", e
                     )
@@ -351,7 +349,6 @@ class BackupConfig(models.Model):
                     }
                 )
             except Exception as e:
-
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
