@@ -11,37 +11,24 @@
                 <div id="user_websites_dropzone_settings">
                     <!-- [@ANCHOR: dropzone_settings] -->
                 </div>
-                <div class="app_settings_block" data-string="User Websites" data-key="user_websites">
-                    <h2>User Websites Management</h2>
-                    <div class="row mt16 o_settings_container">
-
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_right_pane">
-                                <label for="user_websites_administrators_ids"/>
-                                <div class="text-muted">
-                                    Select users who can manage all user sites and violation reports.
-                                </div>
-                                <div class="mt8">
-                                    <field name="user_websites_administrators_ids" widget="many2many_tags"/>
-                                </div>
+                <app data-string="User Websites" string="User Websites" name="user_websites">
+                    <block title="User Websites Management" id="user_websites_management">
+                        <setting help="Select users who can manage all user sites and violation reports.">
+                            <field name="user_websites_administrators_ids" widget="many2many_tags"/>
+                        </setting>
+                        <setting help="Default maximum number of web pages a standard user can create.">
+                            <field name="global_website_page_limit"/>
+                        </setting>
+                        <setting help="Email address where content violation reports will be sent.">
+                            <field name="company_abuse_email" placeholder="abuse@yourcompany.com"/>
+                        </setting>
+                        <setting title="System Environment" help="Manually synchronize the Python Virtual Environment with requirements.txt.">
+                            <div class="mt8">
+                                <button name="action_update_python_venv" type="object" string="Update Dependencies" class="btn-warning" icon="fa-cogs" confirm="This will run pip install -r requirements.txt. You must manually restart the server afterward. Proceed?"/>
                             </div>
-                        </div>
-
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_right_pane">
-                                <span class="o_form_label">System Environment</span>
-                                <div class="text-muted">
-                                    Manually synchronize the Python Virtual Environment with requirements.txt.
-                                </div>
-                                <div class="mt8">
-                                    <button name="action_update_python_venv" type="object" string="Update Dependencies" class="btn-warning" icon="fa-cogs" confirm="This will run pip install -r requirements.txt. You must manually restart the server afterward. Proceed?"/>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
+                        </setting>
+                    </block>
+                </app>
             </xpath>
         </field>
     </record>
