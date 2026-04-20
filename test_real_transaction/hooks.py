@@ -9,9 +9,12 @@ def install_knowledge_docs(env):
     Checks if the knowledge.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
     """
+    # Support both manual_library and standard Odoo knowledge modules
     if "knowledge.article" in env:
+        # Use the odoo_facility_service_internal from zero_sudo for general maintenance tasks
+        # This ensures we don't depend on manual_library's service account.
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "manual_library.user_manual_library_service_account"
+            "zero_sudo.odoo_facility_service_internal"
         )
         article_model = env["knowledge.article"].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
@@ -45,10 +48,3 @@ def install_knowledge_docs(env):
             return article_model.create(vals)
         return existing
     return None
-
-def post_init_hook(env):
-    """
-    Hook executed upon module installation.
-    Installs the documentation via the Knowledge API.
-    """
-    install_knowledge_docs(env)
