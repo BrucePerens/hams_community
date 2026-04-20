@@ -87,3 +87,21 @@ class TestPagerSecurity(TransactionCase):
                 AccessError, msg=f"{user.name} MUST NOT be able to unlink incidents."
             ):
                 self.incident.with_user(user).unlink()
+
+    def test_02_documentation_injection(self):
+        """
+        Verify that documentation is correctly injected during post_init_hook.
+        Tests [@ANCHOR: doc_inject_pager_duty]
+        """
+        # The documentation is created in post_init_hook, so it should exist if tests are running.
+        article_model = self.env.get("knowledge.article")
+        if not article_model:
+            # Skip if knowledge.article is not available (e.g. standard Odoo without manual_library)
+            return
+
+        article = article_model.search(
+            [("name", "=", "Pager Duty & Generalized Monitoring")], limit=1
+        )
+        self.assertTrue(article, "Pager Duty documentation article should exist.")
+        self.assertIn("Pager Duty", article.body)
+        self.assertIn("Generalized Monitoring", article.body)
