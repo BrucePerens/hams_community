@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 23:07+0000\n"
-"PO-Revision-Date: 2026-04-20 23:07+0000\n"
+"POT-Creation-Date: 2026-04-20 23:12+0000\n"
+"PO-Revision-Date: 2026-04-20 23:12+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -79,7 +79,7 @@ msgstr ""
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:105
+#: daemon_key_manager/models/key_registry.py:106
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -91,7 +91,7 @@ msgstr ""
 msgid "Cloudflare Tunnel Command"
 msgstr ""
 
-#: database_management/models/pg_config.py:95
+#: database_management/models/pg_config.py:97
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
@@ -111,7 +111,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:166
+#: database_management/models/db_stats.py:168
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -220,8 +220,8 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: database_management/models/db_stats.py:136
-#: database_management/models/pg_config.py:146
+#: database_management/models/db_stats.py:137
+#: database_management/models/pg_config.py:148
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
@@ -237,7 +237,7 @@ msgstr ""
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
-#: database_management/models/pg_config.py:94
+#: database_management/models/pg_config.py:96
 msgid "Optimizations Applied"
 msgstr ""
 
@@ -261,7 +261,7 @@ msgstr ""
 msgid "Python dependencies have been successfully updated. Restart the Odoo service for changes to take effect."
 msgstr ""
 
-#: database_management/models/pg_config.py:58
+#: database_management/models/pg_config.py:60
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
@@ -321,7 +321,7 @@ msgstr ""
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:115
+#: daemon_key_manager/models/key_registry.py:116
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
@@ -329,7 +329,7 @@ msgstr ""
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:161
+#: daemon_key_manager/models/key_registry.py:163
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
@@ -400,11 +400,11 @@ msgstr ""
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:161
+#: database_management/models/db_stats.py:163
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:164
+#: database_management/models/db_stats.py:166
 msgid "Vacuum timed out for %s."
 msgstr ""
 
