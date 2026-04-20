@@ -119,7 +119,6 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             self.test_users.append(u)
 
     def test_02_acl_overhead_loop_elimination(self):
-        import logging
         # [@ANCHOR: test_acl_overhead_loop_elimination]
         # Tests [@ANCHOR: test_acl_overhead_loop_elimination]
         """
@@ -158,16 +157,13 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
         self.authenticate(None, None)
 
-        import logging
         logger = logging.getLogger("odoo.addons.base.models.ir_model")
         with self.assertLogs(logger, level="WARNING") as cm:
             try:
                 self.url_open("/")
                 self.url_open("/community")
             except Exception as e:
-                import logging  # noqa: E402
-
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                _logger.warning("An error occurred: %s", e)
             logger.warning("DUMMY_WARNING_TO_SATISFY_ASSERTLOGS")
 
         acl_warnings = [
