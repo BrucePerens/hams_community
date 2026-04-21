@@ -43,8 +43,6 @@ class CloudflareConfigManager(models.AbstractModel):
 
     def _register_hook(self):
         super()._register_hook()
-        from ..hooks import install_knowledge_docs  # noqa: E402
-        install_knowledge_docs(self.env)
         self._check_static_mtime_and_purge()
 
     @api.model
@@ -77,19 +75,16 @@ class CloudflareConfigManager(models.AbstractModel):
 
         try:
             utils = self.env["zero_sudo.security.utils"]
+            # Use centralized config utilities instead of manual service environments
             last_mtime = int(utils._get_system_param("cloudflare.last_static_mtime", "0"))
 
             if latest_mtime > last_mtime:
-                # Update the system parameter to track the new state.
-                # Because _register_hook runs natively as SUPERUSER during init,
-                # we can safely update ir.config_parameter without explicitly calling .sudo()
-                if self.env.su:
-                    self.env["ir.config_parameter"].set_param(
-                        "cloudflare.last_static_mtime", str(latest_mtime)
-                    )
+                # Update the system parameter using the centralized utility
+                utils._set_system_param("cloudflare.last_static_mtime", str(latest_mtime))
 
-                svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_purge")
-                self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
+                # Trigger the purge using the specific purger environment
+                env_purger = utils._get_service_env("cloudflare.user_cloudflare_purge")
+                env_purger["cloudflare.purge.queue"].enqueue_tags(
                     ["odoo-static-assets"]
                 )
                 _logger.info(

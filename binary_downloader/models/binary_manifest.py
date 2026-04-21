@@ -54,11 +54,6 @@ class BinaryManifest(models.Model):
         "CHECK(LENGTH(TRIM(checksum)) > 0)", "The checksum cannot be empty."
     )
 
-    def _register_hook(self):
-        super()._register_hook()
-        from ..hooks import install_knowledge_docs  # noqa: E402
-        install_knowledge_docs(self.env)
-
     @api.constrains("name")
     def _check_name_no_slashes(self):
         for record in self:

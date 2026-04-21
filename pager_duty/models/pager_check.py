@@ -12,7 +12,6 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
     distributed_cache,
     invalidate_model_cache,
 )
-from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
 
@@ -182,10 +181,6 @@ class PagerCheck(models.Model):
     _grace_period_non_negative = models.Constraint(
         "CHECK(grace_period >= 0)", "The grace period cannot be negative."
     )
-
-    def _register_hook(self):
-        super()._register_hook()
-        install_knowledge_docs(self.env)
 
     @api.model
     @distributed_cache()

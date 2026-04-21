@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 18:41+0000\n"
-"PO-Revision-Date: 2026-04-21 18:41+0000\n"
+"POT-Creation-Date: 2026-04-21 20:49+0000\n"
+"PO-Revision-Date: 2026-04-21 20:49+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -57,7 +57,7 @@ msgstr ""
 msgid "Appeal rejected. The user remains suspended."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:138
+#: binary_downloader/models/binary_manifest.py:133
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
@@ -65,7 +65,7 @@ msgstr ""
 msgid "Auto-resolved by NOC monitor recovery sequence."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:641
+#: pager_duty/models/pager_check.py:636
 msgid "Autodiscovery Complete"
 msgstr ""
 
@@ -77,7 +77,7 @@ msgstr ""
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:453
+#: pager_duty/models/pager_check.py:448
 msgid "Checks exported to JSON daemon configuration."
 msgstr ""
 
@@ -89,11 +89,11 @@ msgstr ""
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:655
+#: pager_duty/models/pager_check.py:650
 msgid "Daemon Notified"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:343
+#: pager_duty/models/pager_check.py:338
 msgid "Database checks updated from JSON file."
 msgstr ""
 
@@ -113,11 +113,11 @@ msgstr ""
 msgid "Error! You cannot create recursive articles."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:452
+#: pager_duty/models/pager_check.py:447
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:222
+#: binary_downloader/models/binary_manifest.py:217
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -161,31 +161,31 @@ msgstr ""
 msgid "Failed to update some settings:\n%s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:342
+#: pager_duty/models/pager_check.py:337
 msgid "Import Successful"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:264
+#: pager_duty/models/pager_check.py:259
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:37
+#: zero_sudo/models/security_utils.py:38
 msgid "Invalid XML ID format: %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:113
+#: binary_downloader/models/binary_manifest.py:108
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:176
+#: backup_management/models/backup_config.py:171
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:189
+#: backup_management/models/backup_config.py:184
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:210
+#: binary_downloader/models/binary_manifest.py:205
 msgid "Member %s not found in archive."
 msgstr ""
 
@@ -198,11 +198,11 @@ msgstr ""
 msgid "Missing Cloudflare API Token or Zone ID for the selected website."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:130
+#: binary_downloader/models/binary_manifest.py:125
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:115
+#: zero_sudo/models/security_utils.py:116
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
@@ -210,11 +210,11 @@ msgstr ""
 msgid "New Incident Created"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:259
+#: pager_duty/models/pager_check.py:254
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:239
+#: zero_sudo/models/security_utils.py:241
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -266,52 +266,52 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:245
+#: zero_sudo/models/security_utils.py:247
 msgid "Requirements file not found at %s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:642
+#: pager_duty/models/pager_check.py:637
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:62
+#: zero_sudo/models/security_utils.py:63
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:178
+#: binary_downloader/models/binary_manifest.py:173
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:196
+#: binary_downloader/models/binary_manifest.py:191
 msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:170
-#: zero_sudo/models/security_utils.py:208
+#: zero_sudo/models/security_utils.py:171
+#: zero_sudo/models/security_utils.py:209
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:164
+#: zero_sudo/models/security_utils.py:165
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:203
+#: zero_sudo/models/security_utils.py:204
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:48
+#: zero_sudo/models/security_utils.py:49
 msgid "Security Alert: Service Account '%s' not found."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:81
+#: zero_sudo/models/security_utils.py:82
 msgid "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:59
+#: zero_sudo/models/security_utils.py:60
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:205
+#: binary_downloader/models/binary_manifest.py:200
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
@@ -327,7 +327,7 @@ msgstr ""
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:102
+#: binary_downloader/models/binary_manifest.py:97
 #: cloudflare/models/purge_wizard.py:45
 #: cloudflare/models/purge_wizard.py:69
 #: cloudflare/models/purge_wizard.py:85
@@ -339,7 +339,7 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:103
+#: binary_downloader/models/binary_manifest.py:98
 msgid "Successfully installed %s."
 msgstr ""
 
@@ -356,11 +356,11 @@ msgstr ""
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:66
+#: binary_downloader/models/binary_manifest.py:61
 msgid "The binary name cannot contain slashes or backslashes."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:656
+#: pager_duty/models/pager_check.py:651
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
@@ -386,11 +386,11 @@ msgstr ""
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:193
+#: backup_management/models/backup_config.py:188
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:257
+#: zero_sudo/models/security_utils.py:259
 msgid "VENV update failed:\n%s"
 msgstr ""
 
@@ -426,7 +426,7 @@ msgstr ""
 msgid "You cannot create a record owned by another user."
 msgstr ""
 
-#: user_websites/controllers/main.py:686
+#: user_websites/controllers/main.py:685
 msgid "You cannot create posts for this user."
 msgstr ""
 
@@ -434,16 +434,16 @@ msgstr ""
 msgid "You cannot transfer ownership of a record to another user or group."
 msgstr ""
 
-#: user_websites/controllers/main.py:697
+#: user_websites/controllers/main.py:696
 msgid "You do not have permission to create posts for this group."
 msgstr ""
 
-#: user_websites/controllers/main.py:433
-#: user_websites/controllers/main.py:444
+#: user_websites/controllers/main.py:432
+#: user_websites/controllers/main.py:443
 msgid "You do not have permission to create this site."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:95
+#: binary_downloader/models/binary_manifest.py:90
 msgid "You do not have sufficient permissions to install binaries."
 msgstr ""
 
@@ -463,7 +463,7 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:170
+#: backup_management/models/backup_config.py:165
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 

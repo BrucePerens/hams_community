@@ -14,9 +14,6 @@ This journey describes the end-to-end experience of a site owner achieving regul
      - Cookie Policy [@ANCHOR: compliance_cookie_policy_template]
      - Terms of Service [@ANCHOR: compliance_terms_of_service_template]
    - *Verification*: `test_pages_presence` and `test_03_views_rendering` [@ANCHOR: test_compliance_views].
-4. **Documentation Injection**: A comprehensive guide is added to the internal Knowledge base.
-   - *Internal*: `install_knowledge_docs` is called [@ANCHOR: compliance_install_knowledge_docs].
-5. **Continuous Protection**: During subsequent server boots, `_register_hook` ensures the documentation remains available.
 
 ## Verification
 - Verified by [@ANCHOR: test_compliance_ui_tour]

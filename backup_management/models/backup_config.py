@@ -90,11 +90,6 @@ class BackupConfig(models.Model):
         "CHECK(minimum_size_mb >= 0)", "Minimum size threshold cannot be negative."
     )
 
-    def _register_hook(self):
-        super()._register_hook()
-        from ..hooks import install_knowledge_docs  # noqa: E402
-        install_knowledge_docs(self.env)
-
     def _get_fernet(self):
         key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get("HAMS_CRYPTO_KEY")
         if key and Fernet:

@@ -150,19 +150,6 @@ class TestBinaryManifest(TransactionCase):
         with self.assertRaises(ValidationError):
             self.manifest.write({"name": "bad/bin"})
 
-    def test_09_post_init_hook_documentation(self):
-        # Tests [@ANCHOR: binary_doc_bootstrap]
-        """Verify that the post_init_hook correctly creates documentation."""
-        # Post-init hook is already run by the test runner during install.
-        # Find the article created by the hook
-        article_model = self.env.get("knowledge.article")
-        if not article_model:
-            return  # Skip if manual_library isn't fully loaded or mockable here
-
-        article = article_model.search([("name", "=", "Binary Downloader Facility")], limit=1)
-        self.assertTrue(article, "Documentation article should have been created by post_init_hook")
-        self.assertIn("Binary Downloader Facility", article.body)
-
     def test_11_url_validation(self):
         """Verify that only http/https URLs are allowed."""
         with self.assertRaises(ValidationError):

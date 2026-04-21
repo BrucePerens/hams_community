@@ -15,7 +15,6 @@ from werkzeug.urls import url_encode, url_parse
 import werkzeug
 import logging
 from odoo.modules.registry import Registry
-from ..hooks import install_knowledge_docs
 from ..models.res_users import RESERVED_SLUGS
 
 _logger = logging.getLogger(__name__)
@@ -778,7 +777,6 @@ class UserWebsitesController(http.Controller):
             article_model_name = "manual.article"
 
         if article_model_name:
-            install_knowledge_docs(request.env)
             svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.odoo_facility_service_internal"
             )

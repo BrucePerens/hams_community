@@ -1,18 +1,19 @@
 /** @odoo-module **/
-import tour from 'web_tour.tour';
+import { registry } from "@web/core/registry";
 
-tour.register('user_websites_seo_tour', {
+registry.category("web_tour.tours").add("user_websites_seo_tour", {
     test: true,
     url: '/seo-ui-test-user/blog',
-}, [
-    {
-        trigger: 'a[data-action="seo"]',
-        content: 'Check for Optimize SEO menu item',
-        run: 'click',
-    },
-    {
-        trigger: '.modal-title:contains("Optimize SEO")',
-        content: 'Wait for SEO modal to open',
-        run: function() {},
-    }
-]);
+    steps: () => [
+        {
+            trigger: 'a[data-action="seo"]',
+            content: 'Check for Optimize SEO menu item',
+            run: 'click',
+        },
+        {
+            trigger: '.modal-title:contains("Optimize SEO")',
+            content: 'Wait for SEO modal to open',
+            run: () => {},
+        }
+    ],
+});

@@ -30,7 +30,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
     @api.model
     @tools.ormcache("xml_id")
-    def _get_service_uid(self, xml_id):  # [@ANCHOR: get_service_uid]
+    def _get_service_uid(self, xml_id):
+        # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
         # Tests [@ANCHOR: story_secure_escalation]
         if "." not in xml_id:
@@ -94,7 +95,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         and ADR-0064 to prevent ORM cascade Access Errors.
         """
         uid = self._get_service_uid(xml_id)
-        return self.env(user=uid).with_context(mail_notrack=True, prefetch_fields=False)
+        return self.with_user(uid).with_context(mail_notrack=True, prefetch_fields=False).env
 
     @api.model
     def _ensure_executable(self, cmd_name, svc_xml_id=None, pkg_name=None):
@@ -173,7 +174,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        env_svc = self._get_service_env("zero_sudo.config_service_internal")
         return env_svc["ir.config_parameter"].get_param(key, default)
 
     @api.model
@@ -207,10 +208,11 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             raise AccessError(
                 _(
                     "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
-                ) % key
+                )
+                % key
             )
 
-        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        env_svc = self._get_service_env("zero_sudo.config_service_internal")
         env_svc["ir.config_parameter"].set_param(key, value)
         return True
 

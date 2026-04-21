@@ -36,10 +36,6 @@ Tracks whether a binary is available and executable.
 #### `action_install()`
 `[@ANCHOR: binary_action_install]`
 Triggers installation via the UI.
-
-#### `install_knowledge_docs(env)`
-`[@ANCHOR: binary_doc_bootstrap]`
-Bootstraps documentation into the Knowledge system.
 * **Parameters:** `cmd_name` (string) - The name of the binary (e.g., "kopia").
 * **Returns:** `path` (string) - The absolute path to the verified executable.
 * **Logic:**
@@ -69,7 +65,6 @@ For detailed narratives and end-to-end workflows, refer to the following:
 * [Binary Resolution](binary_downloader/docs/stories/binary_resolution.md)
 * [UI Installation](binary_downloader/docs/stories/ui_installation.md)
 * [Installation Status Check](binary_downloader/docs/stories/is_installed_check.md)
-* [Documentation Bootstrap](binary_downloader/docs/stories/doc_bootstrap.md)
 
 ### Journeys
 * [Automated Provisioning Flow](binary_downloader/docs/journeys/auto_provisioning_flow.md)

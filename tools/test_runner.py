@@ -107,7 +107,9 @@ class FailureExtractor:
                 or "AMQPConnector" in line
                 or "Cloudflare URL purge API failed for chunk: API fail" in line
                 or "Cloudflare Tag purge API failed for chunk: API fail" in line
+                or "[BACKUP_WORKER]" in line
             ):
+                # Standard info/warning line. Stop capturing if we were.
                 # Standard info/warning line. Stop capturing if we were.
                 if self.capturing:
                     self.captured_blocks.append(
@@ -1024,7 +1026,8 @@ def main():
             print("❌ ERROR: No modules found in this repository. Aborting.")
             sys.exit(1)
 
-        mod_string = "base," + ",".join(target_modules)
+        # Inject web_tour globally into the test framework so all modules can run tours
+        mod_string = "base,web_tour," + ",".join(target_modules)
         test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
         extractor = FailureExtractor(args.error_log)
@@ -1172,7 +1175,10 @@ def main():
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
 
-                restored, cache_file = check_and_restore_cache(args.db, mod)
+                # Globally inject web_tour so headless browser tests pass regardless of manifest inclusion
+                mod_with_tour = f"web_tour,{mod}"
+
+                restored, cache_file = check_and_restore_cache(args.db, mod_with_tour)
                 if not restored:
                     print(f"[*] Initializing DB for {mod}...")
                     init_cmd = [
@@ -1184,7 +1190,7 @@ def main():
                         "-d",
                         args.db,
                         "-i",
-                        mod,
+                        mod_with_tour,
                         "--stop-after-init",
                         "--workers=0",
                         "--max-cron-threads=0",
@@ -1196,7 +1202,7 @@ def main():
                     if rc_init != 0:
                         failed_modules.append(mod)
                         continue
-                    save_db_cache(args.db, cache_file, mod)
+                    save_db_cache(args.db, cache_file, mod_with_tour)
 
                 print(f"[*] Executing tests for {mod}...")
                 cmd = [
@@ -1208,7 +1214,7 @@ def main():
                     "-d",
                     args.db,
                     "-u",
-                    mod,
+                    mod_with_tour,
                     "--test-enable",
                     "--test-tags",
                     f"/{mod}",
@@ -1234,6 +1240,9 @@ def main():
         elif args.mode == "xml":
             failed_modules = []
             for mod in target_modules:
+                # Globally inject web_tour so headless browser dependencies resolve during view compilation
+                mod_with_tour = f"web_tour,{mod}"
+
                 print("\n[*] Checking XML views in: {}".format(mod))
                 cmd = [
                     venv_python,
@@ -1243,9 +1252,9 @@ def main():
                     "-d",
                     args.db,
                     "-i",
-                    mod,
+                    mod_with_tour,
                     "-u",
-                    mod,
+                    mod_with_tour,
                     "--stop-after-init",
                     "--log-level=error",
                     "--workers=0",

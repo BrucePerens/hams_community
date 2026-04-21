@@ -56,7 +56,8 @@ class Module(models.Model):
             return
 
         try:
-            with tools.file_open(path, 'rb') as f:
+            full_path = f"{module_name}/{path}"
+            with tools.file_open(full_path, 'rb') as f:
                 content_bytes = f.read()
                 content_hash = hashlib.sha256(content_bytes).hexdigest()
                 doc_body = content_bytes.decode('utf-8')

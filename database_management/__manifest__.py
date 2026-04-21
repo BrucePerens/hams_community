@@ -24,7 +24,7 @@
         }
     ],
     "assets": {
-        "web.assets_backend": [
+        "web.assets_tests": [
             "database_management/static/src/tours/**/*",
         ],
     },
