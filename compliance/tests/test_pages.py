@@ -76,7 +76,7 @@ class TestCompliancePagesHttp(HttpCase):
     def test_knowledge_article_installation(self):
         """Verify the documentation article is correctly installed."""
         # [@ANCHOR: test_compliance_knowledge_article_installation]
-        # Tests [@ANCHOR: compliance_install_knowledge_docs]
+        # Tests [@ANCHOR: zero_sudo_doc_installer]
         # Tests [@ANCHOR: story_compliance_documentation]
         article_model_name = None
         if "knowledge.article" in self.env:

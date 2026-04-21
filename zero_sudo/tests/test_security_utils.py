@@ -205,3 +205,28 @@ class TestSecurityUtils(TransactionCase):
             with patch("builtins.open", side_effect=Exception("File not found")):
                 with patch.object(odoo.tools.config, "get", return_value="test_config_key"):
                     self.assertEqual(utils._get_crypto_secret(), "test_config_key")
+
+    def test_09_bootstrap_knowledge_docs(self):
+        # [@ANCHOR: test_zero_sudo_doc_installer]
+        # Tests [@ANCHOR: zero_sudo_doc_installer]
+        # Tests [@ANCHOR: story_zero_sudo_doc_installer]
+        # Tests [@ANCHOR: journey_developer_integration]
+        """
+        Verify that the _bootstrap_knowledge_docs method correctly
+        discovers and installs documentation from module manifests.
+        """
+        article_model_name = None
+        if "knowledge.article" in self.env:
+            article_model_name = "knowledge.article"
+        elif "manual.article" in self.env:
+            article_model_name = "manual.article"
+
+        if not article_model_name:
+            self.skipTest("No documentation API available.")
+
+        # Trigger the centralized installer
+        self.env["ir.module.module"]._bootstrap_knowledge_docs()
+
+        # Check if the primary documentation was successfully injected
+        article = self.env[article_model_name].search([("name", "=", "Zero-Sudo Security Core")], limit=1)
+        self.assertTrue(article, "Documentation for zero_sudo should be installed via the manifest.")

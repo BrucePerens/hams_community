@@ -25,6 +25,7 @@ class Module(models.Model):
     @api.model
     def _bootstrap_knowledge_docs(self):
         # [@ANCHOR: zero_sudo_doc_installer]
+        # Verified by [@ANCHOR: test_zero_sudo_doc_installer]
         article_model_name = None
         if 'knowledge.article' in self.env:
             article_model_name = 'knowledge.article'
