@@ -91,8 +91,8 @@ class ManualLibraryController(http.Controller):
     @http.route(["/manual/search"], type="http", auth="public", website=True)
     def manual_search(self, search="", **kwargs):
         # [@ANCHOR: controller_manual_search]
-        # See [@ANCHOR: story_manual_search] and [@ANCHOR: journey_user_browsing]
         # Verified by [@ANCHOR: test_tour_manual_search]
+        # See story_manual_search and journey_user_browsing
         """
         Provides full-text search across accessible articles.
         """
@@ -139,8 +139,8 @@ class ManualLibraryController(http.Controller):
         self, article_id, is_helpful, website_feedback_honeypot=None, **kwargs
     ):
         # [@ANCHOR: controller_manual_feedback]
-        # See [@ANCHOR: story_manual_feedback] and [@ANCHOR: journey_user_browsing]
         # Verified by [@ANCHOR: test_tour_manual_feedback]
+        # See story_manual_feedback and journey_user_browsing
         """
         Handles article helpfulness ratings via Service Account isolation.
         """

@@ -1,6 +1,7 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
+// Tests [@ANCHOR: story_manual_toc]
 // [@ANCHOR: test_tour_manual_toc]
 // Tests [@ANCHOR: manual_toc_logic]
 registry.category("web_tour.tours").add("manual_toc_tour", {

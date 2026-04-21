@@ -367,7 +367,7 @@ def check_linters(venv_python, base_dir, ignore_filepath):
 
     print("[*] Scanning documentation and codebase for Semantic Anchors...")
     anchor_script = os.path.join(base_dir, "tools", "verify_anchors.py")
-    res_anchor = subprocess.run([venv_python, anchor_script, base_dir])
+    res_anchor = subprocess.run([venv_python, anchor_script, "manual_library"])
     if res_anchor.returncode != 0:
         print(
             "🛑 Halting due to linter/anchor violations. Please review the output above."

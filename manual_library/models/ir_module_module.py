@@ -23,6 +23,7 @@ class IrModuleModule(models.Model):
             self._install_all_module_documentation()
 
     @api.model
+        # Verified by [@ANCHOR: test_manual_doc_auto_install]
     def _install_all_module_documentation(self):
         # [@ANCHOR: manual_doc_auto_install]
         # See [@ANCHOR: story_manual_doc_installation] and [@ANCHOR: journey_developer_integration]
