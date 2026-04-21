@@ -38,11 +38,18 @@ class RealTransactionCase(HttpCase):
             return odoo.sql_db.db_connect(self.registry.db_name).cursor()
 
         if hasattr(self.registry.cursor, "side_effect"):
-            self._original_side_effect = self.registry.cursor.side_effect
+            _original_cursor = self.registry.cursor
+            _original_side_effect = self.registry.cursor.side_effect
             self.registry.cursor.side_effect = _real_cursor_factory
+
+            def _restore_cursor():
+                _original_cursor.side_effect = _original_side_effect
+
+            self.addCleanup(_restore_cursor)
         else:
-            self._original_side_effect = None
+            _original_cursor = self.registry.cursor
             self.registry.cursor = _real_cursor_factory
+            self.addCleanup(setattr, self.registry, "cursor", _original_cursor)
 
         # Provision a true PostgreSQL cursor for the test thread
         self.cr = self.registry.cursor()
@@ -72,11 +79,9 @@ class RealTransactionCase(HttpCase):
             return records
 
         odoo.models.BaseModel.create = tracking_create
+        self.addCleanup(setattr, odoo.models.BaseModel, "create", _original_create)
 
     def tearDown(self):
-        # 1. Restore standard ORM behavior
-        odoo.models.BaseModel.create = _original_create
-
         # Commit any lingering test state to drop REPEATABLE READ snapshot locks
         # preventing "concurrent update" deadlocks with background HTTP workers.
         try:
@@ -123,25 +128,33 @@ class RealTransactionCase(HttpCase):
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
         # [@ANCHOR: leak_verification]
         leaks = []
-        noisy_tables = {
-            "bus_bus",
-            "ir_logging",
-            "base_registry_signaling",
-            "ir_cron",
-            "mail_message",
-            "mail_notification",
-            "mail_followers",
-            "mail_tracking_value",
-            "res_groups_users_rel",
-            "res_company_users_rel",
-            "res_users_log",
-            "http_session",
-            "database_pg_setting",
-            "database_table_stat",
-            "database_query_stat",
-            "database_activity",
-            "database_index_stat",
-        }
+        noisy_tables = set()
+        if "test_real_transaction.noisy_table" in self.env:
+            noisy_records = self.env["test_real_transaction.noisy_table"].search(
+                [], limit=1000
+            )
+            noisy_tables = {r.name for r in noisy_records}
+
+        if not noisy_tables:
+            noisy_tables = {
+                "bus_bus",
+                "ir_logging",
+                "base_registry_signaling",
+                "ir_cron",
+                "mail_message",
+                "mail_notification",
+                "mail_followers",
+                "mail_tracking_value",
+                "res_groups_users_rel",
+                "res_company_users_rel",
+                "res_users_log",
+                "http_session",
+                "database_pg_setting",
+                "database_table_stat",
+                "database_query_stat",
+                "database_activity",
+                "database_index_stat",
+            }
 
         for t in self._tables:
             if t in noisy_tables:
@@ -159,8 +172,7 @@ class RealTransactionCase(HttpCase):
         self.cr.close()
 
         # 5. Hand off teardown to Odoo framework
-        if hasattr(self.registry.cursor, "side_effect"):
-            self.registry.cursor.side_effect = self._original_side_effect
+        # (addCleanup handles cursor restoration)
 
         self.cr = self._test_cursor
         self.env = self._test_env

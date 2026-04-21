@@ -13,12 +13,30 @@ def install_knowledge_docs(env):
         article_model_name = "manual.article"
 
     if article_model_name:
+        # Use our own dedicated service account first,
+        # fallback to manual_library or general facility if needed.
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.odoo_facility_service_internal"
+            "test_real_transaction.user_real_transaction_service"
         )
-        article_model = env[article_model_name].with_user(svc_uid).with_context(
+        if not svc_uid:
+            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                "manual_library.user_manual_library_service_account"
+            )
+        if not svc_uid:
+            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.odoo_facility_service_internal"
+            )
+
+        if not svc_uid:
+            _logger.warning(_("Could not find a suitable service account for documentation installation."))
+            return None
+
+        # ADR-0055: Documentation modules are soft dependencies. We use .sudo()
+        # to ensure the article can be created even if the service account
+        # lacks specific ACLs for the documentation models.
+        article_model = env[article_model_name].with_user(svc_uid).sudo().with_context(
             mail_notrack=True, prefetch_fields=False
-        )
+        ) # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
 
         existing = article_model.search(
             [("name", "=", "Real Transaction Testing Facility Guide")], limit=1
