@@ -16,16 +16,12 @@ registry.category("web_tour.tours").add("manual_search_tour", {
         {
             content: "Submit search",
             trigger: 'button[aria-label="Submit search"]',
-            run: "click"
+            run: "click",
+            expectUnloadPage: true,
         },
         {
             content: "Check results",
             trigger: 'h2:contains("Search Results for:")',
-            run: () => {
-                if (!document.querySelector('h2').textContent.includes('Search Results for')) {
-                    console.error("Search results header missing from DOM");
-                }
-            }
         }
     ],
 });
