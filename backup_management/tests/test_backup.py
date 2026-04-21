@@ -47,58 +47,26 @@ class TestBackupManagement(RealTransactionCase):
             {"name": "Test PG", "engine": "pgbackrest", "target_path": "main"}
         )
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_01b_sync_kopia_success(self, mock_run, mock_which):
+    def test_01b_sync_kopia_triggered(self):
         # Tests [@ANCHOR: backup_sync_kopia]
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_res.stdout = '[{"id": "123", "startTime": "2023-01-01T10:00:00Z", "summary": {"stats": {"totalFileSize": 1000}}}]'
-        mock_run.return_value = mock_res
+        # Since we offloaded to RabbitMQ, we check if a job was created and task was queued.
         self.config_kopia.action_sync_snapshots()
-        self.assertTrue(self.config_kopia.snapshot_ids)
+        job = self.env["backup.job"].search([("config_id", "=", self.config_kopia.id)], order="id desc", limit=1)
+        self.assertTrue(job.exists())
+        self.assertEqual(job.state, "pending")
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_02_sync_pgbackrest(self, mock_run, mock_which):
+    def test_02_sync_pgbackrest_triggered(self):
         # Tests [@ANCHOR: backup_sync_pgbackrest]
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_res.stdout = '[{"backup": [{"label": "test", "timestamp": {"start": 1672567200}, "info": {"size": 2000}}]}]'
-        mock_run.return_value = mock_res
         self.config_pg.action_sync_snapshots()
-        self.assertTrue(self.config_pg.snapshot_ids)
+        job = self.env["backup.job"].search([("config_id", "=", self.config_pg.id)], order="id desc", limit=1)
+        self.assertTrue(job.exists())
+        self.assertEqual(job.state, "pending")
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_02b_sync_failures(self, mock_run, mock_which):
-        # Tests [@ANCHOR: backup_pager_synergy]
-        mock_res = MagicMock()
-        mock_res.returncode = 1
-        mock_res.stderr = "Connection refused"
-        mock_run.return_value = mock_res
-        with patch.object(type(self.config_kopia), "message_post") as mock_msg:
-            self.config_kopia.action_sync_snapshots()
-            mock_msg.assert_called()
-        with patch.object(type(self.config_pg), "message_post") as mock_msg:
-            self.config_pg.action_sync_snapshots()
-            mock_msg.assert_called()
-
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.BackupConfig.action_sync_snapshots"
-    )
-    def test_04_cron_trigger(self, mock_sync):
+    def test_04_cron_trigger(self):
         # Tests [@ANCHOR: test_backup_cron]
         # Tests [@ANCHOR: cron_sync_all_backups]
+        # Tests [@ANCHOR: backup_pager_synergy]
+        # In this environment, we just ensure it queues the sync tasks.
         self.env.ref("backup_management.cron_sync_backups")._trigger()
 
         # Inject a stale snapshot so that it triggers _report_backup_failure -> message_post
@@ -113,10 +81,13 @@ class TestBackupManagement(RealTransactionCase):
         )
 
         with patch.object(type(self.env["backup.config"]), "message_post") as mock_msg:
+            # We must be careful because cron_sync_all_backups calls action_sync_snapshots
+            # which now queues a job.
             self.env["backup.config"].cron_sync_all_backups()
             mock_msg.assert_called()
-        mock_sync.assert_called()
-        self.assertTrue(True)
+
+        jobs = self.env["backup.job"].search([("config_id", "=", self.config_kopia.id)])
+        self.assertTrue(jobs)
 
     def test_07_orchestration_trigger(self):
         # Tests [@ANCHOR: test_backup_orchestration]
@@ -151,65 +122,25 @@ class TestBackupManagement(RealTransactionCase):
         self.assertTrue(job_pg.exists())
         self.assertEqual(job_pg.state, "pending")
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_08_apply_policies(self, mock_run, mock_which):
+    def test_08_apply_policies_triggered(self):
         # Tests [@ANCHOR: backup_apply_policies]
         # Tests [@ANCHOR: test_apply_policies]
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_run.return_value = mock_res
         self.config_kopia.keep_daily = 7
         self.config_kopia.exclude_patterns = "*.log"
-        with patch.object(type(self.env["backup.config"]), "message_post") as mock_msg:
-            self.config_kopia.action_apply_policies()
-            mock_msg.assert_called()
-        args = mock_run.call_args[0][0]
-        self.assertIn("policy", args)
-        self.assertIn("--keep-daily=7", args)
-        self.assertIn("--add-ignore=*.log", args)
+        self.config_kopia.action_apply_policies()
+        job = self.env["backup.job"].search([("config_id", "=", self.config_kopia.id)], order="id desc", limit=1)
+        self.assertTrue(job.exists())
+        self.assertEqual(job.state, "pending")
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_08b_trigger_and_policy_failures(self, mock_run, mock_which):
-        mock_res = MagicMock()
-        mock_res.returncode = 1
-        mock_res.stderr = "Fatal disk error"
-        mock_run.return_value = mock_res
-
-        # Triggering backup no longer fails synchronously; we only test the synchronous policy failure.
-        with patch.object(
-            type(self.config_kopia), "_report_backup_failure"
-        ) as mock_report:
-            self.config_kopia.action_apply_policies()
-            mock_report.assert_called()
-
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_08c_restore_drill_execution(self, mock_run):
+    def test_08c_restore_drill_triggered(self):
         self.config_kopia.restore_drill_script = "/opt/test_restore.sh"
         self.config_kopia.last_drill_time = fields.Datetime.now() - datetime.timedelta(
             days=8
         )
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_run.return_value = mock_res
-        with patch.object(type(self.env["backup.config"]), "message_post") as mock_msg:
-            with patch.object(type(self.config_kopia), "action_sync_snapshots"):
-                self.env["backup.config"].cron_sync_all_backups()
-                mock_run.assert_called_with(
-                    ["/opt/test_restore.sh"],
-                    capture_output=True,
-                    text=True,
-                    timeout=7200,
-                    shell=False,
-                )
-                mock_msg.assert_called()
+        self.env["backup.config"].cron_sync_all_backups()
+        job = self.env["backup.job"].search([("config_id", "=", self.config_kopia.id)], order="id desc", limit=1)
+        self.assertTrue(job.exists())
+        self.assertEqual(job.state, "pending")
 
     @patch(
         "odoo.addons.backup_management.models.backup_config.BackupConfig._get_executable", return_value="/bin/kopia"
@@ -258,18 +189,9 @@ class TestBackupManagement(RealTransactionCase):
         v3 = self.env["backup.job"].get_view(view_type="list")
         self.assertIn("state", v3["arch"])
 
-    @patch(
-        "odoo.addons.backup_management.models.backup_config.shutil.which",
-        return_value="/bin/mock",
-    )
-    @patch("odoo.addons.backup_management.models.backup_config.subprocess.run")
-    def test_11_trigger_kopia_and_pgbackrest(self, mock_run, mock_which):
+    def test_11_trigger_kopia_and_pgbackrest(self):
         # Tests [@ANCHOR: test_trigger_kopia_and_pgbackrest]
-        mock_res = MagicMock()
-        mock_res.returncode = 0
-        mock_run.return_value = mock_res
-        with patch.object(type(self.config_kopia), "message_post") as mock_msg:
-            with patch.object(type(self.config_kopia), "action_sync_snapshots"):
-                self.config_kopia._trigger_kopia_backup()
-                self.config_pg._trigger_pgbackrest_backup()
-                self.assertEqual(mock_msg.call_count, 2)
+        self.config_kopia.action_trigger_backup()
+        self.config_pg.action_trigger_backup()
+        jobs = self.env["backup.job"].search([("config_id", "in", [self.config_kopia.id, self.config_pg.id])])
+        self.assertEqual(len(jobs), 2)

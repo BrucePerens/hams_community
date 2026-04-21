@@ -30,7 +30,7 @@ class BackupSnapshot(models.Model):
         for rec in self:
             if rec.config_id.engine == "kopia":
                 rec.restore_command = (
-                    f"kopia restore {rec.snapshot_id} /tmp/restore_dir"
+                    f"kopia restore {rec.snapshot_id} /var/lib/odoo/backups/restore_{rec.snapshot_id}"
                 )
             elif rec.config_id.engine == "pgbackrest":
                 rec.restore_command = f"pgbackrest restore --stanza={rec.config_id.target_path} --set={rec.snapshot_id}"
