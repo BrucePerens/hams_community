@@ -73,6 +73,6 @@ def install_knowledge_docs(env):
 
 def post_init_hook(env):
     """
-    Empty initialization hook. Logic migrated to _register_hook pattern.
+    Install documentation upon module installation.
     """
-    pass
+    install_knowledge_docs(env)
