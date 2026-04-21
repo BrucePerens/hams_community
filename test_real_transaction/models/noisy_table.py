@@ -9,6 +9,3 @@ class NoisyTable(models.Model):
     active = fields.Boolean(default=True, help='If unchecked, it will allow leak detection for this table.')
 
     _name_uniq = models.Constraint('UNIQUE(name)', 'The table name must be unique!')
-
-    def _register_hook(self):
-        super()._register_hook()

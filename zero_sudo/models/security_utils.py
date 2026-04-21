@@ -3,6 +3,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import shutil
 from odoo import models, api, tools, _
 from odoo.exceptions import AccessError, UserError
 
@@ -86,6 +87,36 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         return uid
 
     @api.model
+    def _get_service_env(self, xml_id):
+        """
+        Returns a new Environment running strictly under the context of the specified
+        service account. Automatically disables tracking and prefetching per ADR-0001
+        and ADR-0064 to prevent ORM cascade Access Errors.
+        """
+        uid = self._get_service_uid(xml_id)
+        return self.env(user=uid).with_context(mail_notrack=True, prefetch_fields=False)
+
+    @api.model
+    def _ensure_executable(self, cmd_name, svc_xml_id=None, pkg_name=None):
+        """
+        Resolves an executable in the system PATH.
+        If not found, and binary.manifest exists, attempts to dynamically install it.
+        """
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        if "binary.manifest" in self.env and svc_xml_id:
+            env_svc = self._get_service_env(svc_xml_id)
+            return env_svc["binary.manifest"].ensure_executable(cmd_name)
+
+        pkg = pkg_name or cmd_name
+        raise UserError(
+            _("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').")
+            % (cmd_name, pkg)
+        )
+
+    @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
         # [@ANCHOR: coherent_cache_signal]
         # Verified by [@ANCHOR: test_coherent_cache_signal]
@@ -109,7 +140,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         # Tests [@ANCHOR: story_parameter_whitelisting]
         # THE MECHANICAL SECRET BLOCK
-        # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
         PARAM_WHITELIST = [
             "web.base.url",
             "cloudflare.last_static_mtime",
@@ -124,13 +154,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         ]
 
         banned_substrings = [
-            "secret",
-            "key",
-            "password",
-            "token",
-            "auth",
-            "crypt",
-            "cert",
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
         ]
         lower_key = key.lower()
 
@@ -142,7 +166,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                     )
                     % key
                 )
-
             raise AccessError(
                 _(
                     "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
@@ -150,15 +173,12 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        # STRICT ZERO-SUDO MANDATE: Impersonate the domain service account to read the parameter safely.
-        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
-        return self.env["ir.config_parameter"].with_user(svc_uid).get_param(key, default)
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        return env_svc["ir.config_parameter"].get_param(key, default)
 
     @api.model
     def _set_system_param(self, key, value):
         # [@ANCHOR: set_system_param]
-        # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
-        # Tests [@ANCHOR: story_parameter_whitelisting]
         PARAM_WHITELIST = [
             "web.base.url",
             "cloudflare.last_static_mtime",
@@ -184,27 +204,26 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                         "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
                     ) % key
                 )
-
             raise AccessError(
                 _(
                     "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
                 ) % key
             )
 
-        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
-        self.env["ir.config_parameter"].with_user(svc_uid).set_param(key, value)
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        env_svc["ir.config_parameter"].set_param(key, value)
         return True
 
     @api.model
     def _get_kv(self, key):
-        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
-        record = self.env['zero_sudo.kv'].with_user(svc_uid).search([('key', '=', key)], limit=1)
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        record = env_svc['zero_sudo.kv'].search([('key', '=', key)], limit=1)
         return record.value if record else None
 
     @api.model
     def _set_kv(self, key, value):
-        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
-        KV = self.env['zero_sudo.kv'].with_user(svc_uid)
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        KV = env_svc['zero_sudo.kv']
         record = KV.search([('key', '=', key)], limit=1)
         if record:
             record.write({'value': value})

@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 17:21+0000\n"
-"PO-Revision-Date: 2026-04-21 17:21+0000\n"
+"POT-Creation-Date: 2026-04-21 17:42+0000\n"
+"PO-Revision-Date: 2026-04-21 17:42+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -73,7 +73,7 @@ msgstr ""
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:111
+#: daemon_key_manager/models/key_registry.py:105
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -105,7 +105,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:95
+#: database_management/models/db_stats.py:77
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -169,7 +169,7 @@ msgstr ""
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:36
+#: zero_sudo/models/security_utils.py:37
 msgid "Invalid XML ID format: %s"
 msgstr ""
 
@@ -202,8 +202,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: database_management/models/db_stats.py:64
-#: database_management/models/pg_config.py:148
+#: zero_sudo/models/security_utils.py:115
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
@@ -215,7 +214,7 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:220
+#: zero_sudo/models/security_utils.py:239
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -267,7 +266,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:226
+#: zero_sudo/models/security_utils.py:245
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -275,7 +274,7 @@ msgstr ""
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:61
+#: zero_sudo/models/security_utils.py:62
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
@@ -287,28 +286,28 @@ msgstr ""
 msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:147
-#: zero_sudo/models/security_utils.py:189
+#: zero_sudo/models/security_utils.py:170
+#: zero_sudo/models/security_utils.py:208
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:140
+#: zero_sudo/models/security_utils.py:164
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:183
+#: zero_sudo/models/security_utils.py:203
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:47
+#: zero_sudo/models/security_utils.py:48
 msgid "Security Alert: Service Account '%s' not found."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:80
+#: zero_sudo/models/security_utils.py:81
 msgid "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:58
+#: zero_sudo/models/security_utils.py:59
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
@@ -316,15 +315,15 @@ msgstr ""
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:121
+#: daemon_key_manager/models/key_registry.py:115
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:58
+#: daemon_key_manager/models/key_registry.py:54
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:169
+#: daemon_key_manager/models/key_registry.py:162
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
@@ -353,7 +352,7 @@ msgstr ""
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
-#: user_websites/models/res_users.py:348
+#: user_websites/models/res_users.py:325
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
@@ -365,17 +364,13 @@ msgstr ""
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:45
+#: daemon_key_manager/models/key_registry.py:44
 msgid "The selected user must be a service account."
 msgstr ""
 
-#: user_websites/models/res_users.py:191
+#: user_websites/models/res_users.py:178
 #: user_websites/models/user_websites_groups.py:92
 msgid "The slug '%s' is reserved and cannot be used."
-msgstr ""
-
-#: daemon_key_manager/models/key_registry.py:73
-msgid "The user %s must be a service account."
 msgstr ""
 
 #: user_websites/models/website_page.py:338
@@ -386,7 +381,7 @@ msgstr ""
 msgid "Tunnels synced successfully."
 msgstr ""
 
-#: user_websites/models/res_users.py:214
+#: user_websites/models/res_users.py:201
 #: user_websites/models/user_websites_groups.py:129
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
@@ -395,15 +390,15 @@ msgstr ""
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:238
+#: zero_sudo/models/security_utils.py:257
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:90
+#: database_management/models/db_stats.py:72
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:93
+#: database_management/models/db_stats.py:75
 msgid "Vacuum timed out for %s."
 msgstr ""
 
@@ -419,7 +414,7 @@ msgstr ""
 msgid "You can only modify SEO metadata for groups you are a member of."
 msgstr ""
 
-#: user_websites_seo/models/res_users.py:48
+#: user_websites_seo/models/res_users.py:45
 msgid "You can only modify your own SEO metadata."
 msgstr ""
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import shutil
 import subprocess
 
 from odoo import models, fields, api, tools, _
@@ -44,27 +43,10 @@ class DatabaseTableStat(models.Model):
         """)
 
     def _get_executable(self, cmd_name):
-        path = shutil.which(cmd_name)
-        if path:
-            return path
-
-        pkg_map = {"vacuumdb": "postgresql-client"}
-        if cmd_name == "vacuumdb" and "binary.manifest" in self.env:
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "database_management.user_database_management_service"
-            )
-            return (
-                self.env["binary.manifest"]
-                .with_user(svc_uid)
-                .ensure_executable("vacuumdb")
-            )
-
-        pkg = pkg_map.get(cmd_name, cmd_name)
-        raise UserError(
-            _(
-                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
-            )
-            % (cmd_name, pkg)
+        return self.env["zero_sudo.security.utils"]._ensure_executable(
+            cmd_name,
+            svc_xml_id="database_management.user_database_management_service",
+            pkg_name="postgresql-client" if cmd_name == "vacuumdb" else cmd_name
         )
 
     def action_vacuum_analyze(self):
@@ -104,13 +86,13 @@ class DatabaseTableStat(models.Model):
         )
         if high_bloat and "pager.incident" in self.env:
             try:
-                pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "pager_duty.user_pager_service_internal"
                 )
                 tables = ", ".join(
                     [f"{t.table_name} ({t.dead_percent:.1f}%%)" for t in high_bloat]
                 )
-                self.env["pager.incident"].with_user(pager_uid).report_incident(
+                env_svc["pager.incident"].report_incident(
                     {
                         "source": "DBA Autovacuum Monitor",
                         "severity": "medium",

@@ -17,10 +17,10 @@ def post_init_hook(env):
     # Verified by [@ANCHOR: test_compliance_ui_tour]
     # ADR-0002: Zero-Sudo Architecture. We must not use .sudo() or stay as SUPERUSER.
     # We switch to a dedicated micro-privilege service account.
-    svc_uid = env["zero_sudo.security.utils"]._get_service_uid("compliance.user_compliance_service")
+    env_svc = env["zero_sudo.security.utils"]._get_service_env("compliance.user_compliance_service")
 
-    websites = env["website"].with_user(svc_uid).search([], limit=10000)
+    websites = env_svc["website"].search([], limit=10000)
 
     # Safely check if the target field exists in the current Odoo version
-    if "cookies_bar" in env["website"]._fields:
+    if "cookies_bar" in env_svc["website"]._fields:
         websites.write({"cookies_bar": True})

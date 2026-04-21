@@ -45,14 +45,12 @@ class Module(models.Model):
         svc_account = "manual_library.user_manual_library_service_account" if res else "zero_sudo.odoo_facility_service_internal"
 
         try:
-            svc_uid = utils._get_service_uid(svc_account)
+            env_svc = utils._get_service_env(svc_account)
         except Exception as e:
             _logger.warning("Could not resolve service account for documentation installation: %s", e)
             return
 
-        Article = self.env[article_model_name].with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
-        )
+        Article = env_svc[article_model_name]
 
         modules = self.env['ir.module.module'].search([('state', '=', 'installed')], limit=10000)
         for mod in modules:
