@@ -1026,9 +1026,9 @@ def main():
             print("❌ ERROR: No modules found in this repository. Aborting.")
             sys.exit(1)
 
-        # Inject core web and tour frameworks globally so all modules can run UI tours
-        mod_string = "base,web,web_tour," + ",".join(target_modules)
-        test_tags = ",".join(["/{}".format(m) for m in target_modules])
+        # Inject test_tours globally into the test framework so all modules can run tours
+        mod_string = "base,test_tours," + ",".join(target_modules)
+        test_tags = "/test_tours," + ",".join(["/{}".format(m) for m in target_modules])
 
         extractor = FailureExtractor(args.error_log)
 

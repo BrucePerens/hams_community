@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Test Tours Infrastructure",
-    "summary": "Testing infrastructure module to inject web and web_tour assets without running their tests.",
+    "summary": "Testing infrastructure to securely inject web_tour assets.",
     "author": "Bruce Perens K6BP",
     "category": "Hidden",
     "version": "1.0",
