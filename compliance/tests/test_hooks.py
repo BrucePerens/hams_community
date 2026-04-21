@@ -11,21 +11,27 @@ class TestComplianceHooks(TransactionCase):
     def test_01_post_init_hook_documentation(self):
         """
         Verify that the post_init_hook successfully reads the HTML file
-        and installs the documentation into the knowledge.article API.
+        and installs the documentation into the knowledge.article or manual.article API.
         """
         # [@ANCHOR: test_compliance_post_init_documentation]
         # Tests [@ANCHOR: compliance_install_knowledge_docs]
         # Tests [@ANCHOR: story_compliance_documentation]
         # Tests [@ANCHOR: journey_compliance_setup]
-        if "knowledge.article" not in self.env:
+        article_model_name = None
+        if "knowledge.article" in self.env:
+            article_model_name = "knowledge.article"
+        elif "manual.article" in self.env:
+            article_model_name = "manual.article"
+
+        if not article_model_name:
             raise unittest.SkipTest(
-                "knowledge.article API is not installed. Skipping documentation hook test."
+                "Neither knowledge.article nor manual.article API is installed. Skipping documentation hook test."
             )
 
         # Manually trigger the hook to ensure execution during the test transaction
         post_init_hook(self.env)
 
-        article = self.env["knowledge.article"].search(
+        article = self.env[article_model_name].search(
             [("name", "=", "Site Owner's Guide to Regulatory Compliance")], limit=1
         )
 

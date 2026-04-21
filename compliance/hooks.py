@@ -84,3 +84,5 @@ def post_init_hook(env):
     # Safely check if the target field exists in the current Odoo version
     if "cookies_bar" in env["website"]._fields:
         websites.write({"cookies_bar": True})
+
+    install_knowledge_docs(env)
