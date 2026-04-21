@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 07:07+0000\n"
-"PO-Revision-Date: 2026-04-21 07:07+0000\n"
+"POT-Creation-Date: 2026-04-21 14:44+0000\n"
+"PO-Revision-Date: 2026-04-21 14:44+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -14,7 +14,7 @@ msgstr ""
 
 #: binary_downloader/hooks.py:44
 #: distributed_redis_cache/hooks.py:40
-#: test_real_transaction/hooks.py:33
+#: test_real_transaction/hooks.py:51
 msgid "<p>Error loading documentation file: %s</p>"
 msgstr ""
 
@@ -43,11 +43,15 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this post."
 msgstr ""
 
-#: backup_management/models/utils.py:14
+#: backup_management/models/utils.py:25
+msgid "Access to internal Odoo data directory %s is prohibited."
+msgstr ""
+
+#: backup_management/models/utils.py:18
 msgid "Access to the path %s is prohibited for security reasons."
 msgstr ""
 
-#: test_real_transaction/tests/real_transaction.py:85
+#: test_real_transaction/tests/real_transaction.py:90
 msgid "An error occurred during final commit in tearDown: %s"
 msgstr ""
 
@@ -71,10 +75,6 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:558
-msgid "Automated Restore Drill completed successfully."
-msgstr ""
-
 #: distributed_redis_cache/models/distributed_cache_config.py:32
 msgid "Cache invalidated for model %s"
 msgstr ""
@@ -95,6 +95,10 @@ msgstr ""
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
+#: test_real_transaction/hooks.py:31
+msgid "Could not find a suitable service account for documentation installation."
+msgstr ""
+
 #: pager_duty/models/pager_check.py:655
 msgid "Daemon Notified"
 msgstr ""
@@ -103,7 +107,7 @@ msgstr ""
 msgid "Database checks updated from JSON file."
 msgstr ""
 
-#: test_real_transaction/tests/real_transaction.py:171
+#: test_real_transaction/tests/real_transaction.py:183
 msgid "Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s"
 msgstr ""
 
@@ -147,7 +151,7 @@ msgstr ""
 msgid "Failed to load Distributed Redis Cache documentation file: %s"
 msgstr ""
 
-#: test_real_transaction/hooks.py:32
+#: test_real_transaction/hooks.py:50
 msgid "Failed to load real transaction documentation file: %s"
 msgstr ""
 
@@ -187,16 +191,8 @@ msgstr ""
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:287
-msgid "Kopia backup completed successfully."
-msgstr ""
-
 #: backup_management/models/backup_config.py:176
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
-msgstr ""
-
-#: backup_management/models/backup_config.py:347
-msgid "Kopia policies applied successfully."
 msgstr ""
 
 #: backup_management/models/backup_config.py:189
@@ -463,10 +459,6 @@ msgstr ""
 
 #: cloudflare/models/zone_settings_wizard.py:91
 msgid "Zone settings updated successfully."
-msgstr ""
-
-#: backup_management/models/backup_config.py:308
-msgid "pgBackRest backup completed successfully."
 msgstr ""
 
 #: backup_management/models/backup_config.py:170

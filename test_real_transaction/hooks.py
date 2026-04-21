@@ -31,12 +31,9 @@ def install_knowledge_docs(env):
             _logger.warning(_("Could not find a suitable service account for documentation installation."))
             return None
 
-        # ADR-0055: Documentation modules are soft dependencies. We use .sudo()
-        # to ensure the article can be created even if the service account
-        # lacks specific ACLs for the documentation models.
-        article_model = env[article_model_name].with_user(svc_uid).sudo().with_context(
+        article_model = env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
-        ) # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
+        )
 
         existing = article_model.search(
             [("name", "=", "Real Transaction Testing Facility Guide")], limit=1
