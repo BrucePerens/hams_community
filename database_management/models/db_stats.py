@@ -66,25 +66,18 @@ class DatabaseTableStat(models.Model):
         if "knowledge.article" not in env:
             return
 
-        # Use the specialized service account for Database Management
-        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "database_management.user_database_management_service"
-        )
+        try:
+            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                "manual_library.user_manual_library_service_account"
+            )
+        except Exception:
+            # Fallback to facility if manual_library service account is missing
+            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.odoo_facility_service_internal"
+            )
+
         if not svc_uid:
             return
-
-        # Dynamically add to manual_library group if present (soft dependency)
-        manual_group = env.ref(
-            "manual_library.group_manual_library_service_account",
-            raise_if_not_found=False,
-        )
-        if manual_group:
-            user = env["res.users"].browse(svc_uid)
-            if manual_group not in user.group_ids:
-                facility_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.odoo_facility_service_internal"
-                )
-                user.with_user(facility_uid).with_context(mail_notrack=True, prefetch_fields=False).write({"group_ids": [(4, manual_group.id)]})
 
         article_model = (
             env["knowledge.article"]

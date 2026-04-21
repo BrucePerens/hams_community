@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-20 23:29+0000\n"
-"PO-Revision-Date: 2026-04-20 23:29+0000\n"
+"POT-Creation-Date: 2026-04-21 01:19+0000\n"
+"PO-Revision-Date: 2026-04-21 01:19+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -111,7 +111,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:168
+#: database_management/models/db_stats.py:161
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -220,7 +220,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: database_management/models/db_stats.py:137
+#: database_management/models/db_stats.py:130
 #: database_management/models/pg_config.py:148
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
@@ -233,7 +233,7 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:156
+#: zero_sudo/models/security_utils.py:161
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -281,7 +281,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:162
+#: zero_sudo/models/security_utils.py:167
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -289,7 +289,7 @@ msgstr ""
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:49
+#: zero_sudo/models/security_utils.py:51
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
@@ -297,23 +297,23 @@ msgstr ""
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:142
+#: zero_sudo/models/security_utils.py:146
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:132
+#: zero_sudo/models/security_utils.py:136
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:36
+#: zero_sudo/models/security_utils.py:38
 msgid "Security Alert: Service Account '%s' not found."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:68
+#: zero_sudo/models/security_utils.py:70
 msgid "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:46
+#: zero_sudo/models/security_utils.py:48
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
@@ -396,15 +396,15 @@ msgstr ""
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:174
+#: zero_sudo/models/security_utils.py:179
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:163
+#: database_management/models/db_stats.py:156
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:166
+#: database_management/models/db_stats.py:159
 msgid "Vacuum timed out for %s."
 msgstr ""
 

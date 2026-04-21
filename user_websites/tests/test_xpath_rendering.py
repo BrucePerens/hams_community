@@ -99,6 +99,7 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
     def test_07_navbar_rendering(self):
         # [@ANCHOR: test_dropzone_navbar]
         # Tests [@ANCHOR: dropzone_navbar]
+        # Tests [@ANCHOR: xpath_rendering_navbar]
         user = self.env["res.users"].create(
             {
                 "name": "Nav User",

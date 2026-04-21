@@ -12,11 +12,7 @@
         "security/ir.model.access.csv",
         "views/res_users_views.xml"
     ],
-    "assets": {
-        "web.assets_backend": [
-            "zero_sudo/static/src/tours/**/*",
-        ],
-    },
+    "post_init_hook": "post_init_hook",
     "installable": True,
     "auto_install": False,
 }
