@@ -66,6 +66,50 @@ class TestKeyRegistry(TransactionCase):
                 'env_file_path': '/home/jules/test.env',
             })
 
+        # Test symlink attack prevention
+        # Create a directory that is within the allowed prefix
+        allowed_dir = "/var/lib/odoo/daemon_keys/trusted"
+        if not os.path.exists(allowed_dir):
+            os.makedirs(allowed_dir, mode=0o700, exist_ok=True)
+
+        # Create a symlink that points outside the allowed prefix
+        symlink_path = os.path.join(allowed_dir, "evil.env")
+        target_path = "/etc/passwd"
+        if os.path.exists(symlink_path):
+            os.remove(symlink_path)
+
+        try:
+            os.symlink(target_path, symlink_path)
+        except OSError:
+            self.skipTest("Cannot create symlink for test")
+
+        # Attempting to use the symlink should fail because os.path.realpath resolves it to /etc/passwd
+        with self.assertRaises(UserError) as cm:
+            self.registry_model.create({
+                'name': 'Symlink Attack',
+                'user_id': self.service_user.id,
+                'env_file_path': symlink_path,
+            })
+        self.assertIn("Security Alert", str(cm.exception))
+
+        # Cleanup
+        self.addCleanup(self._silent_remove, symlink_path)
+        self.addCleanup(self._silent_rmdir, allowed_dir)
+
+    def _silent_remove(self, path):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
+
+    def _silent_rmdir(self, path):
+        try:
+            if os.path.exists(path):
+                os.rmdir(path)
+        except OSError:
+            pass
+
     def test_register_daemon_api(self):
         """Test the register_daemon API. [@ANCHOR: test_register_daemon_api] # Tests [@ANCHOR: register_daemon_api] # Tests [@ANCHOR: register_daemon_logic] # Tests [@ANCHOR: register_daemon_idempotency] # Tests [@ANCHOR: write_secure_env_file_logic] # Tests [@ANCHOR: daemon_self_healing]"""
         daemon_name = "API Test Daemon"
