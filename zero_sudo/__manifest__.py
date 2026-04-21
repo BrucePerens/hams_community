@@ -15,7 +15,7 @@
     "knowledge_docs": [
         {
             "name": "Zero-Sudo Security Core",
-            "path": "zero_sudo/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "🛡️",
             "category": "workspace"
         }

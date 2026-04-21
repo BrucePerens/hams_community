@@ -24,7 +24,7 @@ Distributed Redis Cache
     "knowledge_docs": [
         {
             "name": "Distributed Redis Cache",
-            "path": "distributed_redis_cache/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "⚡",
             "category": "workspace"
         }

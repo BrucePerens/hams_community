@@ -31,7 +31,7 @@
     "knowledge_docs": [
         {
             "name": "Pager Duty & Generalized Monitoring",
-            "path": "pager_duty/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "📟",
             "category": "workspace"
         }

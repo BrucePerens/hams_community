@@ -25,7 +25,7 @@
     "knowledge_docs": [
         {
             "name": "Backup Management",
-            "path": "backup_management/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "💾",
             "category": "workspace"
         }

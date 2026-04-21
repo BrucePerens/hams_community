@@ -50,7 +50,7 @@ This module enables:
     "knowledge_docs": [
         {
             "name": "User Websites Documentation",
-            "path": "user_websites/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "🌐",
             "category": "workspace"
         }

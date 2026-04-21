@@ -20,7 +20,7 @@
     "knowledge_docs": [
         {
             "name": "User Websites SEO Guide",
-            "path": "user_websites_seo/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "🔍",
             "category": "workspace"
         }

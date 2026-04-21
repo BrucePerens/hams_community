@@ -18,7 +18,7 @@
     "knowledge_docs": [
         {
             "name": "Database Management Guide",
-            "path": "database_management/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "🛢",
             "category": "workspace"
         }

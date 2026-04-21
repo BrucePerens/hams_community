@@ -14,7 +14,7 @@
     "knowledge_docs": [
         {
             "name": "Binary Downloader Facility",
-            "path": "binary_downloader/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "📦",
             "category": "workspace"
         }

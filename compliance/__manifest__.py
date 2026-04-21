@@ -26,7 +26,7 @@ Upon installation, it:
     "knowledge_docs": [
         {
             "name": "Site Owner's Guide to Regulatory Compliance",
-            "path": "compliance/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "⚖️",
             "category": "workspace"
         }

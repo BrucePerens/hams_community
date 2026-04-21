@@ -32,11 +32,21 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_service_uid(self, xml_id):  # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
         # Tests [@ANCHOR: story_secure_escalation]
-        uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
-        if not uid:
+        if "." not in xml_id:
+            raise AccessError(_("Invalid XML ID format: %s") % xml_id)
+        module, name = xml_id.split(".", 1)
+
+        # STRICT ZERO-SUDO MANDATE: Resolve the ID using raw SQL to prevent any ORM/sudo bypasses
+        self.env.cr.execute(
+            "SELECT res_id FROM ir_model_data WHERE module = %s AND name = %s AND model = 'res.users'",
+            (module, name)
+        )
+        res_id_row = self.env.cr.fetchone()
+        if not res_id_row:
             raise AccessError(
                 _("Security Alert: Service Account '%s' not found.") % xml_id
             )
+        uid = res_id_row[0]
 
         # Verify the account is active AND is explicitly flagged as a service account
         self.env.cr.execute(
@@ -100,10 +110,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Tests [@ANCHOR: story_parameter_whitelisting]
         # THE MECHANICAL SECRET BLOCK
         # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
-        # This implementation uses a dual-protection strategy:
-        # 1. A hardcoded PARAM_WHITELIST (ADR-0002)
-        # 2. A mechanical block on sensitive substrings for dynamic keys.
-
         PARAM_WHITELIST = [
             "web.base.url",
             "cloudflare.last_static_mtime",
@@ -129,8 +135,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         lower_key = key.lower()
 
         if key not in PARAM_WHITELIST:
-            # If not in whitelist, we check if it's a dynamic key or if it contains banned substrings.
-            # For strict compliance with ADR-0002, we should ideally ONLY allow whitelisted keys.
             if any(banned in lower_key for banned in banned_substrings):
                 raise AccessError(
                     _(
@@ -139,9 +143,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                     % key
                 )
 
-            # In some cases, we might want to allow non-whitelisted but safe keys for decentralization,
-            # but the documentation explicitly states "The requested key MUST be hardcoded in the PARAM_WHITELIST".
-            # To be safe and compliant, we enforce the whitelist strictly.
             raise AccessError(
                 _(
                     "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
@@ -149,8 +150,9 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        # Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
-        return self.env["ir.config_parameter"].sudo().get_param(key, default)
+        # STRICT ZERO-SUDO MANDATE: Impersonate the domain service account to read the parameter safely.
+        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        return self.env["ir.config_parameter"].with_user(svc_uid).get_param(key, default)
 
     @api.model
     def _set_system_param(self, key, value):
@@ -234,6 +236,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return True
         except subprocess.CalledProcessError as e:
             raise UserError(_("VENV update failed:\n%s") % e.stderr)
+
     @api.model
     def _get_crypto_secret(self):
         # [@ANCHOR: get_crypto_secret]

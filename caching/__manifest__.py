@@ -15,7 +15,7 @@
     "knowledge_docs": [
         {
             "name": "Caching Module Documentation",
-            "path": "caching/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "⚡",
             "category": "workspace"
         }

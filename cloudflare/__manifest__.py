@@ -23,7 +23,7 @@
     "knowledge_docs": [
         {
             "name": "Cloudflare Edge Orchestration Documentation",
-            "path": "cloudflare/data/documentation.md",
+            "path": "data/documentation.md",
             "icon": "☁️",
             "category": "workspace"
         }

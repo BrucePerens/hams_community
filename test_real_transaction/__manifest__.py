@@ -20,7 +20,7 @@
     "knowledge_docs": [
         {
             "name": "Real Transaction Testing Facility Guide",
-            "path": "test_real_transaction/data/documentation.html",
+            "path": "data/documentation.html",
             "icon": "🧪",
             "category": "workspace"
         }
