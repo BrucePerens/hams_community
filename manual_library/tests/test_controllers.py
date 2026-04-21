@@ -54,6 +54,8 @@ class TestManualControllers(odoo.tests.common.HttpCase):
         )
 
     def test_01_public_guest_routing(self):
+        # [@ANCHOR: test_controller_manual_article_view]
+        # Tests [@ANCHOR: controller_manual_article_view]
         """Public guests can hit the root manual route and see published content."""
         self.authenticate(None, None)
         response = self.url_open("/manual")

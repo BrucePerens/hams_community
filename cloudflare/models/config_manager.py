@@ -43,6 +43,8 @@ class CloudflareConfigManager(models.AbstractModel):
 
     def _register_hook(self):
         super()._register_hook()
+        from ..hooks import install_knowledge_docs  # noqa: E402
+        install_knowledge_docs(self.env)
         self._check_static_mtime_and_purge()
 
     @api.model

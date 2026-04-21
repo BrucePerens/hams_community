@@ -11,4 +11,4 @@ so that users see the latest version of the site while I maintain high productiv
 4. The background cron `[@ANCHOR: ir_cron_process_cf_purge_queue]` triggers.
 5. The queue processor `[@ANCHOR: cf_process_queue_logic]` batches requests and communicates with the Cloudflare API to invalidate the cache.
 
-**Status:** Verified by `[@ANCHOR: test_queue_batching_and_rate_limiting]` and `[@ANCHOR: test_purge_queue_base_url_sudo]`.
+**Status:** Verified by `[@ANCHOR: test_queue_batching_and_rate_limiting]`, `[@ANCHOR: test_purge_queue_base_url_sudo]`, `[@ANCHOR: test_purge_urls_api]`, and `[@ANCHOR: test_purge_tags_api]`.

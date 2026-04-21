@@ -18,6 +18,20 @@ Implements a Hybrid Architecture for unified backup management.
 * **Dashboard Status:** Aggregates target state and snapshot staleness for the NOC display `[@ANCHOR: backup_board_data]`.
 * **Global Sync Cron:** Polling loop to synchronize offsite states `[@ANCHOR: cron_sync_all_backups]`.
 
+## Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Automated Synchronization](docs/stories/automated_sync.md)
+* [Failure Reporting](docs/stories/failure_reporting.md)
+* [Policy Application](docs/stories/policy_application.md)
+* [Secure Path Validation](docs/stories/secure_path_validation.md)
+
+### Journeys
+* [Backup Configuration and First Sync](docs/journeys/backup_config_sync.md)
+* [Manual Restore Command Generation](docs/journeys/manual_restore_command.md)
+
 ## Testing & Verification
 * **Cron Reliability:** Scheduled syncing functions are validated by `[@ANCHOR: test_backup_cron]`.
 * **View Rendering:** Interface layouts and dashboards are verified by `[@ANCHOR: test_backup_view]`.

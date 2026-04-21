@@ -11,7 +11,9 @@ def install_knowledge_docs(env):
     If it is, reads the standalone HTML documentation file and installs it.
     """
     # [@ANCHOR: compliance_install_knowledge_docs]
+    # [@ANCHOR: story_compliance_documentation]
     # Verified by [@ANCHOR: test_compliance_post_init_documentation]
+    # Verified by [@ANCHOR: test_compliance_knowledge_article_installation]
     # ADR-0055: Support soft dependencies on manual_library or enterprise knowledge.
     article_model_name = None
     if "knowledge.article" in env:
@@ -20,11 +22,10 @@ def install_knowledge_docs(env):
         article_model_name = "manual.article"
 
     if article_model_name:
-        # ADR-0002/0055: We typically use service accounts, but since we have a soft
-        # dependency on an external model (knowledge/manual), we cannot define a
-        # permanent ACL in ir.model.access.csv.
-        # To bypass this for documentation injection only, we use .sudo().
-        article_model = env[article_model_name].sudo().with_context(  # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.odoo_facility_service_internal"
+        )
+        article_model = env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 
@@ -63,15 +64,17 @@ def install_knowledge_docs(env):
         return existing
     return None
 
-
 def post_init_hook(env):
     """
     Hook executed upon module installation.
     1. Enforces the use of Odoo's native cookie consent banner.
-    2. Installs the regulatory documentation via the Knowledge API.
     """
+    # [@ANCHOR: journey_compliance_setup]
+    # Verified by [@ANCHOR: test_compliance_ui_tour]
     # [@ANCHOR: compliance_post_init_cookie_bar]
+    # [@ANCHOR: story_cookie_consent]
     # Verified by [@ANCHOR: test_compliance_post_init_cookie_bar]
+    # Verified by [@ANCHOR: test_compliance_ui_tour]
     # ADR-0002: Zero-Sudo Architecture. We must not use .sudo() or stay as SUPERUSER.
     # We switch to a dedicated micro-privilege service account.
     svc_uid = env["zero_sudo.security.utils"]._get_service_uid("compliance.user_compliance_service")
@@ -81,6 +84,3 @@ def post_init_hook(env):
     # Safely check if the target field exists in the current Odoo version
     if "cookies_bar" in env["website"]._fields:
         websites.write({"cookies_bar": True})
-
-    # Install documentation
-    install_knowledge_docs(env)

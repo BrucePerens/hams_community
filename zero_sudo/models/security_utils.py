@@ -15,6 +15,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_deterministic_hash(self, input_string):
         # [@ANCHOR: deterministic_hash]
         # Verified by [@ANCHOR: test_deterministic_hash]
+        # Tests [@ANCHOR: story_deterministic_hash]
         """
         Generates a high-speed, deterministic 32-bit integer hash.
         Used primarily for PostgreSQL advisory locks (pg_advisory_xact_lock).
@@ -30,6 +31,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @tools.ormcache("xml_id")
     def _get_service_uid(self, xml_id):  # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
+        # Tests [@ANCHOR: story_secure_escalation]
         uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
         if not uid:
             raise AccessError(
@@ -77,6 +79,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _notify_cache_invalidation(self, model_name, key_value):
         # [@ANCHOR: coherent_cache_signal]
         # Verified by [@ANCHOR: test_coherent_cache_signal]
+        # Tests [@ANCHOR: story_cache_signaling]
         if isinstance(key_value, (list, set, tuple)):
             payloads = [f"{model_name}:{kv}" for kv in set(key_value) if kv]
             if payloads:
@@ -94,6 +97,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_system_param(self, key, default=None):
         # [@ANCHOR: get_system_param]
         # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
+        # Tests [@ANCHOR: story_parameter_whitelisting]
         # THE MECHANICAL SECRET BLOCK
         # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
         # This implementation uses a dual-protection strategy:
@@ -145,13 +149,14 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        # burn-ignore-sudo: Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
+        # Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
 
     @api.model
     def _update_python_venv(self):
         # [@ANCHOR: update_python_venv]
         # Verified by [@ANCHOR: test_update_python_venv]
+        # Tests [@ANCHOR: story_venv_management]
         if not self.env.user.has_group("base.group_system"):
             raise AccessError(_("Only administrators can update the Python environment."))
 
@@ -172,3 +177,20 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return True
         except subprocess.CalledProcessError as e:
             raise UserError(_("VENV update failed:\n%s") % e.stderr)
+    @api.model
+    def _get_crypto_secret(self):
+        # [@ANCHOR: get_crypto_secret]
+        """
+        Retrieves the cryptographic secret without requiring .sudo() or database access.
+        Checks environment variables first, then a local file, and falls back to config.
+        """
+        secret = os.environ.get("HAMS_CRYPTO_KEY")
+        if not secret:
+            try:
+                with open("/var/lib/odoo/hams_crypto.secret", "r") as f:
+                    secret = f.read().strip()
+            except Exception:
+                pass
+        if not secret:
+            secret = tools.config.get("admin_passwd", "default_insecure_secret")
+        return secret

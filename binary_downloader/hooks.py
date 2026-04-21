@@ -37,7 +37,7 @@ def install_knowledge_docs(env):
 
         if not existing:
             try:
-                with file_open("binary_downloader/data/documentation.html", "r", encoding="utf-8") as f:
+                with file_open("binary_downloader/data/documentation.html", "r") as f:
                     doc_body = f.read()
             except Exception as e:
                 _logger.error("Failed to load documentation file: %s", e)
@@ -62,6 +62,5 @@ def install_knowledge_docs(env):
 def post_init_hook(env):
     """
     Hook executed upon module installation.
-    Injects docs into the knowledge base if available.
     """
-    install_knowledge_docs(env)
+    pass

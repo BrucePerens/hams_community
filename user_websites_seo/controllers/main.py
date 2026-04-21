@@ -24,6 +24,7 @@ class UserWebsitesSEOController(UserWebsitesController):
     ):
         # [@ANCHOR: controller_user_blog_index_seo_override]
         # Verified by [@ANCHOR: test_seo_widget_tour]
+        # Verified by [@ANCHOR: test_controller_no_ssti_elevation]
         """
         Overrides the base blog routing to inject the SEO-aware user profile
         into the QWeb rendering dictionary. This reactivates the interactive

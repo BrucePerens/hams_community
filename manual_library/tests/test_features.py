@@ -105,3 +105,14 @@ class TestManualFeatures(odoo.tests.common.HttpCase):
             1,
             "The unhelpful_count integer should be incremented.",
         )
+
+    def test_04_manual_doc_auto_install(self):
+        # [@ANCHOR: test_manual_doc_auto_install]
+        # Tests [@ANCHOR: manual_doc_auto_install]
+        """Verify that the module documentation auto-installation hook completes without error."""
+        try:
+            self.env["ir.module.module"]._install_all_module_documentation()
+            success = True
+        except Exception:
+            success = False
+        self.assertTrue(success, "Auto-installation hook should run without crashing.")

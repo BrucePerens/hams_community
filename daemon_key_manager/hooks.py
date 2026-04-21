@@ -73,6 +73,6 @@ def install_knowledge_docs(env):
 
 def post_init_hook(env):
     """
-    Installs the module's LLM documentation.
+    Empty initialization hook. Logic migrated to _register_hook pattern.
     """
-    install_knowledge_docs(env)
+    pass

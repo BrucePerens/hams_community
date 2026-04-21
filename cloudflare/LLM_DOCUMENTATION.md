@@ -18,4 +18,26 @@ Control plane for the CDN edge. Manages Cache-Tags, WAF bans, and Turnstile CAPT
 ## 3. Automated Subsystems
 * Injects `Cloudflare-CDN-Cache-Control` headers natively via `ir.http._post_dispatch`.
 * Scans module `static/` folders on boot and automatically invalidates the CDN edge via cache tags if file modifications are detected.
+* **Header Injection:** Injects `Cloudflare-CDN-Cache-Control` headers `[@ANCHOR: ir_http_post_dispatch_headers]` to control edge caching behavior.
 * **Settings View Injection:** Extends standard Odoo config settings to securely accept Cloudflare API tokens `[@ANCHOR: xpath_rendering_cf_settings]`.
+
+---
+
+<stories_and_journeys>
+## 4. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Asynchronous Cache Purging](cloudflare/docs/stories/cache_purging.md)
+* [Geo-Aware Request Context](cloudflare/docs/stories/request_context.md)
+* [Secure Edge Bridging via Tunnels](cloudflare/docs/stories/tunnels.md)
+* [CAPTCHA Verification with Turnstile](cloudflare/docs/stories/turnstile_verification.md)
+* [Automated WAF IP Banning](cloudflare/docs/stories/waf_banning.md)
+
+### Journeys
+* [High-Performance Content Invalidation](cloudflare/docs/journeys/content_invalidation.md)
+* [Managing Edge Security](cloudflare/docs/journeys/edge_security.md)
+* [Infrastructure Provisioning](cloudflare/docs/journeys/infrastructure.md)
+* [Intelligent Traffic Handling](cloudflare/docs/journeys/traffic_handling.md)
+</stories_and_journeys>

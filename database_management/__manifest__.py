@@ -6,7 +6,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "zero_sudo", "binary_downloader"],
+    "depends": ["base", "mail", "zero_sudo", "binary_downloader", "pager_duty"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -15,4 +15,9 @@
         "views/pg_config_views.xml",
         "views/menu_views.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "database_management/static/src/tours/**/*",
+        ],
+    },
 }

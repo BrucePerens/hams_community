@@ -42,7 +42,9 @@
                 <meta name="user_websites_slug" t-att-content="resolved_slug"/>
             </t>
         </xpath>
-        <xpath expr="//header" position="after"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_dropzone_navbar] -->
+        <!-- [@ANCHOR: xpath_rendering_navbar] -->
+        <!-- Verified by [@ANCHOR: test_xpath_rendering_navbar] -->
+        <xpath expr="//header" position="after"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_xpath_rendering_navbar] -->
             <div id="user_websites_dropzone_navbar">
                 <!-- [@ANCHOR: dropzone_navbar] -->
             </div>

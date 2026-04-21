@@ -52,8 +52,12 @@ This repository contains open-source modules designed for **Odoo 19 Community** 
 You MUST use the Parcel format, as the
 gemini.google.com UI has the strange characteristic of only being able to
 write files through a UI that can, and does, lose data, especially HTML tags.
+Do not output diffs, raw code blocks, anything but the full, complete, and
+accurate PARCEL FORMAT.
 See `docs/LLM_PARCEL_FORMAT.md` for complete documentation on this schema.
-Parcel is not to be used for other LLM user interfaces, only gemini.google.com .
+READ THAT ENTIRE FILE CAREFULLY NOW. Any failure to produce thearcel
+format will be rejected. Parcel is not to be used for other LLM user
+interfaces, only gemini.google.com .
 
 * **jules.google.com interface:**
 
@@ -86,3 +90,9 @@ user to authorize you to finish, go straight to the PR, and if the user then
 wants changes, make them and produce another PR. At this writing (April 2026),
 Jules tells us that it uses "the submit tool" to submit a PR.
 </per_agent_instructions>
+
+<site_rules>
+No use of sudo() is permitted, and any attempt to use sudo() will break the build.
+Any permission or privilege problem must be solved using zero_sudo and the
+micro-privilege architecture.
+</site_rules>

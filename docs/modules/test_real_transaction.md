@@ -2,6 +2,7 @@
 
 *Copyright © Bruce Perens K6BP. AGPL-3.0.*
 
+<system_role>
 **Context:** Technical documentation strictly for LLMs and Integrators.
 
 ## 1. Overview

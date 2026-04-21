@@ -24,33 +24,32 @@ class BlogPost(models.Model):
     )
 
     def _invalidate_cloudflare_cache(self):
-        """Soft-dependency hook to purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" in self.env:
-            # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
-            self.mapped("owner_user_id.website_slug")
-            self.mapped("user_websites_group_id.website_slug")
+        """Purge the global Cache-Tag at the edge."""
+        # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
+        self.mapped("owner_user_id.website_slug")
+        self.mapped("user_websites_group_id.website_slug")
 
-            tags = set()
-            for rec in self:
-                if rec.owner_user_id and rec.owner_user_id.website_slug:
-                    tags.add(f"site-{rec.owner_user_id.website_slug}")
-                elif (
-                    rec.user_websites_group_id
-                    and rec.user_websites_group_id.website_slug
-                ):
-                    tags.add(f"site-{rec.user_websites_group_id.website_slug}")
-            if tags:
-                try:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "cloudflare.user_cloudflare_service"
-                    )
-                    self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
-                        list(tags)
-                    )
-                except Exception as e:
-                    import logging  # noqa: E402
+        tags = set()
+        for rec in self:
+            if rec.owner_user_id and rec.owner_user_id.website_slug:
+                tags.add(f"site-{rec.owner_user_id.website_slug}")
+            elif (
+                rec.user_websites_group_id
+                and rec.user_websites_group_id.website_slug
+            ):
+                tags.add(f"site-{rec.user_websites_group_id.website_slug}")
+        if tags:
+            try:
+                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "cloudflare.user_cloudflare_service"
+                )
+                self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
+                    list(tags)
+                )
+            except Exception as e:
+                import logging  # noqa: E402
 
-                    logging.getLogger(__name__).warning("An error occurred: %s", e)
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
 
     def _get_blog_urls(self):
         """Helper method to construct the blog index URLs for Cloudflare cache invalidation."""
@@ -260,10 +259,10 @@ class BlogPost(models.Model):
         base_url = self.env["zero_sudo.security.utils"]._get_system_param(
             "web.base.url"
         )
-        db_secret = self.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_weekly_digest_secret]  # fmt: skip
+        db_secret = self.env["zero_sudo.security.utils"]._get_crypto_secret()
         if not db_secret:
             _logger.error(
-                "Security Alert: 'database.secret' is not configured. Weekly digest tokens cannot be generated."
+                "Security Alert: Crypto secret is not configured. Weekly digest tokens cannot be generated."
             )
             return
 

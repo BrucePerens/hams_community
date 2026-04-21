@@ -5,7 +5,6 @@ from odoo.tools import file_open, _
 
 _logger = logging.getLogger(__name__)
 
-
 def install_knowledge_docs(env):
     """
     Checks if the knowledge.article API is present in the environment.
@@ -60,14 +59,10 @@ def install_knowledge_docs(env):
         return existing
     return None
 
-
 def post_init_hook(env):
     """
-    Inject documentation and register daemon keys upon installation.
+    Register daemon keys upon installation.
     """
-    # ADR-0055: Modules must have "soft" dependencies for documentation
-    install_knowledge_docs(env)
-
     if "daemon.key.registry" in env:
         env["daemon.key.registry"].register_daemon(
             daemon_name="Redis Cache Manager",
