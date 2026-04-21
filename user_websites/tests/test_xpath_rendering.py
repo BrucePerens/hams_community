@@ -103,6 +103,12 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         # [@ANCHOR: test_xpath_rendering_navbar]
         # Tests [@ANCHOR: dropzone_navbar]
         # Tests [@ANCHOR: xpath_rendering_navbar]
+        # [@ANCHOR: test_dropzone_home_header]
+        # [@ANCHOR: test_dropzone_home_footer]
+        # [@ANCHOR: test_dropzone_navbar_actions]
+        # Tests [@ANCHOR: dropzone_home_header]
+        # Tests [@ANCHOR: dropzone_home_footer]
+        # Tests [@ANCHOR: dropzone_navbar_actions]
         user = self.env["res.users"].create(
             {
                 "name": "Nav User",
@@ -139,6 +145,22 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         )
 
         response = self.url_open(f"/{user.website_slug}/home")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'id="user_websites_dropzone_home_header"',
+            response.content,
+            "The home header dropzone must render."
+        )
+        self.assertIn(
+            b'id="user_websites_dropzone_home_footer"',
+            response.content,
+            "The home footer dropzone must render."
+        )
+        self.assertIn(
+            b'id="user_websites_dropzone_navbar_actions"',
+            response.content,
+            "The navbar actions dropzone must render."
+        )
         self.assertEqual(response.status_code, 200)
         self.assertIn(
             b'name="user_websites_slug"',
@@ -203,3 +225,35 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
             view_type="list",
         )
         self.assertIn("website_published", v8["arch"])
+
+    def test_09_community_directory_rendering(self):
+        # [@ANCHOR: test_dropzone_directory_card]
+        # Tests [@ANCHOR: dropzone_directory_card]
+
+        # Create a user that will show up in the directory
+        self.env["res.users"].create(
+            {
+                "name": "Directory User",
+                "login": "diruser",
+                "website_slug": "diruser",
+                "privacy_show_in_directory": True,
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_portal").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
+
+        response = self.url_open("/community")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            b'id="user_websites_dropzone_directory_card"',
+            response.content,
+            "The community directory must render the directory card dropzone."
+        )
