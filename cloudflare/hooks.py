@@ -6,13 +6,18 @@ _logger = logging.getLogger(__name__)
 
 def install_knowledge_docs(env):
     """
-    Checks if the knowledge.article API is present in the environment.
+    Checks if the knowledge.article or manual.article API is present in the environment.
     If it is, reads the standalone documentation file and installs it.
     Supports both 'manual_library' (community) and 'knowledge' (enterprise).
     """
-    # Check for either the community manual_library or the enterprise knowledge module
-    model_name = "knowledge.article"
-    if model_name not in env:
+    # ADR-0055: Support soft dependencies on manual_library or enterprise knowledge.
+    article_model_name = None
+    if "knowledge.article" in env:
+        article_model_name = "knowledge.article"
+    elif "manual.article" in env:
+        article_model_name = "manual.article"
+
+    if not article_model_name:
         return None
 
     # Use the odoo_facility_service_internal for general maintenance tasks
@@ -20,7 +25,7 @@ def install_knowledge_docs(env):
         "zero_sudo.odoo_facility_service_internal"
     )
     article_model = (
-        env[model_name]
+        env[article_model_name]
         .with_user(svc_uid)
         .with_context(mail_notrack=True, prefetch_fields=False)
     )
@@ -31,7 +36,8 @@ def install_knowledge_docs(env):
 
     if not existing:
         try:
-            with file_open("cloudflare/data/documentation.md", "r") as f:
+            # Use LLM_DOCUMENTATION.md as the source of truth for the injected article
+            with file_open("cloudflare/LLM_DOCUMENTATION.md", "r") as f:
                 doc_body = f.read()
             # Wrap markdown in a basic <pre> block for the Knowledge HTML body
             doc_body = f"<pre>{doc_body}</pre>"
@@ -50,11 +56,17 @@ def install_knowledge_docs(env):
             vals["internal_permission"] = "read"
         if "icon" in article_model._fields:
             vals["icon"] = "☁️"
-        if "category" in article_model._fields:
-            # common in some versions of knowledge
-            vals["category"] = "workspace"
 
-        return article_model.create(vals)
+        # Odoo Enterprise knowledge.article uses 'category' field in some versions.
+        # manual_library's knowledge.article implementation does NOT use 'category'.
+        if article_model_name == "knowledge.article" and "category" in article_model._fields:
+             vals["category"] = "workspace"
+
+        try:
+            # # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
+            return article_model.create(vals)
+        except Exception as e:
+            _logger.error("Failed to create Cloudflare documentation article: %s", e)
     return existing
 
 def post_init_hook(env):
