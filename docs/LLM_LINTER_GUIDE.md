@@ -21,8 +21,6 @@ You MUST NOT mock required functions (via `patch` or `patch.object`); the test m
 The AST linter recursively tracks assignments and function calls to block absolute privilege escalation.
 You MUST use the **Service Account Pattern** (`with_user(svc_uid)`) or the **Public User Idiom**.
 * **`sudo()` is Blocked:** Any use of `.sudo()` on recordsets, environments, or intermediate variables is physically blocked.
-* *Exception:* Fetching cryptographic keys (`.sudo().get_param('database.secret')`) is permitted ONLY if tagged with `# burn-ignore-sudo: Tested by [@ANCHOR: example_name]`.
-* *Exception:* Provisioning long-lived API keys within the `daemon_key_manager` module (`key_registry.py`) is permitted to use `.sudo()._generate(...)` to bypass non-admin expiration limits.
 * **Obfuscation is Caught:** The linter tracks `getattr(..., 'sudo')` and intermediate variable assignments.
 * **Environment Evasions:** Calling `env(su=True)` to forcefully escalate to root privileges natively is completely forbidden and will fail the build.
 * **Shell Injection:** `subprocess.run` MUST explicitly use `shell=False` and pass arguments as lists.
@@ -175,7 +173,6 @@ The AST parser physically reads your test files to verify the assertions exist.
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
 | `ir.ui.view` | `<!-- audit-ignore-view: Tested by [@ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
 | I18N Strings | `# audit-ignore-i18n: Tested by [@ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
-| Sudo Override | `# burn-ignore-sudo: Tested by [@ANCHOR: example_name]` | Exclusively for `database.secret` extraction. |
 
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines and detach your inline linter comments, causing the AST linter to fail.
