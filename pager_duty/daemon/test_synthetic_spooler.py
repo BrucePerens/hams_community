@@ -54,9 +54,10 @@ class TestSyntheticSpooler(unittest.TestCase):
     @patch("pager_synthetic_spooler.urllib.request.urlretrieve")
     @patch("pager_synthetic_spooler.subprocess.run")
     @patch("pager_synthetic_spooler.hashlib.sha256")
-    @patch("builtins.open", new_callable=MagicMock)
+    @patch("pager_synthetic_spooler.os.chmod")
+    @patch("pager_synthetic_spooler.open", create=True)
     def test_03_sandbox_downloads_checksum(
-        self, mock_open, mock_sha, mock_run, mock_url
+        self, mock_open, mock_chmod, mock_sha, mock_run, mock_url
     ):
         """Verify that downloaded binaries are cryptographically verified before execution."""
         mock_hasher = MagicMock()

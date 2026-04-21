@@ -10,6 +10,11 @@ class TestCompliancePages(TransactionCase):
 
     def test_pages_presence(self):
         """Verify that legal pages are created."""
+        # [@ANCHOR: test_compliance_pages_presence]
+        # Tests [@ANCHOR: compliance_privacy_policy_template]
+        # Tests [@ANCHOR: compliance_cookie_policy_template]
+        # Tests [@ANCHOR: compliance_terms_of_service_template]
+        # Tests [@ANCHOR: story_automatic_legal_pages]
         urls = [
             "/privacy",
             "/cookie-policy",
@@ -25,6 +30,11 @@ class TestCompliancePages(TransactionCase):
 
     def test_pages_content(self):
         """Verify that legal pages contain the expected boilerplate content."""
+        # [@ANCHOR: test_compliance_pages_content]
+        # Tests [@ANCHOR: compliance_privacy_policy_template]
+        # Tests [@ANCHOR: compliance_cookie_policy_template]
+        # Tests [@ANCHOR: compliance_terms_of_service_template]
+        # Tests [@ANCHOR: story_automatic_legal_pages]
         for xml_id in ["compliance.compliance_privacy_policy_template",
                        "compliance.compliance_cookie_policy_template",
                        "compliance.compliance_terms_of_service_template"]:
@@ -45,6 +55,9 @@ class TestCompliancePages(TransactionCase):
 
     def test_knowledge_article_installation(self):
         """Verify the documentation article is correctly installed in knowledge.article."""
+        # [@ANCHOR: test_compliance_knowledge_article_installation]
+        # Tests [@ANCHOR: compliance_install_knowledge_docs]
+        # Tests [@ANCHOR: story_compliance_documentation]
         if "knowledge.article" not in self.env:
             self.skipTest("knowledge.article model not available")
 

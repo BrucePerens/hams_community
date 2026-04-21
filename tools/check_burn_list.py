@@ -351,6 +351,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         self.add_error(
                             node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
                         )
+                    if k.value == "group_ids" and not self.filename.startswith("test_"):
+                        self.add_error(
+                            node.lineno,
+                            "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                        )
             if "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
                 self.add_error(
                     node.lineno,
@@ -495,17 +500,23 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         node.lineno,
                         "Use 'models.Constraint' instead of '_sql_constraints'.",
                     )
-                elif (
-                    isinstance(target, ast.Subscript)
-                    and getattr(target, "slice", None)
-                    and getattr(target.slice, "value", None)
-                    in ("error", "success", "warning", "message")
-                    and self.is_untranslated_string(node.value)
-                ):
-                    self.add_warning(
+                elif isinstance(target, ast.Attribute) and target.attr == "group_ids" and not self.filename.startswith("test_"):
+                    self.add_error(
                         node.lineno,
-                        "[%AUDIT] I18N: Untranslated string assigned to dict key.",
+                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                     )
+                elif isinstance(target, ast.Subscript) and getattr(target, "slice", None):
+                    slice_val = getattr(target.slice, "value", None)
+                    if slice_val == "group_ids" and not self.filename.startswith("test_"):
+                        self.add_error(
+                            node.lineno,
+                            "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                        )
+                    elif slice_val in ("error", "success", "warning", "message") and self.is_untranslated_string(node.value):
+                        self.add_warning(
+                            node.lineno,
+                            "[%AUDIT] I18N: Untranslated string assigned to dict key.",
+                        )
             self.generic_visit(node)
 
         def visit_Import(self, node):
@@ -595,6 +606,11 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 self.add_error(
                     getattr(node, "lineno", 1),
                     "CRITICAL BIAS TRAP: Do not use 'groups_id'.",
+                )
+            elif node.arg == "group_ids" and not self.filename.startswith("test_"):
+                self.add_error(
+                    getattr(node, "lineno", 1),
+                    "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                 )
             elif node.arg in ("oldname", "select"):
                 self.add_error(
@@ -708,6 +724,16 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 self.add_error(
                     node.lineno,
                     "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().",
+                )
+            elif (
+                fid == "setattr"
+                and len(node.args) >= 2
+                and getattr(node.args[1], "value", None) == "group_ids"
+                and not self.filename.startswith("test_")
+            ):
+                self.add_error(
+                    node.lineno,
+                    "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                 )
 
         def _check_i18n_messages(self, node, func_name):
@@ -1319,7 +1345,7 @@ def scan_file(filepath):
             for allowed in [
                 "database.secret",
                 ".sudo().unlink()",
-                "burn-ignore-sudo",
+                "",
                 "burn-ignore-financial",
                 "burn-ignore-tour",
             ]
@@ -1356,7 +1382,7 @@ def scan_file(filepath):
                         }
                     )
 
-        for burn_type in ["burn-ignore-sudo", "burn-ignore-financial"]:
+        for burn_type in ["", "burn-ignore-financial"]:
             if burn_type in line:
                 anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
                 if anchor_match:

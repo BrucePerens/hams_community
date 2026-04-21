@@ -96,8 +96,29 @@ If your dependent module (e.g., `cloudflare`, `custom_dns`) needs to programmati
 
 ---
 
+<stories_and_journeys>
+## 4. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Group Websites](user_websites/docs/stories/group_sites.md)
+* [Content Moderation](user_websites/docs/stories/moderation.md)
+* [Personal Site Management](user_websites/docs/stories/personal_site.md)
+* [Privacy and GDPR Compliance](user_websites/docs/stories/privacy.md)
+* [Technical Foundation and Utilities](user_websites/docs/stories/technical_foundation.md)
+
+### Journeys
+* [Extension and Customization](user_websites/docs/journeys/customization.md)
+* [User Data Management (GDPR)](user_websites/docs/journeys/gdpr_compliance.md)
+* [Content Reporting and Resolution](user_websites/docs/journeys/moderation_workflow.md)
+* [First Time Site Setup](user_websites/docs/journeys/onboarding.md)
+</stories_and_journeys>
+
+---
+
 <crons_and_subscriptions>
-## 4. 📧 Weekly Digests & Subscriptions
+## 5. 📧 Weekly Digests & Subscriptions
 * Features an automated `ir.cron` job (`send_weekly_digest` `[@ANCHOR: ir_cron_send_weekly_digest]`, `[@ANCHOR: send_weekly_digest]`) that iterates through `blog.post` objects and dispatches emails to followers. Re-entrant batching algorithm resumption is tested by `[@ANCHOR: test_cron_batching_resumption]`. QWeb Mail templates are verified by `[@ANCHOR: test_weekly_digest_mail_template]`.
 * Utilizes HMAC-SHA256 tokens to generate secure, one-click `List-Unsubscribe` header links for GDPR/CAN-SPAM compliance `[@ANCHOR: test_weekly_digest_secret]`.
 * **Background View Counter Sync:** High-throughput Redis view counters are safely flushed to Postgres via cron `[@ANCHOR: ir_cron_flush_view_counters]`, tested extensively by `[@ANCHOR: test_cron_redis_flush]`.

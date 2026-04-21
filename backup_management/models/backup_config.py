@@ -189,6 +189,7 @@ class BackupConfig(models.Model):
 
     def action_trigger_backup(self):
         # [@ANCHOR: backup_trigger_execution]
+        # Verified by [@ANCHOR: test_backup_orchestration]
         # Implements ADR-0071: Asynchronous Bastion Pattern
         jobs = self.env["backup.job"]
         created_jobs = []
@@ -255,6 +256,7 @@ class BackupConfig(models.Model):
 
     def action_apply_policies(self):
         # [@ANCHOR: backup_apply_policies]
+        # Verified by [@ANCHOR: test_apply_policies]
         for rec in self:
             if rec.engine == "kopia":
                 rec._apply_kopia_policies()
@@ -347,6 +349,7 @@ class BackupConfig(models.Model):
 
     def _report_backup_failure(self, message):
         # [@ANCHOR: backup_pager_synergy]
+        # Verified by [@ANCHOR: test_backup_cron]
         if "pager.incident" in self.env:
             try:
                 pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -370,6 +373,7 @@ class BackupConfig(models.Model):
     @api.model
     def get_board_data(self):
         # [@ANCHOR: backup_board_data]
+        # Verified by [@ANCHOR: test_backup_view]
         configs = self.search_read([], ["name", "engine", "target_path"])
         now = fields.Datetime.now()
 
@@ -394,8 +398,10 @@ class BackupConfig(models.Model):
         return configs
 
     def action_sync_snapshots(self):
+        # [@ANCHOR: UX_BACKUP_SYNC]
         # [@ANCHOR: backup_sync_kopia]
         # [@ANCHOR: backup_sync_pgbackrest]
+        # Verified by [@ANCHOR: test_backup_cron]
         for rec in self:
             if rec.engine == "kopia":
                 rec._sync_kopia()
@@ -503,6 +509,7 @@ class BackupConfig(models.Model):
     @api.model
     def cron_sync_all_backups(self):
         # [@ANCHOR: cron_sync_all_backups]
+        # Verified by [@ANCHOR: test_backup_cron]
         configs = self.env["backup.config"].search([], limit=1000)
         now = fields.Datetime.now()
         for conf in configs:

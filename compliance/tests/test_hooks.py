@@ -15,6 +15,8 @@ class TestComplianceHooks(TransactionCase):
         """
         # [@ANCHOR: test_compliance_post_init_documentation]
         # Tests [@ANCHOR: compliance_install_knowledge_docs]
+        # Tests [@ANCHOR: story_compliance_documentation]
+        # Tests [@ANCHOR: journey_compliance_setup]
         if "knowledge.article" not in self.env:
             raise unittest.SkipTest(
                 "knowledge.article API is not installed. Skipping documentation hook test."
@@ -50,6 +52,8 @@ class TestComplianceHooks(TransactionCase):
         """
         # [@ANCHOR: test_compliance_post_init_cookie_bar]
         # Tests [@ANCHOR: compliance_post_init_cookie_bar]
+        # Tests [@ANCHOR: story_cookie_consent]
+        # Tests [@ANCHOR: journey_compliance_setup]
         if "cookies_bar" not in self.env["website"]._fields:
             raise unittest.SkipTest(
                 "'cookies_bar' field is not present on the website model. Skipping cookie bar hook test."
@@ -66,6 +70,11 @@ class TestComplianceHooks(TransactionCase):
 
     def test_03_views_rendering(self):
         # [@ANCHOR: test_compliance_views]
+        # Tests [@ANCHOR: compliance_privacy_policy_template]
+        # Tests [@ANCHOR: compliance_cookie_policy_template]
+        # Tests [@ANCHOR: compliance_terms_of_service_template]
+        # Tests [@ANCHOR: story_automatic_legal_pages]
+        # Tests [@ANCHOR: journey_compliance_setup]
         self.env.ref("compliance.compliance_privacy_policy_template").with_context(
             lang=None
         )._get_combined_arch()

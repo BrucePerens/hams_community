@@ -1,1 +1,1 @@
-from . import binary_manifest  # noqa: F401
+from . import binary_manifest

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import odoo.tests
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
 
@@ -84,6 +85,8 @@ class TestDatabaseManagement(TransactionCase):
     def test_04_views(self):
         # [@ANCHOR: test_dba_view]
         # Tests [@ANCHOR: db_index_stats]
+        # Tests [@ANCHOR: db_slow_queries]
+        # Tests [@ANCHOR: db_active_sessions]
         v1 = self.env["database.table.stat"].get_view(view_type="list")
         self.assertIn("table_name", v1["arch"])
 
@@ -97,9 +100,24 @@ class TestDatabaseManagement(TransactionCase):
         self.assertIn("index_name", v4["arch"])
 
     def test_05_documentation_installed(self):
+        # Tests [@ANCHOR: db_doc_injection]
         # Verify that the post_init_hook (or similar) installed the documentation
         doc = self.env["knowledge.article"].search(
             [("name", "=", "Database Management Guide")], limit=1
         )
         self.assertTrue(doc, "Module documentation was not installed!")
         self.assertIn("Database Management", doc.body)
+
+
+@tagged("post_install", "-at_install")
+class TestDatabaseTours(odoo.tests.HttpCase):
+    def test_db_bloat_tour(self):
+        # [@ANCHOR: test_db_bloat_tour]
+        # Tests [@ANCHOR: db_index_stats]
+        # Tests [@ANCHOR: vacuum_analyze]
+        self.start_tour("/web", "db_management_bloat_tour", login="admin")
+
+    def test_db_slow_query_tour(self):
+        # [@ANCHOR: test_db_slow_query_tour]
+        # Tests [@ANCHOR: db_slow_queries]
+        self.start_tour("/web", "db_management_slow_query_tour", login="admin")

@@ -11,7 +11,7 @@
                 <div id="user_websites_dropzone_settings">
                     <!-- [@ANCHOR: dropzone_settings] -->
                 </div>
-                <app data-string="User Websites" string="User Websites" name="user_websites">
+                <app data-string="User Websites" string="User Websites" name="user_websites" data-key="user_websites">
                     <block title="User Websites Management" id="user_websites_management">
                         <setting help="Select users who can manage all user sites and violation reports.">
                             <field name="user_websites_administrators_ids" widget="many2many_tags"/>

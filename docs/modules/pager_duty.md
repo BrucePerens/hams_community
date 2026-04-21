@@ -72,5 +72,25 @@ To extend the daemon with a new capability (e.g., a `docker` API health check), 
 
 ---
 
-## 5. Testing Mandate
+<stories_and_journeys>
+## 5. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Scaling the Watchtower](docs/stories/pager_duty/automated_monitoring_setup.md)
+* [Finding the Needle in the Haystack](docs/stories/pager_duty/log_anomaly_detection.md)
+* [The Midnight Guardian](docs/stories/pager_duty/on_call_alerting.md)
+* [The Data-Driven Post-Mortem](docs/stories/pager_duty/performance_analytics.md)
+
+### Journeys
+* [Daemon Execution Loop](docs/journeys/pager_duty/daemon_execution_loop.md)
+* [Escalation Pathway](docs/journeys/pager_duty/escalation_pathway.md)
+* [Incident Lifecycle](docs/journeys/pager_duty/incident_lifecycle.md)
+* [Synthetic Monitoring Flow](docs/journeys/pager_duty/synthetic_monitoring_flow.md)
+</stories_and_journeys>
+
+---
+
+## 6. Testing Mandate
 If you create a new plugin, you **MUST** update `daemons/pager_duty/test_generalized_monitor.py` with an isolated, aggressively mocked test verifying its successful parsing and failure states. Headless APIs and synthetic execution layers safely suppress i18n translation requirements during tests. [@ANCHOR: synthetic_i18n]
