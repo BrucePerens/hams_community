@@ -153,6 +153,47 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
 
     @api.model
+    def _set_system_param(self, key, value):
+        # [@ANCHOR: set_system_param]
+        # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
+        # Tests [@ANCHOR: story_parameter_whitelisting]
+        PARAM_WHITELIST = [
+            "web.base.url",
+            "cloudflare.last_static_mtime",
+            "user_websites.company_abuse_email",
+            "user_websites.max_sites_per_user",
+            "user_websites.enable_blog_comments",
+            "caching.safe_quota_mb",
+            "caching.invalidation_version",
+            "user_websites.global_website_page_limit",
+            "user_websites.last_digest_id",
+            "user_websites_seo.docs_installed",
+        ]
+
+        banned_substrings = [
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
+        ]
+        lower_key = key.lower()
+
+        if key not in PARAM_WHITELIST:
+            if any(banned in lower_key for banned in banned_substrings):
+                raise AccessError(
+                    _(
+                        "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
+                    ) % key
+                )
+
+            raise AccessError(
+                _(
+                    "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
+                ) % key
+            )
+
+        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        self.env["ir.config_parameter"].with_user(svc_uid).set_param(key, value)
+        return True
+
+    @api.model
     def _get_kv(self, key):
         svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
         record = self.env['zero_sudo.kv'].with_user(svc_uid).search([('key', '=', key)], limit=1)

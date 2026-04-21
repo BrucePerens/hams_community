@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 15:53+0000\n"
-"PO-Revision-Date: 2026-04-21 15:53+0000\n"
+"POT-Creation-Date: 2026-04-21 16:08+0000\n"
+"PO-Revision-Date: 2026-04-21 16:08+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 #: binary_downloader/hooks.py:44
-#: distributed_redis_cache/hooks.py:40
+#: distributed_redis_cache/hooks.py:47
 #: test_real_transaction/hooks.py:48
 msgid "<p>Error loading documentation file: %s</p>"
 msgstr ""
@@ -75,7 +75,7 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:32
+#: distributed_redis_cache/models/distributed_cache_config.py:36
 msgid "Cache invalidated for model %s"
 msgstr ""
 
@@ -147,7 +147,7 @@ msgstr ""
 msgid "Failed to lift ban via Cloudflare API: %s"
 msgstr ""
 
-#: distributed_redis_cache/hooks.py:39
+#: distributed_redis_cache/hooks.py:46
 msgid "Failed to load Distributed Redis Cache documentation file: %s"
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:177
+#: zero_sudo/models/security_utils.py:218
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -265,23 +265,23 @@ msgstr ""
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:58
+#: distributed_redis_cache/models/distributed_cache_config.py:62
 msgid "Redis Status"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:51
+#: distributed_redis_cache/models/distributed_cache_config.py:55
 msgid "Redis connection failed: %s"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:48
+#: distributed_redis_cache/models/distributed_cache_config.py:52
 msgid "Redis connection is healthy."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:41
+#: distributed_redis_cache/models/distributed_cache_config.py:45
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:183
+#: zero_sudo/models/security_utils.py:224
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -302,11 +302,16 @@ msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
 #: zero_sudo/models/security_utils.py:146
+#: zero_sudo/models/security_utils.py:187
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
 #: zero_sudo/models/security_utils.py:136
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
+msgstr ""
+
+#: zero_sudo/models/security_utils.py:181
+msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
 msgstr ""
 
 #: zero_sudo/models/security_utils.py:38
@@ -345,7 +350,7 @@ msgstr ""
 #: cloudflare/models/res_config_settings.py:71
 #: cloudflare/models/tunnel.py:98
 #: cloudflare/models/zone_settings_wizard.py:90
-#: distributed_redis_cache/models/distributed_cache_config.py:31
+#: distributed_redis_cache/models/distributed_cache_config.py:35
 msgid "Success"
 msgstr ""
 
@@ -400,7 +405,7 @@ msgstr ""
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:195
+#: zero_sudo/models/security_utils.py:236
 msgid "VENV update failed:\n%s"
 msgstr ""
 

@@ -58,10 +58,10 @@ def install_knowledge_docs(env):
 
             res = article_model.create(vals)
             if res:
-                utils._set_system_param("user_websites_seo.docs_installed", "1", override_svc_uid=param_svc_uid)
+                utils.with_user(param_svc_uid)._set_system_param("user_websites_seo.docs_installed", "1")
             return res
         else:
-            utils._set_system_param("user_websites_seo.docs_installed", "1", override_svc_uid=param_svc_uid)
+            utils.with_user(param_svc_uid)._set_system_param("user_websites_seo.docs_installed", "1")
         return existing
     return None
 
