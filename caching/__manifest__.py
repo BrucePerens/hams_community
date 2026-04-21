@@ -12,6 +12,11 @@
         "views/layout_inherit.xml",
         "views/res_config_settings_views.xml",
     ],
+    "assets": {
+        "web.assets_frontend": [
+            "caching/static/tests/tours/caching_tour.js",
+        ],
+    },
     "installable": True,
     "application": False,
     "license": "LGPL-3",
