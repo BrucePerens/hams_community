@@ -126,10 +126,10 @@ class ResUsers(models.Model):
         from ..hooks import install_knowledge_docs  # noqa: E402
         install_knowledge_docs(self.env)
 
-    @api.model
-    def _get_writeable_fields(self):
+    @property
+    def SELF_WRITEABLE_FIELDS(self):
         """ADR-0015: Self-Writeable Fields Idiom"""
-        return super()._get_writeable_fields() + [
+        return super().SELF_WRITEABLE_FIELDS + [
             "privacy_show_in_directory",
             "website_slug",
         ]

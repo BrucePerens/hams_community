@@ -126,7 +126,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
 
     def test_02_seo_metadata_cross_tenant_idor(self):
         """
-        Risk: The SEO module adds metadata to `_get_writeable_fields`. Malice might pass Victim's ID.
+        Risk: The SEO module adds metadata to `SELF_WRITEABLE_FIELDS`. Malice might pass Victim's ID.
         Action: Malice writes SEO data to Victim's res.users record.
         Expected: AccessError from `check_access_rule`.
         """
