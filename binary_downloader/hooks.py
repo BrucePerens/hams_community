@@ -63,4 +63,4 @@ def post_init_hook(env):
     """
     Hook executed upon module installation.
     """
-    pass
+    install_knowledge_docs(env)
