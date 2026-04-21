@@ -66,4 +66,4 @@ def install_knowledge_docs(env):
     return None
 
 def post_init_hook(env):
-    pass
+    install_knowledge_docs(env)
