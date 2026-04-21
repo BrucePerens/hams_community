@@ -3,7 +3,6 @@ from odoo import models, fields, _
 from odoo.addons.distributed_redis_cache.redis_cache import invalidate_model_cache
 from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
 import json
-from ..hooks import install_knowledge_docs
 
 class DistributedCacheConfig(models.TransientModel):
     _name = 'distributed.cache.config'
@@ -11,16 +10,16 @@ class DistributedCacheConfig(models.TransientModel):
 
     model_id = fields.Many2one('ir.model', string="Model to Invalidate", help="Select a model to flush its specific cache.")
 
-    def _register_hook(self):
-        super()._register_hook()
-        install_knowledge_docs(self.env)
-
     def action_invalidate_model_cache(self):
         # [@ANCHOR: manual_cache_invalidation]
         self.ensure_one()
         if self.model_id:
-            invalidate_model_cache(self.env, self.model_id.model)
-            payload = json.dumps({"model": self.model_id.model})
+            model_name = self.model_id.model
+            # Security: Ensure model exists before notification
+            if model_name not in self.env:
+                 return
+            invalidate_model_cache(self.env, model_name)
+            payload = json.dumps({"model": model_name})
             self.env.cr.execute(
                 "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
             )

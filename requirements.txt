@@ -15,3 +15,4 @@ pyserial
 PyYAML
 redis==5.0.1
 requests
+websocket-client

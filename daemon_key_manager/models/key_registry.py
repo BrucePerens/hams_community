@@ -4,7 +4,6 @@ import logging
 import datetime
 from odoo import models, fields, api, SUPERUSER_ID, tools, _
 from odoo.exceptions import UserError
-from ..hooks import install_knowledge_docs
 
 _logger = logging.getLogger(__name__)
 
@@ -175,15 +174,6 @@ class DaemonKeyRegistry(models.Model):
             f.write(f"ODOO_RPC_KEY={key}\n")
 
         os.chmod(path, 0o600)
-
-    def _register_hook(self):
-        """
-        Retroactively install documentation if it hasn't been done yet.
-        This handles cases where the documentation model was installed after this module.
-        """
-        # Verified by [@ANCHOR: test_documentation_installed]
-        super()._register_hook()
-        install_knowledge_docs(self.env)
 
     @api.model
     def _cron_rotate_all_keys(self):

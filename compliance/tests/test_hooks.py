@@ -8,43 +8,6 @@ from odoo.addons.compliance.hooks import post_init_hook
 @tagged("post_install", "-at_install")
 class TestComplianceHooks(TransactionCase):
 
-    def test_01_post_init_hook_documentation(self):
-        """
-        Verify that the post_init_hook successfully reads the HTML file
-        and installs the documentation into the knowledge.article API.
-        """
-        # [@ANCHOR: test_compliance_post_init_documentation]
-        # Tests [@ANCHOR: compliance_install_knowledge_docs]
-        # Tests [@ANCHOR: story_compliance_documentation]
-        # Tests [@ANCHOR: journey_compliance_setup]
-        if "knowledge.article" not in self.env:
-            raise unittest.SkipTest(
-                "knowledge.article API is not installed. Skipping documentation hook test."
-            )
-
-        # Manually trigger the hook to ensure execution during the test transaction
-        post_init_hook(self.env)
-
-        article = self.env["knowledge.article"].search(
-            [("name", "=", "Site Owner's Guide to Regulatory Compliance")], limit=1
-        )
-
-        self.assertTrue(
-            article, "The compliance documentation article must be created by the hook."
-        )
-
-        # Verify file_open successfully read the HTML content, not the error fallback
-        self.assertIn(
-            "Data Privacy",
-            article.body,
-            "The article body should contain the content from the HTML file.",
-        )
-        self.assertNotIn(
-            "Error loading documentation file",
-            article.body,
-            "The file_open utility should not have failed.",
-        )
-
     def test_02_post_init_hook_cookie_bar(self):
         """
         Verify that the post_init_hook successfully enables the cookies_bar

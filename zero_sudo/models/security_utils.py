@@ -3,6 +3,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import shutil
 from odoo import models, api, tools, _
 from odoo.exceptions import AccessError, UserError
 
@@ -32,11 +33,21 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_service_uid(self, xml_id):  # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
         # Tests [@ANCHOR: story_secure_escalation]
-        uid = self.env["ir.model.data"].sudo()._xmlid_to_res_id(xml_id)
-        if not uid:
+        if "." not in xml_id:
+            raise AccessError(_("Invalid XML ID format: %s") % xml_id)
+        module, name = xml_id.split(".", 1)
+
+        # STRICT ZERO-SUDO MANDATE: Resolve the ID using raw SQL to prevent any ORM/sudo bypasses
+        self.env.cr.execute(
+            "SELECT res_id FROM ir_model_data WHERE module = %s AND name = %s AND model = 'res.users'",
+            (module, name)
+        )
+        res_id_row = self.env.cr.fetchone()
+        if not res_id_row:
             raise AccessError(
                 _("Security Alert: Service Account '%s' not found.") % xml_id
             )
+        uid = res_id_row[0]
 
         # Verify the account is active AND is explicitly flagged as a service account
         self.env.cr.execute(
@@ -76,6 +87,36 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         return uid
 
     @api.model
+    def _get_service_env(self, xml_id):
+        """
+        Returns a new Environment running strictly under the context of the specified
+        service account. Automatically disables tracking and prefetching per ADR-0001
+        and ADR-0064 to prevent ORM cascade Access Errors.
+        """
+        uid = self._get_service_uid(xml_id)
+        return self.env(user=uid).with_context(mail_notrack=True, prefetch_fields=False)
+
+    @api.model
+    def _ensure_executable(self, cmd_name, svc_xml_id=None, pkg_name=None):
+        """
+        Resolves an executable in the system PATH.
+        If not found, and binary.manifest exists, attempts to dynamically install it.
+        """
+        path = shutil.which(cmd_name)
+        if path:
+            return path
+
+        if "binary.manifest" in self.env and svc_xml_id:
+            env_svc = self._get_service_env(svc_xml_id)
+            return env_svc["binary.manifest"].ensure_executable(cmd_name)
+
+        pkg = pkg_name or cmd_name
+        raise UserError(
+            _("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').")
+            % (cmd_name, pkg)
+        )
+
+    @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
         # [@ANCHOR: coherent_cache_signal]
         # Verified by [@ANCHOR: test_coherent_cache_signal]
@@ -99,11 +140,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         # Tests [@ANCHOR: story_parameter_whitelisting]
         # THE MECHANICAL SECRET BLOCK
-        # Prevents Server-Side Template Injection (SSTI) from exfiltrating sensitive keys.
-        # This implementation uses a dual-protection strategy:
-        # 1. A hardcoded PARAM_WHITELIST (ADR-0002)
-        # 2. A mechanical block on sensitive substrings for dynamic keys.
-
         PARAM_WHITELIST = [
             "web.base.url",
             "cloudflare.last_static_mtime",
@@ -118,19 +154,11 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         ]
 
         banned_substrings = [
-            "secret",
-            "key",
-            "password",
-            "token",
-            "auth",
-            "crypt",
-            "cert",
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
         ]
         lower_key = key.lower()
 
         if key not in PARAM_WHITELIST:
-            # If not in whitelist, we check if it's a dynamic key or if it contains banned substrings.
-            # For strict compliance with ADR-0002, we should ideally ONLY allow whitelisted keys.
             if any(banned in lower_key for banned in banned_substrings):
                 raise AccessError(
                     _(
@@ -138,10 +166,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                     )
                     % key
                 )
-
-            # In some cases, we might want to allow non-whitelisted but safe keys for decentralization,
-            # but the documentation explicitly states "The requested key MUST be hardcoded in the PARAM_WHITELIST".
-            # To be safe and compliant, we enforce the whitelist strictly.
             raise AccessError(
                 _(
                     "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
@@ -149,8 +173,62 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        # Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
-        return self.env["ir.config_parameter"].sudo().get_param(key, default)
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        return env_svc["ir.config_parameter"].get_param(key, default)
+
+    @api.model
+    def _set_system_param(self, key, value):
+        # [@ANCHOR: set_system_param]
+        PARAM_WHITELIST = [
+            "web.base.url",
+            "cloudflare.last_static_mtime",
+            "user_websites.company_abuse_email",
+            "user_websites.max_sites_per_user",
+            "user_websites.enable_blog_comments",
+            "caching.safe_quota_mb",
+            "caching.invalidation_version",
+            "user_websites.global_website_page_limit",
+            "user_websites.last_digest_id",
+            "user_websites_seo.docs_installed",
+        ]
+
+        banned_substrings = [
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
+        ]
+        lower_key = key.lower()
+
+        if key not in PARAM_WHITELIST:
+            if any(banned in lower_key for banned in banned_substrings):
+                raise AccessError(
+                    _(
+                        "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
+                    ) % key
+                )
+            raise AccessError(
+                _(
+                    "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
+                ) % key
+            )
+
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        env_svc["ir.config_parameter"].set_param(key, value)
+        return True
+
+    @api.model
+    def _get_kv(self, key):
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        record = env_svc['zero_sudo.kv'].search([('key', '=', key)], limit=1)
+        return record.value if record else None
+
+    @api.model
+    def _set_kv(self, key, value):
+        env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+        KV = env_svc['zero_sudo.kv']
+        record = KV.search([('key', '=', key)], limit=1)
+        if record:
+            record.write({'value': value})
+        else:
+            KV.create({'key': key, 'value': value})
 
     @api.model
     def _update_python_venv(self):
@@ -177,6 +255,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return True
         except subprocess.CalledProcessError as e:
             raise UserError(_("VENV update failed:\n%s") % e.stderr)
+
     @api.model
     def _get_crypto_secret(self):
         # [@ANCHOR: get_crypto_secret]

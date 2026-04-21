@@ -22,6 +22,14 @@ logger = logging.getLogger("cache_manager")
 
 # --- Configuration ---
 # [@ANCHOR: cache_manager_config]
+ENV_FILE = "/var/lib/odoo/daemon_keys/cache_manager.env"
+if os.path.exists(ENV_FILE):
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ENV_FILE)
+    except ImportError:
+        logger.warning("python-dotenv not installed, skipping .env loading")
+
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "odoo")
@@ -34,6 +42,7 @@ if os.getenv("PGHOST"):
 
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASS = os.getenv("REDIS_PASSWORD")
 
 PG_CHANNEL = "distributed_cache_invalidation"
 REDIS_CHANNEL = "odoo_cache_invalidation_bus"
@@ -72,7 +81,7 @@ async def main():
     # 1. Connect to Redis
     try:
         redis_client = redis.Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+            host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASS, decode_responses=True
         )
         await redis_client.ping()
         logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")

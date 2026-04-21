@@ -16,6 +16,7 @@ import werkzeug
 import logging
 from odoo.modules.registry import Registry
 from ..hooks import install_knowledge_docs
+from ..models.res_users import RESERVED_SLUGS
 
 _logger = logging.getLogger(__name__)
 
@@ -236,12 +237,16 @@ class UserWebsitesController(http.Controller):
             "/<string:website_slug>",
             "/<string:website_slug>/home",
             "/<string:website_slug>/home/",
+            "/<string:website_slug>/<path:page_path>",
         ],
         type="http",
         auth="public",
         website=True,
     )
-    def user_websites_home(self, website_slug, **kwargs):
+    def user_websites_home(self, website_slug, page_path=None, **kwargs):
+        # Prevent accessing reserved routes via path routing
+        if page_path and page_path.split("/")[0] in RESERVED_SLUGS:
+            raise werkzeug.exceptions.NotFound()
         # [@ANCHOR: controller_user_websites_home]
         # Verified by [@ANCHOR: test_tour_create_site]
         # Verified by [@ANCHOR: test_group_site_routing]
@@ -275,8 +280,9 @@ class UserWebsitesController(http.Controller):
                 if hasattr(request, "website") and request.website
                 else False
             )
+            target_url = f"/{user.website_slug}/{page_path}" if page_path else f"/{user.website_slug}/home"
             page_id = request.env["website.page"]._get_page_id_by_url(
-                f"/{user.website_slug}/home", website_id
+                target_url, website_id
             )
             page = (
                 request.env["website.page"].with_user(svc_uid).browse(page_id)
@@ -336,8 +342,9 @@ class UserWebsitesController(http.Controller):
                 if hasattr(request, "website") and request.website
                 else False
             )
+            target_url = f"/{group.website_slug}/{page_path}" if page_path else f"/{group.website_slug}/home"
             page_id = request.env["website.page"]._get_page_id_by_url(
-                f"/{group.website_slug}/home", website_id
+                target_url, website_id
             )
             page = (
                 request.env["website.page"].with_user(svc_uid).browse(page_id)

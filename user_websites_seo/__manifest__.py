@@ -17,6 +17,14 @@
         "views/res_users_views.xml",
         "views/user_websites_group_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "User Websites SEO Guide",
+            "path": "data/documentation.html",
+            "icon": "🔍",
+            "category": "workspace"
+        }
+    ],
     "post_init_hook": "post_init_hook",
     "assets": {
         "web.assets_tests": [

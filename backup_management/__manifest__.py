@@ -22,6 +22,14 @@
         "views/backup_board_views.xml",
         "views/menu_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Backup Management",
+            "path": "data/documentation.html",
+            "icon": "💾",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_backend": [
             "backup_management/static/src/components/board/board.js",

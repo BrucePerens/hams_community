@@ -38,22 +38,17 @@ def _async_unpublish_content(db_name, user_ids):
         # ADR-0001: Execute operations under a dedicated service account instead of SUPERUSER_ID
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
-            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            env_svc = env["zero_sudo.security.utils"]._get_service_env(
                 "user_websites.user_user_websites_service_account"
             )
 
             while True:
-                pages = (
-                    env["website.page"]
-                    .with_user(svc_uid)
-                    .with_context(mail_notrack=True, prefetch_fields=False)
-                    .search(
-                        [
-                            ("owner_user_id", "in", user_ids),
-                            ("website_published", "=", True),
-                        ],
-                        limit=5000,
-                    )
+                pages = env_svc["website.page"].search(
+                    [
+                        ("owner_user_id", "in", user_ids),
+                        ("website_published", "=", True),
+                    ],
+                    limit=5000,
                 )
                 if not pages:
                     break
@@ -64,17 +59,12 @@ def _async_unpublish_content(db_name, user_ids):
                 if not os.environ.get('ODOO_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
-                posts = (
-                    env["blog.post"]
-                    .with_user(svc_uid)
-                    .with_context(mail_notrack=True, prefetch_fields=False)
-                    .search(
-                        [
-                            ("owner_user_id", "in", user_ids),
-                            ("is_published", "=", True),
-                        ],
-                        limit=5000,
-                    )
+                posts = env_svc["blog.post"].search(
+                    [
+                        ("owner_user_id", "in", user_ids),
+                        ("is_published", "=", True),
+                    ],
+                    limit=5000,
                 )
                 if not posts:
                     break
@@ -85,11 +75,8 @@ def _async_unpublish_content(db_name, user_ids):
                 if not os.environ.get('ODOO_DISABLE_SLEEPS'): time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
             while True:
-                blogs = (
-                    env["blog.blog"]
-                    .with_user(svc_uid)
-                    .with_context(mail_notrack=True, prefetch_fields=False)
-                    .search([("owner_user_id", "in", user_ids)], limit=5000)
+                blogs = env_svc["blog.blog"].search(
+                    [("owner_user_id", "in", user_ids)], limit=5000
                 )
                 if not blogs:
                     break
@@ -114,22 +101,10 @@ class ResUsers(models.Model):
 
     _inherit = "res.users"
 
-    def _register_hook(self):
-        """
-        Ensures documentation is installed if the required models are available.
-        This runs after all modules are loaded.
-        """
-        super()._register_hook()
-        # ADR-0055: Guard against transient registry states
-        if self.env.context.get("install_mode") or self.env.context.get("module_uninstall"):
-            return
-        from ..hooks import install_knowledge_docs  # noqa: E402
-        install_knowledge_docs(self.env)
-
-    @api.model
-    def _get_writeable_fields(self):
+    @property
+    def SELF_WRITEABLE_FIELDS(self):
         """ADR-0015: Self-Writeable Fields Idiom"""
-        return super()._get_writeable_fields() + [
+        return super().SELF_WRITEABLE_FIELDS + [
             "privacy_show_in_directory",
             "website_slug",
         ]
@@ -237,11 +212,11 @@ class ResUsers(models.Model):
                 user_domain.append(("id", "!=", record_id))
 
             try:
-                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "user_websites.user_user_websites_service_account"
                 )
-                env_user = self.env["res.users"].with_user(svc_uid)
-                env_group = self.env["user.websites.group"].with_user(svc_uid)
+                env_user = env_svc["res.users"]
+                env_group = env_svc["user.websites.group"]
             except AccessError:
                 if self.env.su:
                     env_user = self.env["res.users"]
@@ -307,45 +282,35 @@ class ResUsers(models.Model):
                     _async_unpublish_content, db_name, users_to_archive
                 )
             else:
-                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "user_websites.user_user_websites_service_account"
                 )
                 while True:
-                    pages = (
-                        self.env["website.page"]
-                        .with_user(svc_uid)
-                        .search(
-                            [
-                                ("owner_user_id", "in", users_to_archive),
-                                ("website_published", "=", True),
-                            ],
-                            limit=5000,
-                        )
+                    pages = env_svc["website.page"].search(
+                        [
+                            ("owner_user_id", "in", users_to_archive),
+                            ("website_published", "=", True),
+                        ],
+                        limit=5000,
                     )
                     if not pages:
                         break
                     pages.write({"website_published": False})
                 while True:
-                    posts = (
-                        self.env["blog.post"]
-                        .with_user(svc_uid)
-                        .search(
-                            [
-                                ("owner_user_id", "in", users_to_archive),
-                                ("is_published", "=", True),
-                            ],
-                            limit=5000,
-                        )
+                    posts = env_svc["blog.post"].search(
+                        [
+                            ("owner_user_id", "in", users_to_archive),
+                            ("is_published", "=", True),
+                        ],
+                        limit=5000,
                     )
                     if not posts:
                         break
                     posts.write({"is_published": False})
 
                 while True:
-                    blogs = (
-                        self.env["blog.blog"]
-                        .with_user(svc_uid)
-                        .search([("owner_user_id", "in", users_to_archive)], limit=5000)
+                    blogs = env_svc["blog.blog"].search(
+                        [("owner_user_id", "in", users_to_archive)], limit=5000
                     )
                     if not blogs:
                         break
@@ -361,22 +326,18 @@ class ResUsers(models.Model):
 
         # --- 301 Redirect Automation ---
         if "website_slug" in vals:
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                 "user_websites.user_user_websites_service_account"
             )
-            redirect_env = self.env["website.rewrite"].with_user(svc_uid)
+            redirect_env = env_svc["website.rewrite"]
 
             user_ids = self.ids
             blog_post_counts = {}
             if user_ids:
-                blog_posts = (
-                    self.env["blog.post"]
-                    .with_user(svc_uid)
-                    ._read_group(
-                        [("owner_user_id", "in", user_ids)],
-                        ["owner_user_id"],
-                        ["__count"],
-                    )
+                blog_posts = env_svc["blog.post"]._read_group(
+                    [("owner_user_id", "in", user_ids)],
+                    ["owner_user_id"],
+                    ["__count"],
                 )
                 for owner, count in blog_posts:
                     blog_post_counts[owner.id] = count
@@ -431,19 +392,19 @@ class ResUsers(models.Model):
         is_test = odoo.tools.config.get("test_enable")
 
         if is_test:
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                 "user_websites.user_user_websites_service_account"
             )
-            pages_batch = self.env["website.page"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=10000)
+            pages_batch = env_svc["website.page"].search([("owner_user_id", "=", user_id)], limit=10000)
             pages_data = [{"name": p.name, "url": p.url, "content": p.arch} for p in pages_batch]
 
-            blogs_batch = self.env["blog.post"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=10000)
+            blogs_batch = env_svc["blog.post"].search([("owner_user_id", "=", user_id)], limit=10000)
             blogs_data = [{"name": b.name, "content": b.content, "published_date": str(b.post_date)} for b in blogs_batch]
 
-            reports_batch = self.env["content.violation.report"].with_user(svc_uid).search([("reported_by_user_id", "=", user_id)], limit=10000)
+            reports_batch = env_svc["content.violation.report"].search([("reported_by_user_id", "=", user_id)], limit=10000)
             reports_data = [{"target_url": r.target_url, "description": r.description, "status": r.state, "submitted_date": str(r.create_date)} for r in reports_batch]
 
-            appeals_batch = self.env["content.violation.appeal"].with_user(svc_uid).search([("user_id", "=", user_id)], limit=10000)
+            appeals_batch = env_svc["content.violation.appeal"].search([("user_id", "=", user_id)], limit=10000)
             appeals_data = [{"reason": a.reason, "status": a.state, "submitted_date": str(a.create_date)} for a in appeals_batch]
 
             def generate_pages():
@@ -460,8 +421,8 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                        batch = env["website.page"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        batch = env_svc["website.page"].search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"name": p.name, "url": p.url, "content": p.arch} for p in batch]
                     if not items: break
                     for item in items: yield item
@@ -473,8 +434,8 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                        batch = env["blog.post"].with_user(svc_uid).search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        batch = env_svc["blog.post"].search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"name": b.name, "content": b.content, "published_date": str(b.post_date)} for b in batch]
                     if not items: break
                     for item in items: yield item
@@ -486,8 +447,8 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                        batch = env["content.violation.report"].with_user(svc_uid).search([("reported_by_user_id", "=", user_id)], limit=1000, offset=offset)
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        batch = env_svc["content.violation.report"].search([("reported_by_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"target_url": r.target_url, "description": r.description, "status": r.state, "submitted_date": str(r.create_date)} for r in batch]
                     if not items: break
                     for item in items: yield item
@@ -499,8 +460,8 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        svc_uid = env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                        batch = env["content.violation.appeal"].with_user(svc_uid).search([("user_id", "=", user_id)], limit=1000, offset=offset)
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        batch = env_svc["content.violation.appeal"].search([("user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"reason": a.reason, "status": a.state, "submitted_date": str(a.create_date)} for a in batch]
                     if not items: break
                     for item in items: yield item
@@ -537,7 +498,7 @@ class ResUsers(models.Model):
         Permanently deletes all content created by the user to comply with GDPR.
         """
         self.ensure_one()
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+        env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
             "user_websites.user_user_websites_service_account"
         )
 
@@ -550,7 +511,7 @@ class ResUsers(models.Model):
             )
             if not pages:
                 break
-            pages.with_user(svc_uid).unlink()
+            env_svc["website.page"].browse(pages.ids).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(pages) < 5000:
@@ -564,7 +525,7 @@ class ResUsers(models.Model):
             )
             if not posts:
                 break
-            posts.with_user(svc_uid).unlink()
+            env_svc["blog.post"].browse(posts.ids).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(posts) < 5000:
@@ -578,7 +539,7 @@ class ResUsers(models.Model):
             )
             if not blogs:
                 break
-            blogs.with_user(svc_uid).unlink()
+            env_svc["blog.blog"].browse(blogs.ids).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(blogs) < 5000:
@@ -587,9 +548,7 @@ class ResUsers(models.Model):
                 time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
 
         # ADR-0001: All service account mutations must include appropriate context
-        self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
-        ).write({"privacy_show_in_directory": False})
+        self.with_env(env_svc).write({"privacy_show_in_directory": False})
 
         if hasattr(super(), "_execute_gdpr_erasure"):
             super()._execute_gdpr_erasure()

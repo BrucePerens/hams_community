@@ -77,7 +77,7 @@ Automated post-install configuration is executed via the `compliance.user_compli
 
 ### Semantic Anchors
 - `[@ANCHOR: compliance_post_init_cookie_bar]`: Verified by `TestComplianceHooks.test_02_post_init_hook_cookie_bar`.
-- `[@ANCHOR: compliance_install_knowledge_docs]`: Verified by `TestComplianceHooks.test_01_post_init_hook_documentation`.
+- `[@ANCHOR: zero_sudo_doc_installer]`: Verified by `TestSecurityUtils.test_09_bootstrap_knowledge_docs`.
 - `[@ANCHOR: compliance_privacy_policy_template]`: Verified by `TestComplianceHooks.test_03_views_rendering`.
 - `[@ANCHOR: compliance_cookie_policy_template]`: Verified by `TestComplianceHooks.test_03_views_rendering`.
 - `[@ANCHOR: compliance_terms_of_service_template]`: Verified by `TestComplianceHooks.test_03_views_rendering`.

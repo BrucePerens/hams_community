@@ -7,3 +7,4 @@ access_res_partner_mail_svc,res.partner mail svc,base.model_res_partner,zero_sud
 access_res_users_mail_svc,res.users mail svc,base.model_res_users,zero_sudo.group_mail_service,1,0,0,0
 access_res_company_mail_svc,res.company mail svc,base.model_res_company,zero_sudo.group_mail_service,1,0,0,0
 access_mail_alias_domain_mail_svc,mail.alias.domain mail svc,mail.model_mail_alias_domain,zero_sudo.group_mail_service,1,0,0,0
+access_zero_sudo_kv_facility,zero_sudo.kv,model_zero_sudo_kv,zero_sudo.group_odoo_facility_service,1,1,1,1

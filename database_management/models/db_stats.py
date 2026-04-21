@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import shutil
 import subprocess
 
 from odoo import models, fields, api, tools, _
 from odoo.exceptions import UserError
-from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
@@ -44,93 +42,11 @@ class DatabaseTableStat(models.Model):
             )
         """)
 
-    def _register_hook(self):
-        # [@ANCHOR: db_doc_injection]
-        # Tests [@ANCHOR: db_doc_injection]
-        """
-        Wait until all modules are loaded, then install documentation if
-        manual_library or knowledge is present.
-        """
-        super()._register_hook()
-        # Only run if we are in a proper request or registry loading context
-        # to avoid duplicate work during transient registry states.
-        if not self.env.context.get("install_mode") and not self.env.context.get("module_uninstall"):
-             self._install_knowledge_docs(self.env)
-
-    @api.model
-    def _install_knowledge_docs(self, env):
-        """
-        Checks if the knowledge.article API is present in the environment.
-        If it is, reads the standalone HTML documentation file and installs it.
-        """
-        if "knowledge.article" not in env:
-            return
-
-        try:
-            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                "manual_library.user_manual_library_service_account"
-            )
-        except Exception:
-            # Fallback to facility if manual_library service account is missing
-            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.odoo_facility_service_internal"
-            )
-
-        if not svc_uid:
-            return
-
-        article_model = (
-            env["knowledge.article"]
-            .with_user(svc_uid)
-            .with_context(mail_notrack=True, prefetch_fields=False)
-        )
-
-        existing = article_model.search(
-            [("name", "=", "Database Management Guide")], limit=1
-        )
-
-        if not existing:
-            try:
-                with file_open("database_management/data/documentation.html", "r") as f:
-                    doc_body = f.read()
-            except Exception as e:
-                doc_body = f"<h1>Database Management Guide</h1><p>Welcome to the Database Management module.</p><p>Error loading documentation file: {e}</p>"
-
-            vals = {
-                "name": "Database Management Guide",
-                "body": doc_body,
-            }
-            if "is_published" in article_model._fields:
-                vals["is_published"] = True
-            if "internal_permission" in article_model._fields:
-                vals["internal_permission"] = "read"
-            if "icon" in article_model._fields:
-                vals["icon"] = "🛢"
-
-            article_model.create(vals)
-
     def _get_executable(self, cmd_name):
-        path = shutil.which(cmd_name)
-        if path:
-            return path
-
-        pkg_map = {"vacuumdb": "postgresql-client"}
-        if cmd_name == "vacuumdb" and "binary.manifest" in self.env:
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "database_management.user_database_management_service"
-            )
-            return (
-                self.env["binary.manifest"]
-                .with_user(svc_uid)
-                .ensure_executable("vacuumdb")
-            )
-
-        pkg = pkg_map.get(cmd_name, cmd_name)
-        raise UserError(
-            _(
-                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
-            )
-            % (cmd_name, pkg)
+        return self.env["zero_sudo.security.utils"]._ensure_executable(
+            cmd_name,
+            svc_xml_id="database_management.user_database_management_service",
+            pkg_name="postgresql-client" if cmd_name == "vacuumdb" else cmd_name
         )
 
     def action_vacuum_analyze(self):
@@ -170,13 +86,13 @@ class DatabaseTableStat(models.Model):
         )
         if high_bloat and "pager.incident" in self.env:
             try:
-                pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "pager_duty.user_pager_service_internal"
                 )
                 tables = ", ".join(
                     [f"{t.table_name} ({t.dead_percent:.1f}%%)" for t in high_bloat]
                 )
-                self.env["pager.incident"].with_user(pager_uid).report_incident(
+                env_svc["pager.incident"].report_incident(
                     {
                         "source": "DBA Autovacuum Monitor",
                         "severity": "medium",

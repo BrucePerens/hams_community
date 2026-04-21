@@ -11,6 +11,14 @@
         "data/binary_manifest_data.xml",
         "views/binary_manifest_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Binary Downloader Facility",
+            "path": "data/documentation.html",
+            "icon": "📦",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_tests": [
             "binary_downloader/static/tests/tours/binary_install_tour.js",

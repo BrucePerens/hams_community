@@ -2,19 +2,10 @@
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 from odoo import models, _
 from odoo.exceptions import AccessError
-from ..hooks import install_knowledge_docs
 
 class ResUsersSEO(models.Model):
     _name = "res.users"
     _inherit = ["res.users", "website.seo.metadata"]
-
-    def _register_hook(self):
-        """
-        Ensures documentation is installed if the Knowledge API becomes available.
-        This handles cases where manual_library is installed after this module.
-        """
-        super()._register_hook()
-        install_knowledge_docs(self.env)
 
     @property
     def SELF_WRITEABLE_FIELDS(self):
@@ -47,9 +38,9 @@ class ResUsersSEO(models.Model):
                     # Verified by [@ANCHOR: test_seo_widget_tour]
                     # Verified by [@ANCHOR: test_check_access_rule_res_users]
                     # Escalate strictly for the write operation using the domain service account
-                    # ADR-0001: Use with_context(mail_notrack=True, prefetch_fields=False)
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
-                    res = res and super(ResUsersSEO, self.with_user(svc_uid).with_context(mail_notrack=True, prefetch_fields=False)).write(seo_vals)
+                    # ADR-0001: Use _get_service_env to natively prevent ORM cascade tracking
+                    env_svc = self.env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                    res = res and super(ResUsersSEO, self.with_env(env_svc)).write(seo_vals)
                 else:
                     raise AccessError(_("You can only modify your own SEO metadata."))
 

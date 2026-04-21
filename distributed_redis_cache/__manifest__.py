@@ -21,6 +21,14 @@ Distributed Redis Cache
         "security/ir.model.access.csv",
         "views/distributed_cache_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Distributed Redis Cache",
+            "path": "data/documentation.html",
+            "icon": "⚡",
+            "category": "workspace"
+        }
+    ],
     "post_init_hook": "post_init_hook",
     "installable": True,
     "application": False,

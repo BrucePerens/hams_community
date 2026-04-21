@@ -17,8 +17,9 @@ import socket
 import subprocess
 import sys
 import tempfile
-import threading
+import threading # noqa: F401
 import time
+import concurrent.futures
 from psycopg2.errors import UndefinedTable
 from psycopg2 import sql
 
@@ -40,7 +41,7 @@ def load_ignore_file(filepath):
 
 def is_ignored(path, patterns):
     for pat in patterns:
-        if pat.search(path):
+        if re.search(pat, path):
             return True
     return False
 
@@ -878,6 +879,44 @@ def main():
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
 
         is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+        # Environment Provisioning (Moved here to execute on Host with RW access)
+        if os.environ.get("HAMS_ISOLATED_NS") != "1":
+            venv_dir = os.path.join(base_dir, ".venv")
+            pyvenv_cfg = os.path.join(venv_dir, "pyvenv.cfg")
+            req_file = os.path.join(base_dir, "requirements.txt")
+
+            needs_update = True
+            if os.path.exists(pyvenv_cfg) and os.path.exists(req_file):
+                if os.path.getmtime(pyvenv_cfg) >= os.path.getmtime(req_file):
+                    needs_update = False
+
+            if needs_update:
+                print("[*] Validating virtual environment and dependencies...")
+
+                def _run_venv_cmd(cmd, env=None):
+                    if isinstance(cmd, list):
+                        subprocess.run(cmd, check=True, env=env, capture_output=True)
+                    else:
+                        subprocess.run(
+                            ["/bin/bash", "-c", cmd],
+                            check=True,
+                            env=env,
+                            capture_output=True,
+                        )
+
+                try:
+                    infrastructure.provision_python_venvs(
+                        _run_venv_cmd, environment="pre_flight", dest_dir=base_dir
+                    )
+                    if os.path.exists(pyvenv_cfg):
+                        os.utime(pyvenv_cfg, None)
+                except subprocess.CalledProcessError as e:
+                    print(
+                        f"❌ ERROR: Failed to provision dependencies. Error details:\n{e.stderr.decode('utf-8', errors='ignore')}"
+                    )
+                    sys.exit(1)
 
         if os.environ.get("HAMS_ISOLATED_NS") != "1" and not is_jules_vm:
             print("[*] Routing test execution to isolated namespace to protect environment...")
@@ -914,7 +953,7 @@ def main():
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
                 _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes")
                 _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
-                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo")
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"
@@ -968,43 +1007,6 @@ def main():
 
         ignore_filepath = os.path.join(base_dir, args.config)
         ignore_patterns = load_ignore_file(ignore_filepath)
-
-        # Environment Provisioning
-        venv_dir = os.path.join(base_dir, ".venv")
-        pyvenv_cfg = os.path.join(venv_dir, "pyvenv.cfg")
-        req_file = os.path.join(base_dir, "requirements.txt")
-
-        needs_update = True
-        if os.path.exists(pyvenv_cfg) and os.path.exists(req_file):
-            if os.path.getmtime(pyvenv_cfg) >= os.path.getmtime(req_file):
-                needs_update = False
-
-        if needs_update:
-            print("[*] Validating virtual environment and dependencies...")
-
-            def _run_venv_cmd(cmd, env=None):
-                if isinstance(cmd, list):
-                    subprocess.run(cmd, check=True, env=env, capture_output=True)
-                else:
-                    subprocess.run(
-                        ["/bin/bash", "-c", cmd],
-                        check=True,
-                        env=env,
-                        capture_output=True,
-                    )
-
-            try:
-                infrastructure.provision_python_venvs(
-                    _run_venv_cmd, environment="pre_flight", dest_dir=base_dir
-                )
-                # Touch pyvenv.cfg to update its modification time after successful install
-                if os.path.exists(pyvenv_cfg):
-                    os.utime(pyvenv_cfg, None)
-            except subprocess.CalledProcessError as e:
-                print(
-                    f"❌ ERROR: Failed to provision dependencies. Error details:\n{e.stderr.decode('utf-8', errors='ignore')}"
-                )
-                sys.exit(1)
 
         current_pythonpath = os.environ.get("PYTHONPATH", "")
         os.environ["PYTHONPATH"] = "/usr/lib/python3/dist-packages:{}".format(
@@ -1351,12 +1353,8 @@ def main():
                                 )
                             o_extr.process_line(line)
 
-                odoo_thread = threading.Thread(
-                    target=stream_odoo_output,
-                    args=(odoo_proc, odoo_extractor, extractor),
-                )
-                odoo_thread.daemon = True
-                odoo_thread.start()
+                odoo_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                odoo_executor.submit(stream_odoo_output, odoo_proc, odoo_extractor, extractor)
 
                 print(f"[*] Waiting for Odoo to bind to port {free_port}...")
 
@@ -1498,9 +1496,10 @@ def main():
                     "ham_au_register",
                 ]
 
-                def get_table_counts(c):
+                def get_table_counts(db_conn):
                     counts = {}
-                    with c.cursor() as cr:
+                    cr = db_conn.cursor()
+                    try:
                         for table in TABLES_TO_TRACK:
                             try:
                                 q_str = "SELECT count(*) FROM {}"
@@ -1508,11 +1507,13 @@ def main():
                                 cr.execute(q)
                                 counts[table] = cr.fetchone()[0]
                             except UndefinedTable:
-                                c.rollback()
+                                db_conn.rollback()
                                 counts[table] = "Not Installed"
                             except Exception:
-                                c.rollback()
+                                db_conn.rollback()
                                 counts[table] = "Error"
+                    finally:
+                        cr.close()
                     return counts
 
                 print("\n[*] Fetching Initial Database Counts...")

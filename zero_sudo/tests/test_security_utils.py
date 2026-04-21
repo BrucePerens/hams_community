@@ -10,6 +10,7 @@ class TestSecurityUtils(TransactionCase):
     def test_01_mechanical_secret_block_enforcement(self):
         # [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         # Tests [@ANCHOR: get_system_param]
+        # Tests [@ANCHOR: set_system_param]
         # Tests [@ANCHOR: story_parameter_whitelisting]
         # Tests [@ANCHOR: journey_securing_configuration]
         """Verify that parameters matching cryptographic patterns are blocked."""
@@ -18,6 +19,10 @@ class TestSecurityUtils(TransactionCase):
         # Safe parameters should pass
         base_url = utils._get_system_param("web.base.url")
         self.assertTrue(base_url is not None or base_url is False)
+
+        # Test setting safe parameter
+        # Use a dummy context so it doesn't break the actual DB url
+        utils._set_system_param("web.base.url", base_url)
 
         # Dangerous parameters MUST be violently rejected
         dangerous_keys = [
@@ -33,6 +38,12 @@ class TestSecurityUtils(TransactionCase):
                 msg=f"Extracting dangerous param '{key}' MUST raise an AccessError.",
             ):
                 utils._get_system_param(key)
+
+            with self.assertRaises(
+                AccessError,
+                msg=f"Setting dangerous param '{key}' MUST raise an AccessError.",
+            ):
+                utils._set_system_param(key, "hack")
 
         # Non-whitelisted safe parameters MUST also be rejected
         with self.assertRaises(
@@ -194,3 +205,28 @@ class TestSecurityUtils(TransactionCase):
             with patch("builtins.open", side_effect=Exception("File not found")):
                 with patch.object(odoo.tools.config, "get", return_value="test_config_key"):
                     self.assertEqual(utils._get_crypto_secret(), "test_config_key")
+
+    def test_09_bootstrap_knowledge_docs(self):
+        # [@ANCHOR: test_zero_sudo_doc_installer]
+        # Tests [@ANCHOR: zero_sudo_doc_installer]
+        # Tests [@ANCHOR: story_zero_sudo_doc_installer]
+        # Tests [@ANCHOR: journey_developer_integration]
+        """
+        Verify that the _bootstrap_knowledge_docs method correctly
+        discovers and installs documentation from module manifests.
+        """
+        article_model_name = None
+        if "knowledge.article" in self.env:
+            article_model_name = "knowledge.article"
+        elif "manual.article" in self.env:
+            article_model_name = "manual.article"
+
+        if not article_model_name:
+            self.skipTest("No documentation API available.")
+
+        # Trigger the centralized installer
+        self.env["ir.module.module"]._bootstrap_knowledge_docs()
+
+        # Check if the primary documentation was successfully injected
+        article = self.env[article_model_name].search([("name", "=", "Zero-Sudo Security Core")], limit=1)
+        self.assertTrue(article, "Documentation for zero_sudo should be installed via the manifest.")

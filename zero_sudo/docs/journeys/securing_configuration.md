@@ -6,12 +6,13 @@ This journey describes how a new configuration parameter is safely integrated in
 A module needs to store a setting, for example, `my_module.api_endpoint`, and needs to access it in a context where `.sudo()` is not allowed.
 
 ## 2. Whitelisting
-The developer must modify `zero_sudo/models/security_utils.py` to add `my_module.api_endpoint` to the `PARAM_WHITELIST` within the `_get_system_param` function `[@ANCHOR: get_system_param]`.
+The developer must modify `zero_sudo/models/security_utils.py` to add `my_module.api_endpoint` to the `PARAM_WHITELIST` within the `_get_system_param` and `_set_system_param` functions `[@ANCHOR: get_system_param]`, `[@ANCHOR: set_system_param]`.
 
 ## 3. Secure Access
-Now, anywhere in the codebase, the parameter can be retrieved safely:
+Now, anywhere in the codebase, the parameter can be retrieved or set safely:
 ```python
 endpoint = self.env['zero_sudo.security.utils']._get_system_param('my_module.api_endpoint')
+self.env['zero_sudo.security.utils']._set_system_param('my_module.api_endpoint', '[https://new-api.example.com](https://new-api.example.com)')
 ```
 
 ## 4. Protection against Exfiltration

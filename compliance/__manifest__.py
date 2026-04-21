@@ -2,7 +2,7 @@
     "name": "Global Compliance & Privacy",
     "summary": "Automated configuration of GDPR/CCPA settings and legal pages.",
     "description": """
-This module acts as a central hub for regulatory compliance across the project. 
+This module acts as a central hub for regulatory compliance across the project.
 Upon installation, it:
 - Automatically enables Odoo's native Cookie Consent Bar.
 - Provisions standard editable legal pages (Privacy Policy, Cookie Policy, Terms of Service) via noupdate XML, ensuring site owner edits are never overwritten.
@@ -22,6 +22,14 @@ Upon installation, it:
         "security/security_data.xml",
         "security/ir.model.access.csv",
         "data/legal_pages_data.xml",
+    ],
+    "knowledge_docs": [
+        {
+            "name": "Site Owner's Guide to Regulatory Compliance",
+            "path": "data/documentation.html",
+            "icon": "⚖️",
+            "category": "workspace"
+        }
     ],
     "assets": {
         "web.assets_tests": [

@@ -28,6 +28,7 @@
                     <!-- Downstream Dropzone for Navbar Actions -->
                     <div id="user_websites_dropzone_navbar_actions">
                         <!-- [@ANCHOR: dropzone_navbar_actions] -->
+                        <!-- Verified by [@ANCHOR: test_dropzone_navbar_actions] -->
                     </div>
                 </div>
             </div>
@@ -144,6 +145,7 @@
             <!-- Global User Website Header / Monetization Dropzone -->
             <div id="user_websites_dropzone_home_header">
                 <!-- [@ANCHOR: dropzone_home_header] -->
+                <!-- Verified by [@ANCHOR: test_dropzone_home_header] -->
             </div>
 
             <!-- Yields to the individual user's page content -->
@@ -152,6 +154,7 @@
             <!-- Global User Website Footer / Monetization Dropzone -->
             <div id="user_websites_dropzone_home_footer">
                 <!-- [@ANCHOR: dropzone_home_footer] -->
+                <!-- Verified by [@ANCHOR: test_dropzone_home_footer] -->
             </div>
         </t>
     </template>
@@ -180,6 +183,7 @@
                                     <!-- Downstream Dropzone for User Cards -->
                                     <div id="user_websites_dropzone_directory_card" class="mt-3">
                                         <!-- [@ANCHOR: dropzone_directory_card] -->
+                                        <!-- Verified by [@ANCHOR: test_dropzone_directory_card] -->
                                     </div>
                                 </div>
                             </div>

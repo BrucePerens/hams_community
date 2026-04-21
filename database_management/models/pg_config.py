@@ -125,30 +125,11 @@ class PgHaWizard(models.TransientModel):
     pgbouncer_ini = fields.Text(string="PgBouncer INI", readonly=True)
 
     def _get_executable(self, cmd_name):
-        import shutil  # noqa: E402
-        from odoo.exceptions import UserError  # noqa: E402
-
-        path = shutil.which(cmd_name)
-        if path:
-            return path
-
-        if cmd_name == "etcd":
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "database_management.user_database_management_service"
-            )
-            return (
-                self.env["binary.manifest"]
-                .with_user(svc_uid)
-                .ensure_executable("etcd")
-            )
-
-        pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer"}
-        pkg = pkg_map.get(cmd_name, cmd_name)
-        raise UserError(
-            _(
-                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
-            )
-            % (cmd_name, pkg)
+        pkg_map = {"patroni": "patroni", "pgbouncer": "pgbouncer", "etcd": "etcd"}
+        return self.env["zero_sudo.security.utils"]._ensure_executable(
+            cmd_name,
+            svc_xml_id="database_management.user_database_management_service",
+            pkg_name=pkg_map.get(cmd_name, cmd_name)
         )
 
     def action_generate(self):

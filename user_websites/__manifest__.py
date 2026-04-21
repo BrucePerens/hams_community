@@ -47,6 +47,14 @@ This module enables:
         "views/website_layout.xml",
         "views/snippets.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "User Websites Documentation",
+            "path": "data/documentation.html",
+            "icon": "🌐",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_frontend": [
             "user_websites/static/src/js/violation_report.js",

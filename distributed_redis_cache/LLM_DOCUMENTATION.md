@@ -42,6 +42,7 @@ The module provides a UI to manage the cache and check Redis status.
 The daemon and Odoo worker can be configured via environment variables:
 * **`REDIS_HOST`**: Redis server hostname (default: `redis` or `127.0.0.1`).
 * **`REDIS_PORT`**: Redis server port (default: `6379`).
+* **`REDIS_PASSWORD`**: Redis server password.
 </config>
 
 <stories_and_journeys>
@@ -57,4 +58,7 @@ The daemon and Odoo worker can be configured via environment variables:
 * [Daemon Operations](distributed_redis_cache/docs/journeys/daemon_operations.md)
 * [Invalidation Pipeline](distributed_redis_cache/docs/journeys/invalidation_pipeline.md)
 * [Request Caching Lifecycle](distributed_redis_cache/docs/journeys/request_caching_lifecycle.md)
+
+### Installation
+* **Documentation Injection:** The module automatically provisions its documentation payload into the `knowledge.article` or `manual.article` API upon installation. [@ANCHOR: doc_inject_distributed_redis_cache]
 </stories_and_journeys>

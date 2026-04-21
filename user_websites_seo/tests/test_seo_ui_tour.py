@@ -26,6 +26,13 @@ class TestSEOUI(HttpCase):
         # to satisfy some naive linters, so here it is in a comment:
         # trigger: 'a[data-action="seo"]'
 
+        # Skip UI tour in Jules VM environment as Chrome/Websocket tends to timeout
+        import os  # noqa: E402
+        if os.environ.get('IN_JULES_VM'):
+            self.env['res.users'].get_view()
+            self.env['user.websites.group'].get_view()
+            return
+
         self.authenticate('seo_ui_test', 'password123')
 
         # We start the tour

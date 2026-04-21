@@ -9,7 +9,7 @@ Charlie needs to understand how the platform handles data to answer a query from
 ## Story
 1. Charlie looks for documentation within the Odoo Knowledge or Manual Library modules.
 2. He finds an article titled **"Site Owner's Guide to Regulatory Compliance"**.
-3. This article was automatically injected by the **Global Compliance** module during installation [@ANCHOR: compliance_install_knowledge_docs].
+3. This article was automatically injected by the platform's central documentation installer [@ANCHOR: zero_sudo_doc_installer].
 4. The guide explains technical details such as:
    - Data minimization practices.
    - How privacy-friendly view counters work.
@@ -17,5 +17,4 @@ Charlie needs to understand how the platform handles data to answer a query from
 5. Charlie uses this information to confidently respond to the regulatory inquiry.
 
 ## Verification
-- Verified by [@ANCHOR: test_compliance_post_init_documentation]
-- Verified by [@ANCHOR: test_compliance_knowledge_article_installation]
+- Verified by [@ANCHOR: test_zero_sudo_doc_installer]

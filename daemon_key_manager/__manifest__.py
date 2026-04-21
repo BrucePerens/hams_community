@@ -13,6 +13,14 @@
         "data/cron.xml",
         "views/registry_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Daemon Key Manager Documentation",
+            "path": "LLM_DOCUMENTATION.md",
+            "icon": "🔑",
+            "category": "workspace"
+        }
+    ],
     "installable": True,
     "application": False,
 }
