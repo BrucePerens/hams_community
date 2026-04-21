@@ -54,10 +54,8 @@ class CloudflareConfigManager(models.AbstractModel):
         it automatically triggers an edge purge for the 'odoo-static-assets' Cache-Tag.
         """
         max_mtime = 0.0
-        self.env.cr.execute(
-            "SELECT name FROM ir_module_module WHERE state = 'installed'"
-        )
-        installed_modules = [row[0] for row in self.env.cr.fetchall()]
+        # ADR-0002: Use ORM for module list, but ensure we use limit=False for exhaustive scan
+        installed_modules = self.env['ir.module.module'].search([('state', '=', 'installed')], limit=1000).mapped('name')
 
         for module_name in installed_modules:
             mod_path = get_module_path(module_name)
@@ -95,7 +93,8 @@ class CloudflareConfigManager(models.AbstractModel):
                     ["odoo-static-assets"]
                 )
                 _logger.info(
-                    "[*] Static files modified. Pushed 'odoo-static-assets' to Cloudflare purge queue."
+                    "[*] Static assets modified (%s > %s). Triggered Cloudflare purge for 'odoo-static-assets'.",
+                    latest_mtime, last_mtime
                 )
         except Exception as e:
             _logger.error(f"Failed to process static mtime purge: {e}")
