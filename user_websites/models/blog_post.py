@@ -25,6 +25,9 @@ class BlogPost(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Purge the global Cache-Tag at the edge."""
+        if "cloudflare.purge.queue" not in self.env:
+            return
+
         # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
         self.mapped("owner_user_id.website_slug")
         self.mapped("user_websites_group_id.website_slug")
@@ -49,7 +52,10 @@ class BlogPost(models.Model):
             except Exception as e:
                 import logging  # noqa: E402
 
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+                if type(e).__name__ == "AccessError" and "Service Account" in str(e):
+                    logging.getLogger(__name__).debug("Cloudflare purge skipped: %s", e)
+                else:
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
 
     def _get_blog_urls(self):
         """Helper method to construct the blog index URLs for Cloudflare cache invalidation."""

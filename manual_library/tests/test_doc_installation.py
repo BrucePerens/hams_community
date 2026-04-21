@@ -6,7 +6,6 @@ import odoo.tests
 class TestManualDocInstallation(odoo.tests.common.TransactionCase):
     def test_01_documentation_auto_installation(self):
         # [@ANCHOR: test_manual_doc_auto_install]
-        # Verified by [@ANCHOR: test_manual_doc_auto_install]
         # Tests [@ANCHOR: manual_doc_auto_install]
         # Tests [@ANCHOR: story_manual_doc_installation]
         # Tests [@ANCHOR: journey_developer_integration]

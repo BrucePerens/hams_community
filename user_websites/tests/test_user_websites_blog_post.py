@@ -122,7 +122,7 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
         except Exception as e:
             import logging  # noqa: E402
 
-            logging.getLogger(__name__).warning("An error occurred: %s", e)
+            logging.getLogger(__name__).debug("Expected error on public blog creation: %s", e)
 
         public_created_post = self.env["blog.post"].search(
             [
