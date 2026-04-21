@@ -1026,8 +1026,8 @@ def main():
             print("❌ ERROR: No modules found in this repository. Aborting.")
             sys.exit(1)
 
-        # Inject web_tour globally into the test framework so all modules can run tours
-        mod_string = "base,web_tour," + ",".join(target_modules)
+        # Inject core web and tour frameworks globally so all modules can run UI tours
+        mod_string = "base,web,web_tour," + ",".join(target_modules)
         test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
         extractor = FailureExtractor(args.error_log)
@@ -1175,8 +1175,8 @@ def main():
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
 
-                # Globally inject web_tour so headless browser tests pass regardless of manifest inclusion
-                mod_with_tour = f"web_tour,{mod}"
+                # Globally inject web and web_tour so headless browser tests pass regardless of manifest inclusion
+                mod_with_tour = f"base,web,web_tour,{mod}"
 
                 restored, cache_file = check_and_restore_cache(args.db, mod_with_tour)
                 if not restored:
@@ -1240,8 +1240,8 @@ def main():
         elif args.mode == "xml":
             failed_modules = []
             for mod in target_modules:
-                # Globally inject web_tour so headless browser dependencies resolve during view compilation
-                mod_with_tour = f"web_tour,{mod}"
+                # Globally inject web and web_tour so headless browser dependencies resolve during view compilation
+                mod_with_tour = f"base,web,web_tour,{mod}"
 
                 print("\n[*] Checking XML views in: {}".format(mod))
                 cmd = [

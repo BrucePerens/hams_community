@@ -14,6 +14,22 @@ class TestSEOUI(HttpCase):
             'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])]
         })
 
+        # Ensure a blog and post exist so the blog index route renders the actual website layout
+        # with the "Promote" top menu, rather than falling back to the empty placeholder page.
+        website = self.env['website'].get_current_website()
+        blog = self.env['blog.blog'].create({
+            'name': 'SEO Test Blog',
+            'website_id': website.id,
+            'owner_user_id': self.regular_user.id,
+        })
+        self.env['blog.post'].create({
+            'name': 'SEO Test Post',
+            'blog_id': blog.id,
+            'website_id': website.id,
+            'owner_user_id': self.regular_user.id,
+            'is_published': True,
+        })
+
     def test_seo_widget_tour(self):
         # [@ANCHOR: test_seo_widget_tour]
         # Tests [@ANCHOR: controller_user_blog_index_seo_override]
