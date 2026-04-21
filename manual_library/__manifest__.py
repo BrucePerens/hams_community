@@ -2,8 +2,8 @@
     "name": "Manual Library",
     "summary": "Hierarchical documentation and knowledge-base system",
     "description": """
-A clean-room, open-source implementation of a hierarchical documentation 
-system for Odoo Community. Provides API interoperability for the 
+A clean-room, open-source implementation of a hierarchical documentation
+system for Odoo Community. Provides API interoperability for the
 knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
     """,
     "author": "Bruce Perens K6BP",
@@ -37,5 +37,4 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
     },
     "installable": True,
     "application": True,
-    "post_init_hook": "post_init_hook",
 }
