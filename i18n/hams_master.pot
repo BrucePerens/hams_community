@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 14:44+0000\n"
-"PO-Revision-Date: 2026-04-21 14:44+0000\n"
+"POT-Creation-Date: 2026-04-21 15:41+0000\n"
+"PO-Revision-Date: 2026-04-21 15:41+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -14,7 +14,7 @@ msgstr ""
 
 #: binary_downloader/hooks.py:44
 #: distributed_redis_cache/hooks.py:40
-#: test_real_transaction/hooks.py:51
+#: test_real_transaction/hooks.py:48
 msgid "<p>Error loading documentation file: %s</p>"
 msgstr ""
 
@@ -151,7 +151,7 @@ msgstr ""
 msgid "Failed to load Distributed Redis Cache documentation file: %s"
 msgstr ""
 
-#: test_real_transaction/hooks.py:50
+#: test_real_transaction/hooks.py:47
 msgid "Failed to load real transaction documentation file: %s"
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:161
+#: zero_sudo/models/security_utils.py:177
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -277,7 +277,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:167
+#: zero_sudo/models/security_utils.py:183
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -392,7 +392,7 @@ msgstr ""
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:179
+#: zero_sudo/models/security_utils.py:195
 msgid "VENV update failed:\n%s"
 msgstr ""
 
@@ -416,7 +416,7 @@ msgstr ""
 msgid "You can only modify SEO metadata for groups you are a member of."
 msgstr ""
 
-#: user_websites_seo/models/res_users.py:54
+#: user_websites_seo/models/res_users.py:57
 msgid "You can only modify your own SEO metadata."
 msgstr ""
 

@@ -113,3 +113,20 @@ For detailed narratives and end-to-end workflows, refer to the following:
 * **Security Check:** Performs direct SQL check `[@ANCHOR: web_login_interceptor_check]` for isolation.
 * **Effect:** Prevents interactive web logins for any user flagged as a service account.
 </additional_features>
+## 6. Automated Document Installation Facility
+The `zero_sudo` module provides a centralized facility to inject standalone HTML documentation into the `knowledge.article` or `manual.article` APIs. This structurally eliminates the need to maintain fragile ad-hoc `post_init_hook` scripts in every downstream module.
+
+**How to use it:**
+1. Add a hard dependency on `"zero_sudo"` in your module's `__manifest__.py`.
+2. Add the `"knowledge_docs"` configuration array directly to your `__manifest__.py`:
+```python
+    "knowledge_docs": [
+        {
+            "name": "Your Module Guide",
+            "path": "your_module/data/documentation.html",
+            "icon": "🤖",
+            "category": "workspace"
+        }
+    ],
+```
+3. The `zero_sudo` registry hook (`_register_hook`) will automatically deploy it when the registry is fully loaded, ensuring idempotency via an injected system parameter containing the SHA-256 hash of the payload. **DO NOT** create custom hooks for documentation moving forward.

@@ -153,6 +153,22 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
 
     @api.model
+    def _get_kv(self, key):
+        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        record = self.env['zero_sudo.kv'].with_user(svc_uid).search([('key', '=', key)], limit=1)
+        return record.value if record else None
+
+    @api.model
+    def _set_kv(self, key, value):
+        svc_uid = self._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        KV = self.env['zero_sudo.kv'].with_user(svc_uid)
+        record = KV.search([('key', '=', key)], limit=1)
+        if record:
+            record.write({'value': value})
+        else:
+            KV.create({'key': key, 'value': value})
+
+    @api.model
     def _update_python_venv(self):
         # [@ANCHOR: update_python_venv]
         # Verified by [@ANCHOR: test_update_python_venv]

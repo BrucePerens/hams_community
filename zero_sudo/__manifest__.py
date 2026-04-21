@@ -12,6 +12,14 @@
         "security/ir.model.access.csv",
         "views/res_users_views.xml"
     ],
+    "knowledge_docs": [
+        {
+            "name": "Zero-Sudo Security Core",
+            "path": "zero_sudo/data/documentation.html",
+            "icon": "🛡️",
+            "category": "workspace"
+        }
+    ],
     "post_init_hook": "post_init_hook",
     "installable": True,
     "auto_install": False,
