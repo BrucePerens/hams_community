@@ -219,6 +219,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
 
     def test_07_qweb_arch_sanitization(self):
         """
+        # Tests [@ANCHOR: website_page_sanitize_arch]
         Verify that script tags, iframes, and dangerous QWeb directives are actively stripped
         from the arch field during create and write for non-administrative users.
         """

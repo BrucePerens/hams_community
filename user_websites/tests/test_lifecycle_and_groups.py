@@ -54,6 +54,10 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
         )
 
     def test_02_group_member_access(self):
+        # [@ANCHOR: test_group_site_creation]
+        # [@ANCHOR: test_group_site_routing]
+        # Tests [@ANCHOR: UX_CREATE_SITE]
+        # Tests [@ANCHOR: controller_user_websites_home]
         self.test_group.write({"member_ids": [(4, self.user_a.id)]})
 
         self.authenticate(self.user_a.login, self.user_a.login)
@@ -224,6 +228,8 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
         )
 
     def test_08_group_inverse_relationships(self):
+        # [@ANCHOR: test_group_blog_post_creation]
+        # Tests [@ANCHOR: UX_CREATE_BLOG_POST]
         page = self.env["website.page"].create(
             {
                 "url": f"/{self.test_group.website_slug}/test-page",

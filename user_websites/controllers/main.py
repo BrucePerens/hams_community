@@ -244,6 +244,7 @@ class UserWebsitesController(http.Controller):
     def user_websites_home(self, website_slug, **kwargs):
         # [@ANCHOR: controller_user_websites_home]
         # Verified by [@ANCHOR: test_tour_create_site]
+        # Verified by [@ANCHOR: test_group_site_routing]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -402,6 +403,7 @@ class UserWebsitesController(http.Controller):
     def create_site(self, website_slug, **kwargs):
         # [@ANCHOR: UX_CREATE_SITE]
         # Verified by [@ANCHOR: test_tour_create_site]
+        # Verified by [@ANCHOR: test_group_site_creation]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -656,6 +658,7 @@ class UserWebsitesController(http.Controller):
     def create_blog_post(self, website_slug, **kwargs):
         # [@ANCHOR: UX_CREATE_BLOG_POST]
         # Verified by [@ANCHOR: test_tour_create_blog]
+        # Verified by [@ANCHOR: test_group_blog_post_creation]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -821,6 +824,7 @@ class UserWebsitesController(http.Controller):
     )
     def subscribe_to_site(self, website_slug, **kwargs):
         # [@ANCHOR: UX_SUBSCRIBE]
+        # Verified by [@ANCHOR: test_subscription_creation]
         # Verified by [@ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
@@ -943,6 +947,7 @@ class UserWebsitesController(http.Controller):
     @http.route(["/my/privacy/export"], type="http", auth="user", website=True)
     def export_user_data(self, **kwargs):
         # [@ANCHOR: UX_GDPR_EXPORT]
+        # Verified by [@ANCHOR: test_gdpr_export_api]
         # Verified by [@ANCHOR: test_tour_gdpr_privacy]
         """
         Compiles user generated content into a machine-readable JSON format for data portability.
@@ -996,6 +1001,7 @@ class UserWebsitesController(http.Controller):
     )
     def delete_user_content(self, **kwargs):
         # [@ANCHOR: UX_GDPR_ERASURE]
+        # Verified by [@ANCHOR: test_gdpr_erasure_pages]
         # Verified by [@ANCHOR: test_tour_gdpr_privacy]
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
         user_id = request.env.user.id

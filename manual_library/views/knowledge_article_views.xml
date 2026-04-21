@@ -5,7 +5,7 @@
               web_icon="manual_library,static/description/icon.png"
               sequence="110"/>
 
-    <record id="view_knowledge_article_list" model="ir.ui.view"> <!-- audit-ignore-view: See [@ANCHOR: story_manual_backend_views] and [@ANCHOR: journey_admin_managing]. Tested by [@ANCHOR: test_manual_backend_views_rendering] -->
+    <record id="view_knowledge_article_list" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_manual_backend_views_rendering] -->
         <field name="name">knowledge.article.list</field>
         <field name="model">knowledge.article</field>
         <field name="arch" type="xml">
@@ -19,7 +19,7 @@
         </field>
     </record>
 
-    <record id="view_knowledge_article_form" model="ir.ui.view"> <!-- audit-ignore-view: See [@ANCHOR: story_manual_backend_views] and [@ANCHOR: journey_admin_managing]. Tested by [@ANCHOR: test_manual_backend_views_rendering] -->
+    <record id="view_knowledge_article_form" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_manual_backend_views_rendering] -->
         <field name="name">knowledge.article.form</field>
         <field name="model">knowledge.article</field>
         <field name="arch" type="xml">

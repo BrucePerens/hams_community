@@ -35,19 +35,27 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         )
 
     def test_01_violation_report_tour(self):
+        # Tests [@ANCHOR: test_tour_violation_report]
+        # Tests [@ANCHOR: UX_REPORT_VIOLATION]
         # Access the page as an unauthenticated guest so the Report Violation button is visible
         self.authenticate(None, None)
         self.start_tour(f"/{self.user_test.website_slug}/home", "violation_report_tour")
 
     def test_02_toast_notifications_tour(self):
+        # Tests [@ANCHOR: test_tour_toast_notifications]
+        # Tests [@ANCHOR: admin_toast_logic]
         self.authenticate(None, None)
         self.start_tour("/?report_submitted=1", "toast_notifications_tour")
 
     def test_03_gdpr_privacy_tour(self):
+        # Tests [@ANCHOR: test_tour_gdpr_privacy]
+        # Tests [@ANCHOR: controller_my_privacy_dashboard]
         self.authenticate(self.user_test.login, self.user_test.login)
         self.start_tour("/my/privacy", "gdpr_privacy_tour")
 
     def test_04_moderation_appeal_tour(self):
+        # Tests [@ANCHOR: test_tour_moderation_appeal]
+        # Tests [@ANCHOR: UX_SUBMIT_APPEAL]
         # Suspend user to trigger the appeal form rendering
         self.user_test.is_suspended_from_websites = True
         self.authenticate(self.user_test.login, self.user_test.login)
@@ -100,6 +108,8 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/home", "create_blog_tour")
 
     def test_07_community_directory_tour(self):
+        # Tests [@ANCHOR: test_tour_community_directory]
+        # Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
         self.start_tour("/community", "community_directory_tour")
 
     def test_08_frontend_misc_tour(self):
