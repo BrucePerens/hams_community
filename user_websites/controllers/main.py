@@ -773,7 +773,7 @@ class UserWebsitesController(http.Controller):
         if article_model_name:
             install_knowledge_docs(request.env)
             svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.facility_service_internal"
+                "zero_sudo.odoo_facility_service_internal"
             )
             article = request.env[article_model_name].with_user(svc_uid).search(
                 [("name", "=", "User Websites Documentation")], limit=1

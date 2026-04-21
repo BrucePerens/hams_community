@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 04:38+0000\n"
-"PO-Revision-Date: 2026-04-21 04:38+0000\n"
+"POT-Creation-Date: 2026-04-21 06:49+0000\n"
+"PO-Revision-Date: 2026-04-21 06:49+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 #: binary_downloader/hooks.py:44
-#: distributed_redis_cache/hooks.py:41
+#: distributed_redis_cache/hooks.py:40
 #: test_real_transaction/hooks.py:33
 msgid "<p>Error loading documentation file: %s</p>"
 msgstr ""
@@ -35,7 +35,7 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this blog."
 msgstr ""
 
-#: user_websites/models/website_page.py:395
+#: user_websites/models/website_page.py:396
 msgid "Access Denied: You do not have permission to modify this page."
 msgstr ""
 
@@ -59,7 +59,7 @@ msgstr ""
 msgid "Appeal rejected. The user remains suspended."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:122
+#: binary_downloader/models/binary_manifest.py:127
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
@@ -67,15 +67,15 @@ msgstr ""
 msgid "Auto-resolved by NOC monitor recovery sequence."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:636
+#: pager_duty/models/pager_check.py:641
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: backup_management/models/backup_config.py:553
+#: backup_management/models/backup_config.py:558
 msgid "Automated Restore Drill completed successfully."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:27
+#: distributed_redis_cache/models/distributed_cache_config.py:32
 msgid "Cache invalidated for model %s"
 msgstr ""
 
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:448
+#: pager_duty/models/pager_check.py:453
 msgid "Checks exported to JSON daemon configuration."
 msgstr ""
 
@@ -95,11 +95,11 @@ msgstr ""
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:650
+#: pager_duty/models/pager_check.py:655
 msgid "Daemon Notified"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:338
+#: pager_duty/models/pager_check.py:343
 msgid "Database checks updated from JSON file."
 msgstr ""
 
@@ -119,11 +119,11 @@ msgstr ""
 msgid "Error! You cannot create recursive articles."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:447
+#: pager_duty/models/pager_check.py:452
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:201
+#: binary_downloader/models/binary_manifest.py:206
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -143,7 +143,7 @@ msgstr ""
 msgid "Failed to lift ban via Cloudflare API: %s"
 msgstr ""
 
-#: distributed_redis_cache/hooks.py:40
+#: distributed_redis_cache/hooks.py:39
 msgid "Failed to load Distributed Redis Cache documentation file: %s"
 msgstr ""
 
@@ -175,35 +175,35 @@ msgstr ""
 msgid "Failed to update some settings:\n%s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:337
+#: pager_duty/models/pager_check.py:342
 msgid "Import Successful"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:259
+#: pager_duty/models/pager_check.py:264
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:97
+#: binary_downloader/models/binary_manifest.py:102
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:282
+#: backup_management/models/backup_config.py:287
 msgid "Kopia backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:171
+#: backup_management/models/backup_config.py:176
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:342
+#: backup_management/models/backup_config.py:347
 msgid "Kopia policies applied successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:184
+#: backup_management/models/backup_config.py:189
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:189
+#: binary_downloader/models/binary_manifest.py:194
 msgid "Member %s not found in archive."
 msgstr ""
 
@@ -216,7 +216,7 @@ msgstr ""
 msgid "Missing Cloudflare API Token or Zone ID for the selected website."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:114
+#: binary_downloader/models/binary_manifest.py:119
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "New Incident Created"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:254
+#: pager_duty/models/pager_check.py:259
 msgid "No JSON configuration found at %s"
 msgstr ""
 
@@ -265,19 +265,19 @@ msgstr ""
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:53
+#: distributed_redis_cache/models/distributed_cache_config.py:58
 msgid "Redis Status"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:46
+#: distributed_redis_cache/models/distributed_cache_config.py:51
 msgid "Redis connection failed: %s"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:43
+#: distributed_redis_cache/models/distributed_cache_config.py:48
 msgid "Redis connection is healthy."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:36
+#: distributed_redis_cache/models/distributed_cache_config.py:41
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
@@ -285,7 +285,7 @@ msgstr ""
 msgid "Requirements file not found at %s"
 msgstr ""
 
-#: pager_duty/models/pager_check.py:637
+#: pager_duty/models/pager_check.py:642
 msgid "Scanned the system and injected optimal monitoring checks. Daemon configuration updated."
 msgstr ""
 
@@ -293,7 +293,7 @@ msgstr ""
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:162
+#: binary_downloader/models/binary_manifest.py:167
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
@@ -317,7 +317,7 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:184
+#: binary_downloader/models/binary_manifest.py:189
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
@@ -333,7 +333,7 @@ msgstr ""
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:86
+#: binary_downloader/models/binary_manifest.py:91
 #: cloudflare/models/purge_wizard.py:45
 #: cloudflare/models/purge_wizard.py:69
 #: cloudflare/models/purge_wizard.py:85
@@ -341,11 +341,11 @@ msgstr ""
 #: cloudflare/models/res_config_settings.py:71
 #: cloudflare/models/tunnel.py:98
 #: cloudflare/models/zone_settings_wizard.py:90
-#: distributed_redis_cache/models/distributed_cache_config.py:26
+#: distributed_redis_cache/models/distributed_cache_config.py:31
 msgid "Success"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:87
+#: binary_downloader/models/binary_manifest.py:92
 msgid "Successfully installed %s."
 msgstr ""
 
@@ -362,11 +362,11 @@ msgstr ""
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:54
+#: binary_downloader/models/binary_manifest.py:59
 msgid "The binary name cannot contain slashes or backslashes."
 msgstr ""
 
-#: pager_duty/models/pager_check.py:651
+#: pager_duty/models/pager_check.py:656
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
@@ -379,7 +379,7 @@ msgstr ""
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
 
-#: user_websites/models/website_page.py:337
+#: user_websites/models/website_page.py:338
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
@@ -392,7 +392,7 @@ msgstr ""
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:188
+#: backup_management/models/backup_config.py:193
 msgid "Unknown engine: %s"
 msgstr ""
 
@@ -416,11 +416,11 @@ msgstr ""
 msgid "You applied a strike to the owner. Current strike count: %s"
 msgstr ""
 
-#: user_websites_seo/models/user_websites_group.py:32
+#: user_websites_seo/models/user_websites_group.py:33
 msgid "You can only modify SEO metadata for groups you are a member of."
 msgstr ""
 
-#: user_websites_seo/models/res_users.py:51
+#: user_websites_seo/models/res_users.py:54
 msgid "You can only modify your own SEO metadata."
 msgstr ""
 
@@ -432,7 +432,7 @@ msgstr ""
 msgid "You cannot create a record owned by another user."
 msgstr ""
 
-#: user_websites/controllers/main.py:676
+#: user_websites/controllers/main.py:679
 msgid "You cannot create posts for this user."
 msgstr ""
 
@@ -440,16 +440,16 @@ msgstr ""
 msgid "You cannot transfer ownership of a record to another user or group."
 msgstr ""
 
-#: user_websites/controllers/main.py:687
+#: user_websites/controllers/main.py:690
 msgid "You do not have permission to create posts for this group."
 msgstr ""
 
-#: user_websites/controllers/main.py:424
-#: user_websites/controllers/main.py:435
+#: user_websites/controllers/main.py:426
+#: user_websites/controllers/main.py:437
 msgid "You do not have permission to create this site."
 msgstr ""
 
-#: user_websites/models/website_page.py:292
+#: user_websites/models/website_page.py:293
 msgid "You have reached your limit of %s website pages."
 msgstr ""
 
@@ -465,11 +465,11 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:303
+#: backup_management/models/backup_config.py:308
 msgid "pgBackRest backup completed successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:165
+#: backup_management/models/backup_config.py:170
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 

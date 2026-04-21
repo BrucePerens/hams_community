@@ -4,10 +4,7 @@ from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
-def post_init_hook(env):
-    """
-    Inject documentation and register daemon keys upon installation.
-    """
+def install_knowledge_docs(env):
     # [@ANCHOR: doc_inject_pager_duty]
     # We use knowledge.article as the target for both manual_library and Enterprise knowledge
     if "knowledge.article" in env and "zero_sudo.security.utils" in env:
@@ -43,6 +40,10 @@ def post_init_hook(env):
                 except Exception as e:
                     _logger.warning("Could not install Pager Duty documentation: %s", e)
 
+def post_init_hook(env):
+    """
+    Register daemon keys and trigger autodiscovery upon installation.
+    """
     # Trigger autodiscovery if the system is completely empty
     if "pager.check" in env and not env["pager.check"].search_count([]):
         try:

@@ -544,16 +544,13 @@ class ResUsers(models.Model):
         # [@ANCHOR: gdpr_sudo_erasure]
         # Verified by [@ANCHOR: test_gdpr_erasure_pages]
         # Verified by [@ANCHOR: test_gdpr_erasure_posts]
-        fac_svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.facility_service_internal"
-        )
         while True:
             pages = self.env["website.page"].search(
                 [("owner_user_id", "=", self.id)], limit=5000
             )
             if not pages:
                 break
-            pages.with_user(fac_svc_uid).unlink()
+            pages.with_user(svc_uid).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(pages) < 5000:
@@ -567,7 +564,7 @@ class ResUsers(models.Model):
             )
             if not posts:
                 break
-            posts.with_user(fac_svc_uid).unlink()
+            posts.with_user(svc_uid).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(posts) < 5000:
@@ -581,7 +578,7 @@ class ResUsers(models.Model):
             )
             if not blogs:
                 break
-            blogs.with_user(fac_svc_uid).unlink()
+            blogs.with_user(svc_uid).unlink()
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(blogs) < 5000:

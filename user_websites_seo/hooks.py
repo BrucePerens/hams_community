@@ -19,11 +19,15 @@ def install_knowledge_docs(env):
 
     if article_model_name:
         utils = env["zero_sudo.security.utils"]
-        if env["ir.config_parameter"].sudo().get_param("user_websites_seo.docs_installed"): # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
+
+        # Dual service-account approach for strict least-privilege isolation
+        doc_svc_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        param_svc_uid = utils._get_service_uid("user_websites.user_user_websites_service_account")
+
+        if env["ir.config_parameter"].with_user(param_svc_uid).get_param("user_websites_seo.docs_installed"):
             return None
 
-        svc_uid = utils._get_service_uid("zero_sudo.facility_service_internal")
-        article_model = env[article_model_name].with_user(svc_uid).with_context(
+        article_model = env[article_model_name].with_user(doc_svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 
@@ -54,12 +58,12 @@ def install_knowledge_docs(env):
 
             res = article_model.create(vals)
             if res:
-                env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites_seo.docs_installed", "1")
+                env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites_seo.docs_installed", "1")
             return res
         else:
-            env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites_seo.docs_installed", "1")
+            env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites_seo.docs_installed", "1")
         return existing
     return None
 
 def post_init_hook(env):
-    install_knowledge_docs(env)
+    pass

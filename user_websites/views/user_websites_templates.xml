@@ -36,7 +36,6 @@
 
     <template id="layout_inherit_user_navbar" inherit_id="website.layout" name="User Navbar Global">
         <!-- Verified by [@ANCHOR: test_dropzone_navbar] -->
-        <!-- [@ANCHOR: xpath_rendering_navbar] -->
         <xpath expr="//head" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_dropzone_navbar] -->
             <!-- Universal Context Provider for Frontend JS Widgets -->
             <t t-if="resolved_slug">

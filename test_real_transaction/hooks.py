@@ -14,7 +14,7 @@ def install_knowledge_docs(env):
 
     if article_model_name:
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.facility_service_internal"
+            "zero_sudo.odoo_facility_service_internal"
         )
         article_model = env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
@@ -50,4 +50,4 @@ def install_knowledge_docs(env):
     return None
 
 def post_init_hook(env):
-    install_knowledge_docs(env)
+    pass

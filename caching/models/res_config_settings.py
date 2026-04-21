@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import fields, models
+from ..hooks import install_knowledge_docs
 
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'
@@ -17,6 +18,10 @@ class ResConfigSettings(models.TransientModel):
         default=1,
         help="Increment this value to force users' browsers to immediately wipe their cache."
     )
+
+    def _register_hook(self):
+        super()._register_hook()
+        install_knowledge_docs(self.env)
 
     def action_force_cache_invalidation(self):
         self.ensure_one()

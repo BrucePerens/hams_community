@@ -18,11 +18,15 @@ def install_knowledge_docs(env):
 
     if article_model_name:
         utils = env["zero_sudo.security.utils"]
-        if utils._get_system_param("user_websites.docs_installed"):
+
+        # Dual service-account approach for strict least-privilege isolation
+        param_svc_uid = utils._get_service_uid("user_websites.user_user_websites_service_account")
+        doc_svc_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
+
+        if env["ir.config_parameter"].with_user(param_svc_uid).get_param("user_websites.docs_installed"):
             return None
 
-        fac_svc_uid = utils._get_service_uid("zero_sudo.facility_service_internal")
-        article_model = env[article_model_name].with_user(fac_svc_uid).with_context(
+        article_model = env[article_model_name].with_user(doc_svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 
@@ -53,12 +57,12 @@ def install_knowledge_docs(env):
 
             try:
                 article = article_model.create(vals)
-                env["ir.config_parameter"].with_user(fac_svc_uid).set_param("user_websites.docs_installed", "1")
+                env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites.docs_installed", "1")
                 return article
             except Exception as e:
                 _logger.error("Failed to create user_websites documentation article: %s", e)
         else:
-            env["ir.config_parameter"].with_user(fac_svc_uid).set_param("user_websites.docs_installed", "1")
+            env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites.docs_installed", "1")
         return existing
     return None
 

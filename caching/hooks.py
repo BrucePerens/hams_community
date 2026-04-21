@@ -66,10 +66,8 @@ def install_knowledge_docs(env):
         return existing
     return None
 
-
 def post_init_hook(env):
     """
     Hook executed upon module installation.
-    Installs the caching documentation via the Knowledge API.
     """
-    install_knowledge_docs(env)
+    pass

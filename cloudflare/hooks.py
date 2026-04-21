@@ -4,7 +4,6 @@ from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
-
 def install_knowledge_docs(env):
     """
     Checks if the knowledge.article API is present in the environment.
@@ -58,7 +57,6 @@ def install_knowledge_docs(env):
         return article_model.create(vals)
     return existing
 
-
 def post_init_hook(env):
     """
     Executes automatically upon module installation.
@@ -71,9 +69,3 @@ def post_init_hook(env):
         "cloudflare.user_cloudflare_waf"
     )
     env["cloudflare.config.manager"].with_user(svc_uid).initialize_cloudflare_state()
-
-    # NOTE: To fulfill the requirement of waiting until ALL modules are installed,
-    # we rely on the fact that if manual_library or knowledge is present in the
-    # environment during this post_init_hook, we install the docs.
-    # In Odoo 19, hooks run at the end of the module installation process.
-    install_knowledge_docs(env)

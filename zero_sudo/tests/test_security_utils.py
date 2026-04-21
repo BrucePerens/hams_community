@@ -178,6 +178,7 @@ class TestSecurityUtils(TransactionCase):
         """Test the cryptographic secret retrieval hierarchy."""
         utils = self.env["zero_sudo.security.utils"]
         import os  # noqa: E402
+        import odoo  # noqa: E402
         from unittest.mock import patch, mock_open  # noqa: E402
 
         # 1. Test environment variable resolution
@@ -191,5 +192,5 @@ class TestSecurityUtils(TransactionCase):
 
             # 3. Test configuration fallback
             with patch("builtins.open", side_effect=Exception("File not found")):
-                with patch("odoo.tools.config.get", return_value="test_config_key"):
+                with patch.object(odoo.tools.config, "get", return_value="test_config_key"):
                     self.assertEqual(utils._get_crypto_secret(), "test_config_key")

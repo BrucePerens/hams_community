@@ -23,7 +23,7 @@ def install_knowledge_docs(env):
 
     if article_model_name:
         svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.facility_service_internal"
+            "zero_sudo.odoo_facility_service_internal"
         )
         article_model = env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
@@ -64,12 +64,10 @@ def install_knowledge_docs(env):
         return existing
     return None
 
-
 def post_init_hook(env):
     """
     Hook executed upon module installation.
     1. Enforces the use of Odoo's native cookie consent banner.
-    2. Installs the regulatory documentation via the Knowledge API.
     """
     # [@ANCHOR: journey_compliance_setup]
     # Verified by [@ANCHOR: test_compliance_ui_tour]
@@ -86,6 +84,3 @@ def post_init_hook(env):
     # Safely check if the target field exists in the current Odoo version
     if "cookies_bar" in env["website"]._fields:
         websites.write({"cookies_bar": True})
-
-    # Install documentation
-    install_knowledge_docs(env)

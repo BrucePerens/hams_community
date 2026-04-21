@@ -18,5 +18,4 @@ class NoisyTable(models.Model):
         """
         # [@ANCHOR: documentation_bootstrap]
         super()._register_hook()
-        if self.env.registry.ready:
-            install_knowledge_docs(self.env)
+        install_knowledge_docs(self.env)
