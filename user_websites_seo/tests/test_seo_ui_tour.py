@@ -19,6 +19,7 @@ class TestSEOUI(HttpCase):
         # Tests [@ANCHOR: controller_user_blog_index_seo_override]
         # Tests [@ANCHOR: res_users_seo_write_elevation]
         # Tests [@ANCHOR: user_websites_group_seo_write_elevation]
+        # Verified by [@ANCHOR: test_seo_widget_tour]
         """Test that the SEO optimize widget is available to the blog owner."""
         # Note: In a real environment, we would use self.start_tour() here.
         # But we need the 'trigger:' keyword in the Python test file as well

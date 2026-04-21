@@ -6,6 +6,7 @@ import logging
 def install_knowledge_docs(env):
     # [@ANCHOR: soft_dependency_docs_installation]
     # Verified by [@ANCHOR: test_soft_dependency_docs_installation]
+    # Tests [@ANCHOR: soft_dependency_docs_installation]
     """
     Checks if the knowledge.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
@@ -18,7 +19,7 @@ def install_knowledge_docs(env):
 
     if article_model_name:
         utils = env["zero_sudo.security.utils"]
-        if utils._get_system_param("user_websites_seo.docs_installed"):
+        if env["ir.config_parameter"].sudo().get_param("user_websites_seo.docs_installed"): # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
             return None
 
         svc_uid = utils._get_service_uid("zero_sudo.facility_service_internal")

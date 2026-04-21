@@ -24,6 +24,7 @@ class UserWebsitesGroupSEO(models.Model):
                 if all(self.env.user.id in group.member_ids.ids for group in self):
                     # [@ANCHOR: user_websites_group_seo_write_elevation]
                     # Verified by [@ANCHOR: test_seo_widget_tour]
+                    # Verified by [@ANCHOR: test_check_access_rule_user_websites_group]
                     # Escalate strictly for the write operation using the domain service account
                     # ADR-0001: Use with_context(mail_notrack=True, prefetch_fields=False)
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("user_websites.user_user_websites_service_account")
