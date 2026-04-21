@@ -1,0 +1,19 @@
+# Story: Failure Reporting
+
+This story describes how the system alerts operators when backup operations fail or snapshots become stale.
+
+## Background
+Reliable backups are critical. If a backup fails or hasn't run recently, the SRE team must be notified immediately.
+
+## The Process
+1. **Detection**:
+   - **CLI Failure**: If a subprocess call to an engine fails `[@ANCHOR: backup_trigger_execution]`.
+   - **Staleness**: If no new snapshots are detected for more than 26 hours.
+   - **Size Anomaly**: If a snapshot is suspiciously small (under `minimum_size_mb`).
+2. **Alerting**:
+   - The module uses a soft-dependency on `pager_duty`.
+   - It invokes `pager.incident.report_incident()` `[@ANCHOR: backup_pager_synergy]`.
+3. **Escalation**: The incident is reported using the `pager_service_internal` micro-account, triggering the configured escalation policy in PagerDuty.
+
+## Verification
+This behavior is verified by simulating failures in tests `[@ANCHOR: test_backup_cron]`.

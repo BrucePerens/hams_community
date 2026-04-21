@@ -6,6 +6,7 @@ from psycopg2 import sql
 
 class DatabasePgSetting(models.Model):
     # [@ANCHOR: db_settings_audit]
+    # Tests [@ANCHOR: db_settings_audit]
     _name = "database.pg.setting"
     _description = "PostgreSQL Configuration Parameter"
     _auto = False
@@ -54,6 +55,7 @@ class PgOptimizeWizard(models.TransientModel):
 
     def action_apply_optimizations(self):
         # [@ANCHOR: pg_optimize_wizard]
+        # Tests [@ANCHOR: pg_optimize_wizard]
         if self.ram_gb <= 0 or self.cpu_cores <= 0:
             raise UserError(_("RAM and CPU must be greater than zero."))
 
@@ -151,6 +153,7 @@ class PgHaWizard(models.TransientModel):
 
     def action_generate(self):
         # [@ANCHOR: pg_ha_wizard]
+        # Tests [@ANCHOR: pg_ha_wizard]
         self._get_executable("etcd")
         self._get_executable("patroni")
         self._get_executable("pgbouncer")

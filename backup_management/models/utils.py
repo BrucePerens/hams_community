@@ -4,6 +4,8 @@ from odoo.exceptions import UserError
 from odoo import _
 
 def validate_backup_path(path):
+    # [@ANCHOR: backup_path_validation]
+    # Verified by [@ANCHOR: test_backup_security]
     if not path:
         return
     abs_path = os.path.abspath(path)

@@ -28,69 +28,78 @@ def _cluster_indices(indices, max_gap):
     return clusters
 
 
-def verify_python(filepath):
-    """Runs flake8 to verify Python syntax and style."""
-    try:
-        # Select only E9 (Syntax) and F (Logic/Name) errors to prevent cosmetic spacing
-        # issues from aborting the extraction process.
-        result = subprocess.run(
-            ["flake8", "--select=E9,F", filepath],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            return f"[ERROR] flake8 found issues:\n{result.stdout.strip()}"
-    except FileNotFoundError:
-        return "[WARN] flake8 is not installed. Skipping verification."
-    return None
+def lint_file_content(filepath, content):
+    """Lints the complete file content in-memory before writing it to disk."""
+    post_errors = []
+    warnings = []
+    ext = os.path.splitext(filepath)[1].lower()
 
+    import tempfile
 
-def verify_xml(filepath):
-    """Verifies that the XML is well-formed."""
-    try:
-        ET.parse(filepath)
-    except ET.ParseError as e:
-        return f"[ERROR] XML Parsing Error: {e}"
-    return None
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_filepath = os.path.join(tmpdir, filepath)
+        os.makedirs(os.path.dirname(tmp_filepath), exist_ok=True)
+        with open(tmp_filepath, "w", encoding="utf-8") as f:
+            f.write(content)
 
+        # 1. flake8
+        if ext == ".py":
+            cmd = ["flake8", "--select=E9,F"]
+            if os.path.basename(filepath) == "__init__.py":
+                cmd.append("--extend-ignore=F401")
+            cmd.append(tmp_filepath)
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode != 0:
+                    out = res.stdout.strip().replace(tmp_filepath, filepath)
+                    post_errors.append(f"[ERROR] flake8 found issues:\n{out}")
+            except FileNotFoundError:
+                warnings.append("[WARN] flake8 is not installed. Skipping verification.")
 
-def verify_markdown(filepath):
-    """Checks for unclosed inline and fenced code blocks using robust state parsing."""
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            content = f.read()
-        mask_markdown_and_check_balance(content)
-    except ValueError as e:
-        return f"[ERROR] {e}"
-    except Exception as e:
-        return f"[WARN] Could not verify Markdown: {e}"
-    return None
+        # 2. XML
+        elif ext == ".xml":
+            try:
+                ET.fromstring(content)
+            except ET.ParseError as e:
+                post_errors.append(f"[ERROR] XML Parsing Error: {e}")
 
+        # 3. Markdown
+        elif ext == ".md":
+            try:
+                mask_markdown_and_check_balance(content)
+            except ValueError as e:
+                post_errors.append(f"[ERROR] {e}")
 
-def verify_json(filepath):
-    """Verifies JSON payload validity."""
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            json.load(f)
-    except Exception as e:
-        return f"[ERROR] Invalid JSON: {e}"
-    return None
+        # 4. JSON
+        elif ext == ".json":
+            try:
+                json.loads(content)
+            except Exception as e:
+                post_errors.append(f"[ERROR] Invalid JSON: {e}")
 
+        # 5. check_burn_list
+        if ext in (".py", ".xml", ".js", ".csv"):
+            linter_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_burn_list.py")
+            if os.path.exists(linter_path):
+                sys.path.insert(0, os.path.dirname(linter_path))
+                try:
+                    import check_burn_list
+                    import importlib
+                    importlib.reload(check_burn_list)  # Ensure clean state
+                    check_burn_list.FOUND_TEST_CONTENTS = {}
+                    check_burn_list.REQUIRE_TEST_VERIFICATION = []
+                    errs, warns = check_burn_list.scan_file(tmp_filepath)
+                    if errs:
+                        err_str = "\n".join(errs).replace(tmp_filepath, filepath)
+                        post_errors.append(f"[ERROR] check_burn_list.py rejected:\n{err_str}")
+                    for w in warns:
+                        warnings.append(f"[WARN] check_burn_list.py warning: {w.replace(tmp_filepath, filepath)}")
+                except Exception as e:
+                    warnings.append(f"[WARN] Failed to execute custom linter: {e}")
+                finally:
+                    sys.path.pop(0)
 
-def run_burn_list_linter(filepath):
-    """Runs custom project linter to catch architectural issues."""
-    linter_path = os.path.join(os.path.dirname(__file__), "check_burn_list.py")
-    if os.path.exists(linter_path):
-        try:
-            result = subprocess.run(
-                [sys.executable, linter_path, filepath], capture_output=True, text=True
-            )
-            if result.returncode != 0:
-                out = result.stdout.strip()
-                return f"[ERROR] check_burn_list.py rejected:\n{out}"
-        except Exception as e:
-            return f"[WARN] Failed to execute custom linter: {e}"
-    return None
+    return post_errors, warnings
 
 
 def mask_markdown_and_check_balance(payload):
@@ -1135,7 +1144,17 @@ def extract_parcel(raw_text):
                     file_mutated = True
 
             if file_mutated:
+                if filepath.endswith((".py", ".xml", ".md", ".js", ".html")):
+                    current_text = re.sub(
+                        r"[ \t]+$", "", current_text, flags=re.MULTILINE
+                    )
                 validate_syntax_in_memory(filepath, current_text)
+
+                lint_errs, lint_warns = lint_file_content(filepath, current_text)
+                if lint_errs:
+                    errors.extend(lint_errs)
+                if lint_warns:
+                    warnings.extend(lint_warns)
 
         except Exception as e:
             errors.append(str(e))
@@ -1174,11 +1193,6 @@ def extract_parcel(raw_text):
             shortened_str = ""
 
             if file_mutated:
-                if filepath.endswith((".py", ".xml", ".md", ".js", ".html")):
-                    current_text = re.sub(
-                        r"[ \t]+$", "", current_text, flags=re.MULTILINE
-                    )
-
                 if original_text is not None:
                     orig_lines = len(original_text.splitlines())
                     new_lines = len(current_text.splitlines())
@@ -1193,61 +1207,6 @@ def extract_parcel(raw_text):
 
             if mode_int is not None:
                 os.chmod(filepath, mode_int)
-
-            ext = os.path.splitext(filepath)[1].lower()
-            post_errors = []
-
-            if ext == ".py":
-                err = verify_python(filepath)
-                if err:
-                    if err.startswith("[WARN]"):
-                        warnings.append(err)
-                    else:
-                        post_errors.append(err)
-            elif ext == ".xml":
-                err = verify_xml(filepath)
-                if err:
-                    if err.startswith("[WARN]"):
-                        warnings.append(err)
-                    else:
-                        post_errors.append(err)
-            elif ext == ".md":
-                err = verify_markdown(filepath)
-                if err:
-                    if err.startswith("[WARN]"):
-                        warnings.append(err)
-                    else:
-                        post_errors.append(err)
-            elif ext == ".json":
-                err = verify_json(filepath)
-                if err:
-                    if err.startswith("[WARN]"):
-                        warnings.append(err)
-                    else:
-                        post_errors.append(err)
-
-            if ext in (".py", ".xml", ".js"):
-                err = run_burn_list_linter(filepath)
-                if err:
-                    if err.startswith("[WARN]"):
-                        warnings.append(err)
-                    else:
-                        post_errors.append(err)
-
-            if post_errors:
-                if file_mutated:
-                    if original_text is not None:
-                        with open(filepath, "w", encoding="utf-8") as f:
-                            f.write(original_text)
-                    else:
-                        if os.path.exists(filepath):
-                            os.remove(filepath)
-                errors.extend(post_errors)
-                _print_summary(
-                    filepath, errors, warnings, aborted=True, count=len(tasks)
-                )
-                failed_files.append(filepath)
-                continue
 
             if file_mutated:
                 if is_shortened:

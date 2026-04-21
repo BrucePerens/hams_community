@@ -72,6 +72,7 @@ class WebsitePage(models.Model):
     @api.model
     def _sanitize_user_arch(self, arch_content):
         # [@ANCHOR: website_page_sanitize_arch]
+        # Verified by [@ANCHOR: test_website_page_sanitize_arch]
         if not arch_content:
             return arch_content, False
         try:

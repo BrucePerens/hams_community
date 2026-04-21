@@ -6,7 +6,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "zero_sudo", "test_real_transaction", "binary_downloader"],
+    "depends": ["base", "mail", "zero_sudo", "test_real_transaction", "binary_downloader", "pager_duty"],
     "external_dependencies": {
         "python": ["pika", "cryptography"],
     },
@@ -26,6 +26,9 @@
         "web.assets_backend": [
             "backup_management/static/src/components/board/board.js",
             "backup_management/static/src/components/board/board.xml",
-        ]
+        ],
+        "web.assets_tests": [
+            "backup_management/static/src/tests/tours/backup_dashboard.js",
+        ],
     },
 }

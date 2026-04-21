@@ -314,14 +314,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = (
-                            f"site-{user.website_slug or slug_lower}"
-                        )
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{user.website_slug or slug_lower}"
                 return response
 
             return request.render(
@@ -372,11 +366,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = f"site-{group.website_slug}"
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{group.website_slug}"
                 return response
 
             return request.render(
@@ -642,9 +633,8 @@ class UserWebsitesController(http.Controller):
 
         if request.env.user._is_public():
             response.headers["Cache-Control"] = "public, max-age=60"
-            if "cloudflare.purge.queue" in request.env:
-                response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
-                response.headers["Cache-Tag"] = f"site-{resolved_slug}"
+            response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+            response.headers["Cache-Tag"] = f"site-{resolved_slug}"
         return response
 
     # --- 6. Blog Creation ---
@@ -774,8 +764,20 @@ class UserWebsitesController(http.Controller):
     def user_websites_documentation(self, **kwargs):
         # [@ANCHOR: controller_user_websites_documentation]
         # Verified by [@ANCHOR: test_documentation_route]
+        article_model_name = None
         if "knowledge.article" in request.env:
-            article = install_knowledge_docs(request.env)
+            article_model_name = "knowledge.article"
+        elif "manual.article" in request.env:
+            article_model_name = "manual.article"
+
+        if article_model_name:
+            install_knowledge_docs(request.env)
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.facility_service_internal"
+            )
+            article = request.env[article_model_name].with_user(svc_uid).search(
+                [("name", "=", "User Websites Documentation")], limit=1
+            )
             if article and hasattr(article, "website_url") and article.website_url:
                 return request.redirect(article.website_url)
 
@@ -889,10 +891,10 @@ class UserWebsitesController(http.Controller):
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
 
-        db_secret = request.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
+        db_secret = request.env["zero_sudo.security.utils"]._get_crypto_secret()
         if not db_secret:
             _logger.error(
-                "Security Alert: 'database.secret' is not configured. Unsubscribe tokens cannot be verified."
+                "Security Alert: Crypto secret is not configured. Unsubscribe tokens cannot be verified."
             )
             raise werkzeug.exceptions.InternalServerError(
                 "System configuration error: cryptographic secret missing."

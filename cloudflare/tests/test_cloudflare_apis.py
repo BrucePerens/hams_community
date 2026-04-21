@@ -8,6 +8,9 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_01_waf_ban_ip(self, mock_post):
+        # [@ANCHOR: test_cf_ban_ip_api]
+        # Tests [@ANCHOR: cf_ban_ip_api]
+        # # Verified by [@ANCHOR: test_cf_ban_ip_api]
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()
@@ -28,6 +31,9 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_02_turnstile_secret_fetch(self, mock_post):
+        # [@ANCHOR: test_cf_turnstile_verify]
+        # Tests [@ANCHOR: cf_turnstile_verify]
+        # # Verified by [@ANCHOR: test_cf_turnstile_verify]
         website = self.env["website"].get_current_website()
         website.write({"cloudflare_turnstile_secret": "my_super_secret_key"})
 
@@ -100,6 +106,8 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_04_purge_urls(self, mock_post):
+        # [@ANCHOR: test_purge_urls_api]
+        # # Verified by [@ANCHOR: test_purge_urls_api]
         from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls  # noqa: E402
 
         # Case 1: Missing credentials
@@ -141,6 +149,8 @@ class TestCloudflareAPIs(TransactionCase):
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_05_purge_tags(self, mock_post):
+        # [@ANCHOR: test_purge_tags_api]
+        # # Verified by [@ANCHOR: test_purge_tags_api]
         from odoo.addons.cloudflare.utils.cloudflare_api import purge_tags  # noqa: E402
 
         # Case 1: Missing credentials

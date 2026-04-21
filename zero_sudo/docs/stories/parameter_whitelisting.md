@@ -1,4 +1,4 @@
-# Story: Parameter Whitelisting
+# Story: Parameter Whitelisting `[@ANCHOR: story_parameter_whitelisting]`
 
 This story describes how sensitive system parameters are protected from unauthorized access or exfiltration.
 
@@ -13,3 +13,6 @@ System parameters (`ir.config_parameter`) often contain configuration that, if l
 
 ## Developer Requirement
 If a new, safe parameter needs to be accessible via this utility, the developer MUST add it to the `PARAM_WHITELIST` in the source code of `zero_sudo`.
+
+## Cryptographic Secrets
+Cryptographic secrets are strictly forbidden from entering the parameter whitelist to prevent SSTI. To retrieve the system's root cryptographic key, developers must use the `_get_crypto_secret` utility `[@ANCHOR: get_crypto_secret]`. This function reads from environment variables, local files, or Odoo's base configuration without evaluating the database's `ir.config_parameter` table.

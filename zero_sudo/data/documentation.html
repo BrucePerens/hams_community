@@ -1,0 +1,25 @@
+<h1>🛡️ Zero-Sudo Security Core (<code>zero_sudo</code>)</h1>
+
+<p>This module acts as the foundational security layer for the ecosystem. It implements the platform's strict <strong>Zero-Sudo Architecture</strong> (ADR-0002) and <strong>Service Account Web Isolation</strong> (ADR-0005).</p>
+
+<h2>1. The Service Account Pattern</h2>
+<p>You are strictly FORBIDDEN from using <code>.sudo()</code> inline. To escalate privileges:</p>
+<ol>
+    <li>Define your service account in your module's XML data and set <code>&lt;field name="is_service_account" eval="True"/&gt;</code>.</li>
+    <li>Retrieve its UID securely: <code>svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('your_module.user_xml_id')</code></li>
+    <li>Execute using the impersonation idiom: <code>self.env['target.model'].with_user(svc_uid).create(vals)</code></li>
+</ol>
+
+<h2>2. System Parameter Whitelisting</h2>
+<p>If you need to fetch a configuration parameter securely: <code>value = self.env['zero_sudo.security.utils']._get_system_param('my.key')</code></p>
+<p><strong>CRITICAL:</strong> The key MUST be explicitly added to the <code>PARAM_WHITELIST</code> array in <code>zero_sudo/models/security_utils.py</code>.</p>
+
+<h2>3. Centralized Shared Service Accounts</h2>
+<p>When a daemon or unprivileged user strictly requires native ERP framework interactions that mandate <code>base.group_user</code>, they MUST temporarily assume one of these proxy accounts:</p>
+<ul>
+    <li><strong>Central Mail Service Account:</strong> (<code>zero_sudo.mail_service_internal</code>) Use for <code>message_post()</code>, <code>send_mail()</code>, etc.</li>
+    <li><strong>Odoo Facility Service Account:</strong> (<code>zero_sudo.odoo_facility_service_internal</code>) Use for complex ORM object creations that deeply assume internal user rights.</li>
+</ul>
+
+<h2>4. Global Cache Signaling</h2>
+<p>The <code>_notify_cache_invalidation</code> function provides an entry point to trigger cross-worker cache flushes via the distributed event bus.</p>

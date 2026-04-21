@@ -38,7 +38,7 @@ We do not increase privilege beyond the capability of the persona requesting the
 To present restricted, masked, or aggregated data to an unprivileged user (e.g., public directories, maps, or statistics), you MUST NOT use a Service Account to fetch the raw records and mask them in Python. Instead, create a PostgreSQL View (`_auto = False`) that strictly selects only the safe columns or applies SQL-level masking. Grant the public/portal persona read access exclusively to the View via `ir.model.access.csv`, and execute the read natively without privilege escalation. Sensitive data must never enter the WSGI worker's memory during an unprivileged request.
 
 ### 5. Strict Linter Bypass Confinement
-Generic `# burn-ignore` tags are strictly prohibited. The bypass comment MUST specify the exact rule or pattern being bypassed (e.g., `# burn-ignore-sudo`, `# audit-ignore-mail`, `# audit-ignore-search`). Furthermore, ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the automated unit test that validates it.
+Generic `# burn-ignore` tags are strictly prohibited. The bypass comment MUST specify the exact rule or pattern being bypassed (e.g., `# burn-ignore-financial`, `# audit-ignore-mail`, `# audit-ignore-search`). Furthermore, ANY bypassed line MUST include an inline comment cross-referencing the specific Semantic Anchor of the automated unit test that validates it.
 
 ### 6. OS-Level Daemon Restriction & Airgapped Spooling
 To prevent Remote Code Execution (RCE) escalation from background tasks:

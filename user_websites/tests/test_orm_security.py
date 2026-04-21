@@ -218,6 +218,8 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
             post.with_user(self.user_b).write({"owner_user_id": self.user_a.id})
 
     def test_07_qweb_arch_sanitization(self):
+        # [@ANCHOR: test_website_page_sanitize_arch]
+        # Tests [@ANCHOR: website_page_sanitize_arch]
         """
         # Tests [@ANCHOR: website_page_sanitize_arch]
         Verify that script tags, iframes, and dangerous QWeb directives are actively stripped

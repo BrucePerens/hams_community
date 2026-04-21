@@ -17,6 +17,14 @@ Provides an enterprise-grade Application Performance Monitoring (APM) and DBA su
 ## Automated Subsystems & Alerts
 * **Bloat Alerts:** Integrates with Pager Duty to automatically alert SREs on excessive table/index bloat anomalies `[@ANCHOR: bloat_alert_synergy]`.
 
+## Architectural Stories & Journeys
+
+### Stories
+* [Database Management Stories](docs/stories/database_management/user_stories.md)
+
+### Journeys
+* [Database Management Journeys](docs/journeys/database_management/user_journeys.md)
+
 ## Testing & Verification
 * **Cron Execution:** Database stat collection via cron is verified by `[@ANCHOR: test_dba_cron]`.
 * **View Rendering:** Rendering of configuration and DBA dashboards is verified by `[@ANCHOR: test_dba_view]` and `[@ANCHOR: test_pg_config_views]`.

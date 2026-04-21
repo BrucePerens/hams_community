@@ -110,6 +110,8 @@ class TestDistributedCache(HttpCase):
 
     def test_03_distributed_cache_ui(self):
         # Tests [@ANCHOR: distributed_cache_view]
+        # Tests [@ANCHOR: manual_cache_invalidation]
+        # Tests [@ANCHOR: check_redis_status_logic]
         """
         Verify the UI logic for manually invalidating the cache.
         """
@@ -131,6 +133,8 @@ class TestDistributedCache(HttpCase):
         self.assertTrue(True)
 
     def test_05_redis_scan_invalidation(self):
+        # Tests [@ANCHOR: invalidate_model_cache_logic]
+        # Tests [@ANCHOR: redis_connection_pool]
         """
         Verify that invalidate_model_cache uses SCAN instead of KEYS.
         """
@@ -148,6 +152,7 @@ class TestDistributedCache(HttpCase):
             mock_redis_client.delete.assert_called_once_with("key1", "key2")
 
     def test_06_distributed_cache_decorator_fallback(self):
+        # Tests [@ANCHOR: distributed_cache_decorator]
         """
         Verify the @distributed_cache decorator falls back to local cache when Redis fails.
         """
@@ -179,3 +184,22 @@ class TestDistributedCache(HttpCase):
 
             # Verify it's in local cache now
             self.assertIn(42, _local_cache.values())
+
+    def test_07_distributed_cache_key_generation(self):
+        # Tests [@ANCHOR: distributed_cache_key_generation]
+        """
+        Verify that cache keys are generated deterministically.
+        """
+        from odoo.addons.distributed_redis_cache.redis_cache import _get_hash  # noqa: E402
+
+        h1 = _get_hash(1, 2, a=3)
+        h2 = _get_hash(1, 2, a=3)
+        self.assertEqual(h1, h2)
+
+        h3 = _get_hash(2, 1, a=3)
+        self.assertNotEqual(h1, h3)
+
+        # Test model serialization
+        h4 = _get_hash(self.env.user)
+        h5 = _get_hash(self.env.user)
+        self.assertEqual(h4, h5)
