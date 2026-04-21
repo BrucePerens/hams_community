@@ -313,14 +313,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = (
-                            f"site-{user.website_slug or slug_lower}"
-                        )
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{user.website_slug or slug_lower}"
                 return response
 
             return request.render(
@@ -371,11 +365,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = f"site-{group.website_slug}"
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{group.website_slug}"
                 return response
 
             return request.render(
@@ -640,9 +631,8 @@ class UserWebsitesController(http.Controller):
 
         if request.env.user._is_public():
             response.headers["Cache-Control"] = "public, max-age=60"
-            if "cloudflare.purge.queue" in request.env:
-                response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
-                response.headers["Cache-Tag"] = f"site-{resolved_slug}"
+            response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+            response.headers["Cache-Tag"] = f"site-{resolved_slug}"
         return response
 
     # --- 6. Blog Creation ---

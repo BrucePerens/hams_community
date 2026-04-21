@@ -21,8 +21,8 @@ def install_knowledge_docs(env):
         if utils._get_system_param("user_websites.docs_installed"):
             return None
 
-        svc_uid = utils._get_service_uid("zero_sudo.facility_service_internal")
-        article_model = env[article_model_name].with_user(svc_uid).with_context(
+        fac_svc_uid = utils._get_service_uid("zero_sudo.facility_service_internal")
+        article_model = env[article_model_name].with_user(fac_svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 
@@ -53,16 +53,19 @@ def install_knowledge_docs(env):
 
             try:
                 article = article_model.create(vals)
-                env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.docs_installed", "1")
+                env["ir.config_parameter"].with_user(fac_svc_uid).set_param("user_websites.docs_installed", "1")
                 return article
             except Exception as e:
                 _logger.error("Failed to create user_websites documentation article: %s", e)
         else:
-            env["ir.config_parameter"].with_user(svc_uid).set_param("user_websites.docs_installed", "1")
+            env["ir.config_parameter"].with_user(fac_svc_uid).set_param("user_websites.docs_installed", "1")
         return existing
     return None
 
 def post_init_hook(env):
+    """
+    Hook executed upon module installation.
+    """
     svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
         "user_websites.user_user_websites_service_account"
     )
@@ -98,8 +101,9 @@ def post_init_hook(env):
         "CREATE INDEX IF NOT EXISTS idx_blog_post_published ON blog_post (id) WHERE is_published = TRUE;"
     )
 
-    cf_svc = env.ref("cloudflare.user_cloudflare_service", raise_if_not_found=False)
-    if cf_svc and "is_service_account" in cf_svc._fields:
+    # Lock down the Cloudflare service account (Hard Dependency)
+    cf_svc = env.ref("cloudflare.user_cloudflare_service")
+    if "is_service_account" in cf_svc._fields:
         cf_svc.with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         ).write({"is_service_account": True})

@@ -6,7 +6,7 @@
     "category": "Ham Radio",
     "license": "AGPL-3",
     "version": "1.0",
-    "depends": ["base", "mail", "zero_sudo", "binary_downloader"],
+    "depends": ["base", "mail", "zero_sudo", "binary_downloader", "pager_duty"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",

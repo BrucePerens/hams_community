@@ -23,6 +23,7 @@ This module enables:
         "portal",
         "zero_sudo",
         "distributed_redis_cache",
+        "cloudflare",
     ],
     "external_dependencies": {
         "python": ["redis"],
