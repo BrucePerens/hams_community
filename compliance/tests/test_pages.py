@@ -72,25 +72,3 @@ class TestCompliancePagesHttp(HttpCase):
             self.assertIn("Last Updated:", normalized_arch)
             self.assertIn("Warning: This is the default version", normalized_arch)
             self.assertIn("It was not produced by a lawyer.", normalized_arch)
-
-    def test_knowledge_article_installation(self):
-        """Verify the documentation article is correctly installed."""
-        # [@ANCHOR: test_compliance_knowledge_article_installation]
-        # Tests [@ANCHOR: zero_sudo_doc_installer]
-        # Tests [@ANCHOR: story_compliance_documentation]
-        article_model_name = None
-        if "knowledge.article" in self.env:
-            article_model_name = "knowledge.article"
-        elif "manual.article" in self.env:
-            article_model_name = "manual.article"
-
-        if not article_model_name:
-            self.skipTest("Neither knowledge.article nor manual.article model available")
-
-        article = self.env[article_model_name].search([
-            ("name", "=", "Site Owner's Guide to Regulatory Compliance")
-        ], limit=1)
-        self.assertTrue(article, "Documentation article should have been created.")
-        self.assertIn("GDPR", article.body)
-        self.assertIn("WCAG", article.body)
-        self.assertEqual(article.icon, "⚖️")

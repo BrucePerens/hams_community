@@ -12,12 +12,6 @@ class Module(models.Model):
     @api.model
     def _register_hook(self):
         super()._register_hook()
-
-        # Prevent documentation bootstrapping during active module installations or uninstalls
-        # to avoid interacting with unstable or incomplete registry states.
-        if self.env.context.get("install_mode") or self.env.context.get("module_uninstall"):
-            return
-
         if not hasattr(self.env.registry, '_zero_sudo_docs_checked'):
             self.env.registry._zero_sudo_docs_checked = True
             self._bootstrap_knowledge_docs()
@@ -37,21 +31,14 @@ class Module(models.Model):
 
         utils = self.env['zero_sudo.security.utils']
 
-        # Securely resolve the appropriate service account utilizing direct SQL checks
-        # to ensure the account truly exists before invoking the zero_sudo resolver.
-        self.env.cr.execute(
-            "SELECT res_id FROM ir_model_data WHERE module='manual_library' AND name='user_manual_library_service_account' AND model='res.users'"
+        svc_account = "manual_library.user_manual_library_service_account"
+        if not self.env["ir.model.data"]._xmlid_to_res_id(svc_account, raise_if_not_found=False):
+             svc_account = "zero_sudo.odoo_facility_service_internal"
+
+        svc_uid = utils._get_service_uid(svc_account)
+        Article = self.env[article_model_name].with_user(svc_uid).with_context(
+            mail_notrack=True, prefetch_fields=False
         )
-        res = self.env.cr.fetchone()
-        svc_account = "manual_library.user_manual_library_service_account" if res else "zero_sudo.odoo_facility_service_internal"
-
-        try:
-            env_svc = utils._get_service_env(svc_account)
-        except Exception as e:
-            _logger.warning("Could not resolve service account for documentation installation: %s", e)
-            return
-
-        Article = env_svc[article_model_name]
 
         modules = self.env['ir.module.module'].search([('state', '=', 'installed')], limit=10000)
         for mod in modules:
@@ -64,23 +51,17 @@ class Module(models.Model):
 
     @api.model
     def _install_single_doc(self, utils, Article, module_name, doc_info):
-        rel_path = doc_info.get('path')
-        if not rel_path:
+        path = doc_info.get('path')
+        if not path:
             return
 
-        # Strip module name prefix if the user accidentally left it in to ensure backward compatibility
-        if rel_path.startswith(f"{module_name}/"):
-            rel_path = rel_path[len(f"{module_name}/"):]
-
-        full_path = f"{module_name}/{rel_path}"
-
         try:
-            with tools.file_open(full_path, 'rb') as f:
+            with tools.file_open(path, 'rb') as f:
                 content_bytes = f.read()
                 content_hash = hashlib.sha256(content_bytes).hexdigest()
                 doc_body = content_bytes.decode('utf-8')
         except Exception as e:
-            _logger.error("Failed to load doc file %s for module %s: %s", full_path, module_name, e)
+            _logger.error("Failed to load doc file %s for module %s: %s", path, module_name, e)
             return
 
         name = doc_info.get('name', f"{module_name} Documentation")
