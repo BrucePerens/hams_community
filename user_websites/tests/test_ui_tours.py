@@ -54,6 +54,8 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/privacy", "gdpr_privacy_tour")
 
     def test_04_moderation_appeal_tour(self):
+        # Tests [@ANCHOR: test_tour_moderation_appeal]
+        # Tests [@ANCHOR: UX_SUBMIT_APPEAL]
         # Suspend user to trigger the appeal form rendering
         self.user_test.is_suspended_from_websites = True
         self.authenticate(self.user_test.login, self.user_test.login)

@@ -201,6 +201,7 @@ class TestSubscriptionsAndDigest(HttpCase):
 
 def test_03_subscribe_to_site(self):
     # [@ANCHOR: test_subscribe_to_site]
+    # [@ANCHOR: test_subscription_creation]
     # Tests [@ANCHOR: UX_SUBSCRIBE]
     """
     Verify that users can subscribe to a site.

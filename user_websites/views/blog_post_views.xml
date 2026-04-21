@@ -12,6 +12,7 @@
                 <field name="user_websites_group_id" options="{'no_create': True}"/>
                 <div id="user_websites_dropzone_blog_post">
                     <!-- [@ANCHOR: dropzone_blog_post] -->
+                    <!-- Verified by [@ANCHOR: test_dropzone_blog_post] -->
                 </div>
             </xpath>
         </field>

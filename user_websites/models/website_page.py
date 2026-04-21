@@ -254,6 +254,7 @@ class WebsitePage(models.Model):
                         del vals[k]
 
         # [@ANCHOR: website_page_quota_check]
+        # Verified by [@ANCHOR: test_page_quota_limit]
         # Verified by [@ANCHOR: test_page_limits]
         # 2. Quota Limit Check
         owner_ids = [

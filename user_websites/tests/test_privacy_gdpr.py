@@ -55,6 +55,7 @@ class TestPrivacyGDPR(odoo.tests.common.HttpCase):
         )
 
     def test_01_data_portability_export(self):
+        # [@ANCHOR: test_gdpr_export_api]
         # Tests [@ANCHOR: UX_GDPR_EXPORT]
         """Verify the user can successfully download a JSON payload of their data."""
         self.authenticate(self.user_privacy.login, self.user_privacy.login)
