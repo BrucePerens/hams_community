@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 15:41+0000\n"
-"PO-Revision-Date: 2026-04-21 15:41+0000\n"
+"POT-Creation-Date: 2026-04-21 15:53+0000\n"
+"PO-Revision-Date: 2026-04-21 15:53+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -63,7 +63,7 @@ msgstr ""
 msgid "Appeal rejected. The user remains suspended."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:127
+#: binary_downloader/models/binary_manifest.py:138
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr ""
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:206
+#: binary_downloader/models/binary_manifest.py:222
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -187,7 +187,7 @@ msgstr ""
 msgid "Invalid JSON Format: %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:102
+#: binary_downloader/models/binary_manifest.py:113
 msgid "Invalid binary name."
 msgstr ""
 
@@ -199,7 +199,7 @@ msgstr ""
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:194
+#: binary_downloader/models/binary_manifest.py:210
 msgid "Member %s not found in archive."
 msgstr ""
 
@@ -212,7 +212,7 @@ msgstr ""
 msgid "Missing Cloudflare API Token or Zone ID for the selected website."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:119
+#: binary_downloader/models/binary_manifest.py:130
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
@@ -231,6 +231,10 @@ msgstr ""
 
 #: zero_sudo/models/security_utils.py:177
 msgid "Only administrators can update the Python environment."
+msgstr ""
+
+#: binary_downloader/models/binary_manifest.py:40
+msgid "Only http:// and https:// URLs are allowed for security reasons."
 msgstr ""
 
 #: database_management/models/pg_config.py:96
@@ -289,8 +293,12 @@ msgstr ""
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:167
+#: binary_downloader/models/binary_manifest.py:178
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
+msgstr ""
+
+#: binary_downloader/models/binary_manifest.py:196
+msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
 #: zero_sudo/models/security_utils.py:146
@@ -313,7 +321,7 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:189
+#: binary_downloader/models/binary_manifest.py:205
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
@@ -329,7 +337,7 @@ msgstr ""
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:91
+#: binary_downloader/models/binary_manifest.py:102
 #: cloudflare/models/purge_wizard.py:45
 #: cloudflare/models/purge_wizard.py:69
 #: cloudflare/models/purge_wizard.py:85
@@ -341,7 +349,7 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:92
+#: binary_downloader/models/binary_manifest.py:103
 msgid "Successfully installed %s."
 msgstr ""
 
@@ -358,7 +366,7 @@ msgstr ""
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:59
+#: binary_downloader/models/binary_manifest.py:66
 msgid "The binary name cannot contain slashes or backslashes."
 msgstr ""
 
@@ -443,6 +451,10 @@ msgstr ""
 #: user_websites/controllers/main.py:426
 #: user_websites/controllers/main.py:437
 msgid "You do not have permission to create this site."
+msgstr ""
+
+#: binary_downloader/models/binary_manifest.py:95
+msgid "You do not have sufficient permissions to install binaries."
 msgstr ""
 
 #: user_websites/models/website_page.py:293

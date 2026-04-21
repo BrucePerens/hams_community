@@ -24,7 +24,7 @@ def install_knowledge_docs(env):
         doc_svc_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
         param_svc_uid = utils._get_service_uid("user_websites.user_user_websites_service_account")
 
-        if env["ir.config_parameter"].with_user(param_svc_uid).get_param("user_websites_seo.docs_installed"):
+        if utils._get_system_param("user_websites_seo.docs_installed"):
             return None
 
         article_model = env[article_model_name].with_user(doc_svc_uid).with_context(
@@ -58,10 +58,10 @@ def install_knowledge_docs(env):
 
             res = article_model.create(vals)
             if res:
-                env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites_seo.docs_installed", "1")
+                utils._set_system_param("user_websites_seo.docs_installed", "1", override_svc_uid=param_svc_uid)
             return res
         else:
-            env["ir.config_parameter"].with_user(param_svc_uid).set_param("user_websites_seo.docs_installed", "1")
+            utils._set_system_param("user_websites_seo.docs_installed", "1", override_svc_uid=param_svc_uid)
         return existing
     return None
 

@@ -902,7 +902,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             ):
                 self.add_warning(
                     node.lineno,
-                    f"[%AUDIT] Data Integrity: Direct `{attr}()` on env without `.sudo()`.",
+                    f"[%AUDIT] Data Integrity: Direct `{attr}()` on env without `.with_user()` micro-privilege context.",
                 )
 
         def _check_cr_execute(self, node, is_cr_execute):
