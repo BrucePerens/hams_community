@@ -771,8 +771,20 @@ class UserWebsitesController(http.Controller):
     def user_websites_documentation(self, **kwargs):
         # [@ANCHOR: controller_user_websites_documentation]
         # Verified by [@ANCHOR: test_documentation_route]
-        if "knowledge.article" in request.env or "manual.article" in request.env:
-            article = install_knowledge_docs(request.env)
+        article_model_name = None
+        if "knowledge.article" in request.env:
+            article_model_name = "knowledge.article"
+        elif "manual.article" in request.env:
+            article_model_name = "manual.article"
+
+        if article_model_name:
+            install_knowledge_docs(request.env)
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.facility_service_internal"
+            )
+            article = request.env[article_model_name].with_user(svc_uid).search(
+                [("name", "=", "User Websites Documentation")], limit=1
+            )
             if article and hasattr(article, "website_url") and article.website_url:
                 return request.redirect(article.website_url)
 
