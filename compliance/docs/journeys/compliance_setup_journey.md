@@ -15,11 +15,9 @@ This journey describes the end-to-end experience of a site owner achieving regul
      - Terms of Service [@ANCHOR: compliance_terms_of_service_template]
    - *Verification*: `test_pages_presence` and `test_03_views_rendering` [@ANCHOR: test_compliance_views].
 4. **Documentation Injection**: A comprehensive guide is added to the internal Knowledge base.
-   - *Internal*: `install_knowledge_docs` is called [@ANCHOR: compliance_install_knowledge_docs].
-   - *Verification*: `test_01_post_init_hook_documentation` [@ANCHOR: test_compliance_post_init_documentation].
-5. **Continuous Protection**: During subsequent server boots, `_register_hook` ensures the documentation remains available.
+   - *Internal*: `_bootstrap_knowledge_docs` is called [@ANCHOR: zero_sudo_doc_installer].
+   - *Verification*: `test_01_documentation_auto_installation` [@ANCHOR: test_zero_sudo_doc_installer].
 
 ## Verification
-- Verified by [@ANCHOR: test_compliance_post_init_documentation]
-- Verified by [@ANCHOR: test_compliance_knowledge_article_installation]
+- Verified by [@ANCHOR: test_zero_sudo_doc_installer]
 - Verified by [@ANCHOR: test_compliance_ui_tour]

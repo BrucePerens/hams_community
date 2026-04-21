@@ -8,7 +8,7 @@ import sys
 # Add daemon path to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backup_worker")))
 
-import backup_worker
+import backup_worker  # noqa: E402
 
 class TestBackupWorker(unittest.TestCase):
     @patch("backup_worker._json2_call")
@@ -33,7 +33,7 @@ class TestBackupWorker(unittest.TestCase):
             "job_id": 1,
             "config_id": 10,
             "engine": "kopia",
-            "target_path": "/repo"
+            "target_path": "/var/lib/odoo/backup_repo"
         })
 
         backup_worker.execute_job(mock_ch, mock_method, None, body)
@@ -66,7 +66,7 @@ class TestBackupWorker(unittest.TestCase):
             "job_id": 2,
             "config_id": 11,
             "engine": "kopia_policy",
-            "target_path": "/repo"
+            "target_path": "/var/lib/odoo/backup_repo"
         })
 
         backup_worker.execute_job(mock_ch, mock_method, None, body)
@@ -97,7 +97,7 @@ class TestBackupWorker(unittest.TestCase):
             "job_id": 3,
             "config_id": 12,
             "engine": "sync_snapshots",
-            "target_path": "/repo"
+            "target_path": "/var/lib/odoo/backup_repo"
         })
 
         backup_worker.execute_job(mock_ch, mock_method, None, body)
@@ -161,14 +161,14 @@ class TestBackupWorker(unittest.TestCase):
             "job_id": 5,
             "config_id": 14,
             "engine": "restore_cmd",
-            "cmd_args": ["kopia", "restore", "snap1", "/tmp/res"],
+            "cmd_args": ["kopia", "restore", "snap1", "/var/lib/odoo/restore"],
             "snapshot_id": "snap1"
         })
 
         backup_worker.execute_job(mock_ch, mock_method, None, body)
 
         args = mock_popen.call_args[0][0]
-        self.assertEqual(args, ["kopia", "restore", "snap1", "/tmp/res"])
+        self.assertEqual(args, ["kopia", "restore", "snap1", "/var/lib/odoo/restore"])
 
 if __name__ == "__main__":
     unittest.main()

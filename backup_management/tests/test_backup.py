@@ -13,7 +13,7 @@ if not hasattr(shutil, "_orig_which"):
 
 from odoo.tests.common import tagged
 from odoo.addons.test_real_transaction.tests.real_transaction import RealTransactionCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 @tagged("post_install", "-at_install")

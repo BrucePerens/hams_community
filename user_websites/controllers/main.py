@@ -16,6 +16,7 @@ import werkzeug
 import logging
 from odoo.modules.registry import Registry
 from ..hooks import install_knowledge_docs
+from ..models.res_users import RESERVED_SLUGS
 
 _logger = logging.getLogger(__name__)
 
