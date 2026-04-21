@@ -164,4 +164,7 @@ class TestManualControllers(odoo.tests.common.HttpCase):
     def test_06_manual_templates_rendering(self):
         # [@ANCHOR: test_manual_templates_rendering]
         self.authenticate(None, None)
+        # Tests [@ANCHOR: controller_manual_article_view]
+        # Tests [@ANCHOR: story_article_view]
+        # Tests [@ANCHOR: journey_user_browsing]
         self.url_open("/manual")

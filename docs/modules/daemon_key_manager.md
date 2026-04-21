@@ -63,3 +63,4 @@ Daemons utilizing these files must implement a `try/except` loop around their JS
 The following anchors verify the functionality of the Daemon Key Manager:
 * **register_daemon_api**: Verified by [@ANCHOR: test_register_daemon_api]
 * **documentation_installed**: Verified by [@ANCHOR: test_documentation_installed]
+* **daemon_self_healing**: Verified by [@ANCHOR: test_register_daemon_api] (via idempotent re-generation logic)

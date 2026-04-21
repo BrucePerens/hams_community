@@ -24,6 +24,7 @@ class TestManualFeatures(odoo.tests.common.HttpCase):
             }
         )
 
+        # Tests [@ANCHOR: story_manual_search]
     def test_01_search_functionality(self):
         """Verify the search route correctly identifies published content and hides unpublished."""
         self.authenticate(None, None)
@@ -43,6 +44,7 @@ class TestManualFeatures(odoo.tests.common.HttpCase):
             b"Secret Python Configs",
             response_hidden.content,
             "Unpublished articles must never appear in public search results.",
+        # Tests [@ANCHOR: story_manual_feedback]
         )
 
     def test_02_article_feedback_submission(self):
