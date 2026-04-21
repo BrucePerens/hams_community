@@ -19,6 +19,15 @@
     <li>A background thread running inside every Odoo WSGI worker's <code>ir.http</code> middleware intercepts the Redis broadcast and instantly queues the model for local cache flushing before serving its next HTTP request.</li>
 </ol>
 
+<h2>Configuration</h2>
+<p>The following environment variables can be used to configure the Redis connection:</p>
+<ul>
+    <li><code>REDIS_HOST</code>: Redis server hostname (default: <code>redis</code> or <code>127.0.0.1</code>).</li>
+    <li><code>REDIS_PORT</code>: Redis server port (default: <code>6379</code>).</li>
+    <li><code>REDIS_PASSWORD</code>: Redis server password (optional).</li>
+</ul>
+<p>For the daemon, these can also be placed in <code>/var/lib/odoo/daemon_keys/cache_manager.env</code>.</p>
+
 <h2>Usage</h2>
 <h3>Decorator</h3>
 <p>Use the <code>@distributed_cache()</code> decorator on <code>api.model</code> functions to automatically generate cache keys and write them to Redis with a 24h TTL.</p>

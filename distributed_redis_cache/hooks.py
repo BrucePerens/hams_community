@@ -7,10 +7,17 @@ _logger = logging.getLogger(__name__)
 
 def install_knowledge_docs(env):
     """
-    Checks if the knowledge.article API is present in the environment.
+    Checks if the knowledge.article or manual.article API is present in the environment.
     If it is, reads the standalone HTML documentation file and installs it.
     """
+    # [@ANCHOR: doc_inject_distributed_redis_cache]
+    target_model = None
     if "knowledge.article" in env:
+        target_model = "knowledge.article"
+    elif "manual.article" in env:
+        target_model = "manual.article"
+
+    if target_model:
         # manual_library implements least-privilege architecture using a dedicated
         # micro-privilege service account (user_manual_library_service_account).
         # We try to use it, otherwise fall back to odoo_facility_service_internal.
@@ -18,12 +25,12 @@ def install_knowledge_docs(env):
             svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
                 "manual_library.user_manual_library_service_account"
             )
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, AttributeError):
             svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.odoo_facility_service_internal"
             )
 
-        article_model = env["knowledge.article"].with_user(svc_uid).with_context(
+        article_model = env[target_model].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 

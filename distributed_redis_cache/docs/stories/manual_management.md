@@ -9,3 +9,6 @@ The module provides a dedicated UI ([@ANCHOR: distributed_cache_view]) where adm
 
 ## Safety First
 Manual invalidation still follows the standard invalidation pipeline, ensuring that the cache is cleared across the *entire* cluster, not just on the administrator's current worker.
+
+## Automatic Documentation
+Upon installation, the module automatically injects its comprehensive documentation into the Odoo Knowledge base or Manual Library [@ANCHOR: doc_inject_distributed_redis_cache], ensuring that administrators have immediate access to these instructions.

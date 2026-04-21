@@ -19,8 +19,12 @@ class DistributedCacheConfig(models.TransientModel):
         # [@ANCHOR: manual_cache_invalidation]
         self.ensure_one()
         if self.model_id:
-            invalidate_model_cache(self.env, self.model_id.model)
-            payload = json.dumps({"model": self.model_id.model})
+            model_name = self.model_id.model
+            # Security: Ensure model exists before notification
+            if model_name not in self.env:
+                 return
+            invalidate_model_cache(self.env, model_name)
+            payload = json.dumps({"model": model_name})
             self.env.cr.execute(
                 "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
             )

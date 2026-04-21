@@ -3,8 +3,9 @@
 import json
 import logging
 import hashlib
+import datetime
 from functools import wraps
-from odoo import models
+from odoo import models, tools
 from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
 
 _logger = logging.getLogger(__name__)
@@ -17,8 +18,11 @@ def _get_hash(*args, **kwargs):
     # [@ANCHOR: distributed_cache_key_generation]
     def _serialize(obj):
         if isinstance(obj, models.Model):
+            # Ensure stable serialization for recordsets
             sorted_ids = sorted(obj.ids) if obj.ids else []
-            return f"{obj._name}({sorted_ids})"
+            return f"{obj._name}({','.join(map(str, sorted_ids))})"
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
         return str(obj)
 
     serialized_args = [_serialize(a) for a in args]
@@ -45,13 +49,11 @@ def distributed_cache():
                 f"{dbname}:distributed_cache:{model_name}:{func.__name__}:{arg_hash}"
             )
 
-            import odoo  # noqa: E402
-
             use_redis = bool(redis and redis_pool)
 
             # Completely sever Redis connection during automated testing
             # to prevent cross-test ghost cache poisoning after Postgres rollbacks.
-            if odoo.tools.config.get("test_enable"):
+            if tools.config.get("test_enable"):
                 use_redis = False
 
             if use_redis:
@@ -72,12 +74,16 @@ def distributed_cache():
 
             if use_redis:
                 try:
+                    # Attempt Redis write, fall back to local if serialization or connection fails
+                    serialized_result = json.dumps(result)
                     r = redis.Redis(connection_pool=redis_pool)
-                    r.setex(cache_key, 86400, json.dumps(result))  # 24h TTL
+                    r.setex(cache_key, 86400, serialized_result)  # 24h TTL
+                    return result
                 except Exception as e:
-                    _logger.debug("Redis cache write failed: %s", e)
-            else:
-                _local_cache[cache_key] = result
+                    _logger.debug("Redis cache write failed, falling back to local: %s", e)
+
+            # Fallback to local memory cache
+            _local_cache[cache_key] = result
 
             return result
 
