@@ -44,7 +44,7 @@ You are strictly FORBIDDEN from using `.sudo()` inline. To escalate privileges:
 If you need to fetch a configuration parameter securely:
 `value = self.env['zero_sudo.security.utils']._get_system_param('my.key')` `[@ANCHOR: get_system_param]`
 
-**CRITICAL:** The key MUST be explicitly added to the `PARAM_WHITELIST` array in `zero_sudo/models/security_utils.py`. Cryptographic keys (like `database.secret`) are permanently banned from this whitelist to prevent Server-Side Template Injection (SSTI) exposure. If you need to access cryptographic keys, you MUST use `self.env['zero_sudo.security.utils']._get_crypto_secret()` `[@ANCHOR: get_crypto_secret]`.
+**CRITICAL:** The key MUST be explicitly added to the `PARAM_WHITELIST` array in `zero_sudo/models/security_utils.py`. Cryptographic keys (like `database.secret`) are permanently banned from this whitelist to prevent Server-Side Template Injection (SSTI) exposure.
 </system_parameters>
 
 ---
