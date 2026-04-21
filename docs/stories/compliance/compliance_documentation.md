@@ -15,7 +15,3 @@ Charlie needs to understand how the platform handles data to answer a query from
    - How privacy-friendly view counters work.
    - Procedures for data portability and erasure via the `/my/privacy` dashboard.
 5. Charlie uses this information to confidently respond to the regulatory inquiry.
-
-## Verification
-- Verified by [@ANCHOR: test_compliance_post_init_documentation]
-- Verified by [@ANCHOR: test_compliance_knowledge_article_installation]

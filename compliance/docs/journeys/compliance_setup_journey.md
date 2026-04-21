@@ -17,6 +17,7 @@ This journey describes the end-to-end experience of a site owner achieving regul
 4. **Documentation Injection**: A comprehensive guide is added to the internal Knowledge base.
    - *Internal*: `_bootstrap_knowledge_docs` is called [@ANCHOR: zero_sudo_doc_installer].
    - *Verification*: `test_09_bootstrap_knowledge_docs` [@ANCHOR: test_zero_sudo_doc_installer].
+5. **Continuous Protection**: During subsequent server boots, `_register_hook` ensures the documentation remains available.
 
 ## Verification
 - Verified by [@ANCHOR: test_zero_sudo_doc_installer]
