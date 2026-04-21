@@ -15,6 +15,14 @@
         "views/pg_config_views.xml",
         "views/menu_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Database Management Guide",
+            "path": "database_management/data/documentation.html",
+            "icon": "🛢",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_backend": [
             "database_management/static/src/tours/**/*",

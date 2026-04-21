@@ -114,18 +114,6 @@ class ResUsers(models.Model):
 
     _inherit = "res.users"
 
-    def _register_hook(self):
-        """
-        Ensures documentation is installed if the required models are available.
-        This runs after all modules are loaded.
-        """
-        super()._register_hook()
-        # ADR-0055: Guard against transient registry states
-        if self.env.context.get("install_mode") or self.env.context.get("module_uninstall"):
-            return
-        from ..hooks import install_knowledge_docs  # noqa: E402
-        install_knowledge_docs(self.env)
-
     @property
     def SELF_WRITEABLE_FIELDS(self):
         """ADR-0015: Self-Writeable Fields Idiom"""

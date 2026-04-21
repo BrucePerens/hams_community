@@ -6,7 +6,6 @@ import subprocess
 
 from odoo import models, fields, api, tools, _
 from odoo.exceptions import UserError
-from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
@@ -43,71 +42,6 @@ class DatabaseTableStat(models.Model):
                 JOIN pg_statio_user_tables i ON t.relid = i.relid
             )
         """)
-
-    def _register_hook(self):
-        # [@ANCHOR: db_doc_injection]
-        # Tests [@ANCHOR: db_doc_injection]
-        """
-        Wait until all modules are loaded, then install documentation if
-        manual_library or knowledge is present.
-        """
-        super()._register_hook()
-        # Only run if we are in a proper request or registry loading context
-        # to avoid duplicate work during transient registry states.
-        if not self.env.context.get("install_mode") and not self.env.context.get("module_uninstall"):
-             self._install_knowledge_docs(self.env)
-
-    @api.model
-    def _install_knowledge_docs(self, env):
-        """
-        Checks if the knowledge.article API is present in the environment.
-        If it is, reads the standalone HTML documentation file and installs it.
-        """
-        if "knowledge.article" not in env:
-            return
-
-        try:
-            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                "manual_library.user_manual_library_service_account"
-            )
-        except Exception:
-            # Fallback to facility if manual_library service account is missing
-            svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.odoo_facility_service_internal"
-            )
-
-        if not svc_uid:
-            return
-
-        article_model = (
-            env["knowledge.article"]
-            .with_user(svc_uid)
-            .with_context(mail_notrack=True, prefetch_fields=False)
-        )
-
-        existing = article_model.search(
-            [("name", "=", "Database Management Guide")], limit=1
-        )
-
-        if not existing:
-            try:
-                with file_open("database_management/data/documentation.html", "r") as f:
-                    doc_body = f.read()
-            except Exception as e:
-                doc_body = f"<h1>Database Management Guide</h1><p>Welcome to the Database Management module.</p><p>Error loading documentation file: {e}</p>"
-
-            vals = {
-                "name": "Database Management Guide",
-                "body": doc_body,
-            }
-            if "is_published" in article_model._fields:
-                vals["is_published"] = True
-            if "internal_permission" in article_model._fields:
-                vals["internal_permission"] = "read"
-            if "icon" in article_model._fields:
-                vals["icon"] = "🛢"
-
-            article_model.create(vals)
 
     def _get_executable(self, cmd_name):
         path = shutil.which(cmd_name)

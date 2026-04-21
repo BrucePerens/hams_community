@@ -12,6 +12,14 @@
         "views/layout_inherit.xml",
         "views/res_config_settings_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Caching Module Documentation",
+            "path": "caching/data/documentation.html",
+            "icon": "⚡",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_frontend": [
             "caching/static/tests/tours/caching_tour.js",

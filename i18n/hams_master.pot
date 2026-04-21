@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-21 16:08+0000\n"
-"PO-Revision-Date: 2026-04-21 16:08+0000\n"
+"POT-Creation-Date: 2026-04-21 17:07+0000\n"
+"PO-Revision-Date: 2026-04-21 17:07+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -12,14 +12,8 @@ msgstr ""
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
 
-#: binary_downloader/hooks.py:44
-#: distributed_redis_cache/hooks.py:47
-#: test_real_transaction/hooks.py:48
-msgid "<p>Error loading documentation file: %s</p>"
-msgstr ""
-
-#: user_websites/models/user_websites_owned_mixin.py:78
-#: user_websites/models/user_websites_owned_mixin.py:144
+#: user_websites/models/user_websites_owned_mixin.py:81
+#: user_websites/models/user_websites_owned_mixin.py:147
 msgid "A record cannot be owned by both a user and a group simultaneously."
 msgstr ""
 
@@ -75,11 +69,11 @@ msgstr ""
 msgid "Autodiscovery Complete"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:36
+#: distributed_redis_cache/models/distributed_cache_config.py:31
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:106
+#: daemon_key_manager/models/key_registry.py:111
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -93,10 +87,6 @@ msgstr ""
 
 #: database_management/models/pg_config.py:97
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
-msgstr ""
-
-#: test_real_transaction/hooks.py:31
-msgid "Could not find a suitable service account for documentation installation."
 msgstr ""
 
 #: pager_duty/models/pager_check.py:655
@@ -115,7 +105,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:161
+#: database_management/models/db_stats.py:95
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -145,14 +135,6 @@ msgstr ""
 
 #: cloudflare/models/ip_ban.py:118
 msgid "Failed to lift ban via Cloudflare API: %s"
-msgstr ""
-
-#: distributed_redis_cache/hooks.py:46
-msgid "Failed to load Distributed Redis Cache documentation file: %s"
-msgstr ""
-
-#: test_real_transaction/hooks.py:47
-msgid "Failed to load real transaction documentation file: %s"
 msgstr ""
 
 #: cloudflare/models/res_config_settings.py:78
@@ -216,7 +198,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
-#: database_management/models/db_stats.py:130
+#: database_management/models/db_stats.py:64
 #: database_management/models/pg_config.py:148
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
@@ -265,19 +247,19 @@ msgstr ""
 msgid "RAM and CPU must be greater than zero."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:62
+#: distributed_redis_cache/models/distributed_cache_config.py:57
 msgid "Redis Status"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:55
+#: distributed_redis_cache/models/distributed_cache_config.py:50
 msgid "Redis connection failed: %s"
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:52
+#: distributed_redis_cache/models/distributed_cache_config.py:47
 msgid "Redis connection is healthy."
 msgstr ""
 
-#: distributed_redis_cache/models/distributed_cache_config.py:45
+#: distributed_redis_cache/models/distributed_cache_config.py:40
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
@@ -330,15 +312,15 @@ msgstr ""
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:116
+#: daemon_key_manager/models/key_registry.py:121
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:55
+#: daemon_key_manager/models/key_registry.py:58
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:163
+#: daemon_key_manager/models/key_registry.py:169
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
@@ -350,7 +332,7 @@ msgstr ""
 #: cloudflare/models/res_config_settings.py:71
 #: cloudflare/models/tunnel.py:98
 #: cloudflare/models/zone_settings_wizard.py:90
-#: distributed_redis_cache/models/distributed_cache_config.py:35
+#: distributed_redis_cache/models/distributed_cache_config.py:30
 msgid "Success"
 msgstr ""
 
@@ -367,7 +349,7 @@ msgstr ""
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
-#: user_websites/models/res_users.py:360
+#: user_websites/models/res_users.py:348
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
@@ -383,9 +365,13 @@ msgstr ""
 msgid "The selected user must be a service account."
 msgstr ""
 
-#: user_websites/models/res_users.py:203
+#: user_websites/models/res_users.py:191
 #: user_websites/models/user_websites_groups.py:92
 msgid "The slug '%s' is reserved and cannot be used."
+msgstr ""
+
+#: daemon_key_manager/models/key_registry.py:73
+msgid "The user %s must be a service account."
 msgstr ""
 
 #: user_websites/models/website_page.py:338
@@ -396,7 +382,7 @@ msgstr ""
 msgid "Tunnels synced successfully."
 msgstr ""
 
-#: user_websites/models/res_users.py:226
+#: user_websites/models/res_users.py:214
 #: user_websites/models/user_websites_groups.py:129
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
@@ -409,11 +395,11 @@ msgstr ""
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:156
+#: database_management/models/db_stats.py:90
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:159
+#: database_management/models/db_stats.py:93
 msgid "Vacuum timed out for %s."
 msgstr ""
 
@@ -429,32 +415,32 @@ msgstr ""
 msgid "You can only modify SEO metadata for groups you are a member of."
 msgstr ""
 
-#: user_websites_seo/models/res_users.py:57
+#: user_websites_seo/models/res_users.py:48
 msgid "You can only modify your own SEO metadata."
 msgstr ""
 
-#: user_websites/models/user_websites_owned_mixin.py:105
+#: user_websites/models/user_websites_owned_mixin.py:108
 msgid "You cannot create a record for a group you do not belong to, or the group does not exist."
 msgstr ""
 
-#: user_websites/models/user_websites_owned_mixin.py:95
+#: user_websites/models/user_websites_owned_mixin.py:98
 msgid "You cannot create a record owned by another user."
 msgstr ""
 
-#: user_websites/controllers/main.py:679
+#: user_websites/controllers/main.py:685
 msgid "You cannot create posts for this user."
 msgstr ""
 
-#: user_websites/models/user_websites_owned_mixin.py:152
+#: user_websites/models/user_websites_owned_mixin.py:155
 msgid "You cannot transfer ownership of a record to another user or group."
 msgstr ""
 
-#: user_websites/controllers/main.py:690
+#: user_websites/controllers/main.py:696
 msgid "You do not have permission to create posts for this group."
 msgstr ""
 
-#: user_websites/controllers/main.py:426
-#: user_websites/controllers/main.py:437
+#: user_websites/controllers/main.py:432
+#: user_websites/controllers/main.py:443
 msgid "You do not have permission to create this site."
 msgstr ""
 
@@ -466,7 +452,7 @@ msgstr ""
 msgid "You have reached your limit of %s website pages."
 msgstr ""
 
-#: user_websites/models/user_websites_owned_mixin.py:88
+#: user_websites/models/user_websites_owned_mixin.py:91
 msgid "You must assign an owner (user or group) when creating this record."
 msgstr ""
 

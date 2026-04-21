@@ -1,23 +1,14 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-from odoo import models, api, _
+from odoo import models, _
 from odoo.exceptions import AccessError
-from ..hooks import install_knowledge_docs
 
 class ResUsersSEO(models.Model):
     _name = "res.users"
     _inherit = ["res.users", "website.seo.metadata"]
 
     def _register_hook(self):
-        """
-        Ensures documentation is installed if the Knowledge API becomes available.
-        This handles cases where manual_library is installed after this module.
-        """
         super()._register_hook()
-        # ADR-0055: Guard against transient registry states
-        if self.env.context.get("install_mode") or self.env.context.get("module_uninstall"):
-            return
-        install_knowledge_docs(self.env)
 
     @property
     def SELF_WRITEABLE_FIELDS(self):

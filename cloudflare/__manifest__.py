@@ -20,6 +20,14 @@
         "views/zone_settings_wizard_views.xml",
         "views/tunnel_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Cloudflare Edge Orchestration Documentation",
+            "path": "cloudflare/data/documentation.md",
+            "icon": "☁️",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_tests": [
             "cloudflare/static/tests/tours/**/*",

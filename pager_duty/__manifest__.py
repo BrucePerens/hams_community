@@ -28,6 +28,14 @@
         "views/pager_check_views.xml",
         "views/log_analyzer_views.xml",
     ],
+    "knowledge_docs": [
+        {
+            "name": "Pager Duty & Generalized Monitoring",
+            "path": "pager_duty/data/documentation.html",
+            "icon": "📟",
+            "category": "workspace"
+        }
+    ],
     "assets": {
         "web.assets_backend": [
             "pager_duty/static/src/components/board/board.js",
