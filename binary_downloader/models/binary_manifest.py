@@ -32,6 +32,13 @@ class BinaryManifest(models.Model):
         string="Extract Member", help="Specific file to extract from the archive."
     )
 
+    @api.constrains("url")
+    def _check_url_scheme(self):
+        for record in self:
+            if record.url:
+                if not record.url.startswith(("http://", "https://")):
+                    raise ValidationError(_("Only http:// and https:// URLs are allowed for security reasons."))
+
     is_installed = fields.Boolean(
         string="Installed", compute="_compute_is_installed"
     )
@@ -83,6 +90,10 @@ class BinaryManifest(models.Model):
     def action_install(self):
         # [@ANCHOR: binary_action_install]
         self.ensure_one()
+        # Security: ensure only users with appropriate groups can trigger this
+        if not (self.env.user.has_group('binary_downloader.group_binary_downloader_manager') or self.env.is_admin()):
+            raise UserError(_("You do not have sufficient permissions to install binaries."))
+
         self.ensure_executable(self.name)
         return {
             "type": "ir.actions.client",
@@ -179,6 +190,11 @@ class BinaryManifest(models.Model):
                         ):
                             # Ensure we don't extract anywhere else
                             member.name = os.path.basename(cmd_name)
+
+                            # Deep link/symlink protection
+                            if member.islnk() or member.issym():
+                                raise UserError(_("Security Alert: Links are not allowed in the archive."))
+
                             # Provide `data` filter if available in python version to prevent slip
                             if hasattr(tarfile, 'data_filter'):
                                 tar.extract(member, path=bin_dir, filter='data')

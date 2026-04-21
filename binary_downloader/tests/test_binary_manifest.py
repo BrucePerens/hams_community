@@ -153,7 +153,8 @@ class TestBinaryManifest(TransactionCase):
     def test_09_post_init_hook_documentation(self):
         # Tests [@ANCHOR: binary_doc_bootstrap]
         """Verify that the post_init_hook correctly creates documentation."""
-        # Find the article created by the hook (it might already exist if tests run in certain order)
+        # Post-init hook is already run by the test runner during install.
+        # Find the article created by the hook
         article_model = self.env.get("knowledge.article")
         if not article_model:
             return  # Skip if manual_library isn't fully loaded or mockable here
@@ -161,6 +162,28 @@ class TestBinaryManifest(TransactionCase):
         article = article_model.search([("name", "=", "Binary Downloader Facility")], limit=1)
         self.assertTrue(article, "Documentation article should have been created by post_init_hook")
         self.assertIn("Binary Downloader Facility", article.body)
+
+    def test_11_url_validation(self):
+        """Verify that only http/https URLs are allowed."""
+        with self.assertRaises(ValidationError):
+            self.env["binary.manifest"].create({
+                "name": "badurl",
+                "url": "file:///etc/passwd",
+                "checksum": "fakehash",
+                "archive_type": "binary",
+            })
+
+    def test_12_action_install_permissions(self):
+        """Verify that only managers/admins can call action_install."""
+        # Create a restricted user
+        # audit-ignore-groups_id: normalized group check for Odoo 18+
+        restricted_user = self.env["res.users"].create({
+            "name": "Restricted User",
+            "login": "restricted_user",
+            "group_ids": [(6, 0, [])]
+        })
+        with self.assertRaises(UserError):
+            self.manifest.with_user(restricted_user).action_install()
 
     @patch("shutil.which", return_value=None)
     @patch("platform.system", return_value="Linux")
@@ -189,6 +212,8 @@ class TestBinaryManifest(TransactionCase):
             # Mock tar member with malicious path
             mock_member = MagicMock()
             mock_member.name = "slippy" # It MUST match the extract_target to proceed to extraction
+            mock_member.islnk.return_value = False
+            mock_member.issym.return_value = False
 
             mock_tar = MagicMock()
             mock_tar.getmembers.return_value = [mock_member]
@@ -227,3 +252,48 @@ class TestBinaryManifest(TransactionCase):
                     else:
                          with self.assertRaisesRegex(UserError, "Security Alert: Tar slip attempt detected."):
                              self.env["binary.manifest"].ensure_executable("slippy")
+
+    @patch("shutil.which", return_value=None)
+    @patch("platform.system", return_value="Linux")
+    @patch("platform.machine", return_value="x86_64")
+    @patch("urllib.request.urlretrieve")
+    def test_13_symlink_prevention(self, mock_urlretrieve, mock_machine, mock_system, mock_which):
+        """Verify that symlinks in the archive are blocked."""
+        self.env["binary.manifest"].create({
+            "name": "symlinkbin",
+            "url": "http://example.com/symlink.tar.gz",
+            "checksum": "fakehash_sym",
+            "archive_type": "tar.gz",
+            "extract_member": "symlinkbin"
+        })
+
+        with patch("hashlib.sha256") as mock_sha256, \
+             patch("tarfile.open") as mock_tar_open, \
+             patch("builtins.open", new_callable=MagicMock) as mock_open:
+
+            mock_hasher = MagicMock()
+            mock_hasher.hexdigest.return_value = "fakehash_sym"
+            mock_sha256.return_value = mock_hasher
+
+            mock_open.return_value.__enter__.return_value.read.side_effect = [b"data", b""]
+
+            # Mock tar member with symlink
+            mock_member = MagicMock()
+            mock_member.name = "symlinkbin"
+            mock_member.islnk.return_value = False
+            mock_member.issym.return_value = True
+
+            mock_tar = MagicMock()
+            mock_tar.getmembers.return_value = [mock_member]
+            mock_tar_open.return_value.__enter__.return_value = mock_tar
+
+            with patch("os.path.exists", return_value=False), \
+                 patch("tempfile.NamedTemporaryFile") as mock_temp:
+
+                mock_temp_inst = MagicMock()
+                mock_temp_inst.name = "/var/lib/odoo/hams_bin/fake_sym"
+                mock_temp.return_value.__enter__.return_value = mock_temp_inst
+
+                with patch("os.unlink"):
+                    with self.assertRaisesRegex(UserError, "Security Alert: Links are not allowed in the archive."):
+                        self.env["binary.manifest"].ensure_executable("symlinkbin")
