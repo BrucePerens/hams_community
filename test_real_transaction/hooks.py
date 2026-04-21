@@ -49,3 +49,10 @@ def install_knowledge_docs(env):
             return article_model.create(vals)
         return existing
     return None
+
+def post_init_hook(env):
+    """
+    Hook executed upon module installation.
+    Injects docs into the knowledge base.
+    """
+    install_knowledge_docs(env)

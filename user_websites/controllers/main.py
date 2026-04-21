@@ -771,7 +771,7 @@ class UserWebsitesController(http.Controller):
     def user_websites_documentation(self, **kwargs):
         # [@ANCHOR: controller_user_websites_documentation]
         # Verified by [@ANCHOR: test_documentation_route]
-        if "knowledge.article" in request.env:
+        if "knowledge.article" in request.env or "manual.article" in request.env:
             article = install_knowledge_docs(request.env)
             if article and hasattr(article, "website_url") and article.website_url:
                 return request.redirect(article.website_url)

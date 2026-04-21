@@ -33,8 +33,13 @@ def verify_python(filepath):
     try:
         # Select only E9 (Syntax) and F (Logic/Name) errors to prevent cosmetic spacing
         # issues from aborting the extraction process.
+        cmd = ["flake8", "--select=E9,F"]
+        if os.path.basename(filepath) == "__init__.py":
+            cmd.append("--extend-ignore=F401")
+        cmd.append(filepath)
+
         result = subprocess.run(
-            ["flake8", "--select=E9,F", filepath],
+            cmd,
             capture_output=True,
             text=True,
         )

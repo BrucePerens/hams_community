@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from . import redis_pool  # noqa: F401
-from . import redis_cache  # noqa: F401
-from . import models  # noqa: F401
+from . import redis_pool
+from . import redis_cache
+from . import models
 from .hooks import post_init_hook
 
 import odoo
