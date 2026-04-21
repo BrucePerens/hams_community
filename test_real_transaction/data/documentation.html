@@ -39,3 +39,6 @@ class MyAdvancedTest(RealTransactionCase):
         # 4. No manual cleanup is required! The tearDown() method
         # will auto-unlink the user and verify no tables leaked.
 </code></pre>
+
+<h2>Management Interface</h2>
+<p>Administrators can manage the facility through the <strong>Noisy Tables</strong> interface ([@ANCHOR: UX_NOISY_TABLE_MANAGEMENT]). Noisy tables are explicitly excluded from the leak detection check, which is useful for system logging tables or tables managed by background processes during the test execution.</p>
