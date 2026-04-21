@@ -6,13 +6,9 @@ registry.category("web_tour.tours").add("compliance_tour", {
     test: true,
     steps: () => [
         {
-            content: "Check if cookie bar is present",
-            trigger: ".s_popup[data-v-cookie-bar]",
-            run: () => {},
-        },
-        {
             content: "Click on Cookie Policy link in cookie bar",
-            trigger: ".s_popup[data-v-cookie-bar] a[href='/cookie-policy']",
+            trigger: "#website_cookies_bar a[href='/cookie-policy']",
+            run: "click",
         },
         {
             content: "Verify Cookie Policy page title",
@@ -22,6 +18,7 @@ registry.category("web_tour.tours").add("compliance_tour", {
         {
             content: "Navigate to Privacy Policy",
             trigger: "a[href='/privacy']",
+            run: "click",
         },
         {
             content: "Verify Privacy Policy page title",
@@ -31,6 +28,7 @@ registry.category("web_tour.tours").add("compliance_tour", {
         {
             content: "Navigate to Terms of Service",
             trigger: "a[href='/terms']",
+            run: "click",
         },
         {
             content: "Verify Terms of Service page title",

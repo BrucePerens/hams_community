@@ -1,7 +1,6 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { stepUtils } from "@web_tour/tour_service/tour_utils";
 
 registry.category("tours").add("zero_sudo_tour", {
     // [@ANCHOR: zero_sudo_tour]
@@ -10,7 +9,10 @@ registry.category("tours").add("zero_sudo_tour", {
     // Tests [@ANCHOR: journey_service_account_lifecycle]
     url: "/web",
     steps: () => [
-        stepUtils.showAppsMenuItem(),
+        {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
         {
             trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
         },

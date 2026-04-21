@@ -1,11 +1,13 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
-import { stepUtils } from "@web_tour/tour_service/tour_utils";
 
 registry.category("tours").add("db_management_bloat_tour", { // # Verified by [@ANCHOR: test_db_bloat_tour]
     url: "/web",
     steps: () => [
-        stepUtils.showAppsMenuItem(),
+        {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
         {
             trigger: '.o_app[data-menu-xmlid="database_management.menu_admin_root"]',
         },
