@@ -49,7 +49,9 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
 
     def test_03_blog_post(self):
         # [@ANCHOR: test_dropzone_blog_post]
+        # [@ANCHOR: test_xpath_rendering_blog_post]
         # Tests [@ANCHOR: dropzone_blog_post]
+        # Tests [@ANCHOR: xpath_rendering_blog_post]
         res = self.env["blog.post"].get_view(
             view_id=self.env.ref("website_blog.view_blog_post_form").id,
             view_type="form",
@@ -84,7 +86,9 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
 
     def test_06_layout_templates(self):
         # [@ANCHOR: test_dropzone_layout]
+        # [@ANCHOR: test_xpath_rendering_layout]
         # Tests [@ANCHOR: dropzone_layout]
+        # Tests [@ANCHOR: xpath_rendering_layout]
         self.authenticate(None, None)
         response = self.url_open("/")
         self.assertEqual(response.status_code, 200)
@@ -96,7 +100,9 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
 
     def test_07_navbar_rendering(self):
         # [@ANCHOR: test_dropzone_navbar]
+        # [@ANCHOR: test_xpath_rendering_navbar]
         # Tests [@ANCHOR: dropzone_navbar]
+        # Tests [@ANCHOR: xpath_rendering_navbar]
         user = self.env["res.users"].create(
             {
                 "name": "Nav User",

@@ -1,1 +1,1 @@
-from . import key_registry  # noqa: F401
+from . import key_registry

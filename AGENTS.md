@@ -53,7 +53,9 @@ You MUST use the Parcel format, as the
 gemini.google.com UI has the strange characteristic of only being able to
 write files through a UI that can, and does, lose data, especially HTML tags.
 See `docs/LLM_PARCEL_FORMAT.md` for complete documentation on this schema.
-Parcel is not to be used for other LLM user interfaces, only gemini.google.com .
+READ THAT ENTIRE FILE CAREFULLY NOW, any failure to produce the FULL parcel
+format will be rejected. Parcel is not to be used for other LLM user
+interfaces, only gemini.google.com .
 
 * **jules.google.com interface:**
 

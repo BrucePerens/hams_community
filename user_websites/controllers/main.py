@@ -244,6 +244,7 @@ class UserWebsitesController(http.Controller):
     def user_websites_home(self, website_slug, **kwargs):
         # [@ANCHOR: controller_user_websites_home]
         # Verified by [@ANCHOR: test_tour_create_site]
+        # Verified by [@ANCHOR: test_group_site_routing]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -313,14 +314,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    # Soft-dependency check: Only inject aggressive CDN holds if the purge manager is installed
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = (
-                            f"site-{user.website_slug or slug_lower}"
-                        )
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{user.website_slug or slug_lower}"
                 return response
 
             return request.render(
@@ -371,11 +366,8 @@ class UserWebsitesController(http.Controller):
 
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
-                    if "cloudflare.purge.queue" in request.env:
-                        response.headers["Cloudflare-CDN-Cache-Control"] = (
-                            "max-age=604800"
-                        )
-                        response.headers["Cache-Tag"] = f"site-{group.website_slug}"
+                    response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+                    response.headers["Cache-Tag"] = f"site-{group.website_slug}"
                 return response
 
             return request.render(
@@ -402,6 +394,7 @@ class UserWebsitesController(http.Controller):
     def create_site(self, website_slug, **kwargs):
         # [@ANCHOR: UX_CREATE_SITE]
         # Verified by [@ANCHOR: test_tour_create_site]
+        # Verified by [@ANCHOR: test_group_site_creation]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -640,9 +633,8 @@ class UserWebsitesController(http.Controller):
 
         if request.env.user._is_public():
             response.headers["Cache-Control"] = "public, max-age=60"
-            if "cloudflare.purge.queue" in request.env:
-                response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
-                response.headers["Cache-Tag"] = f"site-{resolved_slug}"
+            response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
+            response.headers["Cache-Tag"] = f"site-{resolved_slug}"
         return response
 
     # --- 6. Blog Creation ---
@@ -656,6 +648,7 @@ class UserWebsitesController(http.Controller):
     def create_blog_post(self, website_slug, **kwargs):
         # [@ANCHOR: UX_CREATE_BLOG_POST]
         # Verified by [@ANCHOR: test_tour_create_blog]
+        # Verified by [@ANCHOR: test_group_blog_post_creation]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
             "user_websites.user_user_websites_service_account"
@@ -771,8 +764,20 @@ class UserWebsitesController(http.Controller):
     def user_websites_documentation(self, **kwargs):
         # [@ANCHOR: controller_user_websites_documentation]
         # Verified by [@ANCHOR: test_documentation_route]
+        article_model_name = None
         if "knowledge.article" in request.env:
-            article = install_knowledge_docs(request.env)
+            article_model_name = "knowledge.article"
+        elif "manual.article" in request.env:
+            article_model_name = "manual.article"
+
+        if article_model_name:
+            install_knowledge_docs(request.env)
+            svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
+                "zero_sudo.facility_service_internal"
+            )
+            article = request.env[article_model_name].with_user(svc_uid).search(
+                [("name", "=", "User Websites Documentation")], limit=1
+            )
             if article and hasattr(article, "website_url") and article.website_url:
                 return request.redirect(article.website_url)
 
@@ -821,6 +826,7 @@ class UserWebsitesController(http.Controller):
     )
     def subscribe_to_site(self, website_slug, **kwargs):
         # [@ANCHOR: UX_SUBSCRIBE]
+        # Verified by [@ANCHOR: test_subscription_creation]
         # Verified by [@ANCHOR: test_subscribe_to_site]
         slug_lower = website_slug.lower()
         svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
@@ -885,10 +891,10 @@ class UserWebsitesController(http.Controller):
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
 
-        db_secret = request.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
+        db_secret = request.env["zero_sudo.security.utils"]._get_crypto_secret()
         if not db_secret:
             _logger.error(
-                "Security Alert: 'database.secret' is not configured. Unsubscribe tokens cannot be verified."
+                "Security Alert: Crypto secret is not configured. Unsubscribe tokens cannot be verified."
             )
             raise werkzeug.exceptions.InternalServerError(
                 "System configuration error: cryptographic secret missing."
@@ -943,6 +949,7 @@ class UserWebsitesController(http.Controller):
     @http.route(["/my/privacy/export"], type="http", auth="user", website=True)
     def export_user_data(self, **kwargs):
         # [@ANCHOR: UX_GDPR_EXPORT]
+        # Verified by [@ANCHOR: test_gdpr_export_api]
         # Verified by [@ANCHOR: test_tour_gdpr_privacy]
         """
         Compiles user generated content into a machine-readable JSON format for data portability.
@@ -996,6 +1003,7 @@ class UserWebsitesController(http.Controller):
     )
     def delete_user_content(self, **kwargs):
         # [@ANCHOR: UX_GDPR_ERASURE]
+        # Verified by [@ANCHOR: test_gdpr_erasure_pages]
         # Verified by [@ANCHOR: test_tour_gdpr_privacy]
         """Fulfills the 'Right to Erasure' by permanently unlinking all owned content in the background."""
         user_id = request.env.user.id

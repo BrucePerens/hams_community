@@ -106,6 +106,7 @@ class TestManualRobustness(odoo.tests.common.HttpCase):
 
     def test_04_backend_views_rendering(self):
         # [@ANCHOR: test_manual_backend_views_rendering]
+        # Tests [@ANCHOR: story_manual_backend_views]
         v1 = self.env["knowledge.article"].get_view(
             view_id=self.env.ref("manual_library.view_knowledge_article_list").id,
             view_type="list",

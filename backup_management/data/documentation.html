@@ -8,7 +8,7 @@
     <p>Navigate to <em>Ham Admin &gt; Backups &gt; Configurations</em>. You can define targets, storage backend credentials (S3/B2), and retention policies for both Kopia and pgBackRest. If using Kopia, enter your repository password here; it will be symmetrically encrypted at rest.</p>
     <p>You may also actively trigger backups or push new retention policies directly to the underlying storage engines via the action buttons in the configuration header.</p>
     <h2>2. Synchronization</h2>
-    <p>An automated hourly cron job interrogates the underlying CLI tools (<code>kopia snapshot list</code> and <code>pgbackrest info</code>) to fetch the latest backup metadata and populate the Snapshots table.</p>
+    <p>An automated hourly cron job interrogates the underlying CLI tools (<code>kopia snapshot list</code> and <code>pgbackrest info</code>) to fetch the latest backup metadata and populate the Snapshots table. [@ANCHOR: UX_BACKUP_SYNC]</p>
     <h2>3. Restoration Assistance</h2>
     <p>Because restoration is highly destructive, it must be performed by a DBA via the CLI. Navigate to any Snapshot record to view and copy the exact generated restoration command for that specific point in time.</p>
 

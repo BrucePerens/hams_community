@@ -3,30 +3,34 @@ import os
 import re
 
 def get_module(path):
-    parts = path.split(os.sep)
-    if parts[0] == '.': parts = parts[1:]
+    abs_path = os.path.abspath(path)
+    current_dir = os.path.dirname(abs_path)
 
-    if len(parts) >= 3 and parts[0] == "docs" and parts[1] == "modules" and parts[2].endswith(".md"):
-        mod = parts[2][:-3]
-        if os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    while current_dir and current_dir != os.path.dirname(current_dir):
+        if os.path.exists(os.path.join(current_dir, "__manifest__.py")):
+            return os.path.basename(current_dir)
+        current_dir = os.path.dirname(current_dir)
 
-    if len(parts) >= 1:
-        mod = parts[0]
-        if os.path.isdir(mod) and os.path.exists(os.path.join(mod, "__manifest__.py")):
-            return mod
+    parts = abs_path.split(os.sep)
+    if len(parts) >= 3 and parts[-3] == "docs" and parts[-2] == "modules" and parts[-1].endswith(".md"):
+        return parts[-1][:-3]
+
     return "non-module"
 
-def find_anchors_in_docs(docs_dir, root_dir):
+def find_anchors_in_docs(root_dir):
     doc_anchors = set()
     contract_anchors = set()
-    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
+    invalid_format = []
+    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_:]+)\s*\]")
 
-    for root, _, files in os.walk(docs_dir):
+    for root, _, files in os.walk(root_dir):
+        if "docs" not in root.split(os.sep):
+            continue
+
         for file in files:
             if file == "LLM_LINTER_GUIDE.md":
                 continue
-            if file.endswith(".md") or file.endswith(".html") or file.endswith(".py"):
+            if file.endswith((".md", ".html", ".py")):
                 full_path = os.path.join(root, file)
                 mod = get_module(full_path)
                 is_contract = False
@@ -39,7 +43,12 @@ def find_anchors_in_docs(docs_dir, root_dir):
                 try:
                     with open(full_path, "r", encoding="utf-8") as f:
                         for match in pattern.finditer(f.read()):
-                            anchor = f"{mod}:{match.group(1)}"
+                            anchor_name = match.group(1)
+                            if ":" in anchor_name:
+                                invalid_format.append((mod, anchor_name, full_path))
+                                continue
+
+                            anchor = f"{mod}:{anchor_name}"
                             if is_contract:
                                 contract_anchors.add(anchor)
                             else:
@@ -47,7 +56,7 @@ def find_anchors_in_docs(docs_dir, root_dir):
                 except UnicodeDecodeError:
                     pass
 
-    return doc_anchors, contract_anchors
+    return doc_anchors, contract_anchors, invalid_format
 
 
 def _process_file_for_anchors(
@@ -61,11 +70,16 @@ def _process_file_for_anchors(
     verified_by_links,
     cross_references,
     duplicates,
+    invalid_format,
 ):
     mod = get_module(full_path)
     for line in content.splitlines():
         for match in pattern.finditer(line):
             anchor_name = match.group(1)
+            if ":" in anchor_name:
+                invalid_format.append((mod, anchor_name, full_path))
+                continue
+
             anchor = f"{mod}:{anchor_name}"
             prefix = line[: match.start()].strip()
             if prefix.endswith("Tests"):
@@ -77,15 +91,17 @@ def _process_file_for_anchors(
                 verified_by_links.add(anchor)
             elif prefix.endswith("Triggers") or prefix.endswith("Triggered by"):
                 cross_references.add(anchor)
+            elif anchor_name.startswith(("story_", "journey_", "doc_")):
+                pass
+            elif re.search(r'\b(See|and|also|or|to)\b$', prefix, re.IGNORECASE):
+                pass
             else:
                 if (
                     anchor in anchor_locations
                     and not anchor_name.startswith("example_")
                     and anchor_name not in ("unique_name", "name", "feature_name")
                 ):
-                    duplicates.append(
-                        f"'{anchor}' in {full_path} and {anchor_locations[anchor]}"
-                    )
+                    duplicates.append((mod, anchor_name, full_path, anchor_locations[anchor]))
                 else:
                     anchor_locations[anchor] = full_path
                     code_anchors.add(anchor)
@@ -96,7 +112,8 @@ def find_anchors_in_code(root_dir):
     tests_links, tests_links_set = {}, set()
     verified_by_links, cross_references = set(), set()
     duplicates = []
-    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]")
+    invalid_format = []
+    pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_:]+)\s*\]")
     exclude_dirs = {"docs", ".git", "venv", "__pycache__"}
 
     for root, dirs, files in os.walk(root_dir):
@@ -127,6 +144,7 @@ def find_anchors_in_code(root_dir):
                             verified_by_links,
                             cross_references,
                             duplicates,
+                            invalid_format,
                         )
                 except UnicodeDecodeError:
                     pass
@@ -139,14 +157,24 @@ def find_anchors_in_code(root_dir):
         verified_by_links,
         cross_references,
         duplicates,
+        invalid_format,
     )
+
+
+def _report_invalid_format(invalid_format):
+    if invalid_format:
+        print("\n[!] CI/CD FAILURE: Invalid anchor format detected:")
+        for mod, name, file_path in invalid_format:
+            print(f"    - Invalid Format (Colon not allowed): {mod} {name} (in {file_path})")
+        return True
+    return False
 
 
 def _report_duplicates(duplicates):
     if duplicates:
         print("\n[!] CI/CD FAILURE: Duplicate Semantic Anchors detected:")
-        for dup in duplicates:
-            print(f"    - {dup}")
+        for mod, name, p1, p2 in duplicates:
+            print(f"    - Duplicate Anchor: {mod} {name} (in {p1} and {p2})")
         return True
     return False
 
@@ -161,11 +189,10 @@ def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors)
                 missing_cross_refs.add(anchor)
 
     if missing_cross_refs:
-        print(
-            "\n[!] CI/CD FAILURE: ADR-0055 Cross-Reference Violation. The following anchors are referenced via 'Triggers' or 'Triggered by' but do not exist in the codebase or API Contracts:"
-        )
+        print("\n[!] CI/CD FAILURE: ADR-0055 Cross-Reference Violation:")
         for anchor in missing_cross_refs:
-            print(f"    - `{anchor}`")
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing Cross-Reference Target: {mod} {name}")
         return True
     return False
 
@@ -181,11 +208,10 @@ def _report_missing_tests(tests_links, code_anchors, contract_anchors):
                     missing_tested.add(link)
 
     if missing_tested:
-        print(
-            "\n[!] CI/CD FAILURE: ADR-0054 Violation. The following anchors are referenced as 'Tests' but do not exist in the codebase or API Contracts:"
-        )
+        print("\n[!] CI/CD FAILURE: ADR-0054 Violation:")
         for anchor in missing_tested:
-            print(f"    - `{anchor}`")
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing Test Target: {mod} {name}")
         return True
     return False
 
@@ -215,18 +241,16 @@ def _report_bidirectional_orphans(
 
     has_errors = False
     if orphaned_source:
-        print(
-            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Source anchors missing corresponding '# Tests [@ANCHOR: ...]' link:"
-        )
+        print("\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation (Source missing Test):")
         for anchor in orphaned_source:
-            print(f"    - `{anchor}`")
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing Test Link for Source: {mod} {name}")
         has_errors = True
     if orphaned_tests:
-        print(
-            "\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation. Test anchors not cited by '# Verified by [@ANCHOR: ...]':"
-        )
+        print("\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Violation (Test missing Source):")
         for anchor in orphaned_tests:
-            print(f"    - `{anchor}`")
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing Source Link for Test: {mod} {name}")
         has_errors = True
     return has_errors, source_anchors
 
@@ -244,25 +268,22 @@ def _report_documentation_gaps(
         a
         for a in docs_anchors
         if a.split(":")[1] not in code_names and a.split(":")[1] not in contract_names
-        and not a.split(":")[1].startswith("example_")
+        and not a.split(":")[1].startswith(("example_", "story_", "journey_", "doc_"))
         and a.split(":")[1] not in ("unique_name", "name", "feature_name")
     }
 
     has_errors = False
     if undocumented:
-        print(
-            "\n[!] CI/CD FAILURE: ADR-0055 Bidirectional Documentation Violation. Source anchors missing from formal docs (docs/):"
-        )
+        print("\n[!] CI/CD FAILURE: ADR-0055 Bidirectional Documentation Violation:")
         for anchor in undocumented:
-            print(f"    - `{anchor}`")
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing from Documentation: {mod} {name}")
         has_errors = True
     if missing_in_code:
-        print(
-            "\n[!] CI/CD WARNING: Documentation references anchors missing from the local codebase or API Contracts (Likely external repository):"
-        )
+        print("\n[!] CI/CD WARNING: Documentation references anchors missing from code:")
         for anchor in missing_in_code:
-            print(f"    - `{anchor}`")
-        # Downgraded to WARNING: Do not fail the build for multi-repo documentation overlaps
+            mod, name = anchor.split(':', 1)
+            print(f"    - Missing from Codebase: {mod} {name}")
     return has_errors
 
 
@@ -272,11 +293,10 @@ def _report_missing_ux_docs(code_anchors, user_manual_anchors):
     missing = {a for a in ux_code_anchors if a.split(":")[1] not in manual_names}
 
     if missing:
-        print(
-            "\n[!] CI/CD FAILURE: The following user-facing features (UX_*) are missing from data/documentation.html:"
-        )
+        print("\n[!] CI/CD FAILURE: User-facing features missing from data/documentation.html:")
         for m in missing:
-            print(f"    - `{m}`")
+            mod, name = m.split(':', 1)
+            print(f"    - Missing UX Documentation: {mod} {name}")
         return True
     return False
 
@@ -299,14 +319,13 @@ def main():
     verified_by_links = set()
     cross_references = set()
     duplicates = []
+    invalid_format = []
 
     for target_dir in args:
-        docs_dir = os.path.join(target_dir, "docs")
-        scan_docs_dir = docs_dir if os.path.exists(docs_dir) else target_dir
-
-        da, ca = find_anchors_in_docs(scan_docs_dir, target_dir)
+        da, ca, inv_docs = find_anchors_in_docs(target_dir)
         docs_anchors.update(da)
         contract_anchors.update(ca)
+        invalid_format.extend(inv_docs)
 
         (
             c_anchors,
@@ -316,10 +335,12 @@ def main():
             v_by_links,
             c_refs,
             dups,
+            inv_code
         ) = find_anchors_in_code(target_dir)
 
         code_anchors.update(c_anchors)
         anchor_locations.update(a_locs)
+        invalid_format.extend(inv_code)
 
         for k, v in t_links.items():
             tests_links.setdefault(k, []).extend(v)
@@ -336,10 +357,14 @@ def main():
                         os.path.join(root, "documentation.html"), "r", encoding="utf-8"
                     ) as f:
                         for match in re.finditer(
-                            r"\[@ANCHOR:\s*(UX_[a-zA-Z0-9_]+)\s*\]", f.read()
+                            r"\[@ANCHOR:\s*(UX_[a-zA-Z0-9_:]+)\s*\]", f.read()
                         ):
                             mod = get_module(os.path.join(root, "documentation.html"))
-                            user_manual_anchors.add(f"{mod}:{match.group(1)}")
+                            anchor_name = match.group(1)
+                            if ":" in anchor_name:
+                                invalid_format.append((mod, anchor_name, os.path.join(root, "documentation.html")))
+                                continue
+                            user_manual_anchors.add(f"{mod}:{anchor_name}")
                 except Exception as e:
                     import logging  # noqa: E402
 
@@ -347,6 +372,7 @@ def main():
                     pass
 
     errs = [
+        _report_invalid_format(invalid_format),
         _report_duplicates(duplicates),
         _report_missing_cross_refs(cross_references, code_anchors, contract_anchors),
         _report_missing_tests(tests_links, code_anchors, contract_anchors),

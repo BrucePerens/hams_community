@@ -20,7 +20,6 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
     },
 
     // [@ANCHOR: toast_notifications_logic]
-    // Verified by [@ANCHOR: test_tour_toast_notifications]
     _checkUrlForNotifications: function () {
         const urlParams = new URLSearchParams(window.location.search);
         let message = '';
@@ -69,6 +68,7 @@ publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
     },
 
     // [@ANCHOR: admin_toast_logic]
+    // Verified by [@ANCHOR: test_tour_toast_notifications]
     // Verified by [@ANCHOR: test_admin_violation_toast_rpc]
     _checkPendingReports: function () {
         var self = this;

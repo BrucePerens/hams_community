@@ -11,6 +11,7 @@
         "base",
         "website",
         "user_websites",
+        "zero_sudo",
     ],
     "data": [
         "views/res_users_views.xml",

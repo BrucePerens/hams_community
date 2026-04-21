@@ -9,3 +9,5 @@ so that I can implement regional content logic or advanced security checks.
 2. The Cloudflare edge injects `CF-IPCountry: FR`.
 3. The Odoo application calls `env['cloudflare.utils'].get_request_context()` `[@ANCHOR: cf_get_request_context]`.
 4. The application logic reads the country code and displays prices in Euros.
+
+**Status:** Verified by `[@ANCHOR: test_cf_get_request_context]`.
