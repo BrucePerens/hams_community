@@ -35,15 +35,21 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         )
 
     def test_01_violation_report_tour(self):
+        # Tests [@ANCHOR: test_tour_violation_report]
+        self.url_open(f"/{self.user_test.website_slug}/home")
         # Access the page as an unauthenticated guest so the Report Violation button is visible
         self.authenticate(None, None)
         self.start_tour(f"/{self.user_test.website_slug}/home", "violation_report_tour")
 
     def test_02_toast_notifications_tour(self):
+        # Tests [@ANCHOR: test_tour_toast_notifications]
+        self.url_open("/?report_submitted=1")
         self.authenticate(None, None)
         self.start_tour("/?report_submitted=1", "toast_notifications_tour")
 
     def test_03_gdpr_privacy_tour(self):
+        # Tests [@ANCHOR: test_tour_gdpr_privacy]
+        self.url_open("/my/privacy")
         self.authenticate(self.user_test.login, self.user_test.login)
         self.start_tour("/my/privacy", "gdpr_privacy_tour")
 
@@ -100,8 +106,12 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         self.start_tour("/my/home", "create_blog_tour")
 
     def test_07_community_directory_tour(self):
+        # Tests [@ANCHOR: test_tour_community_directory]
+        self.url_open("/community")
         self.start_tour("/community", "community_directory_tour")
 
     def test_08_frontend_misc_tour(self):
+        # Tests [@ANCHOR: test_tour_frontend_misc]
+        self.url_open("/user-websites/documentation")
         self.authenticate(self.user_test.login, self.user_test.login)
         self.start_tour("/user-websites/documentation", "frontend_misc_tour")

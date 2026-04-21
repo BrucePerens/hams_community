@@ -172,3 +172,24 @@ class TestSecurityUtils(TransactionCase):
         })
         with self.assertRaises(AccessError):
             utils.with_user(non_admin)._update_python_venv()
+
+    def test_08_get_crypto_secret(self):
+        # Tests [@ANCHOR: get_crypto_secret]
+        """Test the cryptographic secret retrieval hierarchy."""
+        utils = self.env["zero_sudo.security.utils"]
+        import os  # noqa: E402
+        from unittest.mock import patch, mock_open  # noqa: E402
+
+        # 1. Test environment variable resolution
+        with patch.dict(os.environ, {"HAMS_CRYPTO_KEY": "test_env_key"}):
+            self.assertEqual(utils._get_crypto_secret(), "test_env_key")
+
+        # 2. Test file fallback
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("builtins.open", mock_open(read_data="test_file_key\n")):
+                self.assertEqual(utils._get_crypto_secret(), "test_file_key")
+
+            # 3. Test configuration fallback
+            with patch("builtins.open", side_effect=Exception("File not found")):
+                with patch("odoo.tools.config.get", return_value="test_config_key"):
+                    self.assertEqual(utils._get_crypto_secret(), "test_config_key")

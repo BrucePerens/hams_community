@@ -22,11 +22,10 @@ def install_knowledge_docs(env):
         article_model_name = "manual.article"
 
     if article_model_name:
-        # ADR-0002/0055: We typically use service accounts, but since we have a soft
-        # dependency on an external model (knowledge/manual), we cannot define a
-        # permanent ACL in ir.model.access.csv.
-        # To bypass this for documentation injection only, we use .sudo().
-        article_model = env[article_model_name].sudo().with_context(  # ADR-0055 soft-dependency documentation bootstrap
+        svc_uid = env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.facility_service_internal"
+        )
+        article_model = env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 

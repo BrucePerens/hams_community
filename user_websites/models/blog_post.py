@@ -260,10 +260,10 @@ class BlogPost(models.Model):
         base_url = self.env["zero_sudo.security.utils"]._get_system_param(
             "web.base.url"
         )
-        db_secret = self.env["ir.config_parameter"].sudo().get_param("database.secret")  # Tested by [@ANCHOR: test_weekly_digest_secret]  # fmt: skip
+        db_secret = self.env["zero_sudo.security.utils"]._get_crypto_secret()
         if not db_secret:
             _logger.error(
-                "Security Alert: 'database.secret' is not configured. Weekly digest tokens cannot be generated."
+                "Security Alert: Crypto secret is not configured. Weekly digest tokens cannot be generated."
             )
             return
 

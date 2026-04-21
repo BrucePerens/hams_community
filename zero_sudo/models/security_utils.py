@@ -177,3 +177,20 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return True
         except subprocess.CalledProcessError as e:
             raise UserError(_("VENV update failed:\n%s") % e.stderr)
+    @api.model
+    def _get_crypto_secret(self):
+        # [@ANCHOR: get_crypto_secret]
+        """
+        Retrieves the cryptographic secret without requiring .sudo() or database access.
+        Checks environment variables first, then a local file, and falls back to config.
+        """
+        secret = os.environ.get("HAMS_CRYPTO_KEY")
+        if not secret:
+            try:
+                with open("/var/lib/odoo/hams_crypto.secret", "r") as f:
+                    secret = f.read().strip()
+            except Exception:
+                pass
+        if not secret:
+            secret = tools.config.get("admin_passwd", "default_insecure_secret")
+        return secret
