@@ -28,6 +28,9 @@ class TestSEOModels(TransactionCase):
         })
 
     def test_self_writeable_fields(self):
+        # [@ANCHOR: test_self_writeable_fields]
+        # Tests [@ANCHOR: res_users_self_writeable_fields]
+        # Verified by [@ANCHOR: test_self_writeable_fields]
         """Test that SEO fields are added to writeable fields for users."""
         fields = self.env['res.users'].SELF_WRITEABLE_FIELDS
         seo_fields = [
@@ -41,6 +44,9 @@ class TestSEOModels(TransactionCase):
             self.assertIn(field, fields, f"Field {field} should be writeable")
 
     def test_check_access_rule_res_users(self):
+        # [@ANCHOR: test_check_access_rule_res_users]
+        # Tests [@ANCHOR: res_users_seo_write_elevation]
+        # Verified by [@ANCHOR: test_check_access_rule_res_users]
         """Test that a user can write to their own SEO fields but not others."""
         # reg1 can write to their own profile
         reg1_record = self.regular_user1.with_user(self.regular_user1)
@@ -53,6 +59,9 @@ class TestSEOModels(TransactionCase):
             reg2_record_by_reg1.write({'website_meta_title': 'Hacked Title'})
 
     def test_check_access_rule_user_websites_group(self):
+        # [@ANCHOR: test_check_access_rule_user_websites_group]
+        # Tests [@ANCHOR: user_websites_group_seo_write_elevation]
+        # Verified by [@ANCHOR: test_check_access_rule_user_websites_group]
         """Test that a user can write to a group they are a member of, but not others."""
         # reg1 is a member, can write
         group_by_reg1 = self.group.with_user(self.regular_user1)

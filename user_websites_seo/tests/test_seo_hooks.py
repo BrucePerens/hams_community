@@ -7,6 +7,7 @@ class TestSEOHooks(TransactionCase):
     def test_post_init_hook_documentation(self):
         # [@ANCHOR: test_soft_dependency_docs_installation]
         # Tests [@ANCHOR: soft_dependency_docs_installation]
+        # Verified by [@ANCHOR: test_soft_dependency_docs_installation]
         """Test that the documentation is correctly installed by the hook."""
         # Ensure knowledge.article exists (it should, as we depend on manual_library)
         if "knowledge.article" not in self.env:

@@ -20,6 +20,9 @@ class TestSEOController(TransactionCase):
 
     @patch('odoo.addons.user_websites_seo.controllers.main.UserWebsitesController.user_blog_index')
     def test_controller_no_ssti_elevation(self, mock_super_index):
+        # [@ANCHOR: test_controller_no_ssti_elevation]
+        # Tests [@ANCHOR: controller_user_blog_index_seo_override]
+        # Verified by [@ANCHOR: test_controller_no_ssti_elevation]
         """
         Verify the controller intercepts the QWeb context and injects
         the main_object without elevating privileges (no sudo/svc_uid),
