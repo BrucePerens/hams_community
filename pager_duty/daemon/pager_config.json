@@ -116,5 +116,5 @@
     "files": [],
     "patterns": []
   },
-  "odoo_database": "odoo"
+  "odoo_database": "hams_test"
 }

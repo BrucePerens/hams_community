@@ -21,11 +21,11 @@ class BackupRestoreWizard(models.TransientModel):
             "output_log": "Restore queued in RabbitMQ...",
         })
 
-        cmd = ""
+        cmd_args = []
         if self.snapshot_id.config_id.engine == "kopia":
-            cmd = f"kopia restore {self.snapshot_id.snapshot_id} {self.restore_target_path}"
+            cmd_args = ["kopia", "restore", self.snapshot_id.snapshot_id, self.restore_target_path]
         elif self.snapshot_id.config_id.engine == "pgbackrest":
-            cmd = f"pgbackrest restore --stanza={self.restore_target_path} --set={self.snapshot_id.snapshot_id}"
+            cmd_args = ["pgbackrest", "restore", f"--stanza={self.restore_target_path}", f"--set={self.snapshot_id.snapshot_id}"]
 
         import json  # noqa: E402
         import os  # noqa: E402
@@ -36,7 +36,8 @@ class BackupRestoreWizard(models.TransientModel):
             "job_id": job.id,
             "config_id": self.snapshot_id.config_id.id,
             "engine": "restore_cmd",
-            "target_path": cmd
+            "cmd_args": cmd_args,
+            "snapshot_id": self.snapshot_id.snapshot_id,
         })
 
         def publish_task(msg=payload):

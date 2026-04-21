@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
 import json
-import subprocess
 import os
 import datetime
 import shutil
@@ -151,14 +150,15 @@ class BackupConfig(models.Model):
             else:
                 rec.secret_key_crypt = False
 
-    @api.constrains("target_path", "restore_drill_script")
+    @api.constrains("target_path", "restore_drill_script", "engine", "storage_type")
     def _check_security_paths(self):
         for rec in self:
             if rec.engine == "kopia" and rec.storage_type == "local":
                 validate_backup_path(rec.target_path)
             # pgBackRest target_path is a stanza name, not a direct path,
             # but we still validate the restore drill script path.
-            validate_backup_path(rec.restore_drill_script)
+            if rec.restore_drill_script:
+                validate_backup_path(rec.restore_drill_script)
 
     def _get_executable(self, engine):
         cmd_path = shutil.which(engine)
@@ -192,10 +192,10 @@ class BackupConfig(models.Model):
 
         raise UserError(_("Unknown engine: %s") % engine)
 
-    def action_trigger_backup(self):
-        # [@ANCHOR: backup_trigger_execution]
-        # Verified by [@ANCHOR: test_backup_orchestration]
-        # Implements ADR-0071: Asynchronous Bastion Pattern
+    def _publish_to_worker(self, engine, payload_extra=None):
+        """
+        Internal helper to offload tasks to the RabbitMQ Bastion.
+        """
         jobs = self.env["backup.job"]
         created_jobs = []
 
@@ -203,21 +203,23 @@ class BackupConfig(models.Model):
             job = jobs.create(
                 {
                     "config_id": rec.id,
-                    "job_type": rec.engine,
+                    "job_type": rec.engine if engine != "restore_cmd" else "kopia",  # map restore_cmd to engine for UI
                     "state": "pending",
                     "output_log": "Queued in RabbitMQ...",
                 }
             )
             created_jobs.append(job)
 
-            payload = json.dumps(
-                {
-                    "job_id": job.id,
-                    "config_id": rec.id,
-                    "engine": rec.engine,
-                    "target_path": rec.target_path,
-                }
-            )
+            payload_dict = {
+                "job_id": job.id,
+                "config_id": rec.id,
+                "engine": engine,
+                "target_path": rec.target_path,
+            }
+            if payload_extra:
+                payload_dict.update(payload_extra)
+
+            payload = json.dumps(payload_dict)
 
             def publish_task(msg=payload):
                 import odoo  # noqa: E402
@@ -259,102 +261,34 @@ class BackupConfig(models.Model):
             }
         return True
 
+    def action_trigger_backup(self):
+        # [@ANCHOR: backup_trigger_execution]
+        # Verified by [@ANCHOR: test_backup_orchestration]
+        # Implements ADR-0071: Asynchronous Bastion Pattern
+        return self._publish_to_worker(self.engine)
+
     def action_apply_policies(self):
         # [@ANCHOR: backup_apply_policies]
         # Verified by [@ANCHOR: test_apply_policies]
-        for rec in self:
-            if rec.engine == "kopia":
-                rec._apply_kopia_policies()
-        return True
+        return self._publish_to_worker("kopia_policy")
 
-    def _trigger_kopia_backup(self):
-        try:
-            exe = self._get_executable("kopia")
-            env_vars = os.environ.copy()
-            if self.kopia_password:
-                env_vars["KOPIA_PASSWORD"] = self.kopia_password
-            res = subprocess.run(
-                [exe, "snapshot", "create", self.target_path, "--json"],
-                capture_output=True,
-                text=True,
-                timeout=3600,
-                env=env_vars,
-                shell=False,
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(f"Kopia backup failed: {res.stderr}")
-            else:
-                msg_body = _("Kopia backup completed successfully.")
-                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.mail_service_internal"
-                )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
-                self.action_sync_snapshots()
-        except Exception as e:
-            self._report_backup_failure(f"Error triggering Kopia: {e}")
+    def action_sync_snapshots(self):
+        # [@ANCHOR: UX_BACKUP_SYNC]
+        # [@ANCHOR: backup_sync_kopia]
+        # [@ANCHOR: backup_sync_pgbackrest]
+        # Verified by [@ANCHOR: test_backup_cron]
+        return self._publish_to_worker("sync_snapshots")
 
-    def _trigger_pgbackrest_backup(self):
-        try:
-            exe = self._get_executable("pgbackrest")
-            cmd = [exe, "backup", f"--stanza={self.target_path}", "--type=full"]
-            if self.keep_daily > 0:
-                cmd.append(f"--repo1-retention-full={self.keep_daily}")
-            res = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=3600, shell=False
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(f"pgBackRest backup failed: {res.stderr}")
-            else:
-                msg_body = _("pgBackRest backup completed successfully.")
-                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.mail_service_internal"
-                )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_trigger_kopia_and_pgbackrest]  # fmt: skip
-                self.action_sync_snapshots()
-        except Exception as e:
-            self._report_backup_failure(f"Error triggering pgBackRest: {e}")
-
-    def _apply_kopia_policies(self):
-        try:
-            exe = self._get_executable("kopia")
-            env_vars = os.environ.copy()
-            if self.kopia_password:
-                env_vars["KOPIA_PASSWORD"] = self.kopia_password
-            cmd = [exe, "policy", "set", self.target_path]
-            cmd.extend(
-                [
-                    f"--keep-latest={self.keep_daily}",
-                    f"--keep-daily={self.keep_daily}",
-                    f"--keep-weekly={self.keep_weekly}",
-                    f"--keep-monthly={self.keep_monthly}",
-                ]
-            )
-            if self.exclude_patterns:
-                for line in self.exclude_patterns.splitlines():
-                    if line.strip():
-                        cmd.append(f"--add-ignore={line.strip()}")
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                env=env_vars,
-                shell=False,
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(f"Kopia policy set failed: {res.stderr}")
-            else:
-                msg_body = _("Kopia policies applied successfully.")
-                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.mail_service_internal"
-                )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_apply_policies]  # fmt: skip
-        except Exception as e:
-            self._report_backup_failure(f"Error applying Kopia policy: {e}")
+    def _execute_restore_drill(self):
+        """
+        Offloads the restore drill to the worker.
+        """
+        return self._publish_to_worker("restore_drill", {"script": self.restore_drill_script})
 
     def _report_backup_failure(self, message):
         # [@ANCHOR: backup_pager_synergy]
         # Verified by [@ANCHOR: test_backup_cron]
+        # Verified by [@ANCHOR: test_trigger_kopia_and_pgbackrest]
         if "pager.incident" in self.env:
             try:
                 pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -401,61 +335,6 @@ class BackupConfig(models.Model):
                 c["latest_snapshot"] = False
                 c["is_stale"] = True
         return configs
-
-    def action_sync_snapshots(self):
-        # [@ANCHOR: UX_BACKUP_SYNC]
-        # [@ANCHOR: backup_sync_kopia]
-        # [@ANCHOR: backup_sync_pgbackrest]
-        # Verified by [@ANCHOR: test_backup_cron]
-        for rec in self:
-            if rec.engine == "kopia":
-                rec._sync_kopia()
-            elif rec.engine == "pgbackrest":
-                rec._sync_pgbackrest()
-        return True
-
-    def _sync_kopia(self):
-        try:
-            exe = self._get_executable("kopia")
-            env_vars = os.environ.copy()
-            if self.kopia_password:
-                env_vars["KOPIA_PASSWORD"] = self.kopia_password
-
-            res = subprocess.run(
-                [exe, "snapshot", "list", "--json"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                env=env_vars,
-                shell=False,
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(f"Kopia sync failed: {res.stderr}")
-                return
-
-            data = json.loads(res.stdout)
-            self._process_snapshot_data(data, "kopia")
-        except Exception as e:
-            self._report_backup_failure(f"Error running Kopia: {e}")
-
-    def _sync_pgbackrest(self):
-        try:
-            exe = self._get_executable("pgbackrest")
-            res = subprocess.run(
-                [exe, "info", f"--stanza={self.target_path}", "--output=json"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                shell=False,
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(f"pgBackRest sync failed: {res.stderr}")
-                return
-
-            data = json.loads(res.stdout)
-            self._process_snapshot_data(data, "pgbackrest")
-        except Exception as e:
-            self._report_backup_failure(f"Error running pgBackRest: {e}")
 
     def _process_snapshot_data(self, data, engine):
         Snapshot = self.env["backup.snapshot"]
@@ -540,25 +419,3 @@ class BackupConfig(models.Model):
                 if delta_drill > (7 * 24 * 60 * 60):  # 7 Days
                     conf._execute_restore_drill()
 
-    def _execute_restore_drill(self):
-        try:
-            res = subprocess.run(
-                [self.restore_drill_script],
-                capture_output=True,
-                text=True,
-                timeout=7200,
-                shell=False,
-            )
-            if res.returncode != 0:
-                self._report_backup_failure(
-                    f"Automated Restore Drill FAILED: {res.stderr}"
-                )
-            else:
-                self.last_drill_time = fields.Datetime.now()
-                msg_body = _("Automated Restore Drill completed successfully.")
-                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.mail_service_internal"
-                )
-                self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_backup_cron]  # fmt: skip
-        except Exception as e:
-            self._report_backup_failure(f"Error triggering Restore Drill: {e}")

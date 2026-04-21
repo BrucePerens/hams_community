@@ -1,5 +1,5 @@
 [Unit]
-Description=Hams.com Asynchronous Backup Worker
+Description=Asynchronous Backup Worker
 After=network.target rabbitmq-server.service
 
 [Service]

@@ -5,7 +5,7 @@
     <h2>1. Self-Healing Deployment</h2>
     <p>Odoo expects the <code>kopia</code> and <code>pgbackrest</code> packages to be installed at the host OS layer. If an administrator fails to install Kopia during provisioning, the application will automatically perform a Just-In-Time (JIT) download of the static Kopia binary from GitHub, placing it safely into the Odoo datastore to guarantee operation.</p>
     <h2>2. Configurations &amp; Orchestration</h2>
-    <p>Navigate to <em>Ham Admin &gt; Backups &gt; Configurations</em>. You can define targets, storage backend credentials (S3/B2), and retention policies for both Kopia and pgBackRest. If using Kopia, enter your repository password here; it will be symmetrically encrypted at rest.</p>
+    <p>Navigate to <em>Backups &gt; Configurations</em>. You can define targets, storage backend credentials (S3/B2), and retention policies for both Kopia and pgBackRest. If using Kopia, enter your repository password here; it will be symmetrically encrypted at rest.</p>
     <p>You may also actively trigger backups or push new retention policies directly to the underlying storage engines via the action buttons in the configuration header.</p>
     <h2>2. Synchronization</h2>
     <p>An automated hourly cron job interrogates the underlying CLI tools (<code>kopia snapshot list</code> and <code>pgbackrest info</code>) to fetch the latest backup metadata and populate the Snapshots table. [@ANCHOR: UX_BACKUP_SYNC]</p>

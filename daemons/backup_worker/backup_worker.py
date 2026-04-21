@@ -46,10 +46,15 @@ def _json2_call(model, method_name, **kwargs):
 def execute_job(ch, method, properties, body):
     try:
         payload = json.loads(body)
-        job_id = payload["job_id"]
-        engine = payload["engine"]
-        target_path = payload["target_path"]
-        config_id = payload["config_id"]
+        job_id = payload.get("job_id")
+        engine = payload.get("engine")
+        target_path = payload.get("target_path")
+        config_id = payload.get("config_id")
+
+        if not job_id or not engine:
+            logger.error("Missing job_id or engine in payload")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
 
         logger.info(f"Processing job {job_id} ({engine})")
 
@@ -64,7 +69,8 @@ def execute_job(ch, method, properties, body):
         )
 
         config_records = _json2_call(
-            "backup.config", "read", ids=[config_id], fields=["kopia_password"]
+            "backup.config", "read", ids=[config_id],
+            fields=["kopia_password", "keep_daily", "keep_weekly", "keep_monthly", "exclude_patterns", "engine"]
         )
         config = config_records[0] if config_records else {}
 
@@ -77,6 +83,41 @@ def execute_job(ch, method, properties, body):
             cmd = ["kopia", "snapshot", "create", target_path, "--json"]
         elif engine == "pgbackrest":
             cmd = ["pgbackrest", "backup", f"--stanza={target_path}", "--type=full"]
+            keep_daily = config.get("keep_daily", 0)
+            if keep_daily > 0:
+                cmd.append(f"--repo1-retention-full={keep_daily}")
+
+        if engine == "kopia_policy":
+            keep_daily = config.get("keep_daily", 7)
+            keep_weekly = config.get("keep_weekly", 4)
+            keep_monthly = config.get("keep_monthly", 6)
+            exclude_patterns = config.get("exclude_patterns", "")
+
+            cmd = ["kopia", "policy", "set", target_path]
+            cmd.extend([
+                f"--keep-latest={keep_daily}",
+                f"--keep-daily={keep_daily}",
+                f"--keep-weekly={keep_weekly}",
+                f"--keep-monthly={keep_monthly}",
+            ])
+            if exclude_patterns:
+                for line in exclude_patterns.splitlines():
+                    if line.strip():
+                        cmd.append(f"--add-ignore={line.strip()}")
+        elif engine == "sync_snapshots":
+            if config.get("engine") == "kopia":
+                cmd = ["kopia", "snapshot", "list", "--json"]
+            else:
+                cmd = ["pgbackrest", "info", f"--stanza={target_path}", "--output=json"]
+        elif engine == "restore_drill":
+            cmd = [payload.get("script")]
+        elif engine == "restore_cmd":
+            # Direct command passed from wizard
+            cmd = payload.get("cmd_args", [])
+            if "kopia" in cmd:
+                 # Ensure restore directory exists for Kopia
+                 restore_dir = payload.get("snapshot_id", "default")
+                 os.makedirs(f"/var/lib/odoo/backups/restore_{restore_dir}", exist_ok=True)
 
         proc = subprocess.Popen(
             cmd,
@@ -115,9 +156,20 @@ def execute_job(ch, method, properties, body):
         )
 
         if final_state == "done":
-            _json2_call("backup.config", "action_sync_snapshots", ids=[config_id])
+            if engine in ("kopia", "pgbackrest", "restore_cmd"):
+                _json2_call("backup.config", "action_sync_snapshots", ids=[config_id])
+            elif engine == "sync_snapshots":
+                # If we just synced, we need to process the data
+                try:
+                    data = json.loads(log_buffer.split("\nProcess exited")[0])
+                    _json2_call("backup.config", "_process_snapshot_data", ids=[config_id], data=data, engine=config.get("engine"))
+                except Exception as e:
+                    logger.error(f"Failed to parse sync data: {e}")
+            elif engine == "restore_drill":
+                _json2_call("backup.config", "write", ids=[config_id], vals={"last_drill_time": time.strftime("%Y-%m-%d %H:%M:%S")})
+
         else:
-            error_msg = f"{engine.capitalize()} backup failed for job {job_id}."
+            error_msg = f"{engine.capitalize()} failed for job {job_id}: {log_buffer[-500:]}"
             _json2_call(
                 "backup.config",
                 "_report_backup_failure",
