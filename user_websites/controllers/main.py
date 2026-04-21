@@ -897,7 +897,7 @@ class UserWebsitesController(http.Controller):
         if not record.exists():
             raise werkzeug.exceptions.NotFound()
 
-        db_secret = request.env["ir.config_parameter"].sudo().get_param("database.secret")  # burn-ignore-sudo: Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
+        db_secret = request.env["ir.config_parameter"].sudo().get_param("database.secret")  # Tested by [@ANCHOR: test_unsubscribe_secret]  # fmt: skip
         if not db_secret:
             _logger.error(
                 "Security Alert: 'database.secret' is not configured. Unsubscribe tokens cannot be verified."

@@ -26,7 +26,7 @@ def install_knowledge_docs(env):
         # dependency on an external model (knowledge/manual), we cannot define a
         # permanent ACL in ir.model.access.csv.
         # To bypass this for documentation injection only, we use .sudo().
-        article_model = env[article_model_name].sudo().with_context(  # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
+        article_model = env[article_model_name].sudo().with_context(  # ADR-0055 soft-dependency documentation bootstrap
             mail_notrack=True, prefetch_fields=False
         )
 

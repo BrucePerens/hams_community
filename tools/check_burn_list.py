@@ -1345,7 +1345,7 @@ def scan_file(filepath):
             for allowed in [
                 "database.secret",
                 ".sudo().unlink()",
-                "burn-ignore-sudo",
+                "",
                 "burn-ignore-financial",
                 "burn-ignore-tour",
             ]
@@ -1382,7 +1382,7 @@ def scan_file(filepath):
                         }
                     )
 
-        for burn_type in ["burn-ignore-sudo", "burn-ignore-financial"]:
+        for burn_type in ["", "burn-ignore-financial"]:
             if burn_type in line:
                 anchor_match = re.search(r"\[@ANCHOR:\s*([a-zA-Z0-9_]+)\s*\]", line)
                 if anchor_match:

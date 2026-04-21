@@ -123,7 +123,7 @@ class DaemonKeyRegistry(models.Model):
 
         # Revoke old keys for this specific service account AND daemon
         # [@ANCHOR: revoke_old_keys_logic]
-        # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
+        # Tested by [@ANCHOR: test_key_ownership]
         old_keys = self.env["res.users.apikeys"].search(
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
@@ -136,7 +136,7 @@ class DaemonKeyRegistry(models.Model):
         # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
         # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
         # a 90-day key for the service account without exposing the entire ERP.
-        # burn-ignore-sudo: Tested by [@ANCHOR: test_key_ownership]
+        # Tested by [@ANCHOR: test_key_ownership]
         # Verified by [@ANCHOR: test_key_ownership]
         raw_key = (
             self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date)

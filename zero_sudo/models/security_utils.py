@@ -149,7 +149,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 % key
             )
 
-        # burn-ignore-sudo: Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
+        # Tested by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         return self.env["ir.config_parameter"].sudo().get_param(key, default)
 
     @api.model

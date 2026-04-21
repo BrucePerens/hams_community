@@ -551,7 +551,7 @@ class ResUsers(models.Model):
             )
             if not pages:
                 break
-            pages.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_pages]  # fmt: skip
+            pages.sudo().unlink()  # Tested by [@ANCHOR: test_gdpr_erasure_pages]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(pages) < 5000:
@@ -565,7 +565,7 @@ class ResUsers(models.Model):
             )
             if not posts:
                 break
-            posts.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
+            posts.sudo().unlink()  # Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(posts) < 5000:
@@ -579,7 +579,7 @@ class ResUsers(models.Model):
             )
             if not blogs:
                 break
-            blogs.sudo().unlink()  # burn-ignore-sudo: Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
+            blogs.sudo().unlink()  # Tested by [@ANCHOR: test_gdpr_erasure_posts]  # fmt: skip
             if not odoo.tools.config.get("test_enable"):
                 self.env.cr.commit()
             if len(blogs) < 5000:
