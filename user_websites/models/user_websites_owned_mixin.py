@@ -70,6 +70,9 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
                     valid_group_members[group.id] = set(group.member_ids.ids)
 
         for vals in vals_list:
+            # ADR-0082: Auto-assign ownership to the current user if missing and they are not a guest
+            if not vals.get("owner_user_id") and not vals.get("user_websites_group_id") and not self.env.user._is_public():
+                vals["owner_user_id"] = user_id
             owner_id = vals.get("owner_user_id")
             group_id = vals.get("user_websites_group_id")
 

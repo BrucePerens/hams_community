@@ -65,15 +65,41 @@
 
 <hr class="mt-4 mb-4"/>
 
+
 <h2 class="mt-4">3. Integrator & Developer Guide</h2>
 
 <h4 class="mt-4">3.1. Core Architecture & Security</h4>
 <ul>
     <li><strong>Lazy JIT Provisioning:</strong> Websites and Blogs do not exist upon user creation. They are provisioned Just-In-Time to ensure explicit user consent to publish.</li>
     <li><strong>Shared Blog Container:</strong> All user blog posts are housed in a single standard <code>blog.blog</code> record named "Community Blog" to prevent database bloat.</li>
-    <li><strong>Proxy Ownership Pattern:</strong> Standard users cannot create views or pages natively. The module securely circumvents this by explicitly assigning the <code>owner_user_id</code> upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via <code>.sudo()</code> strictly for the database write.</li>
+    <li><strong>Proxy Ownership Pattern:</strong> Standard users cannot create views or pages natively. The module securely circumvents this by explicitly assigning the <code>owner_user_id</code> upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated <strong>Service Account</strong> strictly for the database write.</li>
+    <li><strong>Service Workers and Caching:</strong> High-performance frontend caching is managed via a dedicated Service Worker <span data-trace="[@ANCHOR: simulation_environment]">[@ANCHOR: simulation_environment]</span>.</li>
+    <li><strong>Slug Management:</strong> Automated slug generation and high-performance caching ensure unique and fast URL resolution <span data-trace="[@ANCHOR: slug_cache_invalidation_unlink]">[@ANCHOR: slug_cache_invalidation_unlink]</span>, <span data-trace="[@ANCHOR: group_slug_cache_invalidation_unlink]">[@ANCHOR: group_slug_cache_invalidation_unlink]</span>.</li>
 </ul>
 
+<h4 class="mt-4">3.2. Explicit Dropzones</h4>
+<p>Integrators can extend the UI by targeting these IDs:</p>
+<ul>
+    <li id="dropzone_home_header" data-trace="[@ANCHOR: dropzone_home_header]"><strong>Home Header:</strong> <code>user_websites_dropzone_home_header</code></li>
+    <li id="dropzone_home_footer" data-trace="[@ANCHOR: dropzone_home_footer]"><strong>Home Footer:</strong> <code>user_websites_dropzone_home_footer</code></li>
+    <li id="dropzone_navbar_actions" data-trace="[@ANCHOR: dropzone_navbar_actions]"><strong>Navbar Actions:</strong> <code>user_websites_dropzone_navbar_actions</code></li>
+    <li id="dropzone_directory_card" data-trace="[@ANCHOR: dropzone_directory_card]"><strong>Directory Card:</strong> <code>user_websites_dropzone_directory_card</code></li>
+    <li id="dropzone_blog_post" data-trace="[@ANCHOR: dropzone_blog_post]"><strong>Blog Post:</strong> <code>user_websites_dropzone_blog_post</code></li>
+    <li id="dropzone_settings" data-trace="[@ANCHOR: dropzone_settings]"><strong>Settings:</strong> Target <code>res.config.settings</code> view.</li>
+</ul>
+
+<h4 class="mt-4">3.3. Background Operations</h4>
+<ul>
+    <li id="ir_cron_send_weekly_digest" data-trace="[@ANCHOR: ir_cron_send_weekly_digest]"><strong>Weekly Digest:</strong> Automated blog post summaries for subscribers.</li>
+    <li id="ir_cron_notify_pending_reports" data-trace="[@ANCHOR: ir_cron_notify_pending_reports]"><strong>Moderation Notifications:</strong> Alerts admins of unhandled reports.</li>
+    <li id="ir_cron_flush_view_counters" data-trace="[@ANCHOR: ir_cron_flush_view_counters]"><strong>View Counter Sync:</strong> Flushes Redis counters to PostgreSQL.</li>
+</ul>
+
+<h4 class="mt-4">3.4. Security Logic</h4>
+<ul>
+    <li id="violation_report_logic" data-trace="[@ANCHOR: violation_report_logic]"><strong>Reporting Logic:</strong> Masked originator reporting.</li>
+    <li id="toast_notifications_logic" data-trace="[@ANCHOR: toast_notifications_logic]"><strong>Admin Toasts:</strong> Real-time alerts for moderators.</li>
+</ul>
 <hr class="mt-4 mb-4"/>
 
 <h2 class="mt-4">4. Regulatory Compliance Statement</h2>

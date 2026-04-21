@@ -30,7 +30,7 @@ Returns a dictionary of all personal data owned by the user. Dependent modules s
 * **Returns:** `dict`
 
 #### `_execute_gdpr_erasure()` (Extendable Hook)
-Permanently unlinks all user-owned content. Dependent modules MUST override this to execute `.sudo().unlink()` on their custom records.
+Permanently unlinks all user-owned content. Dependent modules MUST override this to execute `<code>.with_user(svc_uid)</code>.unlink()` on their custom records.
 
 #### `action_suspend_user_websites()` & `action_pardon_user_websites()`
 Forcefully unpublishes (or pardons) user content based on the 3-strike moderation system.
