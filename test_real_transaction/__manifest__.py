@@ -25,6 +25,11 @@
             "category": "workspace"
         }
     ],
+    "assets": {
+        "web.assets_tests": [
+            "test_real_transaction/static/src/js/**/*",
+        ],
+    },
     "license": "AGPL-3",
     "installable": True,
     "auto_install": False,

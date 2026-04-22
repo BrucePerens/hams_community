@@ -1026,11 +1026,6 @@ def main():
             print("❌ ERROR: No modules found in this repository. Aborting.")
             sys.exit(1)
 
-        # Always explicitly place test_tours first in the module list to bootstrap the web framework
-        if "test_tours" in target_modules:
-            target_modules.remove("test_tours")
-        target_modules.insert(0, "test_tours")
-
         mod_string = "base," + ",".join(target_modules)
         test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
@@ -1179,10 +1174,9 @@ def main():
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
 
-                mod_with_tour = f"test_tours,{mod}" if mod != "test_tours" else "test_tours"
-                individual_tags = f"/test_tours,/{mod}" if mod != "test_tours" else "/test_tours"
+                individual_tags = f"/{mod}"
 
-                restored, cache_file = check_and_restore_cache(args.db, mod_with_tour)
+                restored, cache_file = check_and_restore_cache(args.db, mod)
                 if not restored:
                     print(f"[*] Initializing DB for {mod}...")
                     init_cmd = [
@@ -1194,7 +1188,7 @@ def main():
                         "-d",
                         args.db,
                         "-i",
-                        mod_with_tour,
+                        mod,
                         "--stop-after-init",
                         "--workers=0",
                         "--max-cron-threads=0",
@@ -1206,7 +1200,7 @@ def main():
                     if rc_init != 0:
                         failed_modules.append(mod)
                         continue
-                    save_db_cache(args.db, cache_file, mod_with_tour)
+                    save_db_cache(args.db, cache_file, mod)
 
                 print(f"[*] Executing tests for {mod}...")
                 cmd = [
@@ -1218,7 +1212,7 @@ def main():
                     "-d",
                     args.db,
                     "-u",
-                    mod_with_tour,
+                    mod,
                     "--test-enable",
                     "--test-tags",
                     individual_tags,
@@ -1244,8 +1238,6 @@ def main():
         elif args.mode == "xml":
             failed_modules = []
             for mod in target_modules:
-                mod_with_tour = f"test_tours,{mod}" if mod != "test_tours" else "test_tours"
-
                 print("\n[*] Checking XML views in: {}".format(mod))
                 cmd = [
                     venv_python,
@@ -1255,9 +1247,9 @@ def main():
                     "-d",
                     args.db,
                     "-i",
-                    mod_with_tour,
+                    mod,
                     "-u",
-                    mod_with_tour,
+                    mod,
                     "--stop-after-init",
                     "--log-level=error",
                     "--workers=0",

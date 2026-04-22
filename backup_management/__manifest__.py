@@ -36,7 +36,7 @@
             "backup_management/static/src/components/board/board.xml",
         ],
         "web.assets_tests": [
-            "backup_management/static/src/tests/tours/backup_dashboard.js",
+            "backup_management/static/src/tests/**/*",
         ],
     },
 }

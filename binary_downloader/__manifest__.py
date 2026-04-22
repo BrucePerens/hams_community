@@ -21,7 +21,7 @@
     ],
     "assets": {
         "web.assets_tests": [
-            "binary_downloader/static/tests/tours/binary_install_tour.js",
+            "binary_downloader/static/tests/**/*",
         ],
     },
     "post_init_hook": "post_init_hook",

@@ -6,7 +6,7 @@
     "category": "Security",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base", "web", "web_tour", "mail"],
+    "depends": ["base", "mail", "test_tours"],
     "assets": {
       "web.assets_tests": [
         "zero_sudo/static/src/**/*"

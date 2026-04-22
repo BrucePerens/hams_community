@@ -2,16 +2,22 @@
 
 import { registry } from "@web/core/registry";
 
-registry.category("tours").add("backup_dashboard_tour", {
+registry.category("web_tour.tours").add("backup_dashboard_tour", {
     url: "/web",
     steps: () => [
         {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
+        {
             trigger: '.o_app[data-menu-xmlid="backup_management.menu_backup_root"]',
             content: "Click on Backup Management app",
+            run: 'click',
         },
         {
             trigger: 'button[data-menu-xmlid="backup_management.menu_backup_config"]',
             content: "Open Configurations",
+            run: 'click',
         },
         {
             trigger: ".o_list_button_add",

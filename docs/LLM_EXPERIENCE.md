@@ -101,3 +101,6 @@ session.
 ## 30. The URL String Concatenation Trap
 **The Trap:** The model may hallucinate syntactic URL errors by inappropriately splitting standard URIs into multiple concatenated strings (e.g., `"https" + "://" + "nightly.odoo.com"`).
 **The Solution:** You MUST explicitly output URLs as single, unfragmented string literals (e.g., `"https://nightly.odoo.com"`). Never mechanically split protocol schemes from hostnames unless dynamically interpolating them from variables.
+## 31. The Tour Asset Registration Trap
+**The Trap:** JavaScript UI tours will silently fail to load or execute in the test environment if their source files are not explicitly bundled. Odoo does not automatically discover test assets.
+**The Solution:** You MUST explicitly register all tour JavaScript files within the module's `__manifest__.py` by declaring them in the `assets` dictionary under the `web.assets_tests` key. File wildcard ("*") and directory wildcard ("**") are acceptable in this (e.g., `"assets": { "web.assets_tests": [ "module_name/static/tests/**/*" ] }`).

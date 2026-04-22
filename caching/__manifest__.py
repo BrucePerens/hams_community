@@ -21,8 +21,8 @@
         }
     ],
     "assets": {
-        "web.assets_frontend": [
-            "caching/static/tests/tours/caching_tour.js",
+        "web.assets_tests": [
+            "caching/static/tests/**/*",
         ],
     },
     "installable": True,

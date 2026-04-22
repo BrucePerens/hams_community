@@ -1,7 +1,7 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-registry.category("web_tours").add("test_real_transaction_tour", {
+registry.category("web_tour.tours").add("test_real_transaction_tour", {
     url: "/web",
     steps: () => [
         {

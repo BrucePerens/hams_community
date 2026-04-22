@@ -34,7 +34,7 @@ Upon installation, it:
     ],
     "assets": {
         "web.assets_tests": [
-            "compliance/static/tests/tours/compliance_tour.js",
+            "compliance/static/tests/**/*",
         ],
     },
     "demo": [],

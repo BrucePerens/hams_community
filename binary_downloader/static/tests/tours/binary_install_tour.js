@@ -5,12 +5,16 @@ registry.category("web_tour.tours").add("binary_install_tour", {
     url: "/web",
     steps: () => [
         {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
+        {
             trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
             content: "Click on Settings",
             run: "click",
         },
         {
-            trigger: '.o_nav_entry[data-menu-xmlid="base.menu_custom"]',
+            trigger: 'a.nav-link[data-menu-xmlid="base.menu_custom"]',
             content: "Open Technical menu",
             run: "click",
         },

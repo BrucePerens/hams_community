@@ -57,6 +57,7 @@ class TestKeyRegistry(TransactionCase):
                 'user_id': self.regular_user.id,
                 'env_file_path': self.test_env_paths[0],
             })
+            self.env.flush_all()
 
         # Test invalid path
         with self.assertRaises(UserError):
@@ -65,6 +66,7 @@ class TestKeyRegistry(TransactionCase):
                 'user_id': self.service_user.id,
                 'env_file_path': '/home/jules/test.env',
             })
+            self.env.flush_all()
 
         # Test symlink attack prevention
         # Create a directory that is within the allowed prefix
@@ -90,6 +92,7 @@ class TestKeyRegistry(TransactionCase):
                 'user_id': self.service_user.id,
                 'env_file_path': symlink_path,
             })
+            self.env.flush_all()
         self.assertIn("Security Alert", str(cm.exception))
 
         # Cleanup

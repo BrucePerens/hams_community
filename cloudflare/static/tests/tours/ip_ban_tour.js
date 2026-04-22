@@ -7,6 +7,10 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
     url: "/web",
     steps: () => [
         {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
+        {
             content: "Open App Switcher (if needed) or click Cloudflare Edge",
             trigger: '.o_app[data-menu-xmlid="cloudflare.menu_cloudflare_root"], .o_menu_brand:contains("Cloudflare Edge")',
             run: "click"

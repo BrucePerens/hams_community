@@ -5,6 +5,7 @@ import sys
 import ast
 import argparse
 import xml.parsers.expat
+import glob
 
 
 class XMLNode:
@@ -126,6 +127,11 @@ ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"registry\.category\(\s*['\"](tours|web_tours)['\"]\s*\)"),
+        "CRITICAL JS TOUR REGISTRATION: Odoo 19 UI tours MUST be registered under 'web_tour.tours', not 'tours' or 'web_tours'.",
+    ),
+    (
+        r"\.js$",
         re.compile(r"\$\("),
         "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components.",
     ),
@@ -182,6 +188,8 @@ MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
 REQUIRE_TEST_VERIFICATION = []
 FOUND_TEST_CONTENTS = {}
+FOUND_TOURS = []
+FOUND_MANIFESTS = {}
 
 
 def check_ast_vulnerabilities(filepath, content, lines):
@@ -1301,14 +1309,12 @@ def scan_file(filepath):
             "AI SUMMARIZATION BIAS TRAP: LLM_LINTER_GUIDE.md was truncated or summarized. All rules must be preserved."
         )
 
-    if (
-        filename.endswith(".js")
-        and "web_tour.tours" in content
-        and "trigger:" not in content
-    ):
-        errors_found.append(
-            "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
-        )
+    if filename.endswith(".js") and "web_tour.tours" in content:
+        FOUND_TOURS.append(filepath)
+        if "trigger:" not in content:
+            errors_found.append(
+                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
+            )
 
     in_py_multiline = False
     py_multiline_marker = None
@@ -1602,6 +1608,19 @@ def main():
             filepath = os.path.join(root, file)
             if is_ignored(os.path.relpath(filepath, target_dir)):
                 continue
+
+            if file == "__manifest__.py":
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        manifest_content = f.read()
+                    tree = ast.parse(manifest_content, filename=filepath)
+                    for node in tree.body:
+                        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Dict):
+                            manifest_dict = ast.literal_eval(node.value)
+                            FOUND_MANIFESTS[os.path.abspath(root)] = manifest_dict
+                except Exception:
+                    pass
+
             if file.endswith((".py", ".xml", ".js", ".csv")):
                 scanned_files += 1
                 errors, warnings = scan_file(filepath)
@@ -1647,6 +1666,38 @@ def main():
         verification_errors, total_errors = _verify_test_ast(
             req, target_content, target_file, verification_errors, total_errors
         )
+
+    for tour_path in FOUND_TOURS:
+        abs_tour = os.path.abspath(tour_path)
+        mod_dir = os.path.dirname(abs_tour)
+        found_mod = None
+        while mod_dir and mod_dir != os.path.dirname(mod_dir):
+            if mod_dir in FOUND_MANIFESTS:
+                found_mod = mod_dir
+                break
+            mod_dir = os.path.dirname(mod_dir)
+
+        if not found_mod:
+            continue
+
+        manifest = FOUND_MANIFESTS[found_mod]
+        assets = manifest.get("assets", {})
+
+        matched = False
+        parent_dir = os.path.dirname(found_mod)
+        for bundle_name, patterns in assets.items():
+            for pattern in patterns:
+                abs_glob_pattern = os.path.join(parent_dir, pattern)
+                matched_files = [os.path.abspath(p) for p in glob.glob(abs_glob_pattern, recursive=True)]
+                if abs_tour in matched_files:
+                    matched = True
+                    break
+            if matched:
+                break
+
+        if not matched:
+            print(f"  ❌ ERROR: Tour Asset Registration Trap. Tour file '{os.path.relpath(tour_path, target_dir)}' is not matched by any glob pattern in 'assets' of its __manifest__.py.")
+            total_errors += 1
 
     if total_errors > 0 or total_warnings > 0:
         print(f"\nScan Complete: Checked {scanned_files} files.")

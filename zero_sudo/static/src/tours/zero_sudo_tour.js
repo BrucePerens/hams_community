@@ -2,7 +2,7 @@
 
 import { registry } from "@web/core/registry";
 
-registry.category("tours").add("zero_sudo_tour", {
+registry.category("web_tour.tours").add("zero_sudo_tour", {
     // [@ANCHOR: zero_sudo_tour]
     // Verified by [@ANCHOR: test_zero_sudo_tour]
     // Tests [@ANCHOR: story_login_blocking]
@@ -44,7 +44,7 @@ registry.category("tours").add("zero_sudo_tour", {
         },
         {
             trigger: '.o_form_saved_indicator',
-            isCheck: true,
+            run: () => {},
         },
     ],
 });
