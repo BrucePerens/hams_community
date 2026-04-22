@@ -25,7 +25,7 @@ registry.category("web_tour.tours").add("create_blog_tour", {
         },
         {
             content: "Verify initial blog post created",
-            trigger: 'span[data-oe-model="blog.post"]:contains("Welcome to my Blog"), h1:contains("Welcome to my Blog"), h2:contains("Welcome to my Blog")',
+            trigger: 'span[data-oe-model="blog.post"]:contains("Welcome to my Blog"), *:contains("Welcome to my Blog")',
             run: () => {
                 if (!document.body.textContent.includes('Welcome to my Blog')) {
                     console.error("Blog post content not found");
@@ -34,7 +34,7 @@ registry.category("web_tour.tours").add("create_blog_tour", {
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new posting",
-            trigger: '.o_menu_systray a:contains("New"), .o_menu_systray button:contains("New"), #site_new, a[data-action="new_page"]',
+            trigger: '.o_menu_systray *:contains("New"), #site_new, a[data-action="new_page"]',
             run: () => {
                 // By triggering on the New button, we mathematically prove the Proxy Owner
                 // was granted the correct editing UI to make subsequent blog posts.

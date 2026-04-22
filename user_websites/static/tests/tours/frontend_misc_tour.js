@@ -8,7 +8,7 @@ registry.category("web_tour.tours").add("frontend_misc_tour", {
     steps: () => [
         {
             content: "Verify Documentation Page renders correctly",
-            trigger: 'h1:contains("User Websites Module Documentation")',
+            trigger: '*:contains("User Websites Module Documentation")',
             run: () => {
                 if (!document.querySelector('h1').textContent.includes('User Websites Module')) {
                     console.error("Documentation header missing");

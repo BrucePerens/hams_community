@@ -9,11 +9,11 @@ registry.category("web_tour.tours").add("db_management_slow_query_tour", { // # 
             run: 'click',
         },
         {
-            trigger: '.o_app[data-menu-xmlid="database_management.menu_admin_root"]',
+            trigger: '[data-menu-xmlid="database_management.menu_admin_root"]',
             run: 'click',
         },
         {
-            trigger: 'a[data-menu-xmlid="database_management.menu_db_queries"]',
+            trigger: '[data-menu-xmlid="database_management.menu_db_queries"]',
             run: 'click',
         },
         {

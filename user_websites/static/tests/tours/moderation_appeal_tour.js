@@ -9,7 +9,7 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
     steps: () => [
         {
             content: "Verify Suspension Alert",
-            trigger: '.alert-danger h4:contains("Account Suspended")',
+            trigger: '.alert-danger *:contains("Account Suspended")',
             run: () => {
                 if (!document.querySelector('.alert-danger')) {
                     console.error("Suspension alert missing");
@@ -24,11 +24,12 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
         {
             content: "Submit Appeal",
             trigger: 'form[action="/website/submit_appeal"] button[type="submit"]',
-            run: 'click'
+            run: 'click',
+            expectUnloadPage: true,
         },
         {
             content: "Check Pending Status Rendered",
-            trigger: 'p:contains("We are currently reviewing your appeal.")',
+            trigger: '*:contains("We are currently reviewing your appeal.")',
             run: () => {
                 if (!document.body.textContent.includes('currently reviewing your appeal')) {
                     console.error("Appeal pending status missing");

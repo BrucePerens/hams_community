@@ -146,9 +146,11 @@ class TestBinaryManifest(TransactionCase):
                 "checksum": "fakehash",
                 "archive_type": "binary",
             })
+            self.env.flush_all()
 
         with self.assertRaises(ValidationError):
             self.manifest.write({"name": "bad/bin"})
+            self.env.flush_all()
 
     def test_11_url_validation(self):
         """Verify that only http/https URLs are allowed."""
@@ -159,6 +161,7 @@ class TestBinaryManifest(TransactionCase):
                 "checksum": "fakehash",
                 "archive_type": "binary",
             })
+            self.env.flush_all()
 
     def test_12_action_install_permissions(self):
         """Verify that only managers/admins can call action_install."""

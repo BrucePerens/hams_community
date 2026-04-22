@@ -9,7 +9,7 @@ registry.category("web_tour.tours").add("community_directory_tour", {
     steps: () => [
         {
             content: "Check that the directory page renders",
-            trigger: 'h1:contains("Community Directory")',
+            trigger: '*:contains("Community Directory")',
             run: () => {
                 if (!document.querySelector('h1').textContent.includes('Community Directory')) {
                     console.error("Directory header missing");

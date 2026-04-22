@@ -9,17 +9,17 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             run: 'click',
         },
         {
-            trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
+            trigger: '[data-menu-xmlid="base.menu_administration"]',
             content: "Click on Settings",
             run: "click",
         },
         {
-            trigger: 'a.nav-link[data-menu-xmlid="base.menu_custom"]',
+            trigger: '[data-menu-xmlid="base.menu_custom"]',
             content: "Open Technical menu",
             run: "click",
         },
         {
-            trigger: '.o_nav_entry[data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
+            trigger: '[data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
             content: "Go to Binary Manifests",
             run: "click",
         },

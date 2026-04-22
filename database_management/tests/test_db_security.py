@@ -85,6 +85,7 @@ class TestDbSecurity(TransactionCase):
                 msg=f"{user.name} MUST NOT be able to access the Optimize Wizard.",
             ):
                 self.env["pg.optimize.wizard"].with_user(user).create({"ram_gb": 16})
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError,
@@ -93,3 +94,4 @@ class TestDbSecurity(TransactionCase):
                 self.env["pg.ha.wizard"].with_user(user).create(
                     {"primary_ip": "10.0.0.1"}
                 )
+                self.env.flush_all()

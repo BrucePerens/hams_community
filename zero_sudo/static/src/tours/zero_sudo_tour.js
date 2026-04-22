@@ -14,7 +14,7 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
             run: 'click',
         },
         {
-            trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
+            trigger: '[data-menu-xmlid="base.menu_administration"]',
             run: 'click',
         },
         {
@@ -31,12 +31,12 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
             run: 'click',
         },
         {
-            trigger: 'input[name="name"]',
-            run: 'text Tour Service Account',
+            trigger: 'div[name="name"] input',
+            run: 'edit Tour Service Account',
         },
         {
-            trigger: 'input[name="login"]',
-            run: 'text tour_service_account',
+            trigger: 'div[name="login"] input',
+            run: 'edit tour_service_account',
         },
         {
             trigger: 'div[name="is_service_account"] input',

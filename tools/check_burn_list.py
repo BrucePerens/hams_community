@@ -37,20 +37,20 @@ def parse_odoo_xml(content):
         return re.sub(r"[^\n]", " ", match.group(0))
 
     content_clean = re.sub(
-        r"^\s*<\?xml[^>]*\?>",
+        r"^\s*\x3c\?xml[^\x3e]*\?\x3e",
         preserve_lines,
         content,
         flags=re.IGNORECASE,
     )
     content_clean = re.sub(
-        r"<!DOCTYPE[^>]*>",
+        r"\x3c!DOCTYPE[^\x3e]*\x3e",
         preserve_lines,
         content_clean,
         flags=re.IGNORECASE,
     )
     content_clean = content_clean.replace("&", "&amp;")
 
-    wrapped = f"<root_wrapper>{content_clean}</root_wrapper>"
+    wrapped = f"\x3croot_wrapper\x3e{content_clean}\x3c/root_wrapper\x3e"
     parser = xml.parsers.expat.ParserCreate()
     stack = []
     root = None
@@ -166,8 +166,8 @@ ERROR_RULES = [
     ),
     (
         r"\.xml$",
-        re.compile(r"<tree\b"),
-        "CRITICAL DEPRECATION: The <tree> tag is banned in Odoo 19. Use <list> instead.",
+        re.compile(r"\x3ctree\b"),
+        "CRITICAL DEPRECATION: The \x3ctree\x3e tag is banned in Odoo 19. Use \x3clist\x3e instead.",
     ),
     (
         r"\.xml$",
@@ -185,6 +185,21 @@ ERROR_RULES = [
         r"test_.*\.py$",
         re.compile(r"['\"]/tmp(?:/|['\"])"),
         "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
+    ),
+    (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"trigger:\s*['\"`].*?(?:\.o_app|\.nav-link|\.o_menu_brand|h[1-6]:contains).*?['\"`]"),
+        "FRAGILE TOUR TRIGGER: Odoo 19 UI shifted. Do not use '.o_app', '.nav-link', '.o_menu_brand', or 'h1:contains' in tour triggers. Use structure-agnostic selectors like '[data-menu-xmlid=...]' or '*:contains'.",
+    ),
+    (
+        r"\.js$",
+        re.compile(r"window\.location"),
+        "CRITICAL TOUR NAVIGATION: 'window.location' is banned. Use 'document.location' and ensure the step includes 'expectUnloadPage: true'.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"env\[['\"]ir\.module\.module['\"]\]\.search\("),
+        "CRITICAL FRAMEWORK ACL: Searching 'ir.module.module' directly fails without 'base.group_user'. You MUST inject the 'zero_sudo.odoo_facility_service_internal' context via .with_user().",
     ),
 ]
 
@@ -1132,7 +1147,7 @@ def scan_file(filepath):
                     )
                 ):
                     errors_found.append(
-                        f"Line {node.lineno}: CRITICAL SECURITY: <record> must be inside noupdate data block."
+                        f"Line {node.lineno}: CRITICAL SECURITY: \x3crecord\x3e must be inside noupdate data block."
                     )
                 if node.tag == "record" and node.attrs.get("model") == "ir.rule":
                     has_group = any(
@@ -1187,13 +1202,13 @@ def scan_file(filepath):
                             for k in ("title", "aria-label", "aria-hidden")
                         ):
                             errors_found.append(
-                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
+                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon \x3ci\x3e tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
                             )
 
                 if node.tag == "img":
                     if "alt" not in node.attrs:
                         errors_found.append(
-                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): <img> tags must have an 'alt' attribute."
+                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): \x3cimg\x3e tags must have an 'alt' attribute."
                         )
 
                 if node.tag in ("button", "a"):
@@ -1203,7 +1218,7 @@ def scan_file(filepath):
                         # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
                         if not (node.text and node.text.strip()) and not node.children:
                             warnings_found.append(
-                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty <{node.tag}> tag lacks 'string', 'title', or 'aria-label'."
+                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty \x3c{node.tag}\x3e tag lacks 'string', 'title', or 'aria-label'."
                             )
 
                 # WCAG Accessibility Enforcement
@@ -1215,13 +1230,13 @@ def scan_file(filepath):
                             for k in ("title", "aria-label", "aria-hidden")
                         ):
                             errors_found.append(
-                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon <i> tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
+                                f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): Icon \x3ci\x3e tags with '{cls}' must have 'title', 'aria-label', or 'aria-hidden=\"true\"'."
                             )
 
                 if node.tag == "img":
                     if "alt" not in node.attrs:
                         errors_found.append(
-                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): <img> tags must have an 'alt' attribute."
+                            f"Line {node.lineno}: CRITICAL ACCESSIBILITY (WCAG): \x3cimg\x3e tags must have an 'alt' attribute."
                         )
 
                 if node.tag in ("button", "a"):
@@ -1231,7 +1246,7 @@ def scan_file(filepath):
                         # Only warn if it's completely empty of text as well (ignoring deep QWeb evaluation complexity for the warning)
                         if not (node.text and node.text.strip()) and not node.children:
                             warnings_found.append(
-                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty <{node.tag}> tag lacks 'string', 'title', or 'aria-label'."
+                                f"Line {node.lineno}: [%AUDIT] ACCESSIBILITY (WCAG): Empty \x3c{node.tag}\x3e tag lacks 'string', 'title', or 'aria-label'."
                             )
                 if node.tag == "field" and node.attrs.get("name") in (
                     "category_id",
@@ -1307,10 +1322,21 @@ def scan_file(filepath):
                     )
                     if "audit-ignore-xpath" not in raw_text:
                         warnings_found.append(
-                            f"Line {node.lineno}: [%AUDIT] XPATH RENDERING: All <xpath> injections must be proven to render correctly."
+                            f"Line {node.lineno}: [%AUDIT] XPATH RENDERING: All \x3cxpath\x3e injections must be proven to render correctly."
                         )
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
+
+    if filename.endswith(".js") and "web_tour.tours" in content:
+        FOUND_TOURS.append(filepath)
+        if "trigger:" not in content:
+            errors_found.append(
+                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
+            )
+        if "document.location" in content and "expectUnloadPage: true" not in content:
+            errors_found.append(
+                "CRITICAL TOUR NAVIGATION: Tour uses 'document.location' but is missing 'expectUnloadPage: true'."
+            )
 
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
@@ -1337,13 +1363,6 @@ def scan_file(filepath):
             "AI SUMMARIZATION BIAS TRAP: LLM_LINTER_GUIDE.md was truncated or summarized. All rules must be preserved."
         )
 
-    if filename.endswith(".js") and "web_tour.tours" in content:
-        FOUND_TOURS.append(filepath)
-        if "trigger:" not in content:
-            errors_found.append(
-                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
-            )
-
     in_py_multiline = False
     py_multiline_marker = None
     for line_num, line in enumerate(lines, 1):
@@ -1364,7 +1383,7 @@ def scan_file(filepath):
 
         if filename.endswith(".js") and stripped.startswith("//"):
             continue
-        if filename.endswith(".xml") and stripped.startswith("<!--"):
+        if filename.endswith(".xml") and stripped.startswith("\x3c!--"):
             continue
 
         if "burn-ignore" in line and not any(

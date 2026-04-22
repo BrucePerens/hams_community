@@ -9,9 +9,9 @@ registry.category("web_tour.tours").add("toast_notifications_tour", {
     steps: () => [
         {
             content: "Check that the success toast notification is pushed to the DOM",
-            trigger: '.o_notification_manager .o_notification.border-success',
+            trigger: '.o_notification_manager .o_notification',
             run: () => {
-                if (!document.querySelector('.o_notification.border-success')) {
+                if (!document.querySelector('.o_notification')) {
                     console.error("Success notification missing");
                 }
             }

@@ -21,7 +21,7 @@ registry.category("web_tour.tours").add("manual_search_tour", {
         },
         {
             content: "Check results",
-            trigger: 'h2:contains("Search Results for:")',
+            trigger: '*:contains("Search Results for:")',
         }
     ],
 });

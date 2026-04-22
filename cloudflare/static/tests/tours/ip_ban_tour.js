@@ -12,7 +12,7 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
         },
         {
             content: "Open App Switcher (if needed) or click Cloudflare Edge",
-            trigger: '.o_app[data-menu-xmlid="cloudflare.menu_cloudflare_root"], .o_menu_brand:contains("Cloudflare Edge")',
+            trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")',
             run: "click"
         },
         {

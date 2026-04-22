@@ -10,12 +10,12 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             run: 'click',
         },
         {
-            trigger: '.o_app[data-menu-xmlid="backup_management.menu_backup_root"]',
+            trigger: '[data-menu-xmlid="backup_management.menu_backup_root"]',
             content: "Click on Backup Management app",
             run: 'click',
         },
         {
-            trigger: 'button[data-menu-xmlid="backup_management.menu_backup_config"]',
+            trigger: 'button[data-menu-xmlid="backup_management.menu_backup_config"], [data-menu-xmlid="backup_management.menu_backup_config"]',
             content: "Open Configurations",
             run: 'click',
         },

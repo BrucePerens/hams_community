@@ -157,9 +157,11 @@ class TestBackupManagement(RealTransactionCase):
         from odoo.exceptions import UserError  # noqa: E402
         with self.assertRaises(UserError):
             self.config_kopia.write({"target_path": "/etc/shadow"})
+            self.env.flush_all()
 
         with self.assertRaises(UserError):
             self.config_kopia.write({"restore_drill_script": "/root/hack.sh"})
+            self.env.flush_all()
 
     def test_09_board_data_rpc(self):
         # Tests [@ANCHOR: backup_board_data]

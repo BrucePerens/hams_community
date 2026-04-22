@@ -35,12 +35,16 @@ class Module(models.Model):
         if not self.env["ir.model.data"]._xmlid_to_res_id(svc_account, raise_if_not_found=False):
              svc_account = "zero_sudo.odoo_facility_service_internal"
 
+        # Context for creating documentation
         svc_uid = utils._get_service_uid(svc_account)
         Article = self.env[article_model_name].with_user(svc_uid).with_context(
             mail_notrack=True, prefetch_fields=False
         )
 
-        modules = self.env['ir.module.module'].search([('state', '=', 'installed')], limit=10000)
+        # Context for reading the core ERP framework table
+        facility_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        modules = self.env['ir.module.module'].with_user(facility_uid).search([('state', '=', 'installed')], limit=10000)
+
         for mod in modules:
             manifest = get_manifest(mod.name)
             if not manifest or 'knowledge_docs' not in manifest:

@@ -10,7 +10,7 @@ registry.category("web_tour.tours").add("violation_report_tour", {
     steps: () => [
         {
             content: "Click the report violation button",
-            trigger: 'button[data-bs-target="#reportViolationModal"]',
+            trigger: '[data-bs-target="#reportViolationModal"]',
             run: "click",
         },
         {

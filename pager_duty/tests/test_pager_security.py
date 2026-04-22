@@ -75,6 +75,7 @@ class TestPagerSecurity(TransactionCase):
                 AccessError, msg=f"{user.name} MUST NOT be able to write incidents."
             ):
                 self.incident.with_user(user).write({"status": "acknowledged"})
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError, msg=f"{user.name} MUST NOT be able to create incidents."
@@ -82,6 +83,7 @@ class TestPagerSecurity(TransactionCase):
                 self.env["pager.incident"].with_user(user).create(
                     {"source": "x", "severity": "low", "description": "y"}
                 )
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError, msg=f"{user.name} MUST NOT be able to unlink incidents."

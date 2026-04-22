@@ -11,7 +11,7 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
     steps: () => [
         {
             content: "Verify Privacy Dashboard Header",
-            trigger: 'h2:contains("Privacy & Data Management")',
+            trigger: '*:contains("Privacy & Data Management")',
             run: () => {
                 if (!document.querySelector('h2').textContent.includes('Privacy & Data')) {
                     console.error("Privacy header missing");

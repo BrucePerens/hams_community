@@ -9,11 +9,11 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             run: 'click',
         },
         {
-            trigger: '.o_app[data-menu-xmlid="database_management.menu_admin_root"]',
+            trigger: '[data-menu-xmlid="database_management.menu_admin_root"]',
             run: 'click',
         },
         {
-            trigger: 'a[data-menu-xmlid="database_management.menu_db_tables"]',
+            trigger: '[data-menu-xmlid="database_management.menu_db_tables"]',
             run: 'click',
         },
         {

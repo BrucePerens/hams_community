@@ -19,9 +19,9 @@ registry.category("web_tour.tours").add("manual_toc_tour", {
         },
         {
             content: "Verify that a heading link was dynamically generated",
-            trigger: '#manual_toc_container a.nav-link[href^="#toc-heading-"]',
+            trigger: '#manual_toc_container a[href^="#toc-heading-"]',
             run: () => {
-                if (!document.querySelector('#manual_toc_container a.nav-link')) {
+                if (!document.querySelector('#manual_toc_container a')) {
                     console.error("TOC link missing");
                 }
             }

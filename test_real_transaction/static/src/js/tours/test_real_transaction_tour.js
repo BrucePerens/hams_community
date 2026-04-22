@@ -5,12 +5,12 @@ registry.category("web_tour.tours").add("test_real_transaction_tour", {
     url: "/web",
     steps: () => [
         {
-            trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
+            trigger: '[data-menu-xmlid="base.menu_administration"]',
             content: "Open Settings",
             run: "click",
         },
         {
-            trigger: 'a.nav-link[data-menu-xmlid="base.menu_custom"]',
+            trigger: '[data-menu-xmlid="base.menu_custom"]',
             content: "Open Technical Menu",
             run: "click",
         },

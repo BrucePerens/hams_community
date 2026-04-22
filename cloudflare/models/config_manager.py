@@ -53,9 +53,13 @@ class CloudflareConfigManager(models.AbstractModel):
         """
         max_mtime = 0.0
         utils = self.env["zero_sudo.security.utils"]
-        svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_purge")
+
+        # ADR-0064: The Cloudflare Purge account lacks base.group_user and cannot read ir.module.module.
+        # We must use the generalized facility service account for deep framework reads.
+        facility_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
+
         # ADR-0002: Use ORM for module list, but ensure we use limit=False for exhaustive scan
-        installed_modules = self.env['ir.module.module'].with_user(svc_uid).search([('state', '=', 'installed')], limit=1000).mapped('name')
+        installed_modules = self.env['ir.module.module'].with_user(facility_uid).search([('state', '=', 'installed')], limit=1000).mapped('name')
 
         for module_name in installed_modules:
             mod_path = get_module_path(module_name)

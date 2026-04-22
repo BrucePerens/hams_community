@@ -34,7 +34,7 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
-            trigger: '.o_menu_systray a:contains("New"), .o_menu_systray button:contains("New"), #site_new, a[data-action="new_page"]',
+            trigger: '.o_menu_systray *:contains("New"), #site_new, a[data-action="new_page"]',
             run: () => {
                 // By triggering on the New button, we mathematically prove the Proxy Owner
                 // was granted the correct editing UI to make subsequent pages.
