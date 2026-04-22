@@ -48,7 +48,7 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
             run: 'click',
         },
         {
-            trigger: '.o_form_readonly',
+            trigger: '.o_form_button_create',
             run: () => {},
         },
     ],

@@ -142,8 +142,28 @@ ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"\bwillUnmount\b"),
+        "CRITICAL OWL 2 DEPRECATION: 'willUnmount' is removed in OWL 2. Use 'onWillUnmount' from '@odoo/owl'.",
+    ),
+    (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"\.o_form_readonly"),
+        "FRAGILE TOUR TRIGGER: '.o_form_readonly' is frequently unreliable in Odoo 19 tours. Use standard buttons, '.o_form_button_create', or 'body' instead.",
+    ),
+    (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"\.o_notification_success"),
+        "FRAGILE TOUR TRIGGER: '.o_notification_success' changed in Odoo 19. Use standard notification classes or avoid waiting on toasts.",
+    ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"(?<![\'\"])(?:urllib\.request\.urlretrieve|requests\.(?:get|post|put|delete))\s*\("),
+        "CRITICAL TEST ISOLATION: Tests must not make real external HTTP requests. Mock the network call (e.g., via unittest.mock.patch).",
+    ),
+    (
+        r"\.js$",
         re.compile(r"\.o_form_saved_indicator"),
-        "CRITICAL JS TOUR DEPRECATION: '.o_form_saved_indicator' was removed in Odoo 19. Use '.o_form_readonly' instead.",
+        "CRITICAL JS TOUR DEPRECATION: '.o_form_saved_indicator' was removed in Odoo 19. Do not use it.",
     ),
     (
         r"\.js$",

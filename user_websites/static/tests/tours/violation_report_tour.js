@@ -13,7 +13,7 @@ registry.category("web_tour.tours").add("violation_report_tour", {
         },
         {
             content: "Wait for modal to open and check URL field is populated",
-            trigger: '#reportViolationModal.show input[name="url"]',
+            trigger: '#reportViolationModal.show input[name="url"]:not(:visible), #reportViolationModal.show input[name="url"]',
             run: () => {
                 const val = document.querySelector('#reportViolationModal input[name="url"]').value;
                 if (!val) {

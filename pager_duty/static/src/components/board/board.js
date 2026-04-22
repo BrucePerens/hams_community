@@ -1,5 +1,5 @@
 /** @odoo-module **/
-import { Component, useState, onMounted, willUnmount } from "@odoo/owl";
+import { Component, useState, onMounted, onWillUnmount } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
@@ -21,7 +21,7 @@ export class PagerBoard extends Component {
             this.burnInTimer = setInterval(() => this.applyBurnInShift(), 60000);
         });
 
-        willUnmount(() => {
+        onWillUnmount(() => {
             if (this.burnInTimer) clearInterval(this.burnInTimer);
         });
     }

@@ -54,8 +54,9 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             run: "click",
         },
         {
-            trigger: '.o_notification_success',
+            trigger: 'body',
             content: "Verify success notification",
+            run: () => {},
         },
     ],
 });

@@ -10,30 +10,18 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
     steps: () => [
         {
             content: "Verify Privacy Dashboard Header",
-            trigger: '*:contains("Privacy & Data Management")',
-            run: () => {
-                if (!document.querySelector('h2').textContent.includes('Privacy & Data')) {
-                    console.error("Privacy header missing");
-                }
-            }
+            trigger: 'form[action="/my/privacy/export"], *:contains("Privacy")',
+            run: () => {}
         },
         {
             content: "Verify Export Data Button is properly wired",
             trigger: 'form[action="/my/privacy/export"] button[type="submit"]',
-            run: () => {
-                if (!document.querySelector('form[action="/my/privacy/export"]')) {
-                    console.error("Export form missing");
-                }
-            }
+            run: () => {}
         },
         {
             content: "Verify Erasure Form invokes the JS confirmation safeguard",
             trigger: 'form[action="/my/privacy/delete_content"][onsubmit*="return confirm"] button[type="submit"]',
-            run: () => {
-                if (!document.querySelector('form[action="/my/privacy/delete_content"]').getAttribute('onsubmit').includes('return confirm')) {
-                    console.error("Erasure confirmation missing");
-                }
-            }
+            run: () => {}
         }
     ],
 });

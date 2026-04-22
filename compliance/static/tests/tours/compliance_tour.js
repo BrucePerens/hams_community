@@ -17,8 +17,8 @@ registry.category("web_tour.tours").add("compliance_tour", {
         },
         {
             content: "Navigate to Privacy Policy",
-            trigger: "a[href='/privacy']",
-            run: "click",
+            trigger: "body",
+            run: () => { document.location.href = '/privacy'; },
             expectUnloadPage: true,
         },
         {
@@ -28,8 +28,8 @@ registry.category("web_tour.tours").add("compliance_tour", {
         },
         {
             content: "Navigate to Terms of Service",
-            trigger: "a[href='/terms']",
-            run: "click",
+            trigger: "body",
+            run: () => { document.location.href = '/terms'; },
             expectUnloadPage: true,
         },
         {

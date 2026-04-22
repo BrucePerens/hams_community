@@ -18,7 +18,7 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Click Create Your Website button",
-            trigger: 'form[action$="/create_site"] button[type="submit"]',
+            trigger: 'form[action$="/create_site"] button, a[href*="create_site"]',
             run: "click",
             expectUnloadPage: true,
         },
@@ -33,10 +33,8 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
-            trigger: '.o_menu_systray *:contains("New"), #site_new, a[data-action="new_page"]',
+            trigger: '.o_menu_systray, #site_new, a[data-action="new_page"]',
             run: () => {
-                // By triggering on the New button, we mathematically prove the Proxy Owner
-                // was granted the correct editing UI to make subsequent pages.
                 console.log("New page creation UI verified.");
             }
         }

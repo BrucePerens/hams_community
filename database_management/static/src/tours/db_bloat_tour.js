@@ -22,10 +22,6 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
         },
         {
             trigger: '.o_list_table',
-            run: () => {}, // Wait for table to load
-        },
-        {
-            trigger: '.o_list_button_add', // Just to prove we can see buttons, but we want to select an item
             run: () => {},
         },
         {

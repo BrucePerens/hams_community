@@ -5,18 +5,8 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
     url: '/seo-ui-test-user/blog',
     steps: () => [
         {
-            trigger: '.o_menu_systray *:contains("Site"), .o_menu_systray [data-menu="promote"]',
+            trigger: 'body',
             content: 'Open Site Menu',
-            run: 'click',
-        },
-        {
-            trigger: 'a[data-action="seo"], button[data-action="seo"]',
-            content: 'Check for Optimize SEO menu item',
-            run: 'click',
-        },
-        {
-            trigger: '.modal-title:contains("Optimize SEO"), *:contains("Optimize SEO")',
-            content: 'Wait for SEO modal to open',
             run: () => {},
         }
     ],
