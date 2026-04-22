@@ -6,7 +6,12 @@
     "category": "Security",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base", "web", "mail"],
+    "depends": ["base", "web", "web_tour", "mail"],
+    "assets": {
+      "web.assets_tests": [
+        "zero_sudo/static/src/**/*"
+      ],
+    },
     "data": [
         "data/security_data.xml",
         "security/ir.model.access.csv",

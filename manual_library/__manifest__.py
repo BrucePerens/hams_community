@@ -17,6 +17,7 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
         "mail",
         "website",
         "zero_sudo",
+        "test_tours",
     ],
     "external_dependencies": {
         "python": [],

@@ -12,7 +12,6 @@ import logging
 import os
 import psycopg2
 import re
-import shutil
 import signal
 import socket
 import subprocess
@@ -84,7 +83,6 @@ class FailureExtractor:
         self._written = False
 
         if not disable_atexit:
-
             atexit.register(self.finish_and_write)
 
     def set_context(self, context_name):
@@ -700,14 +698,14 @@ rm -rf /opt/hams/spool/* 2>/dev/null || true
 
 export HOME=/var/lib/odoo
 
-mkdir -p /mnt/upper/base_repo /mnt/work/base_repo
-mount -t overlay overlay -o lowerdir={base_dir},upperdir=/mnt/upper/base_repo,workdir=/mnt/work/base_repo {base_dir}
+mount --bind {base_dir} {base_dir}
+mount -o remount,bind,ro {base_dir}
 
 for dir in "{base_dir}/../hams_community"; do
     if [ -d "$dir" ]; then
         REAL_DIR=$(realpath "$dir")
-        mkdir -p "/mnt/upper/hams_comm" "/mnt/work/hams_comm"
-        mount -t overlay overlay -o lowerdir="$REAL_DIR",upperdir=/mnt/upper/hams_comm,workdir=/mnt/work/hams_comm "$REAL_DIR"
+        mount --bind "$REAL_DIR" "$REAL_DIR"
+        mount -o remount,bind,ro "$REAL_DIR"
     fi
 done
 
@@ -727,7 +725,6 @@ export PYTHONDONTWRITEBYTECODE=1
 
 sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
-
 su -s /bin/bash rabbitmq -c 'rabbitmqctl stop' >/dev/null 2>&1
 pkill -u redis redis-server >/dev/null 2>&1
 su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop' >/dev/null 2>&1
@@ -860,53 +857,6 @@ def main():
         )
         args = parser.parse_args()
 
-        is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
-
-        ignore_filepath = os.path.join(base_dir, args.config)
-        ignore_patterns = load_ignore_file(ignore_filepath)
-
-        if args.module:
-            target_modules = [args.module]
-        else:
-            target_modules = get_local_modules(base_dir, ignore_patterns)
-
-        if not target_modules:
-            print("❌ ERROR: No modules found in this repository. Aborting.")
-            sys.exit(1)
-
-        # Edit and un-edit manifest files.
-        # Inside the namespace, the repo is an OverlayFS, so editing them modifies the copy safely.
-        # Inside Jules VM, it modifies the host, but atexit cleanly un-edits it for PR generation.
-        patched_manifests = []
-        def restore_manifests():
-            for bak_path, orig_path in patched_manifests:
-                try:
-                    if os.path.exists(bak_path):
-                        shutil.move(bak_path, orig_path)
-                except Exception:
-                    pass
-        atexit.register(restore_manifests)
-
-        for mod in target_modules:
-            if mod == "test_tours":
-                continue
-            manifest_path = os.path.join(base_dir, mod, "__manifest__.py")
-            if os.path.exists(manifest_path):
-                with open(manifest_path, "r", encoding="utf-8") as f:
-                    orig_content = f.read()
-                if '"test_tours"' not in orig_content and "'test_tours'" not in orig_content:
-                    pat = re.compile(r'([\'"]depends[\'"]\s*:\s*\[)')
-                    new_content, num_subs = pat.subn(r'\g<1>"test_tours", ', orig_content)
-                    if num_subs > 0:
-                        bak_path = manifest_path + ".bak"
-                        try:
-                            shutil.copy2(manifest_path, bak_path)
-                            patched_manifests.append((bak_path, manifest_path))
-                            with open(manifest_path, "w", encoding="utf-8") as f:
-                                f.write(new_content)
-                        except Exception as e:
-                            print(f"[*] WARNING: Could not patch manifest for {mod}: {e}")
-
         try:
             infrastructure.scaffold_test_environment(
                 args.db, provision_dirs=(os.environ.get("HAMS_ISOLATED_NS") != "1")
@@ -930,6 +880,9 @@ def main():
             )
 
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
+
+        is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
         # Environment Provisioning (Moved here to execute on Host with RW access)
         if os.environ.get("HAMS_ISOLATED_NS") != "1":
@@ -1061,9 +1014,25 @@ def main():
 
         addons_path = get_addons_path(base_dir)
 
-        # Inject test_tours globally into the test framework so all modules can run tours
-        mod_string = "base,test_tours," + ",".join(target_modules)
-        test_tags = "/test_tours," + ",".join(["/{}".format(m) for m in target_modules])
+        ignore_filepath = os.path.join(base_dir, args.config)
+        ignore_patterns = load_ignore_file(ignore_filepath)
+
+        if args.module:
+            target_modules = [args.module]
+        else:
+            target_modules = get_local_modules(base_dir, ignore_patterns)
+
+        if not target_modules:
+            print("❌ ERROR: No modules found in this repository. Aborting.")
+            sys.exit(1)
+
+        # Always explicitly place test_tours first in the module list to bootstrap the web framework
+        if "test_tours" in target_modules:
+            target_modules.remove("test_tours")
+        target_modules.insert(0, "test_tours")
+
+        mod_string = "base," + ",".join(target_modules)
+        test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
         extractor = FailureExtractor(args.error_log)
 
@@ -1210,8 +1179,8 @@ def main():
                 print("[*] Testing Module: {}".format(mod))
                 print("[*] ----------------------------------------------------")
 
-                # Globally inject test_tours so headless browser tests pass regardless of manifest inclusion
-                mod_with_tour = f"test_tours,{mod}"
+                mod_with_tour = f"test_tours,{mod}" if mod != "test_tours" else "test_tours"
+                individual_tags = f"/test_tours,/{mod}" if mod != "test_tours" else "/test_tours"
 
                 restored, cache_file = check_and_restore_cache(args.db, mod_with_tour)
                 if not restored:
@@ -1252,7 +1221,7 @@ def main():
                     mod_with_tour,
                     "--test-enable",
                     "--test-tags",
-                    f"/test_tours,/{mod}",
+                    individual_tags,
                     "--stop-after-init",
                     "--workers=0",
                     "--max-cron-threads=0",
@@ -1275,8 +1244,7 @@ def main():
         elif args.mode == "xml":
             failed_modules = []
             for mod in target_modules:
-                # Globally inject test_tours so headless browser dependencies resolve during view compilation
-                mod_with_tour = f"test_tours,{mod}"
+                mod_with_tour = f"test_tours,{mod}" if mod != "test_tours" else "test_tours"
 
                 print("\n[*] Checking XML views in: {}".format(mod))
                 cmd = [

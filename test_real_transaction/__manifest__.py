@@ -10,7 +10,7 @@
         This allows developers to write tests that perform true database commits,
         which is critical for testing One2many inverse cache anomalies and cross-worker behaviors.
     """,
-    "depends": ["base", "zero_sudo"],
+    "depends": ["base", "zero_sudo", "test_tours"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
