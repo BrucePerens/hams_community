@@ -9,6 +9,7 @@ registry.category("web_tour.tours").add("compliance_tour", {
             content: "Click on Cookie Policy link in cookie bar",
             trigger: "#website_cookies_bar a[href='/cookie-policy']",
             run: "click",
+            expectUnloadPage: true,
         },
         {
             content: "Verify Cookie Policy page title",
@@ -19,6 +20,7 @@ registry.category("web_tour.tours").add("compliance_tour", {
             content: "Navigate to Privacy Policy",
             trigger: "a[href='/privacy']",
             run: "click",
+            expectUnloadPage: true,
         },
         {
             content: "Verify Privacy Policy page title",
@@ -29,6 +31,7 @@ registry.category("web_tour.tours").add("compliance_tour", {
             content: "Navigate to Terms of Service",
             trigger: "a[href='/terms']",
             run: "click",
+            expectUnloadPage: true,
         },
         {
             content: "Verify Terms of Service page title",

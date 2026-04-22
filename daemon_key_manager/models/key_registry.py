@@ -48,7 +48,7 @@ class DaemonKeyRegistry(models.Model):
         # [@ANCHOR: security_constraints_path]
         mandatory_prefix = "/var/lib/odoo/daemon_keys/"
         for record in self:
-            path = os.path.abspath(record.env_file_path)
+            path = os.path.realpath(record.env_file_path)
             if not path.startswith(mandatory_prefix):
                 raise UserError(
                     _("Security Alert: The environment file path must start with '%s'.")
@@ -154,7 +154,7 @@ class DaemonKeyRegistry(models.Model):
         Creates directories with 0700 if they do not exist.
         """
         # [@ANCHOR: write_secure_env_file_logic]
-        path = os.path.abspath(path)
+        path = os.path.realpath(path)
         # Sandbox check: Prevent writing to sensitive system directories
         forbidden_prefixes = ["/etc", "/root", "/boot", "/sys", "/proc", "/dev"]
         if any(path.startswith(pref) for pref in forbidden_prefixes):

@@ -12,12 +12,14 @@
                         <!-- [@ANCHOR: dropzone_users] -->
                     </div>
                     <group>
-                        <group string="Configuration">
+                        <group>
+                            <separator string="Configuration"/>
                             <field name="website_slug"/>
                             <field name="website_page_limit"/>
                             <field name="privacy_show_in_directory"/>
                         </group>
-                        <group string="Moderation &amp; Trust" groups="user_websites.group_user_websites_administrator">
+                        <group groups="user_websites.group_user_websites_administrator">
+                            <separator string="Moderation &amp; Trust"/>
                             <field name="violation_strike_count"/>
                             <field name="is_suspended_from_websites" widget="boolean_toggle"/>
                             <div class="mt-2" invisible="not is_suspended_from_websites">

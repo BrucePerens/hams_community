@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
+
     <record id="view_content_violation_report_kanban" model="ir.ui.view"> <!-- audit-ignore-view: Tested by [@ANCHOR: test_user_websites_backend_views_rendering] -->
         <field name="name">content.violation.report.kanban</field>
         <field name="model">content.violation.report</field>
@@ -53,10 +53,10 @@
                 <field name="target_url"/>
                 <field name="content_owner_id"/>
                 <field name="content_group_id"/>
-                <field name="state" widget="badge" 
-                       decoration-danger="state=='new'" 
-                       decoration-warning="state=='under_review'" 
-                       decoration-success="state=='dismissed'" 
+                <field name="state" widget="badge"
+                       decoration-danger="state=='new'"
+                       decoration-warning="state=='under_review'"
+                       decoration-success="state=='dismissed'"
                        decoration-muted="state=='action_taken'"/>
             </list>
         </field>
@@ -79,12 +79,14 @@
                         <h1><field name="target_url" widget="url"/></h1>
                     </div>
                     <group>
-                        <group string="Reporter Details">
+                        <group>
+                            <separator string="Reporter Details"/>
                             <field name="create_date" readonly="1"/>
                             <field name="reported_by_user_id" readonly="1"/>
                             <field name="reported_by_email" readonly="1"/>
                         </group>
-                        <group string="Target Details">
+                        <group>
+                            <separator string="Target Details"/>
                             <field name="content_owner_id" readonly="1"/>
                             <field name="content_group_id" readonly="1"/>
                         </group>

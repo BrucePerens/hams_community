@@ -2,7 +2,7 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("binary_install_tour", {
-    url: "/web",
+    url: "/web?debug=1",
     steps: () => [
         {
             trigger: '.o_navbar_apps_menu button',

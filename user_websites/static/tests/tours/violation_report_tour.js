@@ -6,7 +6,6 @@ import { registry } from "@web/core/registry";
 // Tests [@ANCHOR: violation_report_logic]
 registry.category("web_tour.tours").add("violation_report_tour", {
     test: true,
-    url: "/",
     steps: () => [
         {
             content: "Click the report violation button",

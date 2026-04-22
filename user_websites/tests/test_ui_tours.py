@@ -10,6 +10,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             {
                 "name": "Tour User",
                 "login": "touruser",
+                "password": "touruser",
                 "website_slug": "touruser",
                 "group_ids": [
                     (
@@ -67,6 +68,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             {
                 "name": "Site Tour User",
                 "login": "sitetour",
+                "password": "sitetour",
                 "website_slug": "sitetour",
                 "group_ids": [
                     (
@@ -90,6 +92,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
             {
                 "name": "Blog Tour User",
                 "login": "blogtour",
+                "password": "blogtour",
                 "website_slug": "blogtour",
                 "group_ids": [
                     (

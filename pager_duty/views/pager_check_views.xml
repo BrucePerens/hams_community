@@ -54,10 +54,12 @@
                                     <field name="parent_check_id"/>
                                         <field name="auto_remediate_script"/>
                                     </group>
-                                    <group string="Documentation">
+                                    <group>
+                                        <separator string="Documentation"/>
                                         <field name="comment" widget="text"/>
                                     </group>
-                                <group string="Protocol Specifics">
+                                <group>
+                                    <separator string="Protocol Specifics"/>
                                     <field name="port" invisible="check_type not in ('tcp', 'udp', 'redis', 'rabbitmq', 'postgres')"/>
                                     <field name="dbname" invisible="check_type != 'postgres'"/>
                                     <field name="dbuser" invisible="check_type != 'postgres'"/>

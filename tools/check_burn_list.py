@@ -137,6 +137,11 @@ ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"\.o_form_saved_indicator"),
+        "CRITICAL JS TOUR DEPRECATION: '.o_form_saved_indicator' was removed in Odoo 19. Use '.o_form_readonly' instead.",
+    ),
+    (
+        r"\.js$",
         re.compile(r"\$\("),
         "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components.",
     ),
@@ -1192,6 +1197,18 @@ def scan_file(filepath):
                     )
                 if "t-raw" in node.attrs:
                     errors_found.append(f"Line {node.lineno}: CRITICAL XSS: use t-out.")
+                if "t-esc" in node.attrs:
+                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: t-esc is banned. Use t-out.")
+                if "attrs" in node.attrs:
+                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: The 'attrs' attribute was removed in Odoo 17+. Use invisible, readonly, and required directly.")
+                if node.attrs.get("t-name") == "kanban-box":
+                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: t-name=\"kanban-box\" is banned in Odoo 19. Use t-name=\"card\".")
+                if node.tag == "group" and (node.attrs.get("expand") == "0" or "string" in node.attrs):
+                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: <group expand=\"0\"> and <group string=\"...\"> are banned in Odoo 19. Odoo 19 requires clean group tags.")
+                if node.tag == "xpath" and "expr" in node.attrs:
+                    expr = str(node.attrs.get("expr", ""))
+                    if ".." in expr or re.search(r"//[a-zA-Z0-9_]+\[\s*[a-zA-Z0-9_]+\[@", expr):
+                        errors_found.append(f"Line {node.lineno}: FRAGILE XPATH: Parent axis traversals (..) and complex container predicates are banned.")
 
                 # WCAG Accessibility Enforcement
                 if node.tag == "i":

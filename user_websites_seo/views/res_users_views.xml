@@ -8,7 +8,8 @@
             <xpath expr="//notebook" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_seo_widget_tour] -->
                 <page string="SEO Metadata" name="user_websites_seo_settings">
                     <group>
-                        <group string="SEO Data">
+                        <group>
+                            <separator string="SEO Data"/>
                             <field name="seo_name"/>
                             <field name="website_meta_title"/>
                             <field name="website_meta_description"/>

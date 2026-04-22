@@ -10,8 +10,13 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             run: 'click',
         },
         {
-            trigger: '[data-menu-xmlid="backup_management.menu_backup_root"]',
+            trigger: '[data-menu-xmlid="backup_management.menu_admin_root"]',
             content: "Click on Backup Management app",
+            run: 'click',
+        },
+        {
+            trigger: '[data-menu-xmlid="backup_management.menu_backup_root"]',
+            content: "Click on Backups Submenu",
             run: 'click',
         },
         {
