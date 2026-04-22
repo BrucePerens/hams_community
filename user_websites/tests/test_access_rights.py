@@ -58,6 +58,7 @@ class TestAccessRights(odoo.tests.common.HttpCase):
             self.env["res.config.settings"].with_user(self.regular_user).create(
                 {}
             ).execute()
+            self.env.flush_all()
         self.logout()
 
     def test_02_admin_can_access_settings_and_see_field(self):

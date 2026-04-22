@@ -117,11 +117,13 @@ class TestManualAccessRights(TransactionCase):
             self.unpublished_workspace_article.with_user(self.internal_user).write(
                 {"name": "Hacked"}
             )
+            self.env.flush_all()
 
         with self.assertRaises(AccessError):
             self.env["knowledge.article"].with_user(self.internal_user).create(
                 {"name": "Rogue Article"}
             )
+            self.env.flush_all()
 
         with self.assertRaises(AccessError):
             self.unpublished_workspace_article.with_user(self.internal_user).unlink()
@@ -147,11 +149,13 @@ class TestManualAccessRights(TransactionCase):
             self.published_article.with_user(self.public_user).write(
                 {"name": "Vandalized"}
             )
+            self.env.flush_all()
 
         with self.assertRaises(AccessError):
             self.env["knowledge.article"].with_user(self.public_user).create(
                 {"name": "Spam Article"}
             )
+            self.env.flush_all()
 
     def test_06_private_creator_access(self):
         """Users who create a private article should implicitly have read access to it."""

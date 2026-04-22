@@ -43,6 +43,7 @@ class TestRobustnessAndBoundaries(odoo.tests.common.HttpCase):
                         "login": "infloop",
                     }
                 )
+                self.env.flush_all()
 
     def test_02_uppercase_reserved_slug(self):
         """Verify that trying to use a reserved slug with mixed casing is caught by the validations."""
@@ -57,6 +58,7 @@ class TestRobustnessAndBoundaries(odoo.tests.common.HttpCase):
                     "website_slug": "ConTacTUs",
                 }
             )
+            self.env.flush_all()
 
     def test_03_violation_report_length_truncation(self):
         """Verify that overly long descriptions are safely truncated without crashing the DB."""

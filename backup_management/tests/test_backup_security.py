@@ -101,6 +101,7 @@ class TestBackupSecurity(TransactionCase):
                 AccessError, msg=f"{user.name} MUST NOT be able to write configs."
             ):
                 self.config.with_user(user).write({"name": "hacked"})
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError, msg=f"{user.name} MUST NOT be able to create configs."
@@ -108,6 +109,7 @@ class TestBackupSecurity(TransactionCase):
                 self.env["backup.config"].with_user(user).create(
                     {"name": "x", "engine": "kopia", "target_path": "y"}
                 )
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError, msg=f"{user.name} MUST NOT be able to unlink configs."

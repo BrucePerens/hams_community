@@ -32,6 +32,7 @@ class TestManualORMLogic(TransactionCase):
         ):
             # Attempt to set Node A's parent to Node C (A -> B -> C -> A)
             self.article_a.write({"parent_id": self.article_c.id})
+            self.env.flush_all()
         # Tests [@ANCHOR: manual_compute_website_url]
         # Tests [@ANCHOR: story_manual_url_generation]
 

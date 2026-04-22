@@ -11,8 +11,8 @@ registry.category("web_tour.tours").add("create_site_tour", {
             content: "Navigate from the portal to the site home page placeholder",
             trigger: 'body',
             run: () => {
-                if (!window.location.pathname.includes('/sitetour/home')) {
-                    window.location.href = '/sitetour/home';
+                if (!document.location.pathname.includes('/sitetour/home')) {
+                    document.location.href = '/sitetour/home';
                 }
             },
             expectUnloadPage: true,
@@ -36,6 +36,8 @@ registry.category("web_tour.tours").add("create_site_tour", {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
             trigger: '.o_menu_systray a:contains("New"), .o_menu_systray button:contains("New"), #site_new, a[data-action="new_page"]',
             run: () => {
+                // By triggering on the New button, we mathematically prove the Proxy Owner
+                // was granted the correct editing UI to make subsequent pages.
                 console.log("New page creation UI verified.");
             }
         }

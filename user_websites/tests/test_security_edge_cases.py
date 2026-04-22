@@ -75,6 +75,7 @@ class TestSecurityEdgeCases(TransactionCase):
         """Intruder tries to edit Owner's personal page."""
         with self.assertRaises(AccessError):
             self.personal_page.with_user(self.user_intruder).write({"name": "Hacked"})
+            self.env.flush_all()
 
     def test_02_intruder_cannot_unlink_personal_page(self):
         """Intruder tries to delete Owner's personal page."""
@@ -87,6 +88,7 @@ class TestSecurityEdgeCases(TransactionCase):
             self.group_page.with_user(self.user_intruder).write(
                 {"name": "Hacked Group"}
             )
+            self.env.flush_all()
 
     def test_04_owner_can_write_personal_and_group_page(self):
         """Ensure the true owner/member CAN write to their own resources."""
@@ -105,6 +107,7 @@ class TestSecurityEdgeCases(TransactionCase):
             self.test_group.with_user(self.user_intruder).write(
                 {"name": "Hacked Group Name"}
             )
+            self.env.flush_all()
 
     def test_06_intruder_cannot_unlink_group_page(self):
         """Ensure intruder cannot delete a Group page they do not have membership in."""

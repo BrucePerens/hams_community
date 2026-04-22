@@ -57,6 +57,7 @@ class TestSEOModels(TransactionCase):
         reg2_record_by_reg1 = self.regular_user2.with_user(self.regular_user1)
         with self.assertRaises(AccessError):
             reg2_record_by_reg1.write({'website_meta_title': 'Hacked Title'})
+            self.env.flush_all()
 
     def test_check_access_rule_user_websites_group(self):
         # [@ANCHOR: test_check_access_rule_user_websites_group]
@@ -72,3 +73,4 @@ class TestSEOModels(TransactionCase):
         group_by_reg2 = self.group.with_user(self.regular_user2)
         with self.assertRaises(AccessError):
             group_by_reg2.write({'website_meta_title': 'Hacked Group Title'})
+            self.env.flush_all()

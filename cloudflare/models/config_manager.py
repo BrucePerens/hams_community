@@ -52,8 +52,10 @@ class CloudflareConfigManager(models.AbstractModel):
         it automatically triggers an edge purge for the 'odoo-static-assets' Cache-Tag.
         """
         max_mtime = 0.0
+        utils = self.env["zero_sudo.security.utils"]
+        svc_uid = utils._get_service_uid("cloudflare.user_cloudflare_purge")
         # ADR-0002: Use ORM for module list, but ensure we use limit=False for exhaustive scan
-        installed_modules = self.env['ir.module.module'].search([('state', '=', 'installed')], limit=1000).mapped('name')
+        installed_modules = self.env['ir.module.module'].with_user(svc_uid).search([('state', '=', 'installed')], limit=1000).mapped('name')
 
         for module_name in installed_modules:
             mod_path = get_module_path(module_name)
@@ -74,7 +76,6 @@ class CloudflareConfigManager(models.AbstractModel):
         latest_mtime = int(max_mtime)
 
         try:
-            utils = self.env["zero_sudo.security.utils"]
             # Use centralized config utilities instead of manual service environments
             last_mtime = int(utils._get_system_param("cloudflare.last_static_mtime", "0"))
 

@@ -5,12 +5,12 @@ import publicWidget from "@web/legacy/js/public/public_widget";
 /**
  * URL Toast Notification Widget
  * * Adheres to the requirement mandating Odoo's native notification bus for transient actions.
- * Listens for success parameters in the URL, fires a toast notification, 
+ * Listens for success parameters in the URL, fires a toast notification,
  * and cleans the URL via history.replaceState to prevent duplicate triggers on refresh.
  */
 publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
     selector: '#wrapwrap', // Attach to the global wrapper so it runs on all frontend pages
-    
+
     /**
      * @override
      */
@@ -22,10 +22,10 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
     // [@ANCHOR: toast_notifications_logic]
     // Verified by [@ANCHOR: test_tour_toast_notifications]
     _checkUrlForNotifications: function () {
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(document.location.search);
         let message = '';
         let title = '';
-        let type = 'success'; 
+        let type = 'success';
 
         // Map URL query parameters to specific notification messages
         if (urlParams.has('report_submitted')) {
@@ -49,10 +49,10 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
                 type: type,
                 sticky: false,
             });
-            
+
             // Clean up the URL to maintain a polished UX
             // We use replaceState so the user's back-button history is not affected
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            const newUrl = document.location.protocol + "//" + document.location.host + document.location.pathname;
             window.history.replaceState({path: newUrl}, '', newUrl);
         }
     },
@@ -60,7 +60,7 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
 
 publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
     selector: '#wrapwrap',
-    
+
     start: function () {
         this._super.apply(this, arguments);
         if (sessionStorage.getItem('admin_violation_toast_shown') !== 'true') {
@@ -92,4 +92,3 @@ publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
             });
     }
 });
-
