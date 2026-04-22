@@ -2,8 +2,8 @@
 """
 gemini_startup.py
 Generates a highly-focused initialization payload for Gemini sessions.
-Combines uncommitted/modified Git files with critical architectural docs,
-relying on Gemini's GitHub integration to fetch the rest of the repository dynamically.
+Instructs the AI to fetch static docs while only embedding uncommitted WIP files,
+resulting in a lean, extremely actionable starting prompt.
 """
 
 import os
@@ -83,22 +83,6 @@ def get_uncommitted_files():
         return []
 
 
-def get_docs_files(root_dir):
-    """Recursively fetches all files within the docs/ directory."""
-    docs_dir = os.path.join(root_dir, "docs")
-    docs_files = []
-    if os.path.exists(docs_dir):
-        for dirpath, _, filenames in os.walk(docs_dir):
-            for filename in filenames:
-                ext = os.path.splitext(filename)[1].lower()
-                if ext not in IGNORE_EXTENSIONS:
-                    full_path = os.path.join(dirpath, filename)
-                    rel_path = os.path.relpath(full_path, root_dir)
-                    # Normalize path separators for consistency
-                    docs_files.append(rel_path.replace("\\", "/"))
-    return docs_files
-
-
 def is_text_file(filepath):
     ext = os.path.splitext(filepath)[1].lower()
     return ext not in IGNORE_EXTENSIONS
@@ -114,15 +98,10 @@ def generate_payload(modules=None):
     github_user, repo_name = get_github_info(root_dir)
 
     uncommitted = get_uncommitted_files()
-    docs_files = get_docs_files(root_dir)
 
-    # Amalgamate target files, ensuring uniqueness
+    # We now rely on the AI fetching AGENTS.md and docs/ dynamically,
+    # unless they are actively being modified (uncommitted).
     target_files = set()
-    if os.path.exists("AGENTS.md"):
-        target_files.add("AGENTS.md")
-
-    for f in docs_files:
-        target_files.add(f)
 
     for f in uncommitted:
         if os.path.exists(f) and os.path.isfile(f):
@@ -142,51 +121,50 @@ def generate_payload(modules=None):
         out.write(f"Repository Target: {github_user}/{repo_name}\n\n")
 
         out.write("--- CONTEXT INSTRUCTIONS ---\n")
-        out.write(
-            "1. You have read-only access to my GitHub repository via your extensions.\n"
-        )
-        out.write(
-            "2. The files below represent my CURRENT UNPUSHED WORK-IN-PROGRESS, alongside our strict architectural mandates (AGENTS.md and docs/).\n"
-        )
-        out.write(
-            "3. You MUST prioritize the contents of this file over the historical state on GitHub. For any other files, use your GitHub integration to fetch them dynamically.\n"
-        )
-        out.write(
-            "4. Code Generation: You MUST continue using the MIME-like Parcel transport schema defined in AGENTS.md to modify my local files.\n"
-        )
+        out.write("1. You have read-only access to my GitHub repository via your extensions.\n")
+        out.write("2. The files explicitly dumped below represent my CURRENT UNPUSHED WORK-IN-PROGRESS.\n")
+        out.write("   You MUST prioritize the contents of this payload over the historical state on GitHub.\n")
+        out.write("3. MANDATORY READING: You MUST use your file fetcher or GitHub integration to READ `AGENTS.md`\n")
+        out.write("   and `docs/LLM_GENERAL_REQUIREMENTS.md` BEFORE taking any other action. These contain your strict architectural mandates.\n")
+        out.write("4. Code Generation: You MUST continue using the MIME-like Parcel transport schema defined in\n")
+        out.write("   `docs/LLM_PARCEL_FORMAT.md` to modify my local files.\n")
+
         if modules:
-            out.write(
-                "6. MODULE LOADING MANDATE: Use your @GitHub integration to explicitly fetch and load the following modules/paths before proceeding:\n"
-            )
+            out.write("5. MODULE LOADING MANDATE: Use your @GitHub integration to explicitly fetch and load the following modules/paths before proceeding:\n")
             for mod in modules:
                 out.write(f"   - {mod}\n")
 
         out.write("----------------------------\n\n")
 
-        for filepath in sorted(target_files):
-            if not is_text_file(filepath):
-                continue
+        if target_files:
+            for filepath in sorted(target_files):
+                if not is_text_file(filepath):
+                    continue
 
-            try:
-                with open(filepath, "r", encoding="utf-8") as infile:
-                    content = infile.read()
+                try:
+                    with open(filepath, "r", encoding="utf-8") as infile:
+                        content = infile.read()
 
-                out.write(f"File: {filepath}\n")
-                out.write("=" * 80 + "\n")
-                out.write(content)
-                if not content.endswith("\n"):
-                    out.write("\n")
-                out.write("=" * 80 + "\n\n")
-            except UnicodeDecodeError:
-                # Gracefully skip binaries disguised without extensions
-                pass
-            except Exception as e:
-                print(f"[!] Error reading {filepath}: {e}")
+                    out.write(f"File: {filepath}\n")
+                    out.write("=" * 80 + "\n")
+                    out.write(content)
+                    if not content.endswith("\n"):
+                        out.write("\n")
+                    out.write("=" * 80 + "\n\n")
+                except UnicodeDecodeError:
+                    # Gracefully skip binaries disguised without extensions
+                    pass
+                except Exception as e:
+                    print(f"[!] Error reading {filepath}: {e}")
+        else:
+            out.write("[No uncommitted text files found. Rely on GitHub state.]\n\n")
+
+        out.write("--- IMMEDIATE DIRECTIVE ---\n")
+        out.write("Acknowledge receipt of these instructions. Confirm you have read the mandatory files ")
+        out.write("(`AGENTS.md`, `docs/LLM_GENERAL_REQUIREMENTS.md`), and ask me what specific task, feature, or bug I would like to work on first.\n")
 
     print(f"\n[+] Successfully generated {output_filename}")
-    print(
-        f"    Included: {len(target_files)} files (AGENTS.md, docs/, and uncommitted changes)."
-    )
+    print(f"    Included: {len(target_files)} uncommitted files.")
     if modules:
         print(f"    Requested GitHub Modules: {', '.join(modules)}")
     print("[*] Upload this file to Gemini to begin the session.")
