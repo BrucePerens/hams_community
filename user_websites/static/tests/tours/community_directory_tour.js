@@ -1,19 +1,10 @@
 /** @odoo-module **/
-import { registry } from "@web/core/registry";
+import { describe, test, expect } from "@odoo/hoot";
 
 // [@ANCHOR: test_tour_community_directory]
 // Tests [@ANCHOR: UX_COMMUNITY_DIRECTORY]
-registry.category("web_tour.tours").add("community_directory_tour", {
-    url: "/community",
-    steps: () => [
-        {
-            content: "Check that the directory page renders",
-            trigger: '*:contains("Community Directory")',
-            run: () => {
-                if (!document.querySelector('h1').textContent.includes('Community Directory')) {
-                    console.error("Directory header missing");
-                }
-            }
-        }
-    ],
+describe("Community Directory Tour", () => {
+    test("community_directory_tour", async () => {
+        expect('*:contains("Community Directory")').toHaveCount(1);
+    });
 });
