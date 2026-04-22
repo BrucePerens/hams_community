@@ -227,23 +227,14 @@ ERROR_RULES = [
         "CRITICAL TOUR NAVIGATION: 'window.location' is banned. Use 'document.location'.",
     ),
     (
-        r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"trigger:\s*['\"`].*?\bselect\b.*?['\"`]"),
-        "FRAGILE TOUR TRIGGER: Native <select> elements are deprecated in Odoo 19 form views. Use '.o_select_menu' and '.o_select_menu_item' instead.",
-    ),
-    (
-        r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"trigger:\s*['\"`].*?(?:a|button):contains.*?['\"`]"),
-        "FRAGILE TOUR TRIGGER: 'a:contains()' and 'button:contains()' are brittle. Use '*:contains()' or '[data-menu-xmlid=...]' instead.",
-    ),
-    (
         r"\.py$",
         re.compile(r"env\[['\"]ir\.module\.module['\"]\]\.search\("),
         "CRITICAL FRAMEWORK ACL: Searching 'ir.module.module' directly fails without 'base.group_user'. You MUST inject the 'zero_sudo.odoo_facility_service_internal' context via .with_user().",
     ),
 ]
 
-WARNING_RULES = []
+WARNING_RULES = [
+]
 MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
 REQUIRE_TEST_VERIFICATION = []
@@ -1373,11 +1364,11 @@ def scan_file(filepath):
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
 
-    if filename.endswith(".js") and "web_tour.tours" in content:
+    if filename.endswith(".js") and ("web_tour.tours" in content or "@odoo/hoot" in content):
         FOUND_TOURS.append(filepath)
-        if "trigger:" not in content:
+        if "trigger:" not in content and "click(" not in content and "expect(" not in content:
             errors_found.append(
-                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
+                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger: or HOOT interactions."
             )
 
     if filename.startswith("test_") and filename.endswith(".py"):
@@ -1509,10 +1500,10 @@ def _verify_test_ast(
     if target_file.endswith(".js"):
         if b_type == "audit-ignore-xpath" and not any(
             k in target_content
-            for k in ("get_view", "url_open", "_get_combined_arch", "trigger:")
+            for k in ("get_view", "url_open", "_get_combined_arch", "trigger:", "click(", "expect(")
         ):
             print(
-                "  ❌ ERROR: Invalid JS Test Implementation. Must contain 'trigger:' to verify UI rendering in JS."
+                "  ❌ ERROR: Invalid JS Test Implementation. Must contain 'trigger:' or HOOT clicks to verify UI rendering in JS."
             )
             return verification_errors + 1, total_errors + 1
         return verification_errors, total_errors

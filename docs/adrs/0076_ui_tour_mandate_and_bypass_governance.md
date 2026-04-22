@@ -13,7 +13,7 @@ Mandating 100% tour coverage creates a "Maintenance Trap," where CI/CD pipelines
 We will not eliminate the `burn-ignore-tour` linter bypass. Instead, we elevate the standard for its use. The platform bifurcates view testing into "Mandatory Tours" and "Justified Exceptions."
 
 ### 1. The "Gold Standard" (When Tours are Mandatory)
-A JavaScript UI Tour (`web_tour`) **MUST** be written for views meeting any of the following criteria:
+A JavaScript UI Tour (`web_tour` or HOOT framework) **MUST** be written for views meeting any of the following criteria:
 * **Critical User Journeys:** High-stakes workflows such as SWL callsign upgrades, marketplace purchases, or administrative verifications.
 * **Complex State Machines:** Form views that utilize dynamic `invisible`, `readonly`, or `required` attributes based on the record's state (e.g., dynamic exam forms or multi-step wizards).
 * **Custom Widgets:** Any view injecting custom JavaScript components (e.g., the Morse Code Keyer, DX Cluster WebSocket dashboards, or interactive maps).
