@@ -87,6 +87,7 @@ class TestPageLimits(TransactionCase):
                     "owner_user_id": self.user_limited.id,
                 }
             )
+            self.env.flush_all()
 
     def test_02_global_limit_fallback_enforcement(self):
         """
@@ -116,6 +117,7 @@ class TestPageLimits(TransactionCase):
                     "owner_user_id": self.user_global.id,
                 }
             )
+            self.env.flush_all()
 
     def test_03_group_limit_enforcement(self):
         """
@@ -147,3 +149,4 @@ class TestPageLimits(TransactionCase):
                     "user_websites_group_id": test_group.id,
                 }
             )
+            self.env.flush_all()

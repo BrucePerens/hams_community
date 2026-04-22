@@ -276,6 +276,7 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
                     "website_slug": "community",
                 }
             )
+            self.env.flush_all()
 
         with self.assertRaises(ValidationError):
             self.env["user.websites.group"].create(
@@ -284,3 +285,4 @@ class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
                     "website_slug": "blog",
                 }
             )
+            self.env.flush_all()

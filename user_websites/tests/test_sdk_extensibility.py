@@ -128,6 +128,7 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
                     "owner_user_id": self.user.id,
                 }
             )
+            self.env.flush_all()
 
     def test_04_navbar_rendering(self):
         """Test the standalone user_navbar template renders with a mock context."""
@@ -176,6 +177,7 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
             ValidationError, msg="Must prevent dual ownership on create."
         ):
             self.env["website.page"].with_user(self.user).create(bad_vals)
+            self.env.flush_all()
 
         page = self.env["website.page"].create(
             {
@@ -191,6 +193,7 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
             msg="Must prevent dual ownership on write, even for admins.",
         ):
             page.write({"user_websites_group_id": test_group.id})
+            self.env.flush_all()
 
     def test_06_api_armor_mandatory_assignment(self):
         # [@ANCHOR: test_api_armor_mandatory_assignment]
@@ -212,3 +215,4 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
                     "user_websites_group_id": 99999999,
                 }
             )
+            self.env.flush_all()

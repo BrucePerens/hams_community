@@ -140,6 +140,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                     "owner_user_id": self.test_user.id,
                 }
             )
+            self.env.flush_all()
 
     def test_04_bdd_ormcache_query_counting_slugs(self):
         # [@ANCHOR: test_slug_cache_invalidation]

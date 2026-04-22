@@ -117,6 +117,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             msg="Malice MUST NOT be able to rename the shared blog container.",
         ):
             self.community_blog.with_user(self.malice).write({"name": "Hacked Blog"})
+            self.env.flush_all()
 
         with self.assertRaises(
             AccessError,
@@ -138,6 +139,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 self.victim.with_user(self.malice).write(
                     {"website_meta_title": "Hacked SEO Title"}
                 )
+                self.env.flush_all()
 
             with self.assertRaises(
                 AccessError,
@@ -146,6 +148,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 self.victim_group.with_user(self.malice).write(
                     {"website_meta_title": "Hacked Group SEO"}
                 )
+                self.env.flush_all()
 
     def test_03_group_membership_escalation(self):
         """
@@ -160,6 +163,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             self.victim_group.with_user(self.malice).write(
                 {"member_ids": [(4, self.malice.id)]}
             )
+            self.env.flush_all()
 
     @odoo.tests.mute_logger("odoo.http")
     def test_04_qweb_ssti_injection_attempt(self):
@@ -230,6 +234,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             AccessError, msg="Malice MUST NOT be able to edit Victim's blog post."
         ):
             self.victim_post.with_user(self.malice).write({"content": "Hacked Content"})
+            self.env.flush_all()
 
         with self.assertRaises(
             AccessError, msg="Malice MUST NOT be able to delete Victim's blog post."
@@ -255,6 +260,7 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                     "reported_by_user_id": self.victim.id,
                 }
             )
+            self.env.flush_all()
 
     def test_07_public_read_access(self):
         """

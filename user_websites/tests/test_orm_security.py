@@ -71,6 +71,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
                     "owner_user_id": self.user_b.id,
                 }
             )
+            self.env.flush_all()
 
     def test_02_prevent_report_state_tampering(self):
         """
@@ -96,6 +97,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
             msg="Users must not be able to edit violation reports after submission.",
         ):
             report.with_user(self.user_a).write({"state": "dismissed"})
+            self.env.flush_all()
 
     @mute_logger("odoo.sql_db")
     def test_03_enforce_slug_uniqueness_db_level(self):
@@ -133,6 +135,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
                     "owner_user_id": self.user_b.id,
                 }
             )
+            self.env.flush_all()
 
         # 2. Test Stolen Ownership (Write)
         # Victim creates a legitimate post
@@ -151,6 +154,7 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
             msg="Record rules must protect blog posts from unauthorized ORM writes.",
         ):
             post.with_user(self.user_a).write({"name": "Stolen Post"})
+            self.env.flush_all()
 
     def test_05_other_user_can_read_published_content(self):
         """
@@ -210,12 +214,14 @@ class TestORMSecurity(odoo.tests.common.TransactionCase):
             msg="Users must not be able to transfer ownership of their pages.",
         ):
             page.with_user(self.user_b).write({"owner_user_id": self.user_a.id})
+            self.env.flush_all()
 
         with self.assertRaises(
             AccessError,
             msg="Users must not be able to transfer ownership of their posts.",
         ):
             post.with_user(self.user_b).write({"owner_user_id": self.user_a.id})
+            self.env.flush_all()
 
     def test_07_qweb_arch_sanitization(self):
         # [@ANCHOR: test_website_page_sanitize_arch]
