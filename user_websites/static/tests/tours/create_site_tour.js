@@ -5,7 +5,6 @@ import { registry } from "@web/core/registry";
 // Tests [@ANCHOR: controller_user_websites_home]
 // Tests [@ANCHOR: UX_CREATE_SITE]
 registry.category("web_tour.tours").add("create_site_tour", {
-    test: true,
     steps: () => [
         {
             content: "Navigate from the portal to the site home page placeholder",

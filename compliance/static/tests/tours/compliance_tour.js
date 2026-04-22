@@ -3,7 +3,6 @@ import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("compliance_tour", {
     url: "/",
-    test: true,
     steps: () => [
         {
             content: "Click on Cookie Policy link in cookie bar",

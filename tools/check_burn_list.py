@@ -137,6 +137,11 @@ ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"test\s*:\s*true"),
+        "CRITICAL JS TOUR DEPRECATION: 'test: true' is removed in Odoo 19. Tours are discovered automatically.",
+    ),
+    (
+        r"\.js$",
         re.compile(r"\.o_form_saved_indicator"),
         "CRITICAL JS TOUR DEPRECATION: '.o_form_saved_indicator' was removed in Odoo 19. Use '.o_form_readonly' instead.",
     ),

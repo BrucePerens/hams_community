@@ -2,7 +2,6 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("caching_service_worker_check", {
-    test: true,
     url: "/",
     steps: () => [
         {

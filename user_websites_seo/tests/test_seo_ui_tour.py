@@ -52,7 +52,7 @@ class TestSEOUI(HttpCase):
         self.authenticate('seo_ui_test', 'password123')
 
         # We start the tour
-        self.start_tour('/seo-ui-test-user/blog', 'user_websites_seo_tour', login='seo_ui_test')
+        self.start_tour('/seo-ui-test-user/blog', 'user_websites_seo_tour')
 
         # Prove rendering for AST verification
         self.env['res.users'].get_view()

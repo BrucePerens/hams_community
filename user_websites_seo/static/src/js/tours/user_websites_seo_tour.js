@@ -2,16 +2,15 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("user_websites_seo_tour", {
-    test: true,
     url: '/seo-ui-test-user/blog',
     steps: () => [
         {
-            trigger: '.o_menu_systray *:contains("Site")',
+            trigger: '.o_menu_systray *:contains("Site"), .o_menu_systray [data-menu="promote"]',
             content: 'Open Site Menu',
             run: 'click',
         },
         {
-            trigger: 'a[data-action="seo"]',
+            trigger: 'a[data-action="seo"], button[data-action="seo"]',
             content: 'Check for Optimize SEO menu item',
             run: 'click',
         },

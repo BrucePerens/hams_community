@@ -6,7 +6,6 @@ import { registry } from "@web/core/registry";
 // Tests [@ANCHOR: UX_GDPR_EXPORT]
 // Tests [@ANCHOR: UX_GDPR_ERASURE]
 registry.category("web_tour.tours").add("gdpr_privacy_tour", {
-    test: true,
     url: "/my/privacy",
     steps: () => [
         {

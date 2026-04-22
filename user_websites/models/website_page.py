@@ -4,6 +4,7 @@ import os
 import redis
 import logging
 import re
+import odoo
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 
@@ -42,7 +43,7 @@ class WebsitePage(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" in self.env:
+        if "cloudflare.purge.queue" in self.env and not odoo.tools.config.get("test_enable"):
             # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
             self.mapped("owner_user_id.website_slug")
             self.mapped("user_websites_group_id.website_slug")
