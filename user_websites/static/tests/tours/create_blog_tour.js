@@ -1,10 +1,17 @@
 /** @odoo-module **/
-import { describe, test, expect } from "@odoo/hoot";
-import { click } from "@odoo/hoot-dom";
+import { registry } from "@web/core/registry";
 
-describe("Create Blog Tour", () => {
-    test("create_blog_tour", async () => {
-        await click('*:contains("Create")');
-        expect('#wrap').toHaveCount(1);
-    });
+registry.category("web_tour.tours").add("create_blog_tour", {
+    steps: () => [
+        {
+            content: "Click Create Your Blog button",
+            trigger: '*:contains("Create")',
+            run: "click",
+        },
+        {
+            content: "Verify blog created",
+            trigger: '#wrap',
+            run: () => {}
+        }
+    ],
 });

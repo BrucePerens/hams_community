@@ -1,16 +1,41 @@
 /** @odoo-module **/
-import { describe, test, expect } from "@odoo/hoot";
-import { click } from "@odoo/hoot-dom";
+import { registry } from "@web/core/registry";
 
-describe("Compliance Tour", () => {
-    test("compliance_tour", async () => {
-        await click("#website_cookies_bar a[href='/cookie-policy']");
-        expect("*:contains('Cookie Policy')").toHaveCount(1);
-
-        document.location.href = '/privacy';
-        expect("*:contains('Privacy Policy')").toHaveCount(1);
-
-        document.location.href = '/terms';
-        expect("*:contains('Terms of Service')").toHaveCount(1);
-    });
+registry.category("web_tour.tours").add("compliance_tour", {
+    url: "/",
+    steps: () => [
+        {
+            content: "Click on Cookie Policy link in cookie bar",
+            trigger: "#website_cookies_bar a[href='/cookie-policy']",
+            run: "click",
+            expectUnloadPage: true,
+        },
+        {
+            content: "Verify Cookie Policy page title",
+            trigger: "*:contains('Cookie Policy')",
+            run: () => {},
+        },
+        {
+            content: "Navigate to Privacy Policy",
+            trigger: "body",
+            run: () => { document.location.href = '/privacy'; },
+            expectUnloadPage: true,
+        },
+        {
+            content: "Verify Privacy Policy page title",
+            trigger: "*:contains('Privacy Policy')",
+            run: () => {},
+        },
+        {
+            content: "Navigate to Terms of Service",
+            trigger: "body",
+            run: () => { document.location.href = '/terms'; },
+            expectUnloadPage: true,
+        },
+        {
+            content: "Verify Terms of Service page title",
+            trigger: "*:contains('Terms of Service')",
+            run: () => {},
+        }
+    ],
 });

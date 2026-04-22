@@ -202,7 +202,7 @@ The `verify_anchors.py` script enforces strict documentation traceability:
 2. **Documentation Mandate:** Any anchor embedded in source code MUST be referenced somewhere within the `docs/` folder (Runbooks, Stories, Journeys, or Modules).
 These documentation references MUST be placed inline, immediately adjacent to the relevant descriptive text.
 3. **The View-Tour Mandate:** Every `<template>` or `<record model="ir.ui.view">` MUST contain a UI Tour link.
-4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword (for legacy web_tours) or HOOT assertions (like `click()`, `expect()`) to prove it evaluates the DOM.
+4. **Tour Validation:** The corresponding JavaScript tour file MUST contain the matching anchor and explicitly utilize the `trigger:` keyword to prove it evaluates the DOM.
 </semantic_anchors>
 
 ## 7. Shebang Usage & `__manifest__.py` Formatting

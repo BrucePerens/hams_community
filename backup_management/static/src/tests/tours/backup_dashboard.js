@@ -1,22 +1,63 @@
 /** @odoo-module **/
-import { describe, test, expect } from "@odoo/hoot";
-import { click, edit } from "@odoo/hoot-dom";
 
-describe("Backup Dashboard", () => {
-    test("backup_dashboard_tour", async () => {
-        await click(".o_navbar_apps_menu button");
-        await click('[data-menu-xmlid="backup_management.menu_admin_root"]');
-        await click('[data-menu-xmlid="backup_management.menu_backup_root"]');
-        await click('button[data-menu-xmlid="backup_management.menu_backup_config"], [data-menu-xmlid="backup_management.menu_backup_config"]');
-        await click(".o_list_button_add");
+import { registry } from "@web/core/registry";
 
-        await edit("Test Kopia Tour", 'div[name="name"] input, input[id="name"]');
-        await edit("kopia", 'div[name="engine"] select, select[id="engine"]');
-        await edit("/var/lib/odoo/tour_repo", 'div[name="target_path"] input, input[id="target_path"]');
-
-        await click(".o_form_button_save");
-
-        // Verify saved
-        expect(".o_breadcrumb, .o_form_button_create").toHaveCount(1);
-    });
+registry.category("web_tour.tours").add("backup_dashboard_tour", {
+    url: "/web",
+    steps: () => [
+        {
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
+        {
+            trigger: '[data-menu-xmlid="backup_management.menu_admin_root"]',
+            content: "Click on Backup Management app",
+            run: 'click',
+        },
+        {
+            trigger: '[data-menu-xmlid="backup_management.menu_backup_root"]',
+            content: "Click on Backups Submenu",
+            run: 'click',
+        },
+        {
+            trigger: 'button[data-menu-xmlid="backup_management.menu_backup_config"], [data-menu-xmlid="backup_management.menu_backup_config"]',
+            content: "Open Configurations",
+            run: 'click',
+        },
+        {
+            trigger: ".o_list_button_add",
+            content: "Create new configuration",
+            run: 'click',
+        },
+        {
+            trigger: 'div[name="name"] input, input[id="name"]',
+            run: "edit Test Kopia Tour",
+            content: "Enter name",
+        },
+        {
+            trigger: 'div[name="engine"]',
+            content: "Click engine dropdown",
+            run: "click",
+        },
+        {
+            trigger: '.o_select_menu_item:contains("kopia"), .dropdown-item:contains("kopia"), option[value="kopia"]',
+            content: "Select Kopia engine value",
+            run: "click",
+        },
+        {
+            trigger: 'div[name="target_path"] input, input[id="target_path"]',
+            run: "edit /var/lib/odoo/tour_repo",
+            content: "Enter target path",
+        },
+        {
+            trigger: ".o_form_button_save",
+            content: "Save configuration",
+            run: "click",
+        },
+        {
+            trigger: ".o_breadcrumb, .o_form_button_create",
+            content: "Verify saved",
+            run: () => {},
+        }
+    ],
 });
