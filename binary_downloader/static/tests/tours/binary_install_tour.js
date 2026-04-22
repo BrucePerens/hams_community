@@ -9,17 +9,17 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             run: 'click',
         },
         {
-            trigger: '[data-menu-xmlid="base.menu_administration"]',
+            trigger: '[data-menu-xmlid="base.menu_administration"], a[data-menu-xmlid="base.menu_administration"]',
             content: "Click on Settings",
             run: "click",
         },
         {
-            trigger: '[data-menu-xmlid="base.menu_custom"]',
+            trigger: 'span:contains("Technical"), [data-menu-xmlid="base.menu_custom"]',
             content: "Open Technical menu",
             run: "click",
         },
         {
-            trigger: '[data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
+            trigger: 'a:contains("Binary Manifests"), [data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
             content: "Go to Binary Manifests",
             run: "click",
         },
@@ -36,7 +36,7 @@ registry.category("web_tour.tours").add("binary_install_tour", {
         {
             trigger: 'div[name="url"] input',
             content: "Enter download URL",
-            run: "edit http://example.com/tourbin",
+            run: "edit [http://example.com/tourbin](http://example.com/tourbin)",
         },
         {
             trigger: 'div[name="checksum"] input',

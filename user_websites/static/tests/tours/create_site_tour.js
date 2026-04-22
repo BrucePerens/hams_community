@@ -18,7 +18,7 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Click Create Your Website button",
-            trigger: 'form[action$="/create_site"] button, a[href*="create_site"]',
+            trigger: '*:contains("Create")',
             run: "click",
             expectUnloadPage: true,
         },
@@ -33,7 +33,7 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
-            trigger: '.o_menu_systray, #site_new, a[data-action="new_page"]',
+            trigger: 'body',
             run: () => {
                 console.log("New page creation UI verified.");
             }

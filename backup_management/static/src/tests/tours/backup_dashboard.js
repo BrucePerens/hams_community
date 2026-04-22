@@ -27,29 +27,32 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
         {
             trigger: ".o_list_button_add",
             content: "Create new configuration",
+            run: 'click',
         },
         {
-            trigger: 'input[id="name"]',
-            run: "text Test Kopia Tour",
+            trigger: 'div[name="name"] input, input[id="name"]',
+            run: "edit Test Kopia Tour",
             content: "Enter name",
         },
         {
-            trigger: 'select[id="engine"]',
+            trigger: 'div[name="engine"] select, select[id="engine"]',
             run: "text kopia",
             content: "Select Kopia engine",
         },
         {
-            trigger: 'input[id="target_path"]',
-            run: "text /var/lib/odoo/tour_repo",
+            trigger: 'div[name="target_path"] input, input[id="target_path"]',
+            run: "edit /var/lib/odoo/tour_repo",
             content: "Enter target path",
         },
         {
             trigger: ".o_form_button_save",
             content: "Save configuration",
+            run: "click",
         },
         {
-            trigger: ".o_breadcrumb",
+            trigger: ".o_breadcrumb, .o_form_button_create",
             content: "Verify saved",
+            run: () => {},
         }
     ],
 });

@@ -25,11 +25,15 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             run: () => {},
         },
         {
-            trigger: 'tr.o_data_row',
+            trigger: 'tr.o_data_row .o_list_record_selector input',
             run: 'click',
         },
         {
-            trigger: 'button[name="action_vacuum_analyze"]',
+            trigger: 'button:contains("Action"), .o_cp_action_menus button',
+            run: 'click',
+        },
+        {
+            trigger: 'span:contains("Vacuum Analyze"), a:contains("Vacuum Analyze")',
             run: 'click',
         },
     ],

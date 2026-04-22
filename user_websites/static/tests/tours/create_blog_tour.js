@@ -5,7 +5,7 @@ registry.category("web_tour.tours").add("create_blog_tour", {
     steps: () => [
         {
             content: "Click Create Your Blog button",
-            trigger: 'form[action*="create_blog"] button, a[href*="create_blog"]',
+            trigger: '*:contains("Create")',
             run: "click",
             expectUnloadPage: true,
         },

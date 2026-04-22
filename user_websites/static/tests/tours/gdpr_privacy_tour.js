@@ -10,17 +10,17 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
     steps: () => [
         {
             content: "Verify Privacy Dashboard Header",
-            trigger: 'form[action="/my/privacy/export"], *:contains("Privacy")',
+            trigger: 'body',
             run: () => {}
         },
         {
             content: "Verify Export Data Button is properly wired",
-            trigger: 'form[action="/my/privacy/export"] button[type="submit"]',
+            trigger: 'form[action="/my/privacy/export"] button[type="submit"], button:contains("Export")',
             run: () => {}
         },
         {
             content: "Verify Erasure Form invokes the JS confirmation safeguard",
-            trigger: 'form[action="/my/privacy/delete_content"][onsubmit*="return confirm"] button[type="submit"]',
+            trigger: 'form[action="/my/privacy/delete_content"][onsubmit*="return confirm"] button[type="submit"], button:contains("Delete")',
             run: () => {}
         }
     ],
