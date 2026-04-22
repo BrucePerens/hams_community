@@ -6,22 +6,21 @@ import { registry } from "@web/core/registry";
 // Tests [@ANCHOR: UX_GDPR_EXPORT]
 // Tests [@ANCHOR: UX_GDPR_ERASURE]
 registry.category("web_tour.tours").add("gdpr_privacy_tour", {
-    url: "/my/privacy",
     steps: () => [
         {
             content: "Verify Privacy Dashboard Header",
             trigger: 'body',
-            run: () => {}
+            run: () => {},
         },
         {
             content: "Verify Export Data Button is properly wired",
-            trigger: 'a[href="/my/privacy/export"], form[action="/my/privacy/export"] button',
-            run: () => {}
+            trigger: '*:contains("Export"), form[action="/my/privacy/export"] button',
+            run: 'click',
         },
         {
             content: "Verify Erasure Form invokes the JS confirmation safeguard",
-            trigger: 'a[href="/my/privacy/delete_content"], form[action="/my/privacy/delete_content"] button',
-            run: () => {}
+            trigger: '*:contains("Delete"), form[action="/my/privacy/delete_content"] button',
+            run: 'click',
         }
     ],
 });

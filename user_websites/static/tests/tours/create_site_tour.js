@@ -10,31 +10,25 @@ registry.category("web_tour.tours").add("create_site_tour", {
             content: "Navigate from the portal to the site home page placeholder",
             trigger: 'body',
             run: () => {
-                if (!document.location.pathname.includes('/sitetour/home')) {
-                    document.location.href = '/sitetour/home';
-                }
+                document.location.href = '/sitetour/home';
             },
+            expectUnloadPage: true,
         },
         {
-            content: "Click Create Your Website button",
+            content: "Click Create",
             trigger: '*:contains("Create")',
-            run: "click",
+            run: 'click',
+            expectUnloadPage: true,
         },
         {
             content: "Verify site created (we land on the actual home page instead of placeholder)",
             trigger: '#wrap',
-            run: () => {
-                if (!document.querySelector('#wrap')) {
-                    console.error("Site creation fallback content not found");
-                }
-            }
+            run: () => {},
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
             trigger: 'body',
-            run: () => {
-                console.log("New page creation UI verified.");
-            }
+            run: () => {},
         }
     ],
 });

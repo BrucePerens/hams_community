@@ -4,14 +4,23 @@ import { registry } from "@web/core/registry";
 registry.category("web_tour.tours").add("create_blog_tour", {
     steps: () => [
         {
-            content: "Click Create Your Blog button",
+            content: "Navigate from the portal to the site home page placeholder",
+            trigger: 'body',
+            run: () => {
+                document.location.href = '/sitetour/home';
+            },
+            expectUnloadPage: true,
+        },
+        {
+            content: "Click Create",
             trigger: '*:contains("Create")',
-            run: "click",
+            run: 'click',
+            expectUnloadPage: true,
         },
         {
             content: "Verify blog created",
             trigger: '#wrap',
-            run: () => {}
+            run: () => {},
         }
     ],
 });

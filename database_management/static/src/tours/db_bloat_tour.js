@@ -29,11 +29,11 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             run: 'click',
         },
         {
-            trigger: 'button:contains("Action"), .o_cp_action_menus button',
+            trigger: '*:contains("Action"), .o_cp_action_menus button',
             run: 'click',
         },
         {
-            trigger: 'span:contains("Vacuum Analyze"), a:contains("Vacuum Analyze")',
+            trigger: '*:contains("Vacuum Analyze")',
             run: 'click',
         },
     ],

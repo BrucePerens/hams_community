@@ -20,7 +20,7 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             run: 'click',
         },
         {
-            trigger: 'button[data-menu-xmlid="backup_management.menu_backup_config"], [data-menu-xmlid="backup_management.menu_backup_config"]',
+            trigger: '[data-menu-xmlid="backup_management.menu_backup_config"]',
             content: "Open Configurations",
             run: 'click',
         },
@@ -35,14 +35,14 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             content: "Enter name",
         },
         {
-            trigger: 'div[name="engine"]',
-            content: "Click engine dropdown",
-            run: "click",
+            trigger: 'div[name="engine"] .o_select_menu',
+            content: "Open engine dropdown",
+            run: 'click',
         },
         {
-            trigger: '.o_select_menu_item:contains("kopia"), .dropdown-item:contains("kopia"), option[value="kopia"]',
+            trigger: '.o_select_menu_item:contains("kopia")',
             content: "Select Kopia engine value",
-            run: "click",
+            run: 'click',
         },
         {
             trigger: 'div[name="target_path"] input, input[id="target_path"]',

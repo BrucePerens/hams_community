@@ -553,6 +553,15 @@ def check_and_restore_cache(db_name, mod_string):
         )
         if res.returncode == 0:
             print("[*] DB restored from cache.")
+
+            # Restore the corresponding filestore
+            filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")
+            if os.path.exists(filestore_tar):
+                print("[*] Restoring Filestore...")
+                filestore_base = os.path.expanduser("~/.local/share/Odoo/filestore")
+                os.makedirs(filestore_base, exist_ok=True)
+                subprocess.run(["tar", "-xzf", filestore_tar, "-C", filestore_base])
+
             return True, cache_file
         else:
             print(
@@ -602,6 +611,13 @@ def save_db_cache(db_name, cache_file, mod_string):
                 mod_file = cache_file.replace(".dump", ".modules")
                 with open(mod_file, "w") as mf:
                     mf.write(mod_string)
+
+                # Cache the Filestore
+                filestore_path = os.path.expanduser(f"~/.local/share/Odoo/filestore/{db_name}")
+                if os.path.exists(filestore_path):
+                    print("[*] Caching Filestore...")
+                    filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")
+                    subprocess.run(["tar", "-czf", filestore_tar, "-C", os.path.dirname(filestore_path), db_name])
             else:
                 print(
                     f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache."
@@ -750,6 +766,10 @@ if [ -f /mnt/upper/opt/hams/test/db_cache_master.dump ]; then
     if [ -f /mnt/upper/opt/hams/test/db_cache_master.modules ]; then
         cp /mnt/upper/opt/hams/test/db_cache_master.modules /mnt/host_test_dir/db_cache_master.modules
         chmod 666 /mnt/host_test_dir/db_cache_master.modules 2>/dev/null || true
+    fi
+    if [ -f /mnt/upper/opt/hams/test/db_cache_master.filestore.tar.gz ]; then
+        cp /mnt/upper/opt/hams/test/db_cache_master.filestore.tar.gz /mnt/host_test_dir/db_cache_master.filestore.tar.gz
+        chmod 666 /mnt/host_test_dir/db_cache_master.filestore.tar.gz 2>/dev/null || true
     fi
 fi
 

@@ -222,6 +222,11 @@ ERROR_RULES = [
         "FRAGILE TOUR TRIGGER: Odoo 19 UI shifted. Do not use '.o_app', '.nav-link', '.o_menu_brand', or 'h1:contains' in tour triggers. Use structure-agnostic selectors like '[data-menu-xmlid=...]' or '*:contains'.",
     ),
     (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"trigger:\s*['\"`](?:.*[\s,>])?(?:select|option)(?:[\[:#.\s].*?)?['\"`]"),
+        "CRITICAL JS TOUR DEPRECATION: Native <select> and <option> tags are removed from backend form views in Odoo 19. Target '.o_select_menu' and '.o_select_menu_item' instead.",
+    ),
+    (
         r"\.js$",
         re.compile(r"window\.location"),
         "CRITICAL TOUR NAVIGATION: 'window.location' is banned. Use 'document.location'.",
