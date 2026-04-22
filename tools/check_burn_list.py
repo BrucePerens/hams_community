@@ -132,6 +132,11 @@ ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"isCheck\s*:\s*true"),
+        "CRITICAL JS TOUR DEPRECATION: 'isCheck: true' is removed in Odoo 19. Use 'run: () => {}' instead.",
+    ),
+    (
+        r"\.js$",
         re.compile(r"\$\("),
         "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components.",
     ),
@@ -183,7 +188,13 @@ ERROR_RULES = [
     ),
 ]
 
-WARNING_RULES = []
+WARNING_RULES = [
+    (
+        r"\.js$",
+        re.compile(r"window\.location"),
+        "[%AUDIT] JS TOUR NAVIGATION: If a tour step triggers navigation, Odoo 19 requires 'expectUnloadPage: true' in that step.",
+    ),
+]
 MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
 REQUIRE_TEST_VERIFICATION = []
@@ -332,6 +343,23 @@ def check_ast_vulnerabilities(filepath, content, lines):
                             child.lineno,
                             "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block.",
                         )
+
+            for item in node.items:
+                if isinstance(item.context_expr, ast.Call) and getattr(item.context_expr.func, "attr", "") in ("assertRaises", "assertRaisesRegex"):
+                    has_create_write = False
+                    has_flush = False
+                    for child in ast.walk(node):
+                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                            if child.func.attr in ("create", "write"):
+                                has_create_write = True
+                            elif child.func.attr == "flush_all":
+                                has_flush = True
+                    if has_create_write and not has_flush:
+                        self.add_error(
+                            node.lineno,
+                            "CONSTRAINT FLUSH TRAP: ORM create/write inside assertRaises requires self.env.flush_all() before the context manager exits to trigger @api.constrains."
+                        )
+
             self.generic_visit(node)
 
         def visit_Dict(self, node):

@@ -736,6 +736,13 @@ if [ -f /opt/hams/spool/filtered_test.txt ]; then
     chmod 644 '{real_error_log}' 2>/dev/null || true
 fi
 
+for prof_file in /opt/hams/spool/*.prof; do
+    if [ -f "$prof_file" ]; then
+        cp "$prof_file" "$(dirname '{real_error_log}')/"
+        chown {orig_user} "$(dirname '{real_error_log}')/$(basename "$prof_file")" 2>/dev/null || true
+    fi
+done
+
 if [ -f /mnt/upper/opt/hams/test/db_cache_master.dump ]; then
     echo '[*] Committing Database Cache to Host...'
     cp /mnt/upper/opt/hams/test/db_cache_master.dump /mnt/host_test_dir/db_cache_master.dump
@@ -854,6 +861,11 @@ def main():
             "--already-provisioned",
             action="store_true",
             help="Skip provisioning the Jules environment, assuming it is already set up.",
+        )
+        parser.add_argument(
+            "--profile",
+            action="store_true",
+            help="Profile the Odoo test execution using cProfile.",
         )
         args = parser.parse_args()
 
@@ -1029,6 +1041,14 @@ def main():
         mod_string = "base," + ",".join(target_modules)
         test_tags = ",".join(["/{}".format(m) for m in target_modules])
 
+        def get_python_test_cmd(suffix=""):
+            cmd = [venv_python]
+            if args.profile:
+                base_name = f"odoo_test{suffix}.prof"
+                prof_path = f"/opt/hams/spool/{base_name}" if os.environ.get("HAMS_ISOLATED_NS") == "1" else os.path.join(os.path.dirname(real_error_log), base_name)
+                cmd.extend(["-m", "cProfile", "-o", prof_path])
+            return cmd
+
         extractor = FailureExtractor(args.error_log)
 
         print("==========================================================")
@@ -1078,8 +1098,7 @@ def main():
                 save_db_cache(args.db, cache_file, mod_string)
 
             print("[*] Executing Test Suite...")
-            cmd = [
-                venv_python,
+            cmd = get_python_test_cmd() + [
                 odoo_bin,
                 "--addons-path",
                 addons_path,
@@ -1144,8 +1163,7 @@ def main():
 
             if final_rc == 0:
                 print("[*] Executing Test Suite in Integration Mode...")
-                test_cmd = [
-                    venv_python,
+                test_cmd = get_python_test_cmd("_integration") + [
                     odoo_bin,
                     "--addons-path",
                     addons_path,
@@ -1203,8 +1221,7 @@ def main():
                     save_db_cache(args.db, cache_file, mod)
 
                 print(f"[*] Executing tests for {mod}...")
-                cmd = [
-                    venv_python,
+                cmd = get_python_test_cmd(f"_{mod}") + [
                     odoo_bin,
                     "--addons-path",
                     addons_path,

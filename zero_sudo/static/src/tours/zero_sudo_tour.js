@@ -15,16 +15,20 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
         },
         {
             trigger: '.o_app[data-menu-xmlid="base.menu_administration"]',
+            run: 'click',
         },
         {
-            trigger: '.o_menu_sections [data-menu-xmlid="base.menu_users"]',
+            trigger: '[data-menu-xmlid="base.menu_users"]',
+            run: 'click',
         },
         {
-            trigger: '.o_menu_sections [data-menu-xmlid="base.menu_action_res_users"]',
+            trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
+            run: 'click',
         },
         {
             trigger: '.o_list_button_add',
             content: "Create a new user",
+            run: 'click',
         },
         {
             trigger: 'input[name="name"]',
@@ -41,6 +45,7 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
         {
             trigger: '.o_form_button_save',
             content: "Save the user",
+            run: 'click',
         },
         {
             trigger: '.o_form_saved_indicator',

@@ -6,6 +6,11 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
     url: '/seo-ui-test-user/blog',
     steps: () => [
         {
+            trigger: '.o_menu_systray a:contains("Site")',
+            content: 'Open Site Menu',
+            run: 'click',
+        },
+        {
             trigger: 'a[data-action="seo"]',
             content: 'Check for Optimize SEO menu item',
             run: 'click',
