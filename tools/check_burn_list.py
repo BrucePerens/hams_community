@@ -224,7 +224,17 @@ ERROR_RULES = [
     (
         r"\.js$",
         re.compile(r"window\.location"),
-        "CRITICAL TOUR NAVIGATION: 'window.location' is banned. Use 'document.location' and ensure the step includes 'expectUnloadPage: true'.",
+        "CRITICAL TOUR NAVIGATION: 'window.location' is banned. Use 'document.location'.",
+    ),
+    (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"trigger:\s*['\"`].*?\bselect\b.*?['\"`]"),
+        "FRAGILE TOUR TRIGGER: Native <select> elements are deprecated in Odoo 19 form views. Use '.o_select_menu' and '.o_select_menu_item' instead.",
+    ),
+    (
+        r"tour.*\.js$|.*_tour\.js$",
+        re.compile(r"trigger:\s*['\"`].*?(?:a|button):contains.*?['\"`]"),
+        "FRAGILE TOUR TRIGGER: 'a:contains()' and 'button:contains()' are brittle. Use '*:contains()' or '[data-menu-xmlid=...]' instead.",
     ),
     (
         r"\.py$",
@@ -233,13 +243,7 @@ ERROR_RULES = [
     ),
 ]
 
-WARNING_RULES = [
-    (
-        r"\.js$",
-        re.compile(r"window\.location"),
-        "[%AUDIT] JS TOUR NAVIGATION: If a tour step triggers navigation, Odoo 19 requires 'expectUnloadPage: true' in that step.",
-    ),
-]
+WARNING_RULES = []
 MULTILINE_WARNING_RULES = []
 EXEMPTIONS = {}
 REQUIRE_TEST_VERIFICATION = []
@@ -1374,10 +1378,6 @@ def scan_file(filepath):
         if "trigger:" not in content:
             errors_found.append(
                 "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
-            )
-        if "document.location" in content and "expectUnloadPage: true" not in content:
-            errors_found.append(
-                "CRITICAL TOUR NAVIGATION: Tour uses 'document.location' but is missing 'expectUnloadPage: true'."
             )
 
     if filename.startswith("test_") and filename.endswith(".py"):

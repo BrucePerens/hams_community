@@ -136,9 +136,6 @@ Global rules (rules without a group) are deprecated and banned.
 * **WCAG Accessibility (Icons):** Any `<i>` tag utilizing FontAwesome (`fa`) or Odoo Icons (`oi`) MUST possess a `title`, `aria-label`, or `aria-hidden="true"` attribute to satisfy screen readers.
 * **WCAG Accessibility (Images):** Any `<img>` tag MUST possess an `alt` attribute.
 * **WCAG Accessibility (Buttons & Links):** Empty `<button>` or `<a>` tags lacking text content, a `string` attribute, `title`, or `aria-label` will trigger an audit warning.
-* **WCAG Accessibility (Icons):** Any `<i>` tag utilizing FontAwesome (`fa`) or Odoo Icons (`oi`) MUST possess a `title`, `aria-label`, or `aria-hidden="true"` attribute to satisfy screen readers.
-* **WCAG Accessibility (Images):** Any `<img>` tag MUST possess an `alt` attribute.
-* **WCAG Accessibility (Buttons & Links):** Empty `<button>` or `<a>` tags lacking text content, a `string` attribute, `title`, or `aria-label` will trigger an audit warning.
 </frontend_standards>
 
 ---
@@ -151,6 +148,9 @@ You MUST use Vanilla JS or modern OWL components.
 * **DOM XSS:** Passing template literals (backtick strings) into `.innerHTML` or `.bindPopup` is flagged.
 Ensure all dynamic data injected into the DOM is sanitized.
 * **Deprecated Services:** `useService('company')` is banned.
+* **Tour Page Unloads (expectUnloadPage):** While `expectUnloadPage: true` is still used for hard browser reloads, you MUST NOT use it on steps where navigation is conditional (e.g., inside an `if` statement) or when triggering an OWL soft-route (client action). The Odoo test runner will fatally timeout after 20,000ms if the page does not actually unload.
+* **Tour Dropdown Selection:** Native `<select>` elements are deprecated in backend form views. Odoo 19 uses `.o_select_menu`. Tours must use two steps: click the dropdown, then click `.o_select_menu_item`.
+* **Tour Trigger Brittleness:** Using `a:contains(...)` or `button:contains(...)` is banned because internal text is often wrapped in `<span>` tags. Use `*:contains(...)` or target explicit `[data-menu-xmlid=...]` attributes.
 </javascript_standards>
 
 ---
@@ -208,4 +208,4 @@ These documentation references MUST be placed inline, immediately adjacent to th
 ## 7. Shebang Usage & `__manifest__.py` Formatting
 Shebangs (`#!/usr/bin/env python3`) are strictly prohibited in standard Odoo module files (e.g., `models/`, `controllers/`, `__init__.py`, `__manifest__.py`). They can interfere with packaging and execution expectations inside standard Odoo modules. This restriction does not apply to isolated daemon scripts in the `daemons/` or `tools/` directories.
 
-Additionally, `__manifest__.py` files must strictly conform to dictionary structures without shebangs. Odoo's `ast.literal_eval` parser requires valid, strict Python dictionary syntax, and any extraneous bash-style shebang lines will cause fatal `ParseError: while parsing None:101` exceptions during test or registry initialization.
+Additionally, `__manifest__.py` files must strictly conform to dictionary structures without shebangs. Odoo's `ast.literal_eval` parser requires valid, strict Python dictionary syntax, and any extraneous bash-style lines will cause fatal `ParseError: while parsing None:101` exceptions during test or registry initialization.

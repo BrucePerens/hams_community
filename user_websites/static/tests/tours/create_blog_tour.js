@@ -7,7 +7,6 @@ registry.category("web_tour.tours").add("create_blog_tour", {
             content: "Click Create Your Blog button",
             trigger: '*:contains("Create")',
             run: "click",
-            expectUnloadPage: true,
         },
         {
             content: "Verify blog created",

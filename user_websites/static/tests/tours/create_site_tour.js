@@ -14,13 +14,11 @@ registry.category("web_tour.tours").add("create_site_tour", {
                     document.location.href = '/sitetour/home';
                 }
             },
-            expectUnloadPage: true,
         },
         {
             content: "Click Create Your Website button",
             trigger: '*:contains("Create")',
             run: "click",
-            expectUnloadPage: true,
         },
         {
             content: "Verify site created (we land on the actual home page instead of placeholder)",

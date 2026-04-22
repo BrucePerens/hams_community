@@ -14,12 +14,12 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             run: "click",
         },
         {
-            trigger: 'span:contains("Technical"), [data-menu-xmlid="base.menu_custom"]',
+            trigger: '[data-menu-xmlid="base.menu_custom"]',
             content: "Open Technical menu",
             run: "click",
         },
         {
-            trigger: 'a:contains("Binary Manifests"), [data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
+            trigger: '[data-menu-xmlid="binary_downloader.menu_binary_downloader_manifest"]',
             content: "Go to Binary Manifests",
             run: "click",
         },
