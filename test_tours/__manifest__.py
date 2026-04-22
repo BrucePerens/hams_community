@@ -6,7 +6,7 @@
     "category": "Hidden",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base", "web", "web_tour"],
+    "depends": ["base", "web"],
     "installable": True,
     "auto_install": False,
 }

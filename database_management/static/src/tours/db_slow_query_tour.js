@@ -1,6 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
-import { stepUtils } from "@web_tour/tour_service/tour_utils";
+import { stepUtils } from "@web/core/tour/tour_utils";
 
 registry.category("tours").add("db_management_slow_query_tour", { // # Verified by [@ANCHOR: test_db_slow_query_tour]
     url: "/web",

@@ -1,7 +1,7 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-registry.category("web_tour.tours").add("user_websites_seo_tour", {
+registry.category("tours").add("user_websites_seo_tour", {
     test: true,
     url: '/seo-ui-test-user/blog',
     steps: () => [

@@ -1,0 +1,15 @@
+backup_management/__manifest__.py
+binary_downloader/__manifest__.py
+caching/__manifest__.py
+cloudflare/__manifest__.py
+compliance/__manifest__.py
+daemon_key_manager/__manifest__.py
+database_management/__manifest__.py
+distributed_redis_cache/__manifest__.py
+manual_library/__manifest__.py
+pager_duty/__manifest__.py
+test_real_transaction/__manifest__.py
+test_tours/__manifest__.py
+user_websites/__manifest__.py
+user_websites_seo/__manifest__.py
+zero_sudo/__manifest__.py
