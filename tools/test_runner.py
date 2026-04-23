@@ -558,7 +558,7 @@ def check_and_restore_cache(db_name, mod_string):
             filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")
             if os.path.exists(filestore_tar):
                 print("[*] Restoring Filestore...")
-                filestore_base = os.path.expanduser("~/.local/share/Odoo/filestore")
+                filestore_base = "/var/lib/odoo/.local/share/Odoo/filestore"
                 os.makedirs(filestore_base, exist_ok=True)
                 subprocess.run(["tar", "-xzf", filestore_tar, "-C", filestore_base])
 
@@ -613,7 +613,7 @@ def save_db_cache(db_name, cache_file, mod_string):
                     mf.write(mod_string)
 
                 # Cache the Filestore
-                filestore_path = os.path.expanduser(f"~/.local/share/Odoo/filestore/{db_name}")
+                filestore_path = f"/var/lib/odoo/.local/share/Odoo/filestore/{db_name}"
                 if os.path.exists(filestore_path):
                     print("[*] Caching Filestore...")
                     filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")

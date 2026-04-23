@@ -14,12 +14,12 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
         },
         {
             content: "Verify Export Data Button is properly wired",
-            trigger: '*:contains("Export"), form[action="/my/privacy/export"] button',
+            trigger: 'form[action="/my/privacy/export"] button[type="submit"]',
             run: 'click',
         },
         {
             content: "Verify Erasure Form invokes the JS confirmation safeguard",
-            trigger: '*:contains("Delete"), form[action="/my/privacy/delete_content"] button',
+            trigger: 'form[action="/my/privacy/delete_content"] button[type="submit"]',
             run: 'click',
         }
     ],

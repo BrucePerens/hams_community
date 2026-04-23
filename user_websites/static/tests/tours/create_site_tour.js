@@ -18,7 +18,6 @@ registry.category("web_tour.tours").add("create_site_tour", {
             content: "Click Create",
             trigger: '*:contains("Create")',
             run: 'click',
-            expectUnloadPage: true,
         },
         {
             content: "Verify site created (we land on the actual home page instead of placeholder)",
