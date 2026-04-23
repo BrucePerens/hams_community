@@ -7,6 +7,11 @@
     "version": "1.0",
     "license": "AGPL-3",
     "depends": ["base", "web", "web_tour"],
+    "assets": {
+        "web.assets_tests": [
+            "test_tours/static/src/js/tour_failure_dump.js",
+        ],
+    },
     "installable": True,
     "auto_install": False,
 }
