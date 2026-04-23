@@ -52,7 +52,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         # Tests [@ANCHOR: test_tour_gdpr_privacy]
         self.url_open("/my/privacy")
         self.authenticate(self.user_test.login, self.user_test.login)
-        self.start_tour("/my/privacy", "gdpr_privacy_tour")
+        self.start_tour("/my/privacy", "gdpr_privacy_tour", login=self.user_test.login)
 
     def test_04_moderation_appeal_tour(self):
         # Tests [@ANCHOR: test_tour_moderation_appeal]
@@ -60,7 +60,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         # Suspend user to trigger the appeal form rendering
         self.user_test.is_suspended_from_websites = True
         self.authenticate(self.user_test.login, self.user_test.login)
-        self.start_tour("/my/home", "moderation_appeal_tour")
+        self.start_tour("/my/home", "moderation_appeal_tour", login=self.user_test.login)
 
     def test_05_create_site_tour(self):
         # Tests [@ANCHOR: test_tour_create_site]
@@ -84,7 +84,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         )
         self.authenticate(user_no_site.login, user_no_site.login)
         # Start at the portal so the tour can navigate to the site
-        self.start_tour("/my/home", "create_site_tour")
+        self.start_tour("/my/home", "create_site_tour", login=user_no_site.login)
 
     def test_06_create_blog_tour(self):
         # Tests [@ANCHOR: test_tour_create_blog]
@@ -108,7 +108,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         )
         self.authenticate(user_no_blog.login, user_no_blog.login)
         # Start at the portal so the tour can navigate to the blog
-        self.start_tour("/my/home", "create_blog_tour")
+        self.start_tour("/my/home", "create_blog_tour", login=user_no_blog.login)
 
     def test_07_community_directory_tour(self):
         # Tests [@ANCHOR: test_tour_community_directory]
@@ -119,4 +119,4 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         # Tests [@ANCHOR: test_tour_frontend_misc]
         self.url_open("/user-websites/documentation")
         self.authenticate(self.user_test.login, self.user_test.login)
-        self.start_tour("/user-websites/documentation", "frontend_misc_tour")
+        self.start_tour("/user-websites/documentation", "frontend_misc_tour", login=self.user_test.login)

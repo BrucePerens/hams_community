@@ -40,7 +40,7 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             run: 'click',
         },
         {
-            trigger: '.o_select_menu_item:contains("Kopia"), .o_select_menu_item:contains("kopia")',
+            trigger: '.dropdown-item:contains("Kopia"), .o-dropdown-item:contains("Kopia"), .o_select_menu_item:contains("Kopia"), .o_select_menu_item:contains("kopia")',
             content: "Select Kopia engine value",
             run: 'click',
         },
