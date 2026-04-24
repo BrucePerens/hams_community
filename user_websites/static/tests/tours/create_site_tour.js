@@ -16,13 +16,13 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Click Create",
-            trigger: 'form[action="/sitetour/create_site"] button[type="submit"], *:contains("Create")',
+            trigger: 'button[data-tour="create-site-btn"]',
             run: 'click',
             expectUnloadPage: true,
         },
         {
             content: "Verify site created (we land on the actual home page instead of placeholder)",
-            trigger: '.user-websites-navbar, #user_websites_dropzone_home_header:not(:visible)',
+            trigger: '#user_websites_dropzone_home_header',
             run: () => {},
         },
         {

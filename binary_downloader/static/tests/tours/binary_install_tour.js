@@ -30,35 +30,30 @@ registry.category("web_tour.tours").add("binary_install_tour", {
         },
         {
             trigger: 'div[name="name"] input',
-            run: 'text tourbin',
+            run: 'edit tourbin',
         },
         {
             trigger: 'div[name="url"] input',
-            run: 'text [https://example.com/tourbin](https://example.com/tourbin)',
+            run: 'edit [https://example.com/tourbin](https://example.com/tourbin)',
         },
         {
             trigger: 'div[name="checksum"] input',
-            run: 'text tourhash',
+            run: 'edit tourhash',
         },
         {
-            content: "Click away to ensure onchange fires",
-            trigger: 'div[name="name"] input',
-            run: 'click',
-        },
-        {
+            content: "Explicitly save the record to decouple input from RPC execution",
             trigger: '.o_form_button_save',
-            content: "Save configuration",
             run: 'click',
         },
         {
-            trigger: '.o_form_button_create',
-            content: "Wait for save to finish before triggering action",
+            content: "Wait for the database save to complete and the action button to appear",
+            trigger: 'button[data-tour="install-now-btn"]',
+            run: 'click',
+        },
+        {
+            content: "Wait for the success notification to ensure the RPC resolved before ending tour",
+            trigger: '.o_notification:contains("Success")',
             run: () => {},
-        },
-        {
-            content: "Click Install Now",
-            trigger: 'button[name="action_install"]',
-            run: 'click',
         },
         {
             trigger: 'body',
