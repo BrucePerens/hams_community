@@ -30,15 +30,30 @@ registry.category("web_tour.tours").add("binary_install_tour", {
         },
         {
             trigger: 'div[name="name"] input',
-            run: 'edit tourbin',
+            run: 'text tourbin',
         },
         {
             trigger: 'div[name="url"] input',
-            run: 'edit http://example.com/tourbin',
+            run: 'text [https://example.com/tourbin](https://example.com/tourbin)',
         },
         {
             trigger: 'div[name="checksum"] input',
-            run: 'edit tourhash',
+            run: 'text tourhash',
+        },
+        {
+            content: "Click away to ensure onchange fires",
+            trigger: 'div[name="name"] input',
+            run: 'click',
+        },
+        {
+            trigger: '.o_form_button_save',
+            content: "Save configuration",
+            run: 'click',
+        },
+        {
+            trigger: '.o_form_button_create',
+            content: "Wait for save to finish before triggering action",
+            run: () => {},
         },
         {
             content: "Click Install Now",

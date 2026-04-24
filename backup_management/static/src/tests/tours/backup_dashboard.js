@@ -35,12 +35,12 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             content: "Enter name",
         },
         {
-            trigger: 'div[name="engine"] .o_select_menu',
+            trigger: 'div[name="engine"] input.o_select_menu_toggler',
             content: "Open engine dropdown",
             run: 'click',
         },
         {
-            trigger: '.dropdown-item:contains("Kopia"), .o-dropdown-item:contains("Kopia"), .o_select_menu_item:contains("Kopia"), .o_select_menu_item:contains("kopia")',
+            trigger: '.o_select_menu_item:contains("Kopia"), .o_select_menu_item:contains("kopia")',
             content: "Select Kopia engine value",
             run: 'click',
         },

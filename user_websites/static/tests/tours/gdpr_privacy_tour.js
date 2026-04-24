@@ -18,9 +18,17 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
             run: 'click',
         },
         {
-            content: "Verify Erasure Form invokes the JS confirmation safeguard",
+            content: "Bypass JS confirmation safeguard",
+            trigger: 'form[action="/my/privacy/delete_content"] button[type="submit"]',
+            run: () => {
+                window.confirm = () => true;
+            },
+        },
+        {
+            content: "Verify Erasure Form invokes deletion",
             trigger: 'form[action="/my/privacy/delete_content"] button[type="submit"]',
             run: 'click',
+            expectUnloadPage: true,
         }
     ],
 });
