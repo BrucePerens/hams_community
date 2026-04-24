@@ -15,14 +15,14 @@ registry.category("web_tour.tours").add("create_site_tour", {
             expectUnloadPage: true,
         },
         {
-            content: "Click Create",
-            trigger: 'button[data-tour="create-site-btn"]',
+            content: "Click Create using namespaced fallback class",
+            trigger: 'button.o_tour_create_site_btn',
             run: 'click',
             expectUnloadPage: true,
         },
         {
-            content: "Verify site created (we land on the actual home page instead of placeholder)",
-            trigger: '#user_websites_dropzone_home_header',
+            content: "Verify site created (targeting invisible dropzone with native pseudo-selector)",
+            trigger: '#user_websites_dropzone_home_header:not(:visible)',
             run: () => {},
         },
         {

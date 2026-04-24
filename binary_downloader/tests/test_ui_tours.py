@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from odoo.tests import HttpCase, tagged
-from unittest.mock import patch
 
 @tagged("post_install", "-at_install")
 class TestBinaryDownloaderTour(HttpCase):
+    def setUp(self):
+        super().setUp()
+        # Force the admin user to use a deterministic US English locale
+        # to prevent headless browser translation crashes during UI tours.
+        self.env.ref("base.user_admin").lang = "en_US"
 
     def test_binary_install_tour(self):
-        # Tests [@ANCHOR: UX_BINARY_INSTALL]
-        # Mock the action_install to prevent real 404 HTTP requests during CI
-        with patch('odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.action_install'):
-            self.start_tour("/web?debug=1", "binary_install_tour", login="admin")
+        self.start_tour("/web?debug=1", "binary_install_tour", login="admin")

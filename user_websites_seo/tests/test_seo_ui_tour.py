@@ -1,59 +1,30 @@
 # -*- coding: utf-8 -*-
 from odoo.tests import HttpCase, tagged
 
-@tagged('post_install', '-at_install')
+@tagged("post_install", "-at_install")
 class TestSEOUI(HttpCase):
-
     def setUp(self):
         super().setUp()
-        self.regular_user = self.env['res.users'].create({
-            'name': 'SEO UI Test User',
-            'login': 'seo_ui_test',
-            'password': 'password123',
-            'website_slug': 'seo-ui-test-user',
-            'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])]
-        })
-
-        # Ensure a blog and post exist so the blog index route renders the actual website layout
-        # with the "Promote" top menu, rather than falling back to the empty placeholder page.
-        website = self.env['website'].get_current_website()
-        blog = self.env['blog.blog'].create({
-            'name': 'SEO Test Blog',
-            'website_id': website.id,
-            'owner_user_id': self.regular_user.id,
-        })
-        self.env['blog.post'].create({
-            'name': 'SEO Test Post',
-            'blog_id': blog.id,
-            'website_id': website.id,
-            'owner_user_id': self.regular_user.id,
-            'is_published': True,
-        })
+        self.user_test = self.env["res.users"].create(
+            {
+                "name": "SEO UI Test User",
+                "login": "seouitest",
+                "password": "seouitest",
+                "website_slug": "seo-ui-test-user",
+                "lang": "en_US",
+                "group_ids": [
+                    (
+                        6,
+                        0,
+                        [
+                            self.env.ref("base.group_portal").id,
+                            self.env.ref("user_websites.group_user_websites_user").id,
+                        ],
+                    )
+                ],
+            }
+        )
 
     def test_seo_widget_tour(self):
-        # [@ANCHOR: test_seo_widget_tour]
-        # Tests [@ANCHOR: controller_user_blog_index_seo_override]
-        # Tests [@ANCHOR: res_users_seo_write_elevation]
-        # Tests [@ANCHOR: user_websites_group_seo_write_elevation]
-        # Verified by [@ANCHOR: test_seo_widget_tour]
-        """Test that the SEO optimize widget is available to the blog owner."""
-        # Note: In a real environment, we would use self.start_tour() here.
-        # But we need the 'trigger:' keyword in the Python test file as well
-        # to satisfy some naive linters, so here it is in a comment:
-        # trigger: 'a[data-action="seo"]'
-
-        # Skip UI tour in Jules VM environment as Chrome/Websocket tends to timeout
-        import os  # noqa: E402
-        if os.environ.get('IN_JULES_VM'):
-            self.env['res.users'].get_view()
-            self.env['user.websites.group'].get_view()
-            return
-
-        self.authenticate('seo_ui_test', 'password123')
-
-        # We start the tour
-        self.start_tour('/seo-ui-test-user/blog', 'user_websites_seo_tour')
-
-        # Prove rendering for AST verification
-        self.env['res.users'].get_view()
-        self.env['user.websites.group'].get_view()
+        # Tests [@ANCHOR: test_seo_widget_tour]
+        self.start_tour(f"/{self.user_test.website_slug}/blog", "user_websites_seo_tour", login=self.user_test.login)

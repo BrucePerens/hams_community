@@ -18,13 +18,15 @@ registry.category("web_tour.tours").add("gdpr_privacy_tour", {
             run: () => {}, // Verify presence only to prevent file download from unloading the test page
         },
         {
-            content: "Initiate Erasure Sequence",
-            trigger: 'button[data-tour="erasure-initiate"]',
-            run: 'click',
+            content: "Bypass JS confirmation safeguard safely in an isolated step",
+            trigger: 'body',
+            run: () => {
+                window.confirm = () => true;
+            },
         },
         {
-            content: "Confirm Erasure in Modal",
-            trigger: 'button[data-tour="erasure-confirm"]',
+            content: "Verify Erasure Form invokes deletion using namespaced class",
+            trigger: 'button.o_tour_erasure_initiate',
             run: 'click',
             expectUnloadPage: true,
         }

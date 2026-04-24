@@ -1,42 +1,60 @@
-# ADR 0081: UI Testability and Tour-Friendly Design Architecture
+# ADR 0081: Native Odoo Tour Resilience Architecture
 
 ## Status
 Accepted
 
 ## Context
-The platform mandates automated testing for all UI views to prevent regressions. However, JavaScript UI Tours in Odoo are inherently brittle due to their reliance on specific DOM structures, CSS selectors, and exact timing. Recent CI pipeline failures highlight severe issues with DOM race conditions, invisible elements, and blocking native dialogs.
+JavaScript UI Tours in Odoo are inherently brittle. Recent CI pipeline failures highlight severe issues with DOM race conditions, invisible layout elements, blocking native dialogs, Single Page Application (SPA) context loss, non-deterministic locale initializations, and asynchronous input evaluation.
 
-To enforce the test reliability mandate without creating a "maintenance trap" of constantly broken tours, we must treat UI testability as a core, upstream architectural requirement rather than an afterthought.
+Initially, there was an attempt to inject arbitrary `data-tour` tags to decouple selectors. This proved to be an architectural anti-pattern that caused backend XML schema validation (`jing`) failures. We must adapt the tours to the framework's native architecture to achieve resilience.
 
 ## Decision
-All front-end XML templates and custom JavaScript widgets MUST be architected specifically to support deterministic, race-condition-free automated tours. The following mandates apply to all UI development:
+Tours MUST be written using Odoo's native JS testing capabilities and schema-compliant selectors to deterministically handle race conditions and environment states.
 
-### 1. Dedicated Testing Selectors
-UI components MUST NOT rely on structural layout classes (e.g., `.col-md-6`, `.mt-4`, `.d-flex`) or translated text strings for test triggers, as these frequently change during UI polish.
-* Developers MUST inject dedicated attributes explicitly for testing (e.g., `data-tour="submit-action"`) or utilize strict `name="..."` attributes on fields and buttons.
+### 1. Native-First Targeting and Namespaced Fallbacks
+UI components MUST NOT rely on structural layout classes (e.g., `.col-md-6`) or translated text strings for test triggers, as these frequently change during UI polish.
+* **Primary (The Backend Standard):** Tours MUST prioritize Odoo's native `name` attributes (`button[name="action_install"]`, `field[name="is_installed"]`). These are immutably bound to the Python backend RPC methods.
+* **Secondary (Structural Singletons):** Tours may target native structural IDs (`#wrap`, `.o_form_sheet`).
+* **Fallback (The Namespaced Class):** When an element lacks a natural `name` or `id` (e.g., frontend QWeb buttons, generic containers), developers MUST inject a dedicated CSS class starting with `o_tour_` (e.g., `class="btn btn-primary o_tour_create_site_btn"`). You MUST NOT use `data-*` attributes in backend XML views.
 
-### 2. Explicit Asynchronous State Exposure (Custom Widgets)
-Tours execute steps the millisecond a selector appears in the DOM, which causes violent race conditions when RPC calls (like saving a record) are still in-flight.
-* Custom JavaScript widgets MUST explicitly toggle state classes on their parent containers. For example, inject a `.hams-loading` class when an RPC call begins, and swap it to `.hams-ready` when the promise resolves. Tours MUST trigger on `.hams-ready` to mathematically guarantee the background operations have finished.
-
-### 3. Decoupling of Blocking Dialogs
-Native JavaScript dialogs (`window.confirm`, `window.alert`, `window.prompt`) halt the browser's execution thread and cause the Odoo tour runner to lose context regarding `beforeUnload` events.
-* Developers MUST strictly avoid using inline `onsubmit="return confirm('...');"` handlers in XML templates.
-* Interactions requiring confirmation MUST be routed through an Odoo JS Controller utilizing the native `ConfirmationDialog` service, which allows the test framework to interact with the modal natively without thread-blocking.
-
-### 4. Dimensioned Target Elements
+### 2. Handling Invisible Dropzones and Structural Elements
 Odoo's tour framework inherently ignores elements with a 0x0 pixel dimension.
-* If a UI relies on invisible dropzones or placeholder `<div>` tags for dynamic mounting, the elements MUST possess a minimal physical dimension in the CSS (e.g., `min-height: 1px;`).
-* If a container must remain completely structureless and invisible, the tour MUST explicitly append `:not(:visible)` to the trigger selector.
+* Developers MUST NOT pollute UI CSS with `min-height: 1px` hacks to make an empty container visible to the test runner.
+* If a 0x0 structural dropzone or invisible layout anchor MUST be targeted, the tour MUST explicitly append the Odoo pseudo-selector `:not(:visible)` to the trigger string.
 
-### 5. Bidirectional Semantic Anchoring
-* Every front-end `<template>` and `<record model="ir.ui.view">` MUST contain a bidirectional semantic anchor (`[@ANCHOR: ...]`) linking the XML element directly to its corresponding JS Tour step. This guarantees traceability and prevents developers from breaking tests when refactoring views.
+### 3. The Page Unload Protocol
+When a tour step executes a click that triggers a raw HTML `<form>` submission or a hard browser redirect (bypassing the Odoo SPA router), the test runner will interpret the browser's native `beforeUnload` event as a fatal crash if it isn't warned.
+* The specific tour step that initiates the unload MUST explicitly declare `expectUnloadPage: true`.
+* You MUST use Odoo's native `run: 'click'` helper on this step. Do not use custom JS closures (`run: () => { btn.click() }`) as it breaks the unload event binding.
 
-### 6. Native Auto-Save and RPC Resolution (The "Dirty Form" Rule)
-Native Odoo form buttons (e.g., `type="object"`) automatically and asynchronously save the form before invoking their backend methods. If a tour navigates away or terminates before this background save resolves, Odoo will halt the test with a "dirty form view" error to prevent data corruption.
-* Tours MUST explicitly wait for a verifiable DOM state change confirming the RPC has resolved after clicking *any* native action button. This must be done by explicitly targeting `.o_notification:contains("Success")`, `.o_form_readonly`, or another guaranteed post-save DOM mutation before ending the tour.
+### 4. Decoupling of Blocking Dialogs
+Native JavaScript dialogs (`window.confirm`, `window.alert`) halt the browser's execution thread.
+* If a tour must bypass a native dialog, it MUST isolate the window override into an independent, preceding step targeting the `body`.
 
-### 7. Action Button State Governance (The "Unsaved Record" Trap)
-Relying on Odoo's native auto-save mechanism when clicking an action button on a newly created, dirty form introduces severe race conditions where partial text input is submitted to the backend.
+### 5. Native Auto-Save and RPC Resolution (The "Dirty Form" Rule)
+Native Odoo form buttons (e.g., `type="object"`) automatically and asynchronously save the form before invoking their backend methods. If a tour navigates away or terminates before this background save resolves, Odoo will halt the test with a "dirty form view" error.
+* Tours MUST explicitly wait for a verifiable DOM state change confirming the RPC has resolved after clicking an action button. This must be done by explicitly targeting `.o_notification`, or another guaranteed post-save DOM mutation before ending the tour.
+
+### 6. Action Button State Governance (The "Unsaved Record" Trap)
+Relying on Odoo's native auto-save mechanism when clicking an action button on a newly created, dirty form introduces severe race conditions where partial text input is submitted to the backend because the DOM `blur` event hasn't fired.
 * Native Odoo object buttons (`type="object"`) that execute backend Python methods MUST be hidden on new, unsaved records using `invisible="not id"` (or merged into existing visibility domains, e.g., `invisible="is_installed or not id"`).
-* Forcing the user (and the tour) to explicitly save the record first guarantees a deterministic state machine and decouples data entry from RPC execution.
+* Tours MUST include a neutral "click away" step (e.g., targeting `.o_form_sheet`) after text entry to force the DOM to commit the record state, followed by an explicit click of the `.o_form_button_save` save button before interacting with the RPC actions.
+
+### 7. Language and Translation Determinism
+Odoo's headless browser tests can crash with "no translation language is detected" if the environment's `Accept-Language` headers are ambiguous, especially before translation dictionaries are fully populated.
+* The `--language` CLI flag and OS-level `LANG` variables are ignored by Odoo's web client and MUST NOT be used for this purpose.
+* Developers MUST ensure deterministic locales by explicitly setting the `lang` field (e.g., `"lang": "en_US"`) on any `res.users` records created for testing.
+* For backend tours executing as the `admin` user, the test `setUp` method MUST explicitly set `self.env.ref('base.user_admin').lang = 'en_US'`.
+* For public (unauthenticated) frontend tours, use the explicit language routing prefix in the starting URL (e.g., `/en_US/web`).
+
+### 8. Headless Browser Authentication Context
+Odoo's `HttpCase.start_tour()` spawns its headless browser in an unauthenticated public state by default. The standard Python `self.authenticate()` method ONLY authenticates the local `requests` session utilized for backend scraping, NOT the headless browser.
+* Tours executing authenticated flows MUST explicitly pass the `login` keyword argument directly to the tour execution command (e.g., `self.start_tour("/my/path", "tour_name", login="admin")`).
+
+### 9. Deterministic Input Simulation (Bypassing the `edit` helper)
+Odoo's tour `edit` helper simulates typing character-by-character. This can cause severe validation races (e.g., backend constraints triggering on partially typed strings like `htt` for a URL) if the framework auto-saves before the final DOM `blur` or `change` event fires.
+* If a text input is subject to strict backend format validation, tours MUST bypass the `edit` helper.
+* Developers MUST manually inject the string value and dispatch the input events via pure JavaScript inside a `run: () => { ... }` block (e.g., `input.dispatchEvent(new Event('change', { bubbles: true }));`) to ensure complete synchronization between the DOM and the JS framework before auto-saving.
+
+## Consequences
+* **Positive:** Tours rely entirely on the native framework APIs. Complete decoupling is achieved without triggering XML schema violations or polluting CSS, and headless browser environments are strictly deterministic.
