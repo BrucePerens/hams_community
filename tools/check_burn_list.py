@@ -89,12 +89,35 @@ def parse_odoo_xml(content):
     return root
 
 
-ERROR_RULES = [
+GENERAL_ERROR_RULES = [
     (
         r"\.js$",
         re.compile(r"\.bindPopup\(\s*`|\.innerHTML\s*=\s*`"),
         "JS DOM XSS: Template literal passed to bindPopup or innerHTML.",
     ),
+    (
+        r"\.py$",
+        re.compile(r"except\s+ImportError\s*:"),
+        "CRITICAL AI FAILURE: Wrapping imports in try/except ImportError is forbidden. Use manifest external_dependencies.",
+    ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"(?<![\'\"])(?:urllib\.request\.urlretrieve|requests\.(?:get|post|put|delete))\s*\("),
+        "CRITICAL TEST ISOLATION: Tests must not make real external HTTP requests. Mock the network call (e.g., via unittest.mock.patch).",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"127\.0\.0\.1"),
+        "CRITICAL NETWORK HARDCODING: local loop-back prohibited, use a name that can be resolved using Docker or /etc/hosts .",
+    ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"['\"]/tmp(?:/|['\"])"),
+        "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
+    ),
+]
+
+ODOO_ERROR_RULES = [
     (
         r"\.py$",
         re.compile(r"['\"]groups_id['\"]\s*:"),
@@ -104,11 +127,6 @@ ERROR_RULES = [
         r"\.py$",
         re.compile(r"^\s*_sql_constraints\s*="),
         "CRITICAL DEPRECATION: Use 'models.Constraint' class attributes instead.",
-    ),
-    (
-        r"\.py$",
-        re.compile(r"except\s+ImportError\s*:"),
-        "CRITICAL AI FAILURE: Wrapping imports in try/except ImportError is forbidden. Use manifest external_dependencies.",
     ),
     (
         r"\.py$",
@@ -154,11 +172,6 @@ ERROR_RULES = [
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"\.o_notification_success"),
         "FRAGILE TOUR TRIGGER: '.o_notification_success' changed in Odoo 19. Use standard notification classes or avoid waiting on toasts.",
-    ),
-    (
-        r"test_.*\.py$",
-        re.compile(r"(?<![\'\"])(?:urllib\.request\.urlretrieve|requests\.(?:get|post|put|delete))\s*\("),
-        "CRITICAL TEST ISOLATION: Tests must not make real external HTTP requests. Mock the network call (e.g., via unittest.mock.patch).",
     ),
     (
         r"\.js$",
@@ -207,16 +220,6 @@ ERROR_RULES = [
         "FRAGILE XPATH: Targeting 'hasclass(\"card\")', 'hasclass(\"field-*\")', labels by 'for', or buttons by 'string' is banned. Target robust structural elements.",
     ),
     (
-        r"\.py$",
-        re.compile(r"127\.0\.0\.1"),
-        "CRITICAL NETWORK HARDCODING: local loop-back prohibited, use a name that can be resolved using Docker or /etc/hosts .",
-    ),
-    (
-        r"test_.*\.py$",
-        re.compile(r"['\"]/tmp(?:/|['\"])"),
-        "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
-    ),
-    (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"trigger:\s*['\"`].*?(?:\.o_app|\.nav-link|\.o_menu_brand|h[1-6]:contains).*?['\"`]"),
         "FRAGILE TOUR TRIGGER: Odoo 19 UI shifted. Do not use '.o_app', '.nav-link', '.o_menu_brand', or 'h1:contains' in tour triggers. Use structure-agnostic selectors like '[data-menu-xmlid=...]' or '*:contains'.",
@@ -257,7 +260,7 @@ FOUND_TOURS = []
 FOUND_MANIFESTS = {}
 
 
-def check_ast_vulnerabilities(filepath, content, lines):
+def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
     errors = []
     warnings = []
     filename = os.path.basename(filepath)
@@ -268,7 +271,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
         return errors, warnings
 
     class TaintVisitor(ast.NodeVisitor):
-        def __init__(self, filename, lines):
+        def __init__(self, filename, lines, is_odoo_module):
             self.errors = []
             self.warnings = []
             self.assignments = {}
@@ -277,6 +280,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.in_real_transaction_case = False
             self.filename = filename
             self.lines = lines
+            self.is_odoo_module = is_odoo_module
             self._assignment_stack = set()
             self.current_method = None
             self.current_decorators = []
@@ -380,39 +384,40 @@ def check_ast_vulnerabilities(filepath, content, lines):
             self.generic_visit(node)
 
         def visit_With(self, node):
-            is_cursor = any(
-                isinstance(item.context_expr, ast.Call)
-                and isinstance(item.context_expr.func, ast.Attribute)
-                and item.context_expr.func.attr == "cursor"
-                for item in node.items
-            )
-            if is_cursor:
-                for child in ast.walk(node):
-                    if (
-                        isinstance(child, ast.Call)
-                        and isinstance(child.func, ast.Attribute)
-                        and child.func.attr in ("commit", "rollback")
-                    ):
-                        self.add_error(
-                            child.lineno,
-                            "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block.",
-                        )
-
-            for item in node.items:
-                if isinstance(item.context_expr, ast.Call) and getattr(item.context_expr.func, "attr", "") in ("assertRaises", "assertRaisesRegex"):
-                    has_create_write = False
-                    has_flush = False
+            if self.is_odoo_module:
+                is_cursor = any(
+                    isinstance(item.context_expr, ast.Call)
+                    and isinstance(item.context_expr.func, ast.Attribute)
+                    and item.context_expr.func.attr == "cursor"
+                    for item in node.items
+                )
+                if is_cursor:
                     for child in ast.walk(node):
-                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                            if child.func.attr in ("create", "write"):
-                                has_create_write = True
-                            elif child.func.attr == "flush_all":
-                                has_flush = True
-                    if has_create_write and not has_flush:
-                        self.add_error(
-                            node.lineno,
-                            "CONSTRAINT FLUSH TRAP: ORM create/write inside assertRaises requires self.env.flush_all() before the context manager exits to trigger @api.constrains."
-                        )
+                        if (
+                            isinstance(child, ast.Call)
+                            and isinstance(child.func, ast.Attribute)
+                            and child.func.attr in ("commit", "rollback")
+                        ):
+                            self.add_error(
+                                child.lineno,
+                                "CURSOR MISMANAGEMENT: Do not manually call commit() or rollback() inside a `with registry.cursor():` block.",
+                            )
+
+                for item in node.items:
+                    if isinstance(item.context_expr, ast.Call) and getattr(item.context_expr.func, "attr", "") in ("assertRaises", "assertRaisesRegex"):
+                        has_create_write = False
+                        has_flush = False
+                        for child in ast.walk(node):
+                            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                                if child.func.attr in ("create", "write"):
+                                    has_create_write = True
+                                elif child.func.attr == "flush_all":
+                                    has_flush = True
+                        if has_create_write and not has_flush:
+                            self.add_error(
+                                node.lineno,
+                                "CONSTRAINT FLUSH TRAP: ORM create/write inside assertRaises requires self.env.flush_all() before the context manager exits to trigger @api.constrains."
+                            )
 
             self.generic_visit(node)
 
@@ -421,27 +426,28 @@ def check_ast_vulnerabilities(filepath, content, lines):
             for k, v in zip(node.keys, node.values):
                 if isinstance(k, ast.Constant) and isinstance(k.value, str):
                     keys_found.add(k.value)
-                    if k.value in (
-                        "error",
-                        "success",
-                        "warning",
-                        "message",
-                    ) and self.is_untranslated_string(v):
-                        if not re.search(r".*_?api\.py$", self.filename):
-                            self.add_warning(
-                                node.lineno,
-                                f"[%AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.",
+                    if self.is_odoo_module:
+                        if k.value in (
+                            "error",
+                            "success",
+                            "warning",
+                            "message",
+                        ) and self.is_untranslated_string(v):
+                            if not re.search(r".*_?api\.py$", self.filename):
+                                self.add_warning(
+                                    node.lineno,
+                                    f"[%AUDIT] I18N: Untranslated string assigned to UI feedback dict key '{k.value}'.",
+                                )
+                        if k.value == "groups_id":
+                            self.add_error(
+                                node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
                             )
-                    if k.value == "groups_id":
-                        self.add_error(
-                            node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
-                        )
-                    if k.value == "group_ids" and not self.filename.startswith("test_"):
-                        self.add_error(
-                            node.lineno,
-                            "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
-                        )
-            if "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
+                        if k.value == "group_ids" and not self.filename.startswith("test_"):
+                            self.add_error(
+                                node.lineno,
+                                "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                            )
+            if self.is_odoo_module and "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
                 self.add_error(
                     node.lineno,
                     "MUTUAL EXCLUSIVITY TRAP: Cannot assign both 'owner_user_id' and 'user_websites_group_id'.",
@@ -514,18 +520,19 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 or (isinstance(dec, ast.Attribute) and dec.attr == "route")
                 for dec in node.decorator_list
             )
-            for dec in node.decorator_list:
-                if (
-                    isinstance(dec, ast.Attribute)
-                    and dec.attr == "returns"
-                    and getattr(dec.value, "id", "") == "api"
-                ) or (
-                    isinstance(dec, ast.Call)
-                    and isinstance(dec.func, ast.Attribute)
-                    and dec.func.attr == "returns"
-                    and getattr(dec.func.value, "id", "") == "api"
-                ):
-                    self.add_error(node.lineno, "@api.returns is deprecated.")
+            if self.is_odoo_module:
+                for dec in node.decorator_list:
+                    if (
+                        isinstance(dec, ast.Attribute)
+                        and dec.attr == "returns"
+                        and getattr(dec.value, "id", "") == "api"
+                    ) or (
+                        isinstance(dec, ast.Call)
+                        and isinstance(dec.func, ast.Attribute)
+                        and dec.func.attr == "returns"
+                        and getattr(dec.func.value, "id", "") == "api"
+                    ):
+                        self.add_error(node.lineno, "@api.returns is deprecated.")
 
             self._check_test_empty(node)
 
@@ -569,39 +576,40 @@ def check_ast_vulnerabilities(filepath, content, lines):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     self.assignments[target.id] = node.value
-                elif (
-                    isinstance(target, ast.Attribute)
-                    and target.attr == "context"
-                    and isinstance(target.value, ast.Attribute)
-                    and target.value.attr == "env"
-                    and getattr(target.value.value, "id", "") == "self"
-                ):
-                    self.add_error(
-                        node.lineno,
-                        "Never modify `self.env.context` directly. Use `self.with_context()`.",
-                    )
-                elif isinstance(target, ast.Name) and target.id == "_sql_constraints":
-                    self.add_error(
-                        node.lineno,
-                        "Use 'models.Constraint' instead of '_sql_constraints'.",
-                    )
-                elif isinstance(target, ast.Attribute) and target.attr == "group_ids" and not self.filename.startswith("test_"):
-                    self.add_error(
-                        node.lineno,
-                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
-                    )
-                elif isinstance(target, ast.Subscript) and getattr(target, "slice", None):
-                    slice_val = getattr(target.slice, "value", None)
-                    if slice_val == "group_ids" and not self.filename.startswith("test_"):
+                elif self.is_odoo_module:
+                    if (
+                        isinstance(target, ast.Attribute)
+                        and target.attr == "context"
+                        and isinstance(target.value, ast.Attribute)
+                        and target.value.attr == "env"
+                        and getattr(target.value.value, "id", "") == "self"
+                    ):
+                        self.add_error(
+                            node.lineno,
+                            "Never modify `self.env.context` directly. Use `self.with_context()`.",
+                        )
+                    elif isinstance(target, ast.Name) and target.id == "_sql_constraints":
+                        self.add_error(
+                            node.lineno,
+                            "Use 'models.Constraint' instead of '_sql_constraints'.",
+                        )
+                    elif isinstance(target, ast.Attribute) and target.attr == "group_ids" and not self.filename.startswith("test_"):
                         self.add_error(
                             node.lineno,
                             "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                         )
-                    elif slice_val in ("error", "success", "warning", "message") and self.is_untranslated_string(node.value):
-                        self.add_warning(
-                            node.lineno,
-                            "[%AUDIT] I18N: Untranslated string assigned to dict key.",
-                        )
+                    elif isinstance(target, ast.Subscript) and getattr(target, "slice", None):
+                        slice_val = getattr(target.slice, "value", None)
+                        if slice_val == "group_ids" and not self.filename.startswith("test_"):
+                            self.add_error(
+                                node.lineno,
+                                "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                            )
+                        elif slice_val in ("error", "success", "warning", "message") and self.is_untranslated_string(node.value):
+                            self.add_warning(
+                                node.lineno,
+                                "[%AUDIT] I18N: Untranslated string assigned to dict key.",
+                            )
             self.generic_visit(node)
 
         def visit_Import(self, node):
@@ -651,7 +659,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 )
             elif node.module == "random":
                 self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random'.")
-            elif getattr(node, "module", "") == "odoo.modules" and any(
+            elif self.is_odoo_module and getattr(node, "module", "") == "odoo.modules" and any(
                 alias.name == "get_module_resource" for alias in node.names
             ):
                 self.add_error(
@@ -662,115 +670,119 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
         def visit_Constant(self, node):
             if isinstance(node.value, str):
-                if re.search(r" numbercall ", node.value):
-                    self.add_error(
-                        node.lineno,
-                        "Remove 'numbercall'. Odoo 18+ crons run indefinitely.",
-                    )
-                if (
-                    node.value == "res.users.apikeys"
-                    and "key_registry.py" not in self.filename
-                ):
-                    self.add_error(
-                        node.lineno,
-                        "CRITICAL SECURITY: Odoo native RPC bearer token allocation (res.users.apikeys) is forbidden. Use 'daemon_key_manager'.",
-                    )
+                if self.is_odoo_module:
+                    if re.search(r" numbercall ", node.value):
+                        self.add_error(
+                            node.lineno,
+                            "Remove 'numbercall'. Odoo 18+ crons run indefinitely.",
+                        )
+                    if (
+                        node.value == "res.users.apikeys"
+                        and "key_registry.py" not in self.filename
+                    ):
+                        self.add_error(
+                            node.lineno,
+                            "CRITICAL SECURITY: Odoo native RPC bearer token allocation (res.users.apikeys) is forbidden. Use 'daemon_key_manager'.",
+                        )
             self.generic_visit(node)
 
         def visit_Name(self, node):
-            if node.id == "numbercall":
-                self.add_error(node.lineno, "Remove 'numbercall'.")
-            elif node.id == "_sql_constraints":
-                self.add_error(node.lineno, "Use 'models.Constraint'.")
+            if self.is_odoo_module:
+                if node.id == "numbercall":
+                    self.add_error(node.lineno, "Remove 'numbercall'.")
+                elif node.id == "_sql_constraints":
+                    self.add_error(node.lineno, "Use 'models.Constraint'.")
             self.generic_visit(node)
 
         def visit_keyword(self, node):
-            if node.arg == "numbercall":
-                self.add_error(getattr(node, "lineno", 1), "Remove 'numbercall'.")
-            elif node.arg == "groups_id":
-                self.add_error(
-                    getattr(node, "lineno", 1),
-                    "CRITICAL BIAS TRAP: Do not use 'groups_id'.",
-                )
-            elif node.arg == "group_ids" and not self.filename.startswith("test_"):
-                self.add_error(
-                    getattr(node, "lineno", 1),
-                    "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
-                )
-            elif node.arg in ("oldname", "select"):
-                self.add_error(
-                    getattr(node, "lineno", 1),
-                    f"CRITICAL DEPRECATION: '{node.arg}' is a legacy attribute.",
-                )
-            elif node.arg == "type" and getattr(node.value, "value", None) == "json":
-                self.add_error(getattr(node, "lineno", 1), "Use type='jsonrpc'.")
-            elif node.arg == "index" and getattr(node.value, "value", None) == "trgm":
-                self.add_error(getattr(node, "lineno", 1), "Use index='trigram'.")
-            elif (
-                node.arg == "csrf"
-                and getattr(node.value, "value", None) in (False, 0)
-                and not re.search(r".*_?api\.py$", self.filename)
-            ):
-                self.add_error(
-                    getattr(node, "lineno", 1),
-                    "SECURITY ALERT: csrf=False found outside an API.",
-                )
-            elif node.arg == "shell" and getattr(node.value, "value", None) is True:
+            if node.arg == "shell" and getattr(node.value, "value", None) is True:
                 self.add_error(
                     getattr(node, "lineno", 1),
                     "CRITICAL SHELL INJECTION: Avoid shell=True.",
                 )
-            elif node.arg == "related" and getattr(node.value, "value", "").endswith(
-                ".users"
-            ):
-                self.add_error(
-                    getattr(node, "lineno", 1),
-                    "Legacy security relation: Use 'user_ids'.",
-                )
+            if self.is_odoo_module:
+                if node.arg == "numbercall":
+                    self.add_error(getattr(node, "lineno", 1), "Remove 'numbercall'.")
+                elif node.arg == "groups_id":
+                    self.add_error(
+                        getattr(node, "lineno", 1),
+                        "CRITICAL BIAS TRAP: Do not use 'groups_id'.",
+                    )
+                elif node.arg == "group_ids" and not self.filename.startswith("test_"):
+                    self.add_error(
+                        getattr(node, "lineno", 1),
+                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                    )
+                elif node.arg in ("oldname", "select"):
+                    self.add_error(
+                        getattr(node, "lineno", 1),
+                        f"CRITICAL DEPRECATION: '{node.arg}' is a legacy attribute.",
+                    )
+                elif node.arg == "type" and getattr(node.value, "value", None) == "json":
+                    self.add_error(getattr(node, "lineno", 1), "Use type='jsonrpc'.")
+                elif node.arg == "index" and getattr(node.value, "value", None) == "trgm":
+                    self.add_error(getattr(node, "lineno", 1), "Use index='trigram'.")
+                elif (
+                    node.arg == "csrf"
+                    and getattr(node.value, "value", None) in (False, 0)
+                    and not re.search(r".*_?api\.py$", self.filename)
+                ):
+                    self.add_error(
+                        getattr(node, "lineno", 1),
+                        "SECURITY ALERT: csrf=False found outside an API.",
+                    )
+                elif node.arg == "related" and getattr(node.value, "value", "").endswith(
+                    ".users"
+                ):
+                    self.add_error(
+                        getattr(node, "lineno", 1),
+                        "Legacy security relation: Use 'user_ids'.",
+                    )
             self.generic_visit(node)
 
         def visit_Attribute(self, node):
-            if node.attr == "sudo":
-                line_content = (
-                    self.lines[node.lineno - 1]
-                    if node.lineno <= len(self.lines)
-                    else ""
-                )
-                if self.filename == "security_utils.py":
-                    if (
-                        ".sudo()._xmlid_to_res_id" not in line_content
-                        and ".sudo().get_param" not in line_content
+            if self.is_odoo_module:
+                if node.attr == "sudo":
+                    line_content = (
+                        self.lines[node.lineno - 1]
+                        if node.lineno <= len(self.lines)
+                        else ""
+                    )
+                    if self.filename == "security_utils.py":
+                        if (
+                            ".sudo()._xmlid_to_res_id" not in line_content
+                            and ".sudo().get_param" not in line_content
+                        ):
+                            self.add_error(
+                                node.lineno,
+                                "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
+                            )
+                    elif self.filename == "key_registry.py":
+                        if ".sudo()._generate" not in line_content:
+                            self.add_error(
+                                node.lineno,
+                                "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden except for _generate().",
+                            )
+                    elif not (
+                        "# burn-ignore" in line_content  # fmt: skip
+                        and (
+                            "database.secret" in line_content
+                            or ".sudo().unlink()" in line_content
+                        )
                     ):
                         self.add_error(
                             node.lineno,
                             "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
                         )
-                elif self.filename == "key_registry.py":
-                    if ".sudo()._generate" not in line_content:
+                if getattr(node.value, "id", "") == "self":
+                    if node.attr in ("_context", "_uid"):
                         self.add_error(
-                            node.lineno,
-                            "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden except for _generate().",
+                            node.lineno, f"Use 'self.env.{node.attr.strip('_')}'."
                         )
-                elif not (
-                    "# burn-ignore" in line_content  # fmt: skip
-                    and (
-                        "database.secret" in line_content
-                        or ".sudo().unlink()" in line_content
-                    )
-                ):
-                    self.add_error(
-                        node.lineno,
-                        "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
-                    )
-            if getattr(node.value, "id", "") == "self":
-                if node.attr in ("_context", "_uid"):
-                    self.add_error(
-                        node.lineno, f"Use 'self.env.{node.attr.strip('_')}'."
-                    )
-            elif node.attr == "users" and getattr(
-                node.value, "id", getattr(node.value, "attr", "")
-            ) in ("group", "groups", "_group_id"):
-                self.add_error(node.lineno, "Legacy security relation: Use 'user_ids'.")
+                elif node.attr == "users" and getattr(
+                    node.value, "id", getattr(node.value, "attr", "")
+                ) in ("group", "groups", "_group_id"):
+                    self.add_error(node.lineno, "Legacy security relation: Use 'user_ids'.")
             self.generic_visit(node)
 
         def _check_forbidden_functions(self, node):
@@ -789,40 +801,41 @@ def check_ast_vulnerabilities(filepath, content, lines):
                     node.lineno,
                     "CRITICAL RCE: The use of exec() is strictly forbidden.",
                 )
-            elif fid == "_sign_token":
-                self.add_error(
-                    node.lineno,
-                    "Verify '_sign_token' is not called on models lacking an 'access_token' field...",
-                )
-            elif fid == "clear_caches":
-                self.add_error(
-                    node.lineno,
-                    "ORM cache invalidation in Odoo 19+ MUST use targeted `.clear_cache(self)` or `self.env.registry.clear_cache()`.",
-                )
-            elif fid == "_check_recursion":
-                self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
-            elif (
-                fid == "getattr"
-                and len(node.args) >= 2
-                and getattr(node.args[1], "value", None) == "sudo"
-            ):
-                self.add_error(
-                    node.lineno,
-                    "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().",
-                )
-            elif (
-                fid == "setattr"
-                and len(node.args) >= 2
-                and getattr(node.args[1], "value", None) == "group_ids"
-                and not self.filename.startswith("test_")
-            ):
-                self.add_error(
-                    node.lineno,
-                    "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
-                )
+            elif self.is_odoo_module:
+                if fid == "_sign_token":
+                    self.add_error(
+                        node.lineno,
+                        "Verify '_sign_token' is not called on models lacking an 'access_token' field...",
+                    )
+                elif fid == "clear_caches":
+                    self.add_error(
+                        node.lineno,
+                        "ORM cache invalidation in Odoo 19+ MUST use targeted `.clear_cache(self)` or `self.env.registry.clear_cache()`.",
+                    )
+                elif fid == "_check_recursion":
+                    self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
+                elif (
+                    fid == "getattr"
+                    and len(node.args) >= 2
+                    and getattr(node.args[1], "value", None) == "sudo"
+                ):
+                    self.add_error(
+                        node.lineno,
+                        "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().",
+                    )
+                elif (
+                    fid == "setattr"
+                    and len(node.args) >= 2
+                    and getattr(node.args[1], "value", None) == "group_ids"
+                    and not self.filename.startswith("test_")
+                ):
+                    self.add_error(
+                        node.lineno,
+                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                    )
 
         def _check_i18n_messages(self, node, func_name):
-            if re.search(r".*_?api\.py$", self.filename):
+            if re.search(r".*_?api\.py$", self.filename) or not self.is_odoo_module:
                 return
             if func_name in ("UserError", "AccessError", "ValidationError"):
                 if node.args and self.is_untranslated_string(node.args[0]):
@@ -848,97 +861,91 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 == "cr"
             ):
                 is_cr_execute = True
-            elif attr == "send_mail":
-                self.add_warning(
-                    node.lineno, "[%AUDIT] Mail Templates: Verify model_id matches."
-                )
-            elif attr == "_sign_token":
-                self.add_error(node.lineno, "Verify '_sign_token' context...")
-            elif attr == "clear_caches":
-                self.add_error(
-                    node.lineno,
-                    "CRITICAL DEPRECATION: `clear_caches()` is removed. Use `self.method.clear_cache(self)` or `self.env.registry.clear_cache()`.",
-                )
-            elif (
-                attr in ("search", "create", "browse")
-                and getattr(node.func.value, "id", "") == "self"
-            ):
-                self.add_error(
-                    node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`"
-                )
-            elif attr in ("with_user", "with_context"):
-                caller = node.func.value
-                if isinstance(caller, ast.Name) and caller.id == "env":
-                    self.add_error(
-                        node.lineno,
-                        f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `env['model'].{attr}(...)`)."
-                    )
-                elif isinstance(caller, ast.Attribute) and caller.attr == "env" and getattr(caller.value, "id", "") == "self":
-                    self.add_error(
-                        node.lineno,
-                        f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `self.env['model'].{attr}(...)`)."
-                    )
-            elif attr == "_check_recursion":
-                self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
-            elif attr in ("message_post", "message_subscribe") and (
-                "res.users"
-                in (
-                    ast.unparse(node.func.value).strip()
-                    if hasattr(ast, "unparse")
-                    else ""
-                )
-                or str(getattr(node.func.value, "attr", "")) in ("user_id", "user")
-            ):
-                self.add_error(
-                    node.lineno,
-                    "Messaging & Followers: Do not call on res.users directly.",
-                )
-            elif (
-                attr == "ref"
-                and len(node.args) == 1
-                and isinstance(node.args[0], ast.Constant)
-                and node.args[0].value == "base.group_user"
-            ):
-                if not ("odoo_facility_service" in self.filename):
-                    self.add_warning(
-                        node.lineno,
-                        "[%AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Only odoo_facility_service_internal may hold this.",
-                    )
-            elif (
-                attr in ("loads", "dumps")
-                and getattr(node.func.value, "id", "") == "pickle"
-            ):
+
+            if attr in ("loads", "dumps") and getattr(node.func.value, "id", "") == "pickle":
                 self.add_error(
                     node.lineno, "CRITICAL RCE: The pickle module is vulnerable."
                 )
-            elif (
-                attr in ("md5", "sha1")
-                and getattr(node.func.value, "id", "") == "hashlib"
-            ):
+            elif attr in ("md5", "sha1") and getattr(node.func.value, "id", "") == "hashlib":
                 self.add_error(node.lineno, "WEAK CRYPTO: MD5/SHA1 broken.")
-            elif (
-                attr in ("choice", "randint", "random")
-                and getattr(node.func.value, "id", "") == "random"
-            ):
+            elif attr in ("choice", "randint", "random") and getattr(node.func.value, "id", "") == "random":
                 self.add_error(node.lineno, "WEAK CRYPTO: Do not use 'random'.")
-            elif (
-                attr == "sleep"
-                and getattr(node.func.value, "id", "") == "time"
-                and "audit-ignore-sleep"
-                not in (
-                    self.lines[node.lineno - 1]
-                    if node.lineno <= len(self.lines)
-                    else ""
-                )
-            ):
-                self.add_warning(
-                    node.lineno,
-                    "[%AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...",
-                )
-            elif attr == "Thread" and getattr(node.func.value, "id", "") == "threading":
-                self.add_error(node.lineno, "CRITICAL DOS VECTOR: Unbounded Thread.")
 
-            if self.in_http_controller:
+            if self.is_odoo_module:
+                if attr == "send_mail":
+                    self.add_warning(
+                        node.lineno, "[%AUDIT] Mail Templates: Verify model_id matches."
+                    )
+                elif attr == "_sign_token":
+                    self.add_error(node.lineno, "Verify '_sign_token' context...")
+                elif attr == "clear_caches":
+                    self.add_error(
+                        node.lineno,
+                        "CRITICAL DEPRECATION: `clear_caches()` is removed. Use `self.method.clear_cache(self)` or `self.env.registry.clear_cache()`.",
+                    )
+                elif (
+                    attr in ("search", "create", "browse")
+                    and getattr(node.func.value, "id", "") == "self"
+                ):
+                    self.add_error(
+                        node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`"
+                    )
+                elif attr in ("with_user", "with_context"):
+                    caller = node.func.value
+                    if isinstance(caller, ast.Name) and caller.id == "env":
+                        self.add_error(
+                            node.lineno,
+                            f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `env['model'].{attr}(...)`)."
+                        )
+                    elif isinstance(caller, ast.Attribute) and caller.attr == "env" and getattr(caller.value, "id", "") == "self":
+                        self.add_error(
+                            node.lineno,
+                            f"CRITICAL ORM ERROR: Cannot call `.{attr}()` directly on the Environment object. Call it on a RecordSet (e.g., `self.env['model'].{attr}(...)`)."
+                        )
+                elif attr == "_check_recursion":
+                    self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
+                elif attr in ("message_post", "message_subscribe") and (
+                    "res.users"
+                    in (
+                        ast.unparse(node.func.value).strip()
+                        if hasattr(ast, "unparse")
+                        else ""
+                    )
+                    or str(getattr(node.func.value, "attr", "")) in ("user_id", "user")
+                ):
+                    self.add_error(
+                        node.lineno,
+                        "Messaging & Followers: Do not call on res.users directly.",
+                    )
+                elif (
+                    attr == "ref"
+                    and len(node.args) == 1
+                    and isinstance(node.args[0], ast.Constant)
+                    and node.args[0].value == "base.group_user"
+                ):
+                    if not ("odoo_facility_service" in self.filename):
+                        self.add_warning(
+                            node.lineno,
+                            "[%AUDIT] DOMAIN SANDBOX: Do not grant base.group_user (Internal User) in tests or logic. Only odoo_facility_service_internal may hold this.",
+                        )
+                elif (
+                    attr == "sleep"
+                    and getattr(node.func.value, "id", "") == "time"
+                    and "audit-ignore-sleep"
+                    not in (
+                        self.lines[node.lineno - 1]
+                        if node.lineno <= len(self.lines)
+                        else ""
+                    )
+                ):
+                    self.add_warning(
+                        node.lineno,
+                        "[%AUDIT] THREAD BLOCKING: 'time.sleep()' halts the worker...",
+                    )
+                elif attr == "Thread" and getattr(node.func.value, "id", "") == "threading":
+                    self.add_error(node.lineno, "CRITICAL DOS VECTOR: Unbounded Thread.")
+
+            if self.in_http_controller and self.is_odoo_module:
                 if (
                     attr == "get"
                     and getattr(node.func.value, "id", "") == self.current_kwarg_name
@@ -1011,7 +1018,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
             if getattr(node.func, "attr", getattr(node.func, "id", "")) == "env":
                 for kw in node.keywords:
-                    if kw.arg == "su":
+                    if kw.arg == "su" and self.is_odoo_module:
                         self.add_error(
                             node.lineno,
                             "CRITICAL PRIVILEGE ESCALATION: Environment modification with 'su=True' is strictly forbidden (Zero-Sudo evasion).",
@@ -1024,7 +1031,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
                 else ""
             )
 
-            if attr in ("commit", "rollback") and self.filename.startswith("test_"):
+            if attr in ("commit", "rollback") and self.filename.startswith("test_") and self.is_odoo_module:
                 val = getattr(node.func, "value", None)
                 if isinstance(val, ast.Attribute) and val.attr == "cr":
                     if (
@@ -1040,7 +1047,7 @@ def check_ast_vulnerabilities(filepath, content, lines):
             if attr:
                 is_cr_execute = self._check_forbidden_attributes(node, attr)
 
-            if self.loop_depth > 0 and attr in ("search", "search_count", "read_group"):
+            if self.loop_depth > 0 and attr in ("search", "search_count", "read_group") and self.is_odoo_module:
                 caller_id = (
                     getattr(node.func.value, "id", "")
                     if hasattr(node.func, "value")
@@ -1052,12 +1059,12 @@ def check_ast_vulnerabilities(filepath, content, lines):
                         f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.",
                     )
 
-            if attr in ("search", "search_count"):
+            if attr in ("search", "search_count") and self.is_odoo_module:
                 self._check_search_methods(node, attr)
 
             self._check_cr_execute(node, is_cr_execute)
 
-            if attr == "execute" and not is_cr_execute:
+            if attr == "execute" and not is_cr_execute and self.is_odoo_module:
                 if len(node.args) >= 2 and getattr(node.args[1], "value", None) in (
                     "search",
                     "search_read",
@@ -1077,12 +1084,12 @@ def check_ast_vulnerabilities(filepath, content, lines):
 
             self.generic_visit(node)
 
-    visitor = TaintVisitor(filename, lines)
+    visitor = TaintVisitor(filename, lines, is_odoo_module)
     visitor.visit(tree)
     return visitor.errors, visitor.warnings
 
 
-def scan_file(filepath):
+def scan_file(filepath, is_odoo_module=False):
     filename = os.path.basename(filepath)
     if filename == "check_burn_list.py":
         return [], []
@@ -1095,7 +1102,7 @@ def scan_file(filepath):
     except Exception as e:
         return [f"Could not read file: {e}"], []
 
-    if filename.endswith(".csv"):
+    if is_odoo_module and filename.endswith(".csv"):
         financial_models = [
             "model_res_partner_bank",
             "model_account_tax",
@@ -1125,7 +1132,7 @@ def scan_file(filepath):
                         f"Line {i}: CRITICAL FINANCIAL EXPOSURE: Granting access to '{model_id}' in custom ir.model.access.csv is strictly forbidden."
                     )
 
-    if filename.endswith(".xml"):
+    if is_odoo_module and filename.endswith(".xml"):
         try:
             root_node = parse_odoo_xml(content)
             for node in root_node.walk():
@@ -1378,7 +1385,7 @@ def scan_file(filepath):
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
 
-    if filename.endswith(".js") and "web_tour.tours" in content:
+    if is_odoo_module and filename.endswith(".js") and "web_tour.tours" in content:
         FOUND_TOURS.append(filepath)
         if "trigger:" not in content:
             errors_found.append(
@@ -1388,7 +1395,7 @@ def scan_file(filepath):
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
     if filename.endswith(".py"):
-        ast_errs, ast_warns = check_ast_vulnerabilities(filepath, content, lines)
+        ast_errs, ast_warns = check_ast_vulnerabilities(filepath, content, lines, is_odoo_module)
         for lineno, msg in ast_errs:
             code_snippet = lines[lineno - 1].strip() if lineno <= len(lines) else ""
             errors_found.append(
@@ -1487,7 +1494,7 @@ def scan_file(filepath):
                         }
                     )
 
-        for ext_pattern, regex, msg in ERROR_RULES:
+        for ext_pattern, regex, msg in GENERAL_ERROR_RULES:
             if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(
                 line
             ):
@@ -1495,6 +1502,17 @@ def scan_file(filepath):
                     errors_found.append(
                         f"Line {line_num}: {msg}\n      Code: `{stripped}`"
                     )
+
+        if is_odoo_module:
+            for ext_pattern, regex, msg in ODOO_ERROR_RULES:
+                if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(
+                    line
+                ):
+                    if "burn-ignore" not in line:
+                        errors_found.append(
+                            f"Line {line_num}: {msg}\n      Code: `{stripped}`"
+                        )
+
         for ext_pattern, regex, msg in WARNING_RULES:
             if re.search(ext_pattern, filepath.replace("\\", "/")) and regex.search(
                 line
@@ -1649,6 +1667,16 @@ def _verify_test_ast(
         return verification_errors + 1, total_errors + 1
     return verification_errors, total_errors
 
+def _is_odoo_module(filepath, target_dir):
+    current = os.path.dirname(os.path.abspath(filepath))
+    target_abs = os.path.abspath(target_dir)
+    while current:
+        if os.path.exists(os.path.join(current, '__manifest__.py')):
+            return True
+        if current == target_abs or current == os.path.dirname(current):
+            break
+        current = os.path.dirname(current)
+    return False
 
 def main():
     parser = argparse.ArgumentParser()
@@ -1717,7 +1745,8 @@ def main():
 
             if file.endswith((".py", ".xml", ".js", ".csv")):
                 scanned_files += 1
-                errors, warnings = scan_file(filepath)
+                is_odoo = _is_odoo_module(filepath, target_dir)
+                errors, warnings = scan_file(filepath, is_odoo_module=is_odoo)
                 if file.endswith(".py"):
                     try:
                         with open(filepath, "r", encoding="utf-8") as f:
