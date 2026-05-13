@@ -1668,6 +1668,10 @@ def _verify_test_ast(
     return verification_errors, total_errors
 
 def _is_odoo_module(filepath, target_dir):
+    filepath_forward = filepath.replace("\\", "/")
+    if "/daemons/" in filepath_forward or "/daemon/" in filepath_forward or "/tools/" in filepath_forward:
+        return False
+
     current = os.path.dirname(os.path.abspath(filepath))
     target_abs = os.path.abspath(target_dir)
     while current:

@@ -17,9 +17,18 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import ftplib
+import imaplib
+import poplib
+import ldap3
+import ntplib
+import shlex
+import xmlrpc.client
 from email.message import EmailMessage
 
 import psycopg2
+import pymysql
+import redis as redis_lib
 
 
 class OdooClient:
@@ -65,8 +74,6 @@ def get_odoo_client(logger, config):
                 if dbs:
                     db = dbs[0]
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).warning("An error occurred: %s", e)
     if not db:
         db = "odoo"
@@ -150,21 +157,19 @@ def verify_and_install_dependencies(client, checks):
                 msg = f"FATAL: Missing dependency '{cmd}'. Halting."
                 logger.critical(msg)
                 fallback_notify("Daemon Boot", msg, "critical")
-                try:
-                    client.execute(
-                        "pager.incident",
-                        "report_incident",
-                        vals={
-                            "source": "Daemon Boot",
-                            "severity": "critical",
-                            "description": msg,
-                        },
-                    )
-                except Exception as e:
-                    import logging
-
-                    logging.getLogger(__name__).warning("An error occurred: %s", e)
-                sys.exit(1)
+            try:
+                client.execute(
+                    "pager.incident",
+                    "report_incident",
+                    vals={
+                        "source": "Daemon Boot",
+                        "severity": "critical",
+                        "description": msg,
+                    },
+                )
+            except Exception as e:
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
+            sys.exit(1)
 
 
 THREAD_HEARTBEATS = {}
@@ -183,8 +188,6 @@ def is_in_maintenance(check):
             if start <= now <= end:
                 return True
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).warning("An error occurred: %s", e)
     return False
 
@@ -239,8 +242,6 @@ def report(client, source, msg, severity="high"):
             with urllib.request.urlopen(req, timeout=5):
                 pass
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).warning("An error occurred: %s", e)
 
     try:
@@ -304,8 +305,6 @@ def execute_check(check, client=None):
             return False, f"Load check failed: {e}"
 
     elif ctype == "ftp":
-        import ftplib
-
         port = int(parse_env(check.get("port", 21)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -321,8 +320,6 @@ def execute_check(check, client=None):
             return False, f"FTP check failed: {e}"
 
     elif ctype == "imap":
-        import imaplib
-
         port = int(parse_env(check.get("port", 143)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -339,8 +336,6 @@ def execute_check(check, client=None):
             return False, f"IMAP check failed: {e}"
 
     elif ctype == "pop3":
-        import poplib
-
         port = int(parse_env(check.get("port", 110)))
         user = parse_env(check.get("user", ""))
         password = parse_env(check.get("password", ""))
@@ -363,8 +358,6 @@ def execute_check(check, client=None):
         password = parse_env(check.get("password", ""))
         dbname = parse_env(check.get("dbname", ""))
         try:
-            import pymysql
-
             conn = pymysql.connect(
                 host=target,
                 port=port,
@@ -386,8 +379,6 @@ def execute_check(check, client=None):
     elif ctype == "ldap":
         port = int(parse_env(check.get("port", 389)))
         try:
-            import ldap3
-
             server = ldap3.Server(
                 target, port=port, get_info=ldap3.ALL, connect_timeout=5
             )
@@ -400,8 +391,6 @@ def execute_check(check, client=None):
     elif ctype == "ntp":
         port = int(parse_env(check.get("port", 123)))
         try:
-            import ntplib
-
             client_ntp = ntplib.NTPClient()
             response = client_ntp.request(target, version=3, timeout=5)
             return True, f"OK (Offset: {response.offset:.4f}s)"
@@ -539,8 +528,6 @@ def execute_check(check, client=None):
         port = int(parse_env(check.get("port", 6379)))
         password = parse_env(check.get("password", ""))
         try:
-            import redis as redis_lib
-
             r = redis_lib.Redis(
                 host=target, port=port, password=password or None, socket_timeout=2
             )
@@ -563,8 +550,6 @@ def execute_check(check, client=None):
             return False, f"RabbitMQ connection failed: {e}"
 
     elif ctype == "xmlrpc":
-        import xmlrpc.client
-
         method = parse_env(check.get("rpc_method", ""))
         params_str = parse_env(check.get("rpc_params", "[]"))
         expect = parse_env(check.get("expect"))
@@ -674,8 +659,6 @@ def execute_check(check, client=None):
         if not script:
             return False, "Synthetic script path missing"
         try:
-            import shlex
-
             res = subprocess.run(
                 shlex.split(script),
                 shell=False,
@@ -1241,8 +1224,6 @@ if __name__ == "__main__":
     futures = []
 
     def log_anomaly_proxy(cl):
-        import redis as redis_lib
-
         r = redis_lib.Redis(
             host=os.getenv("REDIS_HOST") or "redis",
             port=int(os.getenv("REDIS_PORT") or "6379"),
@@ -1261,8 +1242,6 @@ if __name__ == "__main__":
                         payload["severity"],
                     )
             except Exception as e:
-                import logging
-
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
                 time.sleep(1)
 
