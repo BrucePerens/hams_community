@@ -5,10 +5,13 @@ import sys
 import os
 from unittest.mock import AsyncMock
 
+from odoo.tests.common import tagged
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import cache_manager  # noqa: E402
 
 
+@tagged("standard", "post_install", "-at_install")
 class TestCacheManager(unittest.IsolatedAsyncioTestCase):
     async def test_01_broadcast_to_redis(self):
         # Tests [@ANCHOR: cache_manager_redis_publish]

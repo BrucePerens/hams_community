@@ -127,7 +127,7 @@ Target the button by its method name (`//button[@name='...']`).
 Use `invisible`, `readonly`, and `required` directly with Python expressions.
 * **Parent Axis Traversals:** Using `..` (e.g., `//input[@name='login']/..`) or complex container predicates (`//div[input[@name='login']]`) is strictly banned.
 Odoo's XML compiler often fails to resolve these when patching inherited views.
-* **Cross-Module Custom View Targets (Dropzones):** When using `<xpath>` to extend our *own* custom modules (not native Odoo core views), you MUST target the explicitly designated "Dropzone" containers (e.g., an empty `div` designated for injection) defined in the target module's `LLM_DOCUMENTATION.md`.
+* **Cross-Module Custom View Targets (Dropzones):** When using `<xpath>` to extend our *own* custom modules (not native Odoo core views), you MUST target the explicitly designated "Dropzone" containers (e.g., an empty `div` designated for injection) defined in the target module's `README.md`.
 Arbitrary structural targeting inside our own custom views is banned to prevent cross-module fragility.
 * **Security Categories:** Using `name="category_id"` in `<record model="res.groups">` is banned. Use `privilege_id`.
 * **Record Rules (ir.rule):** Every `<record model="ir.rule">` MUST specify a `<field name="groups" ...>`.

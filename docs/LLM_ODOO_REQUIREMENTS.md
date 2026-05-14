@@ -61,7 +61,7 @@ Execute logic using `.with_user(svc_uid)`.
 ## 5. XML, VIEWS & QWEB STANDARDS
 * **QWeb Logic:** Python built-ins (`getattr`, `hasattr`) are FORBIDDEN in QWeb.
 * **Settings Views:** Must inherit `base.res_config_settings_view_form`. Target the form directly using `xpath`.
-* **Cross-Module XPath (Dropzones):** To maintain strict Open Source isolation, do not hardcode downstream dependencies in base module views. You MUST use `<xpath>` to inject custom elements into designated "Dropzones" of our own base modules (e.g., injecting domain-specific widgets into `user_websites`). When doing this, you MUST utilize the explicit structural targets and reference the specific Semantic Anchors defined in the target module's `docs/modules/*.md` (or `LLM_DOCUMENTATION.md`) API contract.
+* **Cross-Module XPath (Dropzones):** To maintain strict Open Source isolation, do not hardcode downstream dependencies in base module views. You MUST use `<xpath>` to inject custom elements into designated "Dropzones" of our own base modules (e.g., injecting domain-specific widgets into `user_websites`). When doing this, you MUST utilize the explicit structural targets and reference the specific Semantic Anchors defined in the target module's `docs/modules/*.md` (or `README.md`) API contract.
 * **Translations:** Include an `i18n/` directory containing a `.pot` file and `.po` files for the 7 most popular languages. Use `_()` in Python.
 * **Regulatory Compliance:** Integrate with Odoo's native cookie consent mechanism. NO custom cookie banners.
 * **GDPR:** Override `_get_gdpr_export_data(self)` and `_execute_gdpr_erasure(self)` on `res.users`.

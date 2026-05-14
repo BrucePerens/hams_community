@@ -16,7 +16,7 @@
     "knowledge_docs": [
         {
             "name": "Daemon Key Manager Documentation",
-            "path": "LLM_DOCUMENTATION.md",
+            "path": "README.md",
             "icon": "🔑",
             "category": "workspace"
         }

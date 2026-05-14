@@ -5,11 +5,14 @@ import json
 import os
 import sys
 
+from odoo.tests.common import tagged
+
 # Add daemon path to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backup_worker")))
 
 import backup_worker  # noqa: E402
 
+@tagged("standard", "post_install", "-at_install")
 class TestBackupWorker(unittest.TestCase):
     @patch("backup_worker._json2_call")
     @patch("backup_worker.subprocess.Popen")

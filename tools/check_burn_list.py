@@ -1755,7 +1755,8 @@ def main():
                     try:
                         with open(filepath, "r", encoding="utf-8") as f:
                             first_line = f.readline()
-                            if first_line.startswith("#!") and not "daemons/" in filepath and not "tools/" in filepath and not filepath.endswith("setup.py") and not filepath.endswith("__init__.py"):
+                            filepath_forward = filepath.replace("\\", "/")
+                            if first_line.startswith("#!") and not "daemons/" in filepath_forward and not "daemon/" in filepath_forward and not "tools/" in filepath_forward and not filepath.endswith("setup.py") and not filepath.endswith("__init__.py"):
                                 errors.append(f"Line 1 (Shebang): Shebangs are strictly prohibited in standard Odoo module files as they can interfere with packaging and execution expectations. Code: {first_line.strip()}")
                             if file == "__manifest__.py":
                                 f.seek(0)

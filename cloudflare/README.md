@@ -8,7 +8,7 @@ This module acts as the command center for your Cloudflare CDN and Web Applicati
 
 * **Automated Static Caching & Purging:** It forces Cloudflare to aggressively cache static assets (like images, CSS, and JS) for a full year. If you update a file and restart the server, the module detects the new file timestamp during boot and automatically tells Cloudflare to purge the stale assets globally.
 * **WAF Management:** You can build, backup, and deploy Cloudflare Firewall rules directly from the Odoo backend.
-* **Honeypot IP Banning:** If a malicious bot triggers a silent honeypot trap on your site, this module instantly talks to Cloudflare%2s API and bans their IP address at the network edge.
+* **Honeypot IP Banning:** If a malicious bot triggers a silent honeypot trap on your site, this module instantly talks to Cloudflare's API and bans their IP address at the network edge.
 * **Zero Trust Tunnels:** You can provision a new `cloudflared` tunnel directly from the settings menu. The module generates the tunnel via API and gives you the exact copy-paste command to run on your server.
 * **Turnstile Integration:** It provides a backend validator for Cloudflare's invisible Turnstile CAPTCHA to protect your public forms.
 
@@ -20,3 +20,47 @@ This module acts as the command center for your Cloudflare CDN and Web Applicati
    * `CLOUDFLARE_ZONE_ID`
    * `CLOUDFLARE_ACCOUNT_ID` (Only needed if using Zero Trust Tunnels)
 3. Install the module. It will automatically apply the baseline security rules.
+
+---
+
+# Technical Documentation
+
+**Context:** Technical documentation strictly for LLMs and Integrators.
+
+## 1. Overview
+Control plane for the CDN edge. Manages Cache-Tags, WAF bans, and Turnstile CAPTCHA verification to offload CPU from the Python WSGI workers.
+
+## 2. API Interfaces
+* **WAF IP Banning:** `env['cloudflare.waf'].ban_ip(...)` dynamically injects firewall rules `[@ANCHOR: cf_execute_ban]`. Automatically lifts expired bans via `[@ANCHOR: cf_action_lift_ban]`.
+* **Cache Purging:** `env['cloudflare.purge.queue'].enqueue_tags(...)`. Processes asynchronous cache invalidation queues via cron `[@ANCHOR: ir_cron_process_cf_purge_queue]`. Base URLs are accurately resolved and injected via `[@ANCHOR: enqueue_urls_base_url]`.
+* **Turnstile API:** `env['cloudflare.turnstile'].verify_token(...)` securely evaluates CAPTCHA handshakes against the API `[@ANCHOR: cf_turnstile_verify]`.
+* **Edge Context:** `env['cloudflare.utils'].get_request_context()` (Extracts trusted IP/Geodata) `[@ANCHOR: cf_get_request_context]`.
+* **Tunnel Setup:** Wizard dynamically generates the `cloudflared` execution token command for edge network bridging `[@ANCHOR: cf_tunnel_setup]`.
+* **Tunnel Management:** Modules can sync existing tunnels `[@ANCHOR: cf_sync_tunnels]` and delete them `[@ANCHOR: cf_delete_tunnel]`.
+
+## 3. Automated Subsystems
+* Injects `Cloudflare-CDN-Cache-Control` headers natively via `ir.http._post_dispatch`.
+* Scans module `static/` folders on boot and automatically invalidates the CDN edge via cache tags if file modifications are detected.
+* **Header Injection:** Injects `Cloudflare-CDN-Cache-Control` headers `[@ANCHOR: ir_http_post_dispatch_headers]` to control edge caching behavior.
+* **Settings View Injection:** Extends standard Odoo config settings to securely accept Cloudflare API tokens `[@ANCHOR: xpath_rendering_cf_settings]`.
+
+---
+
+<stories_and_journeys>
+## 4. Architectural Stories & Journeys
+
+For detailed narratives and end-to-end workflows, refer to the following:
+
+### Stories
+* [Asynchronous Cache Purging](docs/stories/cache_purging.md)
+* [Geo-Aware Request Context](docs/stories/request_context.md)
+* [Secure Edge Bridging via Tunnels](docs/stories/tunnels.md)
+* [CAPTCHA Verification with Turnstile](docs/stories/turnstile_verification.md)
+* [Automated WAF IP Banning](docs/stories/waf_banning.md)
+
+### Journeys
+* [High-Performance Content Invalidation](docs/journeys/content_invalidation.md)
+* [Managing Edge Security](docs/journeys/edge_security.md)
+* [Infrastructure Provisioning](docs/journeys/infrastructure.md)
+* [Intelligent Traffic Handling](docs/journeys/traffic_handling.md)
+</stories_and_journeys>

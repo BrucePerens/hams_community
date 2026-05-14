@@ -158,8 +158,23 @@ class BinaryManifest(models.Model):
                 os.unlink(target_bin)
 
         try:
-            with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
-                urllib.request.urlretrieve(manifest_record.url, tmp.name)
+            req = urllib.request.Request(
+                manifest_record.url,
+                headers={"User-Agent": "OdooBinaryDownloader/1.0"}
+            )
+
+            # Ethical Crawling: Use HEAD requests to evaluate ETags before downloading
+            req.method = "HEAD"
+            try:
+                with urllib.request.urlopen(req) as head_resp:
+                    _logger.info("HEAD successful, ETag: %s", head_resp.getheader("ETag"))
+            except Exception as e:
+                _logger.warning("HEAD request failed or unsupported: %s", e)
+
+            req.method = "GET"
+            with urllib.request.urlopen(req) as response:
+                with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
+                    shutil.copyfileobj(response, tmp)
 
             hasher = hashlib.sha256()
             with open(tmp.name, "rb") as f:

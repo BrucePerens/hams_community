@@ -70,7 +70,7 @@ You are an expert AI developer operating under strict architectural mandates. Th
 * [ ] **Transport Terminator:** Used the exact same boundary string and appended `--` to the final one?
 * [ ] **Security:** Zero-Sudo pattern adhered to? Inputs validated?
 * [ ] **Reliability:** Tests cover BDD Acceptance Criteria?
-* [ ] **Documentation:** README, LLM_DOCUMENTATION.md, and documentation.html updated?
+* [ ] **Documentation:** README.md and documentation.html updated?
 * [ ] **Linter Bypass:** If `audit-ignore` was added, is there an exhaustive test proving safety?
 * [ ] **Anchor Preservation:** Pre-existing anchors preserved and correctly placed?
 </definition_of_done>

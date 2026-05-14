@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-13 21:37+0000\n"
-"PO-Revision-Date: 2026-05-13 21:37+0000\n"
+"POT-Creation-Date: 2026-05-14 06:28+0000\n"
+"PO-Revision-Date: 2026-05-14 06:28+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -93,6 +93,10 @@ msgstr ""
 msgid "Daemon Notified"
 msgstr ""
 
+#: zero_sudo/models/daemon_utils.py:57
+msgid "Daemon health check failed for %s after %s seconds."
+msgstr ""
+
 #: pager_duty/models/pager_check.py:338
 msgid "Database checks updated from JSON file."
 msgstr ""
@@ -117,7 +121,7 @@ msgstr ""
 msgid "Export Successful"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:217
+#: binary_downloader/models/binary_manifest.py:232
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -185,7 +189,7 @@ msgstr ""
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:205
+#: binary_downloader/models/binary_manifest.py:220
 msgid "Member %s not found in archive."
 msgstr ""
 
@@ -278,11 +282,11 @@ msgstr ""
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:173
+#: binary_downloader/models/binary_manifest.py:188
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:191
+#: binary_downloader/models/binary_manifest.py:206
 msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
@@ -311,7 +315,7 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:200
+#: binary_downloader/models/binary_manifest.py:215
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
@@ -343,8 +347,8 @@ msgstr ""
 msgid "Successfully installed %s."
 msgstr ""
 
-#: pager_duty/tests/test_incident.py:94
-#: pager_duty/tests/test_incident.py:117
+#: pager_duty/tests/test_incident.py:66
+#: pager_duty/tests/test_incident.py:210
 msgid "Test message"
 msgstr ""
 
