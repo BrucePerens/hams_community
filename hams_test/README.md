@@ -1,0 +1,80 @@
+# Hams Test Infrastructure (`hams_test`)
+
+*Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
+
+This module is the unified testing infrastructure for the repository. It consolidates the Real Transaction Testing facility, the Daemon Integration Testing framework, and the UI Tour governance standards into a single, cohesive architecture.
+
+---
+
+## 1. Real Transaction Testing Facility
+
+In standard Odoo testing, `TransactionCase` wraps the entire test execution inside an uncommitted PostgreSQL `SAVEPOINT`. While this makes tests extremely fast and prevents database pollution, it creates an artificial environment. This environment fundamentally breaks the ORM's local memory cache for inverse relational fields (like `One2many` relationships) and makes testing distributed workers impossible.
+
+The `hams_test` module solves this by providing: **`RealTransactionCase`**.
+**Because it inherits from Odoo's `HttpCase`, it natively supports full Werkzeug HTTP routing and testing utilities like `self.authenticate()` and `self.make_jsonrpc_request()`.**
+
+### True Database Commits
+You can safely call `self.env.cr.commit()` in your tests. This allows developers to write accurate tests for cross-worker cache invalidations (e.g., Redis pub/sub buses), background daemon polling, and lazy-loaded ORM relations.
+
+### Automated ORM Tracking & Cleanup
+Because real commits permanently write to the database, the facility dynamically instruments Odoo's `BaseModel.create()` during `setUp()`. It tracks the ID of every record created via the ORM and automatically executes a hard-delete (`unlink()`) on all tracked records during `tearDown()`.
+
+### SQL Leak Detection
+To guarantee a pristine database, the facility takes a mathematical snapshot of the exact row count of every table in the `public` PostgreSQL schema before the test begins. During `tearDown()`, it recounts the tables. If your test leaked data, the test will immediately crash with an `AssertionError`.
+
+**Usage Example:**
+```python
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
+
+@tagged('post_install', '-at_install')
+class MyAdvancedTest(RealTransactionCase):
+    def test_01_real_commit_behavior(self):
+        user = self.env['res.users'].create({'name': 'Test User'})
+        self.env.cr.commit()
+```
+
+---
+
+## 2. Integration Daemon Testing (`HamsIntegrationCase`)
+
+This facility provides an automated execution wrapper to spin up external Python daemons (e.g., Pager Duty Spoolers, Redis Cache Managers) and run real HTTP/XML-RPC requests against them during the test phase.
+
+* **Lifecycle Management:** It utilizes Python's `subprocess` to boot daemons in `setUpClass()` and guarantees zombie processes are SIGKILL'd in `tearDownClass()`.
+* **Health Polling:** It automatically polls the daemon's port/endpoint until a `200 OK` is returned, preventing race conditions where test requests fire before the daemon binds to the socket.
+
+---
+
+## 3. UI Tour Development Guide
+
+DOM-based tours are inherently brittle, so we bifurcate view testing into "Mandatory Tours" and "Justified Exceptions."
+
+### The "Gold Standard" (Mandatory Tours)
+A JavaScript UI Tour (`web_tour`) **MUST** be written for views meeting any of the following criteria:
+* **Critical User Journeys:** High-stakes workflows such as upgrades, purchases, or administrative verifications.
+* **Complex State Machines:** Form views utilizing dynamic `invisible`, `readonly`, or `required` attributes.
+* **Custom Widgets:** Any view injecting custom JavaScript components.
+
+### Justified Exceptions (When to use `<!-- burn-ignore-tour -->`)
+The bypass tag is strictly reserved for scenarios where the ROI of a DOM tour is zero:
+* **Simple Dictionary / Lookup Tables:** Basic CRUD views with no complex interactions.
+* **Invisible / Programmatic Views:** Views designed to be invoked silently by background processes.
+* **Read-Only Audit Logs:** Backend history views where user data mutation is impossible.
+* **Micro-Inheritances:** Views inheriting a base view solely to inject a single `invisible="1"` field, an `xpath` removal, or a basic domain filter.
+
+### Tour Targeting & Selectors
+Tours MUST use schema-compliant selectors to deterministically handle race conditions.
+
+**BANNED TARGETS:** * `.col-md-6` and generic layout classes.
+* `a:contains(...)`, `button:contains(...)`, `h1:contains(...)` (brittle translated strings).
+* `data-*` attributes (breaks backend XML schema validation).
+
+**Allowed Targeting Hierarchy:**
+1. **Primary:** Native `name` attributes (e.g., `button[name="action_install"]`, `field[name="is_installed"]`).
+2. **Secondary:** Structural IDs (`#wrap`, `.o_form_sheet`).
+3. **Fallback:** Dedicated namespaced CSS classes starting with `o_tour_` (e.g., `.o_tour_create_site_btn`).
+
+### State & Execution Control
+* **The Page Unload Protocol:** When a step triggers a raw `<form>` submission or hard redirect, you **MUST** explicitly declare `expectUnloadPage: true` on that step and use Odoo's native `run: 'click'` helper.
+* **The "Dirty Form" Rule:** Object buttons MUST be hidden on unsaved records (`invisible="not id"`). Include a neutral "click away" step (e.g., targeting `.o_form_sheet`) to force `blur`/commit before clicking the save button `.o_form_button_save`. Wait for `.o_notification:contains("Success")` to confirm the RPC resolved before ending the tour.
+* **Deterministic Input Simulation:** For strictly validated inputs (e.g., URLs, emails), bypass the `edit` helper. Manually inject the string and dispatch events to force synchronous evaluation.
