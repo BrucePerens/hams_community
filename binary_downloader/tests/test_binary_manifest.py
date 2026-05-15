@@ -18,6 +18,8 @@ def mock_if_standard(target, **kwargs):
 
 @tagged("post_install", "-at_install", "integration" if INTEGRATION_MODE else "standard")
 class TestBinaryManifest(TransactionCase):
+    # [@ANCHOR: test_binary_manifest_standard]
+    # Tested by [@ANCHOR: test_binary_manifest_standard]
 
     def tearDown(self):
         for path in ["/var/lib/odoo/hams_bin/fake", "/var/lib/odoo/hams_bin/testbin"]:
@@ -95,8 +97,8 @@ class TestBinaryManifest(TransactionCase):
     @mock_if_standard("shutil.which", return_value=None)
     @mock_if_standard("platform.system", return_value="Linux")
     @mock_if_standard("platform.machine", return_value="x86_64")
-    @mock_if_standard("urllib.request.urlretrieve")
-    @mock_if_standard("builtins.open", new_callable=MagicMock)
+    @mock_if_standard("urllib.request.urlopen")
+    @mock_if_standard("odoo.addons.binary_downloader.models.binary_manifest.open", create=True)
     @mock_if_standard("os.chmod")
     @mock_if_standard("os.makedirs")
     def test_04_successful_download_and_checksum(
@@ -104,7 +106,7 @@ class TestBinaryManifest(TransactionCase):
         mock_makedirs=None,
         mock_chmod=None,
         mock_open=None,
-        mock_urlretrieve=None,
+        mock_urlopen=None,
         mock_machine=None,
         mock_system=None,
         mock_which=None,
@@ -115,6 +117,11 @@ class TestBinaryManifest(TransactionCase):
             self.assertTrue(path.endswith("testbin"))
             self.assertTrue(os.path.exists(path))
             return
+
+        mock_response = MagicMock()
+        mock_response.read.side_effect = [b"chunk", b""]
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
 
         with patch("hashlib.sha256") as mock_sha256:
             mock_hasher = MagicMock()
@@ -136,11 +143,12 @@ class TestBinaryManifest(TransactionCase):
                     with patch("shutil.copy2") as mock_copy, patch("os.unlink"):
                         path = self.env["binary.manifest"].ensure_executable("testbin")
                         self.assertTrue(path.endswith("testbin"))
-                        mock_urlretrieve.assert_called_once()
+                        self.assertTrue(mock_urlopen.called)
                         mock_copy.assert_called_once()
 
     def test_05_views_render(self):
-        # Tests [@ANCHOR: test_binary_manifest_views]
+        # [@ANCHOR: test_binary_manifest_views]
+        # Tested by [@ANCHOR: test_binary_manifest_views]
         v1 = self.env["binary.manifest"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])
         v2 = self.env["binary.manifest"].get_view(view_type="form")
@@ -220,8 +228,9 @@ class TestBinaryManifest(TransactionCase):
     @mock_if_standard("shutil.which", return_value=None)
     @mock_if_standard("platform.system", return_value="Linux")
     @mock_if_standard("platform.machine", return_value="x86_64")
-    @mock_if_standard("urllib.request.urlretrieve")
-    def test_10_tar_slip_prevention(self, mock_urlretrieve=None, mock_machine=None, mock_system=None, mock_which=None):
+    @mock_if_standard("urllib.request.urlopen")
+    @mock_if_standard("odoo.addons.binary_downloader.models.binary_manifest.open", create=True)
+    def test_10_tar_slip_prevention(self, mock_open=None, mock_urlopen=None, mock_machine=None, mock_system=None, mock_which=None):
         if INTEGRATION_MODE:
             return # Complex negative path spoofing relies on mocks
 
@@ -233,9 +242,17 @@ class TestBinaryManifest(TransactionCase):
             "extract_member": "slippy"
         })
 
+        mock_response_head = MagicMock()
+        mock_response_head.__enter__.return_value = mock_response_head
+
+        mock_response_get = MagicMock()
+        mock_response_get.read.side_effect = [b"data", b""]
+        mock_response_get.__enter__.return_value = mock_response_get
+
+        mock_urlopen.side_effect = [mock_response_head, mock_response_get]
+
         with patch("hashlib.sha256") as mock_sha256, \
-             patch("tarfile.open") as mock_tar_open, \
-             patch("builtins.open", new_callable=MagicMock) as mock_open:
+             patch("tarfile.open") as mock_tar_open:
 
             mock_hasher = MagicMock()
             mock_hasher.hexdigest.return_value = "fakehash_tar"
@@ -279,8 +296,9 @@ class TestBinaryManifest(TransactionCase):
     @mock_if_standard("shutil.which", return_value=None)
     @mock_if_standard("platform.system", return_value="Linux")
     @mock_if_standard("platform.machine", return_value="x86_64")
-    @mock_if_standard("urllib.request.urlretrieve")
-    def test_13_symlink_prevention(self, mock_urlretrieve=None, mock_machine=None, mock_system=None, mock_which=None):
+    @mock_if_standard("urllib.request.urlopen")
+    @mock_if_standard("odoo.addons.binary_downloader.models.binary_manifest.open", create=True)
+    def test_13_symlink_prevention(self, mock_open=None, mock_urlopen=None, mock_machine=None, mock_system=None, mock_which=None):
         if INTEGRATION_MODE:
             return # Complex negative path spoofing relies on mocks
 
@@ -292,9 +310,17 @@ class TestBinaryManifest(TransactionCase):
             "extract_member": "symlinkbin"
         })
 
+        mock_response_head = MagicMock()
+        mock_response_head.__enter__.return_value = mock_response_head
+
+        mock_response_get = MagicMock()
+        mock_response_get.read.side_effect = [b"data", b""]
+        mock_response_get.__enter__.return_value = mock_response_get
+
+        mock_urlopen.side_effect = [mock_response_head, mock_response_get]
+
         with patch("hashlib.sha256") as mock_sha256, \
-             patch("tarfile.open") as mock_tar_open, \
-             patch("builtins.open", new_callable=MagicMock) as mock_open:
+             patch("tarfile.open") as mock_tar_open:
 
             mock_hasher = MagicMock()
             mock_hasher.hexdigest.return_value = "fakehash_sym"
