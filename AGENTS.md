@@ -96,3 +96,8 @@ No use of sudo() is permitted, and any attempt to use sudo() will break the buil
 Any permission or privilege problem must be solved using zero_sudo and the
 micro-privilege architecture.
 </site_rules>
+
+<initial_instruction>
+Read the instructions on creating a Parcel now. Many sessions have gotten
+that wrong in responding to their initial prompt, you must get it right.
+</initial_instructions>
