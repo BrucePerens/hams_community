@@ -733,7 +733,7 @@ su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'
 echo '[*] Starting PostgreSQL...'
 su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"
 echo '[*] Provisioning PostgreSQL roles...'
-echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;" | su -s /bin/bash postgres -c 'PGUSER=postgres psql -h {pg_socket_dir} -d postgres'
+echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres'
 
 su -s /bin/bash redis -c 'redis-server --daemonize yes' >/dev/null 2>&1
 su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached' >/dev/null 2>&1
@@ -836,6 +836,11 @@ def main():
             os.environ["RABBITMQ_HOST"] = "localhost"
         if not os.environ.get("REDIS_HOST"):
             os.environ["REDIS_HOST"] = "localhost"
+
+        pg_bins_sys = glob.glob("/usr/lib/postgresql/*/bin/initdb")
+        if pg_bins_sys:
+            pg_bin_dir_sys = os.path.dirname(sorted(pg_bins_sys)[-1])
+            os.environ["PATH"] = f"{pg_bin_dir_sys}:{os.environ.get('PATH', '')}"
 
         parser = argparse.ArgumentParser(
             description="Unified Odoo Test Runner for Hams.com",
@@ -991,7 +996,7 @@ def main():
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
                 _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes")
                 _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
-                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing")
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"
@@ -1011,7 +1016,7 @@ def main():
                     _run_sudo_cmd(f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
 
                 _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\" || true")
-                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres psql -h {pg_socket_dir} -d postgres' || true")
+                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres' || true")
 
                 print("[*] Starting local Redis and RabbitMQ...")
                 _run_sudo_cmd("systemctl start redis-server || true")
@@ -1197,7 +1202,8 @@ def main():
                 odoo_proc = subprocess.Popen(
                     [
                         venv_python, odoo_bin, "--addons-path", addons_path,
-                        "-d", args.db, "--workers=0", "--max-cron-threads=0",
+                        "-d", args.db, "--db-filter", f"^{args.db}$",
+                        "--workers=0", "--max-cron-threads=0",
                         "--http-port", str(free_port), "--http-interface", "localhost",
                         "--log-level=warn",
                     ],
@@ -1409,6 +1415,8 @@ def main():
                         addons_path,
                         "-d",
                         args.db,
+                        "--db-filter",
+                        f"^{args.db}$",
                         "--workers=0",
                         "--max-cron-threads=0",
                         "--http-port",

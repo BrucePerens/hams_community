@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 import unittest
 from unittest.mock import patch, MagicMock
-from odoo.tests.common import tagged
+
 import pager_synthetic_spooler
 
 
-@tagged("standard", "post_install", "-at_install")
 class TestSyntheticSpooler(unittest.TestCase):
 
     def test_00_i18n_headless_audit(self):

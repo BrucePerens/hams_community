@@ -4,9 +4,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import backup_worker
-from odoo.tests.common import tagged
 
-@tagged("standard", "post_install", "-at_install")
+
 class TestBackupWorker(unittest.TestCase):
     @patch("backup_worker._json2_call")
     @patch("backup_worker.subprocess.Popen")

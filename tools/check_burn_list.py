@@ -101,6 +101,11 @@ GENERAL_ERROR_RULES = [
         "CRITICAL HALLUCINATION: Redundant sys.path manipulation. Python automatically resolves imports from the script's directory.",
     ),
     (
+        r"(?:/|^)daemons?/(?!.*parcel_extract\.py).*\.py$",
+        re.compile(r"^\s*(?:import\s+odoo\b|from\s+odoo\b)"),
+        "CRITICAL DAEMON DECOUPLING: Standalone daemons and their tests MUST NOT import Odoo modules or testing decorators. They must run entirely isolated.",
+    ),
+    (
         r"\.js$",
         re.compile(r"\.bindPopup\(\s*`|\.innerHTML\s*=\s*`"),
         "JS DOM XSS: Template literal passed to bindPopup or innerHTML.",

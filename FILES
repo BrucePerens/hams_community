@@ -289,7 +289,6 @@ docs/modules/database_management.md
 docs/modules/distributed_redis_cache.md
 docs/modules/manual_library.md
 docs/modules/pager_duty.md
-docs/modules/test_real_transaction.md
 docs/modules/user_websites.md
 docs/modules/user_websites_seo.md
 docs/modules/zero_sudo.md
@@ -435,7 +434,6 @@ tools/generate_pot.py
 tools/infrastructure.py
 tools/jules_all_modules.py
 tools/list_routes.py
-tools/parcel_extract.py
 tools/pre_flight_check.py
 tools/restart_odoo.sh
 tools/run_black.sh
@@ -449,6 +447,7 @@ tools/test_runner.py
 tools/verify_anchors.py
 tools/check_burn_list.py
 tools/sync_module_docs.sh
+tools/parcel_extract.py
 user_websites/API_REFERENCE.md
 user_websites/DOCUMENTATION.md
 user_websites/INSTRUCTIONS.md
