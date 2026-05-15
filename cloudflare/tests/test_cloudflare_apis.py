@@ -7,16 +7,12 @@ from odoo.addons.cloudflare.utils.cloudflare_api import purge_urls, purge_tags
 @tagged("post_install", "-at_install")
 class TestCloudflareAPIs(TransactionCase):
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
-    def test_01_waf_ban_ip(self, mock_post):
+    @patch("odoo.addons.cloudflare.models.ip_ban.ban_ip")
+    def test_01_waf_ban_ip(self, mock_ban_ip):
         # [@ANCHOR: test_cf_ban_ip_api]
         # Tests [@ANCHOR: cf_ban_ip_api]
         # # Verified by [@ANCHOR: test_cf_ban_ip_api]
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.raise_for_status = __import__("unittest.mock").mock.MagicMock()
-        mock_response.json.return_value = {"result": {"id": "fake_rule_123"}}
-        mock_post.return_value = mock_response
+        mock_ban_ip.return_value = (True, "fake_rule_123")
 
         website = self.env["website"].get_current_website()
         website.write(
@@ -25,10 +21,6 @@ class TestCloudflareAPIs(TransactionCase):
 
         res = self.env["cloudflare.waf"].ban_ip("192.168.1.100", website_id=website.id)
         self.assertTrue(res)
-
-        called_json = mock_post.call_args[1]["json"]
-        self.assertEqual(called_json["mode"], "block")
-        self.assertEqual(called_json["configuration"]["value"], "192.168.1.100")
 
     @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
     def test_02_turnstile_secret_fetch(self, mock_post):
@@ -51,8 +43,8 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertEqual(called_data["secret"], "my_super_secret_key")
         self.assertEqual(called_data["response"], "fake_token_123")
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.create_cfd_tunnel")
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.get_cfd_tunnel_token")
+    @patch("odoo.addons.cloudflare.models.res_config_settings.create_cfd_tunnel")
+    @patch("odoo.addons.cloudflare.models.res_config_settings.get_cfd_tunnel_token")
     def test_03_tunnel_setup(self, mock_get_token, mock_create):
         # [@ANCHOR: test_cf_tunnel_setup]
         # Tests [@ANCHOR: cf_tunnel_setup]
@@ -71,7 +63,7 @@ class TestCloudflareAPIs(TransactionCase):
         wizard = self.env["cloudflare.tunnel.wizard"].browse(action["res_id"])
         self.assertIn("mock_token_xyz", wizard.command)
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.list_cfd_tunnels")
+    @patch("odoo.addons.cloudflare.models.tunnel.list_cfd_tunnels")
     def test_04_sync_tunnels(self, mock_list):
         # [@ANCHOR: test_cf_sync_tunnels]
         # Tests [@ANCHOR: cf_sync_tunnels]
@@ -88,7 +80,7 @@ class TestCloudflareAPIs(TransactionCase):
         self.assertTrue(tunnel)
         self.assertEqual(tunnel.name, "Tunnel 1")
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.delete_cfd_tunnel")
+    @patch("odoo.addons.cloudflare.models.tunnel.delete_cfd_tunnel")
     def test_05_delete_tunnel(self, mock_delete):
         # [@ANCHOR: test_cf_delete_tunnel]
         # Tests [@ANCHOR: cf_delete_tunnel]

@@ -174,8 +174,13 @@ class BinaryManifest(models.Model):
             except Exception as e:
                 _logger.warning("HEAD request failed or unsupported: %s", e)
 
-            req.method = "GET"
-            with urllib.request.urlopen(req) as response:
+            # Create a fresh request for the actual download to prevent 400 Bad Request issues
+            # from reusing the HEAD request object.
+            get_req = urllib.request.Request(
+                manifest_record.url,
+                headers={"User-Agent": "OdooBinaryDownloader/1.0"}
+            )
+            with urllib.request.urlopen(get_req) as response:
                 with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
                     shutil.copyfileobj(response, tmp)
 

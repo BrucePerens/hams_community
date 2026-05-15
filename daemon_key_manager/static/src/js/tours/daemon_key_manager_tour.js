@@ -7,12 +7,12 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
     url: "/odoo",
     steps: () => [
         {
-            trigger: '.o_list_renderer, .o_list_button_add',
+            trigger: '.o_control_panel .btn-primary',
             content: "Wait for list view",
             run: () => {},
         },
         {
-            trigger: 'button.o_list_button_add',
+            trigger: '.o_control_panel .btn-primary',
             content: "Create new registry entry",
             run: "click",
         },

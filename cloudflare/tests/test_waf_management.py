@@ -18,7 +18,7 @@ class TestWafManagement(RealTransactionCase):
             {"cloudflare_api_token": "fake_token", "cloudflare_zone_id": "fake_zone"}
         )
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.ban_ip")
+    @patch("odoo.addons.cloudflare.models.ip_ban.ban_ip")
     def test_01_cf_execute_ban(self, mock_ban_ip):
         # [@ANCHOR: test_cf_execute_ban]
         # Tests [@ANCHOR: cf_execute_ban]
@@ -39,7 +39,7 @@ class TestWafManagement(RealTransactionCase):
         self.assertEqual(ban_record.cf_rule_id, "fake_rule_123")
         self.assertEqual(ban_record.website_id.id, self.website.id)
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.unban_ip")
+    @patch("odoo.addons.cloudflare.models.ip_ban.unban_ip")
     def test_02_cf_action_lift_ban(self, mock_unban_ip):
         # [@ANCHOR: test_cf_action_lift_ban]
         # Tests [@ANCHOR: cf_action_lift_ban]

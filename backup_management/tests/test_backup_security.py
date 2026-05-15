@@ -51,6 +51,7 @@ class TestBackupSecurity(RealTransactionCase):
     def test_symlink_traversal(self):
         # Create a symlink to a forbidden path
         symlink_path = "/var/lib/odoo/backups/evil_link"
+        os.makedirs(os.path.dirname(symlink_path), exist_ok=True)
         if os.path.exists(symlink_path):
             os.remove(symlink_path)
 
@@ -123,9 +124,8 @@ class TestBackupSecurity(RealTransactionCase):
             "config_id": self.config.id,
             "snapshot_id": "snap_acc",
         })
-        wizard = self.env["backup.restore.wizard"].with_user(self.user_no_group).create({
-            "snapshot_id": snapshot.id,
-            "restore_target_path": "/var/lib/odoo/backups/safe"
-        })
         with self.assertRaises(AccessError):
-            wizard.action_restore()
+            self.env["backup.restore.wizard"].with_user(self.user_no_group).create({
+                "snapshot_id": snapshot.id,
+                "restore_target_path": "/var/lib/odoo/backups/safe"
+            })

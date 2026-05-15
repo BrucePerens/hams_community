@@ -1,3 +1,8 @@
+@@BOUNDARY_PARCEL_EXTRACT_FIX@@
+Repository: BrucePerens/hams_community
+Path: tools/parcel_extract.py
+Operation: overwrite
+
 #!/usr/bin/env python3
 import os
 import sys
@@ -194,7 +199,7 @@ def check_ai_foibles(payload, filepath=""):
     foibles = [
         r"#\s*\.\.\.\s*rest of",
         r"//\s*\.\.\.\s*rest of",
-        r"<!--\s*\.\.\.\s*rest of",
+        r"%3C!--\s*\.\.\.\s*rest of",
         r"#\s*Code unchanged",
         r"//\s*Code unchanged",
         r"#\s*\.\.\.\s*existing code\s*\.\.\.",
@@ -210,7 +215,7 @@ def check_ai_foibles(payload, filepath=""):
         raise ValueError(
             "UI Data Loss Detected: Found empty inline code block (``). "
             "The conversational UI likely stripped an HTML/XML comment before reaching the extractor. "
-            "You MUST percent-encode the tags (<, >) to bypass the UI."
+            "You MUST percent-encode the tags (%3C, %3E) to bypass the UI."
         )
 
     return payload
@@ -869,7 +874,7 @@ def extract_parcel(raw_text):
         header_lines = []
         payload_lines = []
         in_header = True
-
+        
         for line in lines:
             if in_header:
                 if not line.strip():
@@ -917,10 +922,10 @@ def extract_parcel(raw_text):
                 current_repo = os.path.basename(top_level)
             except Exception:
                 current_repo = os.path.basename(os.getcwd())
-
+            
             exp_base = expected_repo.split('/')[-1].lower()
             curr_base = current_repo.lower()
-
+            
             if not (curr_base.startswith(exp_base) or exp_base.startswith(curr_base)):
                 tasks_by_file.setdefault(filepath, []).append({"error": f"Repository mismatch. Expected '{expected_repo}', but currently in '{current_repo}'."})
                 continue
@@ -931,13 +936,13 @@ def extract_parcel(raw_text):
         payload = urllib.parse.unquote(payload)
 
         if filepath.endswith((".py", ".sh", ".conf", ".yaml", ".json", ".xml", ".csv", ".md")):
-            # 1. Fix standard or escaped markdown links wrapping URLs: https://a.com or \"https://a.com"\
+            # 1. Fix standard or escaped markdown links wrapping URLs: [https://a.com](https://a.com) or \"[https://a.com](https://a.com)"\
             payload = re.sub(
                 r'\\?\[\s*(["\']?)\s*(https?://[^\]"\'\s]+)\s*\1\s*\\?\]\s*\\?\(\s*(https?://[^)\s]+)\s*\\?\)',
                 r'\1\2\1',
                 payload
             )
-            # 2. Fix the https://a.com mangling
+            # 2. Fix the [https://a.com](https://a.com) mangling
             payload = re.sub(
                 r"(https?://)?\[([^\]]+)\]\([^)]*https?://[^)]+\)",
                 lambda m: (m.group(1) or "") + m.group(2),
@@ -1276,3 +1281,4 @@ if __name__ == "__main__":
         input_data = sys.stdin.read()
 
     extract_parcel(input_data)
+@@BOUNDARY_PARCEL_EXTRACT_FIX@@--

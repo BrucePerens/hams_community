@@ -20,7 +20,7 @@ class TestHelpdeskAdapter(TransactionCase):
         # Ensure the parameter is set to a valid model
         self.env["ir.config_parameter"].set_param("pager_duty.helpdesk_model", "hams_helpdesk.ticket")
 
-        with patch('odoo.addons.calendar.models.calendar_event.Meeting.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
+        with patch('odoo.addons.calendar.models.calendar_event.CalendarEvent.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
             incident = self.env['pager.incident'].create({
                 'name': 'Test Adapter Incident',
                 'source': 'test_source',
@@ -46,7 +46,7 @@ class TestHelpdeskAdapter(TransactionCase):
         # Set to an invalid/uninstalled model
         self.env["ir.config_parameter"].set_param("pager_duty.helpdesk_model", "invalid.model.does.not.exist")
 
-        with patch('odoo.addons.calendar.models.calendar_event.Meeting.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
+        with patch('odoo.addons.calendar.models.calendar_event.CalendarEvent.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
             incident = self.env['pager.incident'].create({
                 'name': 'Test Fallback Incident',
                 'source': 'test_fallback',

@@ -214,9 +214,10 @@ class TestBackupManagement(RealTransactionCase):
         if doc_model:
              article = self.env[doc_model].search([('name', '=', 'Backup Management')], limit=1)
              self.assertTrue(article.exists(), "Backup documentation should be installed")
-             self.assertIn("Backup Management Facility", article.body)
+             self.assertIn("Unified Backup Management Manual", article.body)
 
-    def test_13_restore_action(self):
+    @patch('pika.BlockingConnection')
+    def test_13_restore_action(self, mock_pika):
         # Tests [@ANCHOR: test_restore_action]
         # Tests [@ANCHOR: backup_trigger_restore]
         snap = self.env["backup.snapshot"].create({

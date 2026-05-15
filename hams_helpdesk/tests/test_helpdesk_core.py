@@ -9,14 +9,24 @@ class TestHelpdeskCore(RealTransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         # Provision test roles
+        cls.manager_partner = cls.env['res.partner'].create({
+            'name': 'Helpdesk Manager Partner',
+            'email': 'manager@example.com',
+        })
         cls.manager_user = cls.env['res.users'].create({
             'name': 'Helpdesk Manager',
             'login': 'hd_manager_test',
+            'partner_id': cls.manager_partner.id,
             'group_ids': [(6, 0, [cls.env.ref('hams_helpdesk.group_helpdesk_manager').id])]
+        })
+        cls.portal_partner = cls.env['res.partner'].create({
+            'name': 'Portal Customer Partner',
+            'email': 'portal@example.com',
         })
         cls.portal_user = cls.env['res.users'].create({
             'name': 'Portal Customer',
             'login': 'portal_cust_test',
+            'partner_id': cls.portal_partner.id,
             'group_ids': [(6, 0, [cls.env.ref('base.group_portal').id])]
         })
 

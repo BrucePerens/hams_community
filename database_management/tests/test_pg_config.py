@@ -17,6 +17,18 @@ class TestPgConfig(RealTransactionCase):
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")
+        # Ensure the expected service account exists for optimization logic
+        svc_user = self.env['res.users'].create({
+            'name': 'DB Management SVC',
+            'login': 'db_mgt_svc',
+            'email': 'db_mgt@example.com'
+        })
+        self.env['ir.model.data'].create({
+            'name': 'user_database_management_service',
+            'module': 'database_management',
+            'model': 'res.users',
+            'res_id': svc_user.id,
+        })
 
     def test_01_optimization_wizard(self):
         # Tests [@ANCHOR: pg_optimize_wizard]
