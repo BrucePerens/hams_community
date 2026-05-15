@@ -176,7 +176,7 @@ class BackupConfig(models.Model):
         """
         Internal helper to offload tasks to the RabbitMQ Bastion.
         """
-        if not self.env.user.has_group("backup_management.group_backup_admin"):
+        if not self.env.su and not self.env.user.has_group("backup_management.group_backup_admin"):
              raise AccessError(_("Only Backup Administrators can trigger backup operations."))
 
         jobs = self.env["backup.job"]

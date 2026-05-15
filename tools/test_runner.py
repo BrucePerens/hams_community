@@ -19,6 +19,8 @@ import sys
 import tempfile
 import time
 import concurrent.futures
+import queue
+import threading
 from psycopg2.errors import UndefinedTable
 from psycopg2 import sql
 
@@ -289,32 +291,57 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     )
 
     force_killed = False
+
+    q = queue.Queue()
+    def reader():
+        try:
+            for line in process.stdout:
+                q.put(line)
+        except Exception:
+            pass
+        q.put(None)
+
+    t = threading.Thread(target=reader)
+    t.daemon = True
+    t.start()
+
     try:
-        for line in process.stdout:
-            line_lower = line.lower()
-            if (
-                "deprecated" in line_lower and "directive" in line_lower
-            ) or "pypdf2" in line_lower:
-                continue
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            if extractor:
-                extractor.process_line(line)
+        while True:
+            try:
+                line = q.get(timeout=120.0)
+                if line is None:
+                    break
+                line_lower = line.lower()
+                if (
+                    "deprecated" in line_lower and "directive" in line_lower
+                ) or "pypdf2" in line_lower:
+                    continue
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                if extractor:
+                    extractor.process_line(line)
 
-            if "Hit CTRL-C again or send a second signal" in line:
-                print(
-                    "\n[!] WARNING: Odoo did not terminate because a background thread within it,"
-                )
-                print(
-                    "             possibly spawned by your module, is not set up to terminate"
-                )
-                print(
-                    "             with the rest of Odoo. The test program killed Odoo's process"
-                )
-                print("             group to end the test.\n")
+                if "Hit CTRL-C again or send a second signal" in line:
+                    print(
+                        "\n[!] WARNING: Odoo did not terminate because a background thread within it,"
+                    )
+                    print(
+                        "             possibly spawned by your module, is not set up to terminate"
+                    )
+                    print(
+                        "             with the rest of Odoo. The test program killed Odoo's process"
+                    )
+                    print("             group to end the test.\n")
 
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                    force_killed = True
+                    break
+            except queue.Empty:
+                print("\n[!] WARNING: Test runner hung for 120 seconds with no output! Killing to continue...")
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                 force_killed = True
+                if extractor:
+                    extractor.process_line("CRITICAL: Test execution hung for 120 seconds. Process forcefully killed.\n")
                 break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")

@@ -1,8 +1,9 @@
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
 from unittest.mock import patch
 
 @tagged('post_install', '-at_install', 'standard')
-class TestHelpdeskCore(TransactionCase):
+class TestHelpdeskCore(RealTransactionCase):
 
     @classmethod
     def setUpClass(cls):

@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-15 16:41+0000\n"
-"PO-Revision-Date: 2026-05-15 16:41+0000\n"
+"POT-Creation-Date: 2026-05-15 18:30+0000\n"
+"PO-Revision-Date: 2026-05-15 18:30+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -37,15 +37,15 @@ msgstr ""
 msgid "Access Denied: You do not have permission to modify this post."
 msgstr ""
 
-#: backup_management/models/utils.py:25
+#: backup_management/models/utils.py:40
 msgid "Access to internal Odoo data directory %s is prohibited."
 msgstr ""
 
-#: backup_management/models/utils.py:18
+#: backup_management/models/utils.py:27
 msgid "Access to the path %s is prohibited for security reasons."
 msgstr ""
 
-#: hams_test/tests/real_transaction.py:90
+#: hams_test/tests/real_transaction.py:91
 msgid "An error occurred during final commit in tearDown: %s"
 msgstr ""
 
@@ -57,7 +57,7 @@ msgstr ""
 msgid "Appeal rejected. The user remains suspended."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:133
+#: binary_downloader/models/binary_manifest.py:136
 msgid "Auto-install of %s is only supported on Linux x86_64. Please install manually."
 msgstr ""
 
@@ -73,7 +73,7 @@ msgstr ""
 msgid "Cache invalidated for model %s"
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:105
+#: daemon_key_manager/models/key_registry.py:118
 msgid "Cannot write key file for '%s' at '%s'. Check permissions."
 msgstr ""
 
@@ -85,7 +85,7 @@ msgstr ""
 msgid "Cloudflare Tunnel Command"
 msgstr ""
 
-#: database_management/models/pg_config.py:97
+#: database_management/models/pg_config.py:104
 msgid "Configuration written to postgresql.auto.conf. NOTE: Parameters like shared_buffers and max_connections require a full PostgreSQL service restart to take effect."
 msgstr ""
 
@@ -101,7 +101,7 @@ msgstr ""
 msgid "Database checks updated from JSON file."
 msgstr ""
 
-#: hams_test/tests/real_transaction.py:183
+#: hams_test/tests/real_transaction.py:186
 msgid "Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s"
 msgstr ""
 
@@ -109,7 +109,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:77
+#: database_management/models/db_stats.py:78
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -121,11 +121,11 @@ msgstr ""
 msgid "Export Successful"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:99
+#: hams_helpdesk/models/helpdesk_ticket.py:107
 msgid "FYI: A new issue was logged shortly before your shift begins."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:232
+#: binary_downloader/models/binary_manifest.py:235
 msgid "Failed to auto-install %s: %s"
 msgstr ""
 
@@ -169,7 +169,7 @@ msgstr ""
 msgid "Failed to update some settings:\n%s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:79
+#: hams_helpdesk/models/helpdesk_ticket.py:87
 msgid "Helpdesk Ticket #%s assigned to you."
 msgstr ""
 
@@ -185,19 +185,27 @@ msgstr ""
 msgid "Invalid XML ID format: %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:108
+#: binary_downloader/models/binary_manifest.py:111
 msgid "Invalid binary name."
 msgstr ""
 
-#: backup_management/models/backup_config.py:172
+#: backup_management/models/utils.py:44
+msgid "Invalid path: path cannot start with a hyphen."
+msgstr ""
+
+#: backup_management/models/restore_wizard.py:29
+msgid "Invalid restore target stanza."
+msgstr ""
+
+#: backup_management/models/backup_config.py:156
 msgid "Kopia binary not found. Deferring to central generalized downloader..."
 msgstr ""
 
-#: backup_management/models/backup_config.py:185
+#: backup_management/models/backup_config.py:169
 msgid "Kopia successfully installed to %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:220
+#: binary_downloader/models/binary_manifest.py:223
 msgid "Member %s not found in archive."
 msgstr ""
 
@@ -210,7 +218,7 @@ msgstr ""
 msgid "Missing Cloudflare API Token or Zone ID for the selected website."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:125
+#: binary_downloader/models/binary_manifest.py:128
 msgid "Missing dependency: '%s'. Please configure it in Settings -> Technical -> Binary Manifests or install via OS package manager."
 msgstr ""
 
@@ -218,7 +226,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:89
+#: hams_helpdesk/models/helpdesk_ticket.py:97
 msgid "New Helpdesk Ticket"
 msgstr ""
 
@@ -230,7 +238,15 @@ msgstr ""
 msgid "No JSON configuration found at %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:241
+#: backup_management/models/backup_config.py:180
+msgid "Only Backup Administrators can trigger backup operations."
+msgstr ""
+
+#: backup_management/models/restore_wizard.py:21
+msgid "Only Backup Administrators can trigger restore operations."
+msgstr ""
+
+#: zero_sudo/models/security_utils.py:235
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -238,7 +254,7 @@ msgstr ""
 msgid "Only http:// and https:// URLs are allowed for security reasons."
 msgstr ""
 
-#: database_management/models/pg_config.py:96
+#: database_management/models/pg_config.py:103
 msgid "Optimizations Applied"
 msgstr ""
 
@@ -282,7 +298,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:247
+#: zero_sudo/models/security_utils.py:241
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -294,24 +310,24 @@ msgstr ""
 msgid "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:188
+#: binary_downloader/models/binary_manifest.py:191
 msgid "Security Alert: Checksum mismatch for downloaded %s binary."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:206
+#: binary_downloader/models/binary_manifest.py:209
 msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:171
-#: zero_sudo/models/security_utils.py:209
+#: zero_sudo/models/security_utils.py:176
+#: zero_sudo/models/security_utils.py:203
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:165
+#: zero_sudo/models/security_utils.py:170
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:204
+#: zero_sudo/models/security_utils.py:198
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
 msgstr ""
 
@@ -327,27 +343,27 @@ msgstr ""
 msgid "Security Alert: Service Account is disabled."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:215
+#: binary_downloader/models/binary_manifest.py:218
 msgid "Security Alert: Tar slip attempt detected."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:115
+#: daemon_key_manager/models/key_registry.py:129
 msgid "Security Alert: The __system__ user ID cannot be used to provision a key. This account is forbidden from RPC calls."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:54
+#: daemon_key_manager/models/key_registry.py:56
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:162
+#: daemon_key_manager/models/key_registry.py:179
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
-#: hams_helpdesk/models/shift_handoff.py:27
+#: hams_helpdesk/models/shift_handoff.py:28
 msgid "Shift Handoff: %s"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:97
+#: binary_downloader/models/binary_manifest.py:99
 #: cloudflare/models/purge_wizard.py:44
 #: cloudflare/models/purge_wizard.py:68
 #: cloudflare/models/purge_wizard.py:84
@@ -359,7 +375,7 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:98
+#: binary_downloader/models/binary_manifest.py:100
 msgid "Successfully installed %s."
 msgstr ""
 
@@ -372,7 +388,7 @@ msgstr ""
 msgid "The Group Website Slug must be unique and valid."
 msgstr ""
 
-#: user_websites/models/res_users.py:325
+#: user_websites/models/res_users.py:334
 msgid "The Website Slug must be unique and valid."
 msgstr ""
 
@@ -384,11 +400,11 @@ msgstr ""
 msgid "The external SRE daemon operates asynchronously outside of Odoo. It will execute this check on its next polling cycle."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:44
+#: daemon_key_manager/models/key_registry.py:45
 msgid "The selected user must be a service account."
 msgstr ""
 
-#: user_websites/models/res_users.py:178
+#: user_websites/models/res_users.py:187
 #: user_websites/models/user_websites_groups.py:92
 msgid "The slug '%s' is reserved and cannot be used."
 msgstr ""
@@ -397,15 +413,15 @@ msgstr ""
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:90
+#: hams_helpdesk/models/helpdesk_ticket.py:98
 msgid "Ticket %s requires your attention."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:81
+#: hams_helpdesk/models/helpdesk_ticket.py:89
 msgid "Ticket Assigned: %s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:121
+#: hams_helpdesk/models/helpdesk_ticket.py:129
 msgid "Ticket Update: %s"
 msgstr ""
 
@@ -413,28 +429,28 @@ msgstr ""
 msgid "Tunnels synced successfully."
 msgstr ""
 
-#: user_websites/models/res_users.py:201
+#: user_websites/models/res_users.py:210
 #: user_websites/models/user_websites_groups.py:129
 msgid "Unable to generate a unique website slug after %s attempts."
 msgstr ""
 
-#: backup_management/models/backup_config.py:189
+#: backup_management/models/backup_config.py:173
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:101
+#: hams_helpdesk/models/helpdesk_ticket.py:109
 msgid "Upcoming Shift CC: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:259
+#: zero_sudo/models/security_utils.py:253
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:72
+#: database_management/models/db_stats.py:73
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:75
+#: database_management/models/db_stats.py:76
 msgid "Vacuum timed out for %s."
 msgstr ""
 
@@ -479,7 +495,7 @@ msgstr ""
 msgid "You do not have permission to create this site."
 msgstr ""
 
-#: binary_downloader/models/binary_manifest.py:90
+#: binary_downloader/models/binary_manifest.py:92
 msgid "You do not have sufficient permissions to install binaries."
 msgstr ""
 
@@ -495,7 +511,7 @@ msgstr ""
 msgid "You must provide both the Cloudflare API Token and Account ID to create a tunnel."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:119
+#: hams_helpdesk/models/helpdesk_ticket.py:127
 msgid "Your issue has been updated. New Status: %s"
 msgstr ""
 
@@ -503,7 +519,7 @@ msgstr ""
 msgid "Zone settings updated successfully."
 msgstr ""
 
-#: backup_management/models/backup_config.py:166
+#: backup_management/models/backup_config.py:150
 msgid "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
 msgstr ""
 

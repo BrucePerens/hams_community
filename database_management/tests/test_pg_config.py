@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import shutil
 import os
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
 from unittest.mock import patch
 from odoo.exceptions import UserError
 
@@ -12,7 +13,7 @@ if not hasattr(shutil, "_orig_which"):
     )
 
 @tagged("post_install", "-at_install")
-class TestPgConfig(TransactionCase):
+class TestPgConfig(RealTransactionCase):
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")

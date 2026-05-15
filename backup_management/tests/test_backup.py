@@ -32,6 +32,7 @@ class TestBackupManagement(RealTransactionCase):
 
     def setUp(self):
         super().setUp()
+        self.env.user.write({'group_ids': [(4, self.env.ref('backup_management.group_backup_admin').id)]})
         if os.path.exists("/var/lib/odoo/backup_repo"):
             if os.path.isdir("/var/lib/odoo/backup_repo"):
                 shutil.rmtree("/var/lib/odoo/backup_repo", ignore_errors=True)

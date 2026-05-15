@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import patch
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
 from odoo.exceptions import UserError
 
 
 @tagged("post_install", "-at_install")
-class TestWafManagement(TransactionCase):
+class TestWafManagement(RealTransactionCase):
 
     def setUp(self):
         super().setUp()

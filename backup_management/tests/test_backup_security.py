@@ -16,12 +16,13 @@ class TestBackupSecurity(RealTransactionCase):
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "zero_sudo.odoo_facility_service_internal"
         )
+        self.env['res.users'].browse(svc_uid).write({'group_ids': [(4, self.env.ref('backup_management.group_backup_admin').id)]})
         self.config = self.BackupConfig.with_user(svc_uid).create({
             "name": "Security Test Repo",
             "engine": "kopia",
             "target_path": self.valid_repo
         })
-        self.user_no_group = self.env['res.users'].with_user(svc_uid).create({
+        self.user_no_group = self.env['res.users'].create({
             'name': 'No Group User',
             'login': 'no_group',
             'email': 'no@group.com',
