@@ -1,4 +1,5 @@
 /** @odoo-module **/
+// # Verified by [@ANCHOR: test_binary_install_tour]
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("binary_install_tour", {

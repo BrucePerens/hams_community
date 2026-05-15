@@ -63,6 +63,7 @@ class BinaryManifest(models.Model):
     @api.depends('name')
     def _compute_is_installed(self):
         # [@ANCHOR: binary_compute_installed]
+        # Verified by [@ANCHOR: test_binary_manifest_standard]
         data_dir = tools.config.get("data_dir", "/var/lib/odoo")
         bin_dir = os.path.join(data_dir, "hams_bin")
         for record in self:
@@ -84,6 +85,7 @@ class BinaryManifest(models.Model):
 
     def action_install(self):
         # [@ANCHOR: binary_action_install]
+        # Verified by [@ANCHOR: test_binary_manifest_standard]
         self.ensure_one()
         # Security: ensure only users with appropriate groups can trigger this
         if not (self.env.user.has_group('binary_downloader.group_binary_downloader_manager') or self.env.is_admin()):
@@ -104,6 +106,7 @@ class BinaryManifest(models.Model):
     @api.model
     def ensure_executable(self, cmd_name):
         # [@ANCHOR: binary_ensure_executable]
+        # Verified by [@ANCHOR: test_binary_manifest_standard]
         if "/" in cmd_name or "\\" in cmd_name:
             raise ValidationError(_("Invalid binary name."))
 
