@@ -19,7 +19,7 @@
             <field name="name">Pager Service Internal</field>
             <field name="login">pager_service_internal</field>
             <field name="is_service_account" eval="True"/>
-            <field name="group_ids" eval="[(6, 0, [ref('pager_duty.group_pager_service')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('pager_duty.group_pager_service'), ref('base.group_user')])]"/>
         </record>
     </data>
 </odoo>

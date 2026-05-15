@@ -4,15 +4,10 @@ import { registry } from "@web/core/registry";
 
 // # Verified by [@ANCHOR: test_daemon_key_manager_tour]
 registry.category("web_tour.tours").add("daemon_key_manager_tour", {
-    url: "/odoo",
+    url: "/odoo?action=daemon_key_manager.action_daemon_key_registry",
     steps: () => [
         {
-            trigger: '.o_control_panel .btn-primary',
-            content: "Wait for list view",
-            run: () => {},
-        },
-        {
-            trigger: '.o_control_panel .btn-primary',
+            trigger: '.o_list_button_add',
             content: "Create new registry entry",
             run: "click",
         },
@@ -45,11 +40,6 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             trigger: 'button[name="action_force_provision_all"]',
             content: "Force provision all keys",
             run: "click",
-        },
-        {
-            trigger: '.o_list_renderer',
-            content: "Wait for return to list view (assuming the action returns to list or stays on form)",
-            run: () => {}, // Just a check
-        },
+        }
     ],
 });

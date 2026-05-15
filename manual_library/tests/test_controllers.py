@@ -13,7 +13,6 @@ class TestManualControllers(odoo.tests.common.HttpCase):
                 "name": "Controller Tester",
                 "login": "controllertester",
                 "email": "tester@manual.com",
-                "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
         self.internal_user.partner_id.company_id = self.env.company

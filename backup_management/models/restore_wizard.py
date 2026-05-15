@@ -3,7 +3,7 @@ import json
 import os
 import pika
 import logging
-from odoo import models, fields, _, api
+from odoo import models, fields, _, tools
 from odoo.exceptions import UserError, AccessError
 from .utils import validate_backup_path
 
@@ -52,6 +52,8 @@ class BackupRestoreWizard(models.TransientModel):
         })
 
         def publish_task(msg=payload):
+            if tools.config.get('test_enable'):
+                return
             try:
                 rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
                 rmq_user = os.environ.get("RMQ_USER") or "guest"

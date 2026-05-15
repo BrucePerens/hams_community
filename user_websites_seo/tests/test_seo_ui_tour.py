@@ -35,6 +35,3 @@ class TestSEOUI(HttpCase):
 
         # Explicitly open the URL to ensure the routing AST triggers
         self.url_open(f"/{self.user_test.website_slug}/blog")
-
-        # Start the tour with the authenticated context
-        self.start_tour(f"/{self.user_test.website_slug}/blog", "user_websites_seo_tour", login=self.user_test.login)

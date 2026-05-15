@@ -387,7 +387,7 @@ def get_addons_path(base_dir):
     return ",".join(paths)
 
 
-def check_linters(venv_python, base_dir, ignore_filepath):
+def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
     """Executes the AST Burn List and Semantic Anchor DevSecOps linters"""
     print("[*] Running AST Burn List Linter...")
     burn_script = os.path.join(base_dir, "tools", "check_burn_list.py")
@@ -396,6 +396,8 @@ def check_linters(venv_python, base_dir, ignore_filepath):
     )
     if res_burn.returncode != 0:
         print("🛑 Halting due to burn list violations. Please review the output above.")
+        if extractor:
+            extractor._written = True
         sys.exit(1)
 
     print("[*] Scanning documentation and codebase for Semantic Anchors...")
@@ -405,6 +407,8 @@ def check_linters(venv_python, base_dir, ignore_filepath):
         print(
             "🛑 Halting due to linter/anchor violations. Please review the output above."
         )
+        if extractor:
+            extractor._written = True
         sys.exit(1)
 
 
@@ -1117,7 +1121,7 @@ def main():
         final_rc = 0
 
         if args.mode == "standard":
-            check_linters(venv_python, base_dir, ignore_filepath)
+            check_linters(venv_python, base_dir, ignore_filepath, extractor)
             final_rc = run_daemon_tests(
                 venv_python, base_dir, extractor, ignore_patterns, target_modules
             )
@@ -1149,6 +1153,7 @@ def main():
                 rc_init = run_cmd(init_cmd, extractor)
                 if rc_init != 0:
                     print("❌ ERROR: Database initialization failed!")
+                    extractor._written = True
                     sys.exit(rc_init)
                 save_db_cache(args.db, cache_file, mod_string)
 
@@ -1177,7 +1182,7 @@ def main():
                 final_rc = rc_odoo
 
         elif args.mode == "integration":
-            check_linters(venv_python, base_dir, ignore_filepath)
+            check_linters(venv_python, base_dir, ignore_filepath, extractor)
             final_rc = run_daemon_tests(
                 venv_python, base_dir, extractor, ignore_patterns, target_modules
             )
@@ -1297,7 +1302,7 @@ def main():
                     pass
 
         elif args.mode == "individual":
-            check_linters(venv_python, base_dir, ignore_filepath)
+            check_linters(venv_python, base_dir, ignore_filepath, extractor)
             failed_modules = []
             for mod in target_modules:
                 print("\n[*] ----------------------------------------------------")

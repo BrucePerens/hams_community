@@ -56,20 +56,22 @@ class HelpdeskTicket(models.Model):
 
         # PagerDuty API Integration: Resolve on-duty personnel
         on_duty_user = False
-        if hasattr(self.env["calendar.event"], "get_current_on_duty_admin"):
-            on_duty_user = self.env["calendar.event"].get_current_on_duty_admin()
+
+        # Use service account to search calendar events to ensure full visibility without sudo()
+        try:
+            env_svc = self.env["zero_sudo.security.utils"]._get_service_env("pager_duty.user_pager_service_internal")
+            Calendar = env_svc["calendar.event"]
+        except Exception:
+            Calendar = self.env["calendar.event"]
+
+        if hasattr(Calendar, "get_current_on_duty_admin"):
+            on_duty_user = Calendar.get_current_on_duty_admin()
 
         # Discover upcoming shifts (within 30 minutes)
         now = fields.Datetime.now()
         thirty_mins = now + datetime.timedelta(minutes=30)
         upcoming_users = self.env["res.users"]
-        if "is_pager_duty" in self.env["calendar.event"]._fields:
-            # Use service account to search calendar events to ensure full visibility without sudo()
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("hams_helpdesk.user_helpdesk_service")
-            Calendar = self.env["calendar.event"]
-            if svc_uid:
-                Calendar = Calendar.with_user(svc_uid)
-
+        if "is_pager_duty" in Calendar._fields:
             upcoming_shifts = Calendar.search([
                 ("is_pager_duty", "=", True),
                 ("start", ">", now),

@@ -149,6 +149,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             "user_websites.global_website_page_limit",
             "user_websites.last_digest_id",
             "user_websites_seo.docs_installed",
+            "pager_duty.helpdesk_model",
         ]
 
     @api.model

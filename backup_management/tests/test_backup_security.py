@@ -119,6 +119,7 @@ class TestBackupSecurity(RealTransactionCase):
         # Ensure non-admins cannot trigger backups or restores
         with self.assertRaises(AccessError):
             self.config.with_user(self.user_no_group).action_trigger_backup()
+            self.env.flush_all()
 
         snapshot = self.env["backup.snapshot"].create({
             "config_id": self.config.id,
@@ -129,3 +130,4 @@ class TestBackupSecurity(RealTransactionCase):
                 "snapshot_id": snapshot.id,
                 "restore_target_path": "/var/lib/odoo/backups/safe"
             })
+            self.env.flush_all()

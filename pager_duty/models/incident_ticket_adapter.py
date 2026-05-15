@@ -1,5 +1,5 @@
 import logging
-from odoo import _, fields, models
+from odoo import _, fields, models, api
 
 _logger = logging.getLogger(__name__)
 
@@ -17,6 +17,12 @@ class PagerDutyIncidentTicketAdapter(models.Model):
         help="The Odoo model used for the ticket (e.g. hams_helpdesk.ticket or helpdesk.ticket)."
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records.action_generate_helpdesk_ticket()
+        return records
+
     def action_generate_helpdesk_ticket(self):
         """
         Adapter API: Dynamically resolves the helpdesk model from system parameters
@@ -27,20 +33,23 @@ class PagerDutyIncidentTicketAdapter(models.Model):
             if incident.helpdesk_ticket_id:
                 continue
 
-            target_model = self.env["ir.config_parameter"].get_param(
-                "pager_duty.helpdesk_model", default="hams_helpdesk.ticket"
-            )
-
-            if target_model not in self.env:
-                _logger.warning("Target helpdesk model '%s' not found. Ensure the module is installed.", target_model)
-                self._execute_smtp_fallback(incident, "Target model not installed.")
-                continue
+            try:
+                target_model = self.env["zero_sudo.security.utils"]._get_system_param(
+                    "pager_duty.helpdesk_model", default="hams_helpdesk.ticket"
+                )
+            except Exception:
+                target_model = "hams_helpdesk.ticket"
 
             assignee_id = False
             if hasattr(self.env["calendar.event"], "get_current_on_duty_admin"):
                 user = self.env["calendar.event"].get_current_on_duty_admin()
                 if user:
                     assignee_id = user.id
+
+            if target_model not in self.env:
+                _logger.warning("Target helpdesk model '%s' not found. Ensure the module is installed.", target_model)
+                self._execute_smtp_fallback(incident, "Target model not installed.", assignee_id)
+                continue
 
             payload = {
                 "name": f"[PAGER] {incident.name}",
@@ -51,21 +60,31 @@ class PagerDutyIncidentTicketAdapter(models.Model):
                 payload["user_id"] = assignee_id
 
             try:
+                # Isolate specific module service accounts for scoped relational object generation
                 try:
-                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "pager_duty.user_pager_service_internal"
+                    hd_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                        "hams_helpdesk.user_helpdesk_service"
                     )
                 except Exception:
-                    svc_uid = self.env.user.id
+                    hd_uid = self.env.user.id
 
-                ticket = self.env[target_model].with_user(svc_uid).create(payload)
-                incident.helpdesk_ticket_id = ticket.id
-                incident.helpdesk_ticket_model = target_model
+                ticket = self.env[target_model].with_user(hd_uid).create(payload)
+                incident.write({
+                    'helpdesk_ticket_id': ticket.id,
+                    'helpdesk_ticket_model': target_model
+                })
 
                 if assignee_id:
                     user = self.env["res.users"].browse(assignee_id)
                     if user.partner_id:
-                        self.env["calendar.event"].with_user(svc_uid).create({
+                        try:
+                            pd_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                                "pager_duty.user_pager_service_internal"
+                            )
+                        except Exception:
+                            pd_uid = self.env.user.id
+
+                        self.env["calendar.event"].with_user(pd_uid).create({
                             "name": f"Incident Response: {incident.name}",
                             "start": fields.Datetime.now(),
                             "stop": fields.Datetime.add(fields.Datetime.now(), hours=1),
@@ -86,27 +105,30 @@ class PagerDutyIncidentTicketAdapter(models.Model):
                 if user:
                     assignee_id = user.id
 
+        try:
+            pd_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "pager_duty.user_pager_service_internal"
+            )
+        except Exception:
+            pd_uid = self.env.user.id
+
+        body = (
+            f"🚨 <b>EMERGENCY PAGE (Helpdesk Fallback)</b><br/><br/>"
+            f"The Pager Duty module attempted to create a Helpdesk ticket but failed due to an internal error:<br/>"
+            f"<i>{error_msg}</i><br/><br/>"
+            f"<b>Incident ID:</b> {incident.name}<br/>"
+            f"<b>Severity:</b> {incident.severity}<br/>"
+            f"<b>Details:</b> {incident.description}"
+        )
+
+        partner_ids = []
         if assignee_id:
-            try:
-                mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "zero_sudo.mail_service_internal"
-                )
-            except Exception:
-                mail_svc = self.env.user.id
-
             user = self.env["res.users"].browse(assignee_id)
+            if user.partner_id:
+                partner_ids.append(user.partner_id.id)
 
-            body = (
-                f"🚨 <b>EMERGENCY PAGE (Helpdesk Fallback)</b><br/><br/>"
-                f"The Pager Duty module attempted to create a Helpdesk ticket but failed due to an internal error:<br/>"
-                f"<i>{error_msg}</i><br/><br/>"
-                f"<b>Incident ID:</b> {incident.name}<br/>"
-                f"<b>Severity:</b> {incident.severity}<br/>"
-                f"<b>Details:</b> {incident.description}"
-            )
-
-            incident.with_user(mail_svc).message_post(
-                body=body,
-                subject=_("🚨 PAGER DUTY FALLBACK: %s") % incident.name,
-                partner_ids=[user.partner_id.id]
-            )
+        incident.with_user(pd_uid).message_post(
+            body=body,
+            subject=_("🚨 PAGER DUTY FALLBACK: %s") % incident.name,
+            partner_ids=partner_ids
+        )

@@ -3,8 +3,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-15 20:00+0000\n"
-"PO-Revision-Date: 2026-05-15 20:00+0000\n"
+"POT-Creation-Date: 2026-05-15 23:37+0000\n"
+"PO-Revision-Date: 2026-05-15 23:37+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -109,7 +109,7 @@ msgstr ""
 msgid "Environment Updated"
 msgstr ""
 
-#: database_management/models/db_stats.py:78
+#: database_management/models/db_stats.py:79
 msgid "Error executing vacuumdb: %s"
 msgstr ""
 
@@ -121,7 +121,7 @@ msgstr ""
 msgid "Export Successful"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:107
+#: hams_helpdesk/models/helpdesk_ticket.py:109
 msgid "FYI: A new issue was logged shortly before your shift begins."
 msgstr ""
 
@@ -169,7 +169,7 @@ msgstr ""
 msgid "Failed to update some settings:\n%s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:87
+#: hams_helpdesk/models/helpdesk_ticket.py:89
 msgid "Helpdesk Ticket #%s assigned to you."
 msgstr ""
 
@@ -226,7 +226,7 @@ msgstr ""
 msgid "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:97
+#: hams_helpdesk/models/helpdesk_ticket.py:99
 msgid "New Helpdesk Ticket"
 msgstr ""
 
@@ -246,7 +246,7 @@ msgstr ""
 msgid "Only Backup Administrators can trigger restore operations."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:235
+#: zero_sudo/models/security_utils.py:236
 msgid "Only administrators can update the Python environment."
 msgstr ""
 
@@ -298,7 +298,7 @@ msgstr ""
 msgid "Redis connection is not configured or unavailable. Local fallback cache is active."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:241
+#: zero_sudo/models/security_utils.py:242
 msgid "Requirements file not found at %s"
 msgstr ""
 
@@ -318,16 +318,16 @@ msgstr ""
 msgid "Security Alert: Links are not allowed in the archive."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:176
-#: zero_sudo/models/security_utils.py:203
+#: zero_sudo/models/security_utils.py:177
+#: zero_sudo/models/security_utils.py:204
 msgid "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:170
+#: zero_sudo/models/security_utils.py:171
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:198
+#: zero_sudo/models/security_utils.py:199
 msgid "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
 msgstr ""
 
@@ -355,7 +355,7 @@ msgstr ""
 msgid "Security Alert: The environment file path must start with '%s'."
 msgstr ""
 
-#: daemon_key_manager/models/key_registry.py:179
+#: daemon_key_manager/models/key_registry.py:183
 msgid "Security Alert: Writing to system directory '%s' is forbidden."
 msgstr ""
 
@@ -413,15 +413,15 @@ msgstr ""
 msgid "This group has reached its limit of %s website pages."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:98
+#: hams_helpdesk/models/helpdesk_ticket.py:100
 msgid "Ticket %s requires your attention."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:89
+#: hams_helpdesk/models/helpdesk_ticket.py:91
 msgid "Ticket Assigned: %s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:129
+#: hams_helpdesk/models/helpdesk_ticket.py:131
 msgid "Ticket Update: %s"
 msgstr ""
 
@@ -438,19 +438,19 @@ msgstr ""
 msgid "Unknown engine: %s"
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:109
+#: hams_helpdesk/models/helpdesk_ticket.py:111
 msgid "Upcoming Shift CC: %s"
 msgstr ""
 
-#: zero_sudo/models/security_utils.py:253
+#: zero_sudo/models/security_utils.py:254
 msgid "VENV update failed:\n%s"
 msgstr ""
 
-#: database_management/models/db_stats.py:73
+#: database_management/models/db_stats.py:74
 msgid "Vacuum failed for %s: %s"
 msgstr ""
 
-#: database_management/models/db_stats.py:76
+#: database_management/models/db_stats.py:77
 msgid "Vacuum timed out for %s."
 msgstr ""
 
@@ -511,7 +511,7 @@ msgstr ""
 msgid "You must provide both the Cloudflare API Token and Account ID to create a tunnel."
 msgstr ""
 
-#: hams_helpdesk/models/helpdesk_ticket.py:127
+#: hams_helpdesk/models/helpdesk_ticket.py:129
 msgid "Your issue has been updated. New Status: %s"
 msgstr ""
 
@@ -535,7 +535,7 @@ msgstr ""
 msgid "🚨 ESCALATION: Incident open for > 15 minutes!"
 msgstr ""
 
-#: pager_duty/models/incident_ticket_adapter.py:110
+#: pager_duty/models/incident_ticket_adapter.py:132
 msgid "🚨 PAGER DUTY FALLBACK: %s"
 msgstr ""
 

@@ -3,6 +3,7 @@ import os
 from odoo import http
 from odoo.http import request
 from odoo.tests import HttpCase, tagged
+from unittest.mock import patch
 
 class BinaryDownloaderTestController(http.Controller):
     @http.route('/test/dummy_bin', type='http', auth='none', csrf=False)
@@ -34,7 +35,8 @@ class TestBinaryDownloaderTour(HttpCase):
             except OSError:
                 pass
 
-    def test_binary_install_tour(self):
+    @patch("odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable", return_value="/var/lib/odoo/hams_bin/tourbin")
+    def test_binary_install_tour(self, mock_ensure):
         # Tested by [@ANCHOR: test_binary_install_tour]
         if os.environ.get("IN_JULES_VM") or os.environ.get("JULES_SESSION_ID"):
             # Bypassing full tour execution in Jules VM to prevent websocket timeouts.

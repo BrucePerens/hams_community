@@ -44,23 +44,30 @@ def get_git_root():
 
 def get_github_info(root_dir):
     """
-    Determines the GitHub username and repository name.
-    Prompts the user for their username if it's not cached locally.
+    Determines the GitHub username, email, and repository name from git config.
     """
-    user_file = os.path.join(root_dir, ".github_user")
-    if os.path.exists(user_file):
-        with open(user_file, "r", encoding="utf-8") as f:
-            github_user = f.read().strip()
-    else:
-        github_user = input(
-            "Enter your GitHub username (for open source context): "
-        ).strip()
-        if github_user:
-            with open(user_file, "w", encoding="utf-8") as f:
-                f.write(github_user + "\n")
+    try:
+        github_user = subprocess.run(
+            ["git", "config", "user.name"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        github_user = "UnknownUser"
+
+    try:
+        github_email = subprocess.run(
+            ["git", "config", "user.email"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        github_email = "unknown@example.com"
 
     repo_name = os.path.basename(root_dir)
-    return github_user, repo_name
+    return github_user, github_email, repo_name
 
 
 def get_uncommitted_files():
@@ -95,7 +102,7 @@ def generate_payload(modules=None):
     root_dir = get_git_root()
     os.chdir(root_dir)
 
-    github_user, repo_name = get_github_info(root_dir)
+    github_user, github_email, repo_name = get_github_info(root_dir)
 
     uncommitted = get_uncommitted_files()
 
@@ -118,7 +125,8 @@ def generate_payload(modules=None):
 
     with open(output_filename, "w", encoding="utf-8") as out:
         out.write("SYSTEM DIRECTIVE: INITIALIZATION PAYLOAD\n")
-        out.write(f"Repository Target: {github_user}/{repo_name}\n\n")
+        out.write(f"Repository Target: {github_user}/{repo_name}\n")
+        out.write(f"Author Email: {github_email}\n\n")
 
         out.write("--- CONTEXT INSTRUCTIONS ---\n")
         out.write("1. You have read-only access to my GitHub repository via your extensions.\n")

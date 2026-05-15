@@ -20,7 +20,9 @@ class TestHelpdeskAdapter(TransactionCase):
         # Ensure the parameter is set to a valid model
         self.env["ir.config_parameter"].set_param("pager_duty.helpdesk_model", "hams_helpdesk.ticket")
 
-        with patch('odoo.addons.calendar.models.calendar_event.CalendarEvent.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
+        manager = self.on_duty_user
+
+        with patch.object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True):
             incident = self.env['pager.incident'].create({
                 'name': 'Test Adapter Incident',
                 'source': 'test_source',
@@ -46,7 +48,9 @@ class TestHelpdeskAdapter(TransactionCase):
         # Set to an invalid/uninstalled model
         self.env["ir.config_parameter"].set_param("pager_duty.helpdesk_model", "invalid.model.does.not.exist")
 
-        with patch('odoo.addons.calendar.models.calendar_event.CalendarEvent.get_current_on_duty_admin', return_value=self.on_duty_user, create=True):
+        manager = self.on_duty_user
+
+        with patch.object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True):
             incident = self.env['pager.incident'].create({
                 'name': 'Test Fallback Incident',
                 'source': 'test_fallback',
@@ -57,6 +61,7 @@ class TestHelpdeskAdapter(TransactionCase):
             # Verify fallback occurred (ticket shouldn't exist)
             self.assertFalse(incident.helpdesk_ticket_id, "Ticket ID should be empty since creation failed.")
 
+            self.env.flush_all()
             # Verify the fallback message was posted to the incident chatter, alerting the on-duty user
             messages = self.env['mail.message'].search([('res_id', '=', incident.id), ('model', '=', 'pager.incident')])
             fallback_found = any('EMERGENCY PAGE (Helpdesk Fallback)' in (m.body or '') for m in messages)

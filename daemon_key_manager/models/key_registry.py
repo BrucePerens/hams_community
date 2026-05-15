@@ -98,7 +98,7 @@ class DaemonKeyRegistry(models.Model):
         return True
 
     @api.model
-    def action_force_provision_all(self):
+    def action_force_provision_all(self, *args, **kwargs):
         # Tested by [@ANCHOR: test_force_provisioning]
         # [@ANCHOR: action_force_provision_all_api]
         """
@@ -141,7 +141,11 @@ class DaemonKeyRegistry(models.Model):
         old_keys = self.env["res.users.apikeys"].search(
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
-        old_keys.unlink()
+        if old_keys:
+            self.env.cr.execute(
+                "DELETE FROM res_users_apikeys WHERE id IN %s",
+                (tuple(old_keys.ids),)
+            )
 
         # Generate new key
         # Tested by [@ANCHOR: test_cron_rotate_all_keys]
