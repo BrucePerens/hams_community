@@ -21,11 +21,12 @@ class TestHelpdeskCore(TransactionCase):
 
     def test_01_ticket_creation_and_routing(self):
         """Verify ticket creation routes to on-duty user, subscribes customer, and fires bus toast."""
+        # [@ANCHOR: test_01_ticket_creation_and_routing]
         # Tests [@ANCHOR: helpdesk_ticket_creation]
         # Tests [@ANCHOR: helpdesk_ticket_lifecycle]
         # Mock the on-duty admin resolver and the Odoo bus to prevent real websocket dispatch during tests
-        with patch('odoo.addons.calendar.models.calendar_event.Meeting.get_current_on_duty_admin', return_value=self.manager_user, create=True), \
-             patch('odoo.addons.bus.models.bus.Bus._sendone') as mock_sendone:
+        with patch('odoo.addons.calendar.models.calendar_event.CalendarEvent.get_current_on_duty_admin', return_value=self.manager_user, create=True), \
+             patch('odoo.addons.bus.models.bus.BusBus._sendone') as mock_sendone:
 
             ticket = self.env['hams_helpdesk.ticket'].create({
                 'name': 'Test Outage Incident',
@@ -39,6 +40,7 @@ class TestHelpdeskCore(TransactionCase):
 
     def test_02_shift_handoff_wizard(self):
         """Verify the formal shift handoff transfers ownership and logs the secure history."""
+        # [@ANCHOR: test_02_shift_handoff_wizard]
         # Tests [@ANCHOR: helpdesk_shift_handoff]
         # Tests [@ANCHOR: helpdesk_handoff_execution]
         ticket = self.env['hams_helpdesk.ticket'].create({
@@ -89,9 +91,25 @@ class TestHelpdeskCore(TransactionCase):
         self.assertNotIn(other_ticket, visible_tickets, "CRITICAL SECURITY FAILURE: Portal user can see another user's ticket.")
 
     def test_05_doc_injection(self):
-        """Verify documentation injection payload executes safely."""
+        """Verify documentation injection payload executes safely via zero-sudo facility."""
+        # [@ANCHOR: test_05_doc_injection]
         # Tests [@ANCHOR: helpdesk_doc_injection]
-        self.assertTrue(True, "Doc injection securely handled by post_init_hook.")
+
+        # Trigger the zero-sudo documentation installer
+        self.env['ir.module.module']._bootstrap_knowledge_docs()
+
+        article_model = None
+        if "manual.article" in self.env:
+            article_model = "manual.article"
+        elif "knowledge.article" in self.env:
+            article_model = "knowledge.article"
+
+        if article_model:
+            article = self.env[article_model].search([("name", "=", "Hams Helpdesk")])
+            self.assertTrue(article.exists(), "Documentation article MUST be created.")
+            self.assertIn("Hams Helpdesk provides Zero-Sudo compliant ticketing", article.body)
+        else:
+            self.assertTrue(True, "No article model present, skipping deep check.")
 
     def test_04_stage_mailback_automation(self):
         """Verify that transitioning a ticket stage fires an automated mail-back to the subscribed customer."""

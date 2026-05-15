@@ -18,7 +18,14 @@
             "hams_helpdesk/static/tests/tours/**/*",
         ],
     },
-    "post_init_hook": "post_init_hook",
+    "knowledge_docs": [
+        {
+            "name": "Hams Helpdesk",
+            "path": "data/documentation.html",
+            "icon": "🎫",
+            "category": "technical",
+        }
+    ],
     "installable": True,
     "application": True,
     "license": "AGPL-3",

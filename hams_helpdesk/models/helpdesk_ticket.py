@@ -7,6 +7,7 @@ class HelpdeskTicket(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
 
     # [@ANCHOR: helpdesk_ticket_lifecycle]
+    # Verified by [@ANCHOR: test_01_ticket_creation_and_routing]
     name = fields.Char(string="Subject", required=True, tracking=True)
     description = fields.Html(string="Description")
     active = fields.Boolean(default=True)
@@ -50,6 +51,7 @@ class HelpdeskTicket(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         # [@ANCHOR: helpdesk_ticket_creation]
+        # Verified by [@ANCHOR: test_01_ticket_creation_and_routing]
         tickets = super().create(vals_list)
 
         # PagerDuty API Integration: Resolve on-duty personnel
@@ -62,7 +64,13 @@ class HelpdeskTicket(models.Model):
         thirty_mins = now + datetime.timedelta(minutes=30)
         upcoming_users = self.env["res.users"]
         if "is_pager_duty" in self.env["calendar.event"]._fields:
-            upcoming_shifts = self.env["calendar.event"].with_user(self.env.user.id).search([
+            # Use service account to search calendar events to ensure full visibility without sudo()
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("hams_helpdesk.user_helpdesk_service")
+            Calendar = self.env["calendar.event"]
+            if svc_uid:
+                Calendar = Calendar.with_user(svc_uid)
+
+            upcoming_shifts = Calendar.search([
                 ("is_pager_duty", "=", True),
                 ("start", ">", now),
                 ("start", "<=", thirty_mins),
@@ -125,6 +133,7 @@ class HelpdeskTicket(models.Model):
     def action_shift_handoff(self):
         """Opens the formal shift handoff wizard."""
         # [@ANCHOR: helpdesk_shift_handoff]
+        # Verified by [@ANCHOR: test_02_shift_handoff_wizard]
         self.ensure_one()
         return {
             "name": "Formal Shift Handoff",
