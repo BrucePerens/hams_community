@@ -13,7 +13,7 @@ These instructions apply exclusively to LLMs operating via the `gemini.google.co
 When generating or modifying code, you **MUST** output your response using the **Parcel** schema.
 
 ### THE PRIME DIRECTIVES (CRITICAL SYSTEM FAILURES IF IGNORED)
-1. **THE WRAPPER (FOUR BACKTICKS):** You MUST EXCLUSIVELY output all generated files inside ONE SINGLE markdown code block of type "python". You MUST use AT LEAST FOUR BACKTICKS (````python ... ````) for the starting and ending boundaries. Nested blocks using three backticks will corrupt the extraction engine.
+1. **THE WRAPPER (SIX BACKTICKS):** You MUST EXCLUSIVELY output all generated files inside ONE SINGLE markdown code block of type "python". You MUST use AT LEAST SIX BACKTICKS (``````python ... ``````) for the starting and ending boundaries. This prevents internal markdown examples using 3 or 4 backticks from collapsing the parser. Nested blocks using fewer backticks will corrupt the extraction engine.
 2. **SINGLE UNIFIED BOUNDARY:** You MUST use the EXACT SAME boundary string for every file within a single output block. Do not change boundaries between files.
 3. **REPOSITORY-RELATIVE PATHS (The Upload Artifact Trap):** The `Path:` header MUST be strictly relative to the logical repository root (e.g., `ham_base/models/foo.py`). If the user provides files via web upload or zip archive, they may contain a deep artifact prefix (e.g., `bruceperens/hams_private/BrucePerens-hams_private-hash/`). You MUST actively sanitize the `Path:` header and strip away this entire prefix. You MUST NEVER include absolute system paths, workspace mount prefixes, or artifact prefixes.
 4. **SELECTIVE URL-ENCODING (The XML Comment Trap):** The Web UI aggressively sanitizes and destroys raw HTML/XML elements, specifically `&lt;!-- --&gt;`, even inside code blocks. To prevent data loss during extraction, you MUST URL-encode the angle brackets exclusively for vulnerable XML structures (e.g., `&lt;!-- --&gt;`). General Python operators (like `x < y`) do NOT need to be encoded.
@@ -24,7 +24,7 @@ output. Always use URL-encoding in Parcel output.
 Before generating any Parcel block, you MUST output a brief, plain-text chain-of-thought verifying your compliance with the critical rules. Use this format:
 
 *Pre-Flight Verification:*
-* Format: Using single `python` block with at least 4 backticks.
+* Format: Using single `python` block with at least 6 backticks.
 * Paths: Verified strictly repository-relative.
 * Boundaries: One unified boundary string used.
 * Encoding: URL-encoding applied selectively to vulnerable XML comments.
@@ -38,7 +38,7 @@ Before generating any Parcel block, you MUST output a brief, plain-text chain-of
 5. **Mode (Optional):** To change or set file permissions, include "Mode: 0755" in the headers.
 6. **No Decorations (Strict):** You MUST NOT use ASCII art, markdown horizontal rules (`---`), or decorative equals signs (`===`) anywhere inside the Parcel block. Proceed directly from the file headers to the file content.
 7. **The Content:** Output the file payload exactly as it should be written to disk.
-8. **The Terminator:** End the entire archive by appending "--" to your absolute final boundary string.
+8. **The Terminator:** End the entire archive by appending "--" to your absolute final boundary string. **CRITICAL:** This terminator MUST be placed strictly INSIDE the python code block, appearing immediately before the closing markdown backticks. Do not place the terminator outside the python block.
 9. **Multi-Step Disclosure:** If your response is part of a multi-step process, clearly state the required successive steps in plain text *before* rendering the Parcel block.
 
 ### The Exactness Guarantee & Patch Protocol
@@ -83,8 +83,8 @@ Operation: overwrite
     "depends": ["base", "website"],
     "auto_install": True,
 }
-````
 @@BOUNDARY_UPDATE_FILES@@--
+````
 
 ## Operational Traps & Solutions
 
@@ -95,6 +95,10 @@ Operation: overwrite
 **The Mismatched Boundary and Missing Terminator Trap**
 * **The Trap:** Using mismatched boundary strings (e.g., starting with `@@BOUNDARY_1@@` but closing with `@@BOUNDARY_2@@`) or failing to append the `--` terminator to the absolute final boundary of the transmission (e.g., `@@BOUNDARY_HAMS@@--`), causes the extraction script to instantly reject the entire parcel.
 * **The Solution:** Always use exactly the same boundary string for all files and explicitly end every file block with the closing boundary. Ensure the absolute final boundary in your response includes the `--` MIME terminator.
+
+**The Strict Terminator Mandate & Placement Trap**
+* **The Trap:** Failing to append the double dash to the absolute final boundary string, OR placing the terminator *outside* the closing backticks. The parser expects the terminator to exist entirely inside the parsed python block.
+* **The Solution:** The absolute final line of any Parcel transmission MUST be the boundary string immediately followed by two dashes, and it MUST be placed as plaintext strictly *inside* the markdown code block, immediately prior to the closing backticks.
 
 **The 500-Line Overwrite Enforcement Trap**
 * **The Trap:** Attempting to use the `search-and-replace` operation on files containing 500 lines or less causes the extraction script's fuzzy-line fallback to misalign AST boundaries, resulting in catastrophic indentation errors.
@@ -107,10 +111,6 @@ Operation: overwrite
 **The Nested Backtick Collapse**
 * **The Trap:** When generating a payload that contains internal markdown code blocks (e.g., a README containing a bash fenced code block), wrapping the outer Parcel in only three or four backticks causes the UI parser to prematurely terminate the block if the internal examples also use backticks, destroying the payload format.
 * **The Solution:** The outermost Parcel block MUST be instantiated with at least six backticks to guarantee the UI parser safely encapsulates internal markdown.
-
-**The Strict Terminator Mandate**
-* **The Trap:** Failing to append the double dash to the absolute final boundary string (e.g., outputting just the boundary instead of appending the double dash) causes the extraction script to assume an interrupted transmission and aggressively reject the entire payload.
-* **The Solution:** The absolute final line of any Parcel transmission MUST be the boundary string immediately followed by two dashes.
 
 **The Corrupted AST Linter Trap (URL-Encoding Artifacts)**
 * **The Trap:** If a Python file inadvertently contains leftover URL-encoded artifacts (e.g., `<=` instead of `<`) from a previous UI extraction glitch, the extraction script's AST validation will fatally crash (throwing `unexpected indent` or `SyntaxError`) during a `search-and-replace` operation, causing the patch to be actively rejected.

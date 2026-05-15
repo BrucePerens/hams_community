@@ -49,7 +49,9 @@ class TestKeyRegistry(TransactionCase):
                 pass
 
     def test_security_constraints(self):
-        """Test that only service accounts and valid paths can be used. # Tests [@ANCHOR: security_constraints_user] # Tests [@ANCHOR: security_constraints_path]"""
+        """Test that only service accounts and valid paths can be used."""
+        # Tests [@ANCHOR: security_constraints_user]
+        # Tests [@ANCHOR: security_constraints_path]
         # Test non-service account
         with self.assertRaises(UserError):
             self.registry_model.create({
@@ -114,7 +116,13 @@ class TestKeyRegistry(TransactionCase):
             pass
 
     def test_register_daemon_api(self):
-        """Test the register_daemon API. [@ANCHOR: test_register_daemon_api] # Tests [@ANCHOR: register_daemon_api] # Tests [@ANCHOR: register_daemon_logic] # Tests [@ANCHOR: register_daemon_idempotency] # Tests [@ANCHOR: write_secure_env_file_logic] # Tests [@ANCHOR: daemon_self_healing]"""
+        """Test the register_daemon API."""
+        # [@ANCHOR: test_register_daemon_api]
+        # Tests [@ANCHOR: register_daemon_api]
+        # Tests [@ANCHOR: register_daemon_logic]
+        # Tests [@ANCHOR: register_daemon_idempotency]
+        # Tests [@ANCHOR: write_secure_env_file_logic]
+        # Tests [@ANCHOR: daemon_self_healing]
         daemon_name = "API Test Daemon"
         user_xml_id = "daemon_key_manager.user_daemon_key_manager_service"
         env_file_path = "/var/lib/odoo/daemon_keys/api_test.env"
@@ -129,7 +137,8 @@ class TestKeyRegistry(TransactionCase):
         self.assertTrue(os.path.exists(env_file_path))
 
     def test_documentation_installed(self):
-        """Verify that documentation is installed in knowledge.article or manual.article. [@ANCHOR: test_documentation_installed]"""
+        """Verify that documentation is installed in knowledge.article or manual.article."""
+        # [@ANCHOR: test_documentation_installed]
         model = None
         if "knowledge.article" in self.env:
             model = "knowledge.article"
@@ -144,7 +153,12 @@ class TestKeyRegistry(TransactionCase):
             self.skipTest("No documentation model available")
 
     def test_cron_rotate_all_keys(self):
-        """Test cron rotation and trigger functionality. [@ANCHOR: test_cron_rotate_all_keys] # Tests [@ANCHOR: cron_rotation_trigger] # Tests [@ANCHOR: cron_rotation_logic] # Tests [@ANCHOR: revoke_old_keys_logic] # Tests [@ANCHOR: generate_new_key_logic]"""
+        """Test cron rotation and trigger functionality."""
+        # [@ANCHOR: test_cron_rotate_all_keys]
+        # Tests [@ANCHOR: cron_rotation_trigger]
+        # Tests [@ANCHOR: cron_rotation_logic]
+        # Tests [@ANCHOR: revoke_old_keys_logic]
+        # Tests [@ANCHOR: generate_new_key_logic]
         # Create a mock daemon
         registry = self.registry_model.create({
             'name': 'Cron Test Daemon',
@@ -161,7 +175,9 @@ class TestKeyRegistry(TransactionCase):
         registry.unlink()
 
     def test_key_ownership(self):
-        """Verify that the generated key belongs to the service account, not SUPERUSER. [@ANCHOR: test_key_ownership] # Tests [@ANCHOR: generate_new_key_logic]"""
+        """Verify that the generated key belongs to the service account, not SUPERUSER."""
+        # [@ANCHOR: test_key_ownership]
+        # Tests [@ANCHOR: generate_new_key_logic]
         service_user = self.env['res.users'].create({
             'name': 'Test Ownership Service Account',
             'login': 'test_ownership_svc',
@@ -185,7 +201,10 @@ class TestKeyRegistry(TransactionCase):
         self.assertNotEqual(res[0], SUPERUSER_ID, "Key should not be owned by SUPERUSER")
 
     def test_force_provisioning(self):
-        """Test force provisioning of all keys. # Tests [@ANCHOR: action_force_provision_all_api] # Tests [@ANCHOR: force_provision_logic] # Tests [@ANCHOR: force_provision_error_handling]"""
+        """Test force provisioning of all keys."""
+        # Tests [@ANCHOR: action_force_provision_all_api]
+        # Tests [@ANCHOR: force_provision_logic]
+        # Tests [@ANCHOR: force_provision_error_handling]
         daemon_name = "Force Provision Test"
         env_file_path = "/var/lib/odoo/daemon_keys/force_provision.env"
         self.test_env_paths.append(env_file_path)
@@ -204,7 +223,8 @@ class TestKeyRegistry(TransactionCase):
         self.assertTrue(os.path.exists(env_file_path))
 
     def test_ui_rendering(self):
-        """Test UI view rendering. [@ANCHOR: test_ui_rendering]"""
+        """Test UI view rendering."""
+        # [@ANCHOR: test_ui_rendering]
         # Test Tree View (Now 'list' in Odoo 19)
         tree_view = self.env['ir.ui.view'].get_view(
             res_model='daemon.key.registry',

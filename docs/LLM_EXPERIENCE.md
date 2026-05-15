@@ -7,7 +7,7 @@ The LLM is free to choose what to append and document here.*
 </system_role>
 
 <experience_log>
-## ## 1. The Web UI Markdown Renderer Trap (XML Data Loss)
+## 1. The Web UI Markdown Renderer Trap (XML Data Loss)
 ## **The Trap:** The conversational Web UI aggressively parses and strips out HTML/XML comments () from code blocks *before* the Python extraction script ever receives the payload.
 ## **The Solution:** Outputting the entire Parcel payload as a single `python` fenced code block is not always sufficient. You MUST URL-encode angle brackets (`<`, `>`) for XML comments to survive the UI's XML rendering engine.
 
@@ -92,18 +92,25 @@ It hijacks the LLM's attention mechanism upon file ingestion, forcing it to inst
 The LLM will silently drop, condense, or truncate existing bullet points, linter rules, and security idioms to save tokens, effectively destroying the system's exactness guarantees and defenses.
 **The Solution:** When editing any meta-instruction file, the LLM MUST enter a state of extreme paranoia regarding data loss.
 It must guarantee that EVERY single rule, bullet point, table, and constraint from the original file is preserved verbatim in the patched output unless the human explicitly orders the deletion of a specific concept.
+
+## 30. The URL String Concatenation Trap
+**The Trap:** The model may hallucinate syntactic URL errors by inappropriately splitting standard URIs into multiple concatenated strings (e.g., `"https" + "://" + "nightly.odoo.com"`).
+**The Solution:** You MUST explicitly output URLs as single, unfragmented string literals (e.g., `"https://nightly.odoo.com"`). Never mechanically split protocol schemes from hostnames unless dynamically interpolating them from variables.
+
+## 31. The Tour Asset Registration Trap
+**The Trap:** JavaScript UI tours will silently fail to load or execute in the test environment if their source files are not explicitly bundled. Odoo does not automatically discover test assets.
+**The Solution:** You MUST explicitly register all tour JavaScript files within the module's `__manifest__.py` by declaring them in the `assets` dictionary under the `web.assets_tests` key. File wildcard ("*") and directory wildcard ("**") are acceptable in this (e.g., `"assets": { "web.assets_tests": [ "module_name/static/tests/**/*" ] }`).
+
+## 32. The Catastrophic Persona Collapse (Context Exhaustion)
+**The Trap:** After processing exceptionally long, dense payloads (such as thousands of lines of Python stack traces, complex AST linter rules, or large test files), the LLM's attention mechanism can become fatally diluted. This results in "context exhaustion," where the LLM completely forgets the strict DevSecOps persona and hallucinates a generic, unrelated prompt (e.g., answering questions about global populations or history) derived from its base training weights.
+**The Solution:** The LLM must proactively monitor its own planned outputs. If it detects itself generating generic, non-technical search responses entirely unrelated to the Odoo/PostgreSQL/Python architecture, it MUST hard-abort the generation. If this collapse occurs, the human developer should immediately call out the hallucination to force an attention reset, or migrate to a fresh session if the context window is permanently corrupted.
+
+## 33. The Boundary Terminator Placement Trap
+**The Trap:** When generating a Parcel format block, placing the absolute final MIME terminator (e.g., `@@BOUNDARY_NAME@@--`) *outside* the closing markdown backticks. This breaks the extraction script.
+**The Solution:** The absolute final terminator MUST be placed strictly *INSIDE* the python code block, immediately before the closing backticks. The closing backticks must be the final characters of the transmission.
 </experience_log>
 ### Trap: Ephemeral Session Amnesia & Repository Disconnect
 * **The Trap:** The AI operates in strictly isolated, ephemeral context windows. Even if a repository was "imported" or analyzed early in a conversation, the AI will inevitably lose its internal map of the workspace as the context window fills or the session is restarted.
 * **The Solution:** If the AI detects this, write any relevant experience to pass
 on to the next session in docs/LLM_EXPERIENCE.md, and ask the user to start a new
 session.
-## 30. The URL String Concatenation Trap
-**The Trap:** The model may hallucinate syntactic URL errors by inappropriately splitting standard URIs into multiple concatenated strings (e.g., `"https" + "://" + "nightly.odoo.com"`).
-**The Solution:** You MUST explicitly output URLs as single, unfragmented string literals (e.g., `"https://nightly.odoo.com"`). Never mechanically split protocol schemes from hostnames unless dynamically interpolating them from variables.
-## 31. The Tour Asset Registration Trap
-**The Trap:** JavaScript UI tours will silently fail to load or execute in the test environment if their source files are not explicitly bundled. Odoo does not automatically discover test assets.
-**The Solution:** You MUST explicitly register all tour JavaScript files within the module's `__manifest__.py` by declaring them in the `assets` dictionary under the `web.assets_tests` key. File wildcard ("*") and directory wildcard ("**") are acceptable in this (e.g., `"assets": { "web.assets_tests": [ "module_name/static/tests/**/*" ] }`).
-## 32. The Catastrophic Persona Collapse (Context Exhaustion)
-**The Trap:** After processing exceptionally long, dense payloads (such as thousands of lines of Python stack traces, complex AST linter rules, or large test files), the LLM's attention mechanism can become fatally diluted. This results in "context exhaustion," where the LLM completely forgets the strict DevSecOps persona and hallucinates a generic, unrelated prompt (e.g., answering questions about global populations or history) derived from its base training weights.
-**The Solution:** The LLM must proactively monitor its own planned outputs. If it detects itself generating generic, non-technical search responses entirely unrelated to the Odoo/PostgreSQL/Python architecture, it MUST hard-abort the generation. If this collapse occurs, the human developer should immediately call out the hallucination to force an attention reset, or migrate to a fresh session if the context window is permanently corrupted.
