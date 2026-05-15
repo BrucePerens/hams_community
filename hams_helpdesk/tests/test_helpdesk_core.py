@@ -91,20 +91,25 @@ class TestHelpdeskCore(TransactionCase):
         self.assertNotIn(other_ticket, visible_tickets, "CRITICAL SECURITY FAILURE: Portal user can see another user's ticket.")
 
     def test_05_doc_injection(self):
-        """Verify documentation injection payload executes safely."""
+        """Verify documentation injection payload executes safely via zero-sudo facility."""
         # [@ANCHOR: test_05_doc_injection]
         # Tests [@ANCHOR: helpdesk_doc_injection]
 
-        # Mock manual.article if it doesn't exist to test the logic
-        if "manual.article" not in self.env:
-            self.assertTrue(True, "manual.article not present, skipping deep check but ensuring hook safety.")
-            self.env["hams_helpdesk.ticket"]._register_hook()
-            return
+        # Trigger the zero-sudo documentation installer
+        self.env['ir.module.module']._bootstrap_knowledge_docs()
 
-        self.env["hams_helpdesk.ticket"]._register_hook()
-        article = self.env["manual.article"].search([("name", "=", "Hams Helpdesk")])
-        self.assertTrue(article.exists(), "Documentation article MUST be created in manual.article")
-        self.assertIn("Hams Helpdesk provides Zero-Sudo compliant ticketing", article.body)
+        article_model = None
+        if "manual.article" in self.env:
+            article_model = "manual.article"
+        elif "knowledge.article" in self.env:
+            article_model = "knowledge.article"
+
+        if article_model:
+            article = self.env[article_model].search([("name", "=", "Hams Helpdesk")])
+            self.assertTrue(article.exists(), "Documentation article MUST be created.")
+            self.assertIn("Hams Helpdesk provides Zero-Sudo compliant ticketing", article.body)
+        else:
+            self.assertTrue(True, "No article model present, skipping deep check.")
 
     def test_04_stage_mailback_automation(self):
         """Verify that transitioning a ticket stage fires an automated mail-back to the subscribed customer."""

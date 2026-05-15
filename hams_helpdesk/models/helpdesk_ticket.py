@@ -1,6 +1,5 @@
 from odoo import _, api, fields, models
 import datetime
-import os
 
 class HelpdeskTicket(models.Model):
     _name = "hams_helpdesk.ticket"
@@ -147,47 +146,3 @@ class HelpdeskTicket(models.Model):
                 "default_old_user_id": self.user_id.id if self.user_id else False,
             }
         }
-
-    def _register_hook(self):
-        # burn-ignore-sudo: ADR-0055 soft-dependency documentation bootstrap
-        # [@ANCHOR: helpdesk_doc_injection]
-        # Verified by [@ANCHOR: test_05_doc_injection]
-        if not self.env.registry.ready:
-            return
-
-        # Attempt documentation injection via manual_library or knowledge
-        doc_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "documentation.html")
-        if not os.path.exists(doc_path):
-            return
-
-        with open(doc_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        # Support both Odoo Enterprise Knowledge and the custom Manual Library
-        # Use a service account if available, otherwise fallback to current user (likely system/admin during install)
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("hams_helpdesk.user_helpdesk_service")
-        context_env = self.env
-        if svc_uid:
-            context_env = self.env(user=svc_uid)
-
-        # burn-ignore-sudo: ADR-0022 search inside loop bypass for multi-model registration
-        # This is safe because we break after the first successful match and it is not iterating over records.
-        target_model = False
-        if "manual.article" in self.env:
-            target_model = "manual.article"
-        elif "knowledge.article" in self.env:
-            target_model = "knowledge.article"
-
-        if target_model:
-            existing = context_env[target_model].search([("name", "=", "Hams Helpdesk")], limit=1)
-            vals = {
-                "name": "Hams Helpdesk",
-                "body": content,
-            }
-            if target_model == "manual.article":
-                vals["category"] = "technical"
-
-            if existing:
-                existing.write({"body": content})
-            else:
-                context_env[target_model].create(vals)
