@@ -76,7 +76,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
                 ],
             }
         )
-        self.start_tour("/my/home", "create_site_tour", login=user_no_site.login)
+        self.start_tour("/sitetour/home", "create_site_tour", login=user_no_site.login)
 
     def test_06_create_blog_tour(self):
         # Tests [@ANCHOR: test_tour_create_blog]
@@ -99,7 +99,7 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
                 ],
             }
         )
-        self.start_tour("/my/home", "create_blog_tour", login=user_no_blog.login)
+        self.start_tour("/blogtour/blog", "create_blog_tour", login=user_no_blog.login)
 
     def test_07_community_directory_tour(self):
         # Tests [@ANCHOR: test_tour_community_directory]

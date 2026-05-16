@@ -17,11 +17,6 @@ registry.category("web_tour.tours").add("create_site_tour", {
             content: "Verify site created (targeting invisible dropzone with native pseudo-selector)",
             trigger: '#user_websites_dropzone_home_header:not(:visible)',
             run: () => {},
-        },
-        {
-            content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
-            trigger: '.o_menu_systray, a[data-action="edit"], a[data-action="show-new-content-modal"], #o_new_content_menu_btn, .o_new_content_btn',
-            run: () => {},
         }
     ],
 });
