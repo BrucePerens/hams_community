@@ -1,6 +1,7 @@
 /** @odoo-module **/
 // # Verified by [@ANCHOR: test_binary_install_tour]
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("binary_install_tour", {
     url: "/web",
@@ -48,28 +49,15 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             trigger: 'div[name="checksum"] input',
             run: 'edit 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
         },
-        {
-            content: "Click away to commit text fields before auto-save",
-            trigger: '.o_form_sheet',
-            run: 'click',
-        },
-        {
-            content: "Explicitly save the record to decouple input from RPC execution and unhide the action button",
-            trigger: '.o_form_button_save',
-            run: 'click',
-        },
+        ...TourUtils.safeSave(),
         {
             content: "Click Install Now using immutable name attribute",
             trigger: 'button[name="action_install"]',
             run: 'click',
         },
         {
-            content: "Wait for the success notification to ensure the RPC resolved to prevent Dirty Form crash",
+            content: "Wait for the success notification to ensure the RPC resolved",
             trigger: '.o_notification:contains("Success")',
-            run: () => {},
-        },
-        {
-            trigger: 'body',
             run: () => {},
         }
     ],

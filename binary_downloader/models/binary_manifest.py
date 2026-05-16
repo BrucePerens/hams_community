@@ -4,7 +4,6 @@ import logging
 import os
 import platform
 import shutil
-import stat
 import tarfile
 import tempfile
 import urllib.request
@@ -143,7 +142,7 @@ class BinaryManifest(models.Model):
         bin_dir = os.path.join(data_dir, "hams_bin")
 
         os.makedirs(bin_dir, exist_ok=True)
-        os.chmod(bin_dir, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+        os.chmod(bin_dir, 0o750)
 
         target_bin = os.path.join(bin_dir, cmd_name)
 
@@ -154,7 +153,7 @@ class BinaryManifest(models.Model):
                 for chunk in iter(lambda: f.read(4096), b""):
                     hasher.update(chunk)
             if hasher.hexdigest() == manifest_record.checksum:
-                os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+                os.chmod(target_bin, 0o750)
                 return target_bin
             else:
                 _logger.info("Checksum mismatch for %s, re-downloading...", cmd_name)
@@ -229,7 +228,7 @@ class BinaryManifest(models.Model):
             else:
                 shutil.copy2(tmp.name, target_bin)
 
-            os.chmod(target_bin, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+            os.chmod(target_bin, 0o750)
             if os.path.exists(tmp.name):
                 os.unlink(tmp.name)
             return target_bin
