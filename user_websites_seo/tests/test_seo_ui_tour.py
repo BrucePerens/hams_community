@@ -33,5 +33,5 @@ class TestSEOUI(HttpCase):
         if "user.websites.group" in self.env:
             self.env["user.websites.group"].get_view(view_type="form")
 
-        # Explicitly open the URL to ensure the routing AST triggers
-        self.url_open(f"/{self.user_test.website_slug}/blog")
+        # Start the tour with the authenticated context on the universally stable base portal URL
+        self.start_tour("/my", "user_websites_seo_tour", login=self.user_test.login)

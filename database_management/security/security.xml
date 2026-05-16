@@ -14,12 +14,17 @@
         </record>
 
         <record id="base.group_system" model="res.groups">
-            <field name="implied_ids" eval="[(4, ref('group_database_management_manager'))]"/>
+            <field name="name">Settings</field> <field name="implied_ids" eval="[(4, ref('database_management.group_database_management_manager'))]"/>
         </record>
-
+    </data>
+    <data>
         <record id="user_database_management_service" model="res.users">
             <field name="name">Database Management Service Account</field>
             <field name="login">user_database_management_service</field>
+            <field name="email">dbmgt@hams.local</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="company_ids" eval="[(4, ref('base.main_company'))]"/>
+            <field name="notification_type">email</field>
             <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
             <field name="group_ids" eval="[(6, 0, [ref('database_management.group_database_management_manager')])]"/>

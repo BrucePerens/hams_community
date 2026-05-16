@@ -15,53 +15,13 @@ if not hasattr(shutil, "_orig_which"):
 @tagged("post_install", "-at_install")
 class TestPgConfig(RealTransactionCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Bypass ORM entirely to prevent poisoned RealTransactions from UniqueViolations
-        cls.env.cr.execute("SELECT id FROM res_users WHERE login='db_mgt_svc'")
-        res = cls.env.cr.fetchone()
-        if not res:
-            cls.env.cr.execute("INSERT INTO res_partner (name, active) VALUES ('DB Management SVC', true) RETURNING id")
-            partner_id = cls.env.cr.fetchone()[0]
-            cls.env.cr.execute("SELECT id FROM res_company LIMIT 1")
-            company_row = cls.env.cr.fetchone()
-            company_id = company_row[0] if company_row else None
-
-            if company_id:
-                cls.env.cr.execute(
-                    "INSERT INTO res_users (login, partner_id, active, is_service_account, company_id, notification_type) VALUES ('db_mgt_svc', %s, true, true, %s, 'email') RETURNING id",
-                    (partner_id, company_id)
-                )
-            else:
-                cls.env.cr.execute(
-                    "INSERT INTO res_users (login, partner_id, active, is_service_account, notification_type) VALUES ('db_mgt_svc', %s, true, true, 'email') RETURNING id",
-                    (partner_id,)
-                )
-            uid = cls.env.cr.fetchone()[0]
-        else:
-            uid = res[0]
-            cls.env.cr.execute("UPDATE res_users SET is_service_account = true, active = true WHERE id=%s", (uid,))
-
-        cls.env.cr.execute("SELECT id FROM ir_model_data WHERE module='database_management' AND name='user_database_management_service'")
-        mapping_exists = cls.env.cr.fetchone()
-
-        if not mapping_exists:
-            cls.env.cr.execute(
-                "INSERT INTO ir_model_data (module, name, model, res_id) VALUES ('database_management', 'user_database_management_service', 'res.users', %s)",
-                (uid,)
-            )
-        else:
-            cls.env.cr.execute(
-                "UPDATE ir_model_data SET res_id=%s WHERE module='database_management' AND name='user_database_management_service'",
-                (uid,)
-            )
-
     def setUp(self):
         super().setUp()
         self.admin = self.env.ref("base.user_admin")
 
-    def test_01_optimization_wizard(self):
+    @patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._get_service_uid")
+    def test_01_optimization_wizard(self, mock_get_uid):
+        mock_get_uid.return_value = self.admin.id
         # Tests [@ANCHOR: pg_optimize_wizard]
         wizard = (
             self.env["pg.optimize.wizard"]

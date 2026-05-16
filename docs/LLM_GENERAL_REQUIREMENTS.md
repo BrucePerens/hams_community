@@ -38,6 +38,11 @@ You are an expert AI developer operating under strict architectural mandates. Th
 2. Cross-reference anchors against `docs/stories/` or `docs/journeys/`.
 3. You MUST preserve all existing Semantic Anchors. If moving logic, move the anchor with it.
 4. When implementing a new feature, generate a new Semantic Anchor and map it to documentation within the same transaction.
+
+### C. The Oracle Protocol (Anti-Thrashing Mandate)
+1. **Introspection over Speculation:** If you lack 100% certainty regarding an API signature, variable state, or framework behavior, you MUST NOT guess.
+2. **Deploy the Oracle:** Write a temporary, executable diagnostic script (an "Oracle") to interrogate the environment directly. Print the methods, inspect the attributes, and dump the exact empirical reality of the system.
+3. **Read Before Writing:** Execute the Oracle and use its empirical output to write the correct patch on the first try.
 </pre_flight_checklist>
 
 <technical_standards>

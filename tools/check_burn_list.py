@@ -1205,6 +1205,39 @@ def scan_file(filepath, is_odoo_module=False):
                     errors_found.append(
                         f"Line {node.lineno}: CRITICAL SECURITY: \x3crecord\x3e must be inside noupdate data block."
                     )
+                if node.tag == "record":
+                    model_name = node.attrs.get("model")
+                    defined_fields = {child.attrs.get("name") for child in node.children if child.tag == "field"}
+
+                    # Dictionary of mandatory fields for critical Odoo framework models.
+                    # Since this static linter runs offline without a live PostgreSQL connection,
+                    # it cannot dynamically introspect the `ir.model.fields` registry for `required=True`.
+                    # We strictly enforce the core framework models that most commonly cause silent NOT NULL installation failures.
+                    mandatory_model_fields = {
+                        "res.users": {"name", "login", "company_id", "company_ids", "notification_type"},
+                        "ir.rule": {"name", "model_id"},
+                        "ir.model.access": {"name", "model_id", "group_id"},
+                        "ir.ui.view": {"name", "model"},
+                        "ir.actions.act_window": {"name", "res_model"},
+                        "ir.cron": {"name", "model_id", "user_id"},
+                        "res.groups": {"name"},
+                        "res.company": {"name"},
+                        "res.partner": {"name"},
+                    }
+
+                    if model_name in mandatory_model_fields:
+                        required = mandatory_model_fields[model_name]
+                        missing = required - defined_fields
+                        if missing:
+                            errors_found.append(
+                                f"Line {node.lineno}: CRITICAL XML DATA INTEGRITY: <record model='{model_name}'> is missing mandatory fields required in Odoo 19: {', '.join(missing)}. This causes silent installation failures."
+                            )
+
+                    if model_name == "res.users" and any(anc.tag == "data" and anc.attrs.get("noupdate") in ("1", "True", "true") for anc in node.get_ancestors()):
+                        warnings_found.append(
+                            f"Line {node.lineno}: [%AUDIT] RECORD UPDATE: <record model='res.users'> is inside a noupdate='1' block. If this service account requires updates in the future, Odoo will ignore them."
+                        )
+
                 if node.tag == "record" and node.attrs.get("model") == "ir.rule":
                     has_group = any(
                         child.tag == "field" and child.attrs.get("name") == "groups"

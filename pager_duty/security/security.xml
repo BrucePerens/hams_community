@@ -14,12 +14,16 @@
             <field name="name">Pager Duty Service Account Group</field>
             <field name="privilege_id" ref="privilege_pager_duty"/>
         </record>
-
+    </data>
+    <data>
         <record id="user_pager_service_internal" model="res.users">
             <field name="name">Pager Service Internal</field>
             <field name="login">pager_service_internal</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="company_ids" eval="[(4, ref('base.main_company'))]"/>
+            <field name="notification_type">email</field>
             <field name="is_service_account" eval="True"/>
-            <field name="group_ids" eval="[(6, 0, [ref('pager_duty.group_pager_service'), ref('base.group_user')])]"/>
+            <field name="group_ids" eval="[(6, 0, [ref('pager_duty.group_pager_service')])]"/>
         </record>
     </data>
 </odoo>

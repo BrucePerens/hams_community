@@ -70,6 +70,11 @@ class FailureExtractor:
         else:
             self.output_path = self.display_path
 
+        try:
+            os.remove(self.output_path)
+        except OSError:
+            pass
+
         self.log_prefix_pattern = re.compile(
             r"^(?:\s*)?\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}"
         )
@@ -389,6 +394,17 @@ def get_addons_path(base_dir):
 
 def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
     """Executes the AST Burn List and Semantic Anchor DevSecOps linters"""
+
+    print("[*] Running Manifest Dependency Graph Linter...")
+    manifest_script = os.path.join(base_dir, "tools", "check_manifest_dependencies.py")
+    res_manifest = subprocess.run([venv_python, manifest_script, base_dir])
+    if res_manifest.returncode != 0:
+        print("🛑 Halting due to manifest load-order violations. Please review the output above.")
+        if extractor:
+            extractor.captured_blocks.append(("Linter Violation", ["Manifest Dependency Graph Linter failed. Forward references detected.\n"]))
+            extractor.finish_and_write()
+        sys.exit(1)
+
     print("[*] Running AST Burn List Linter...")
     burn_script = os.path.join(base_dir, "tools", "check_burn_list.py")
     res_burn = subprocess.run(
@@ -397,7 +413,8 @@ def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
     if res_burn.returncode != 0:
         print("🛑 Halting due to burn list violations. Please review the output above.")
         if extractor:
-            extractor._written = True
+            extractor.captured_blocks.append(("Linter Violation", ["AST Burn List Linter failed. Please review the console output for details.\n"]))
+            extractor.finish_and_write()
         sys.exit(1)
 
     print("[*] Scanning documentation and codebase for Semantic Anchors...")
@@ -408,7 +425,8 @@ def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
             "🛑 Halting due to linter/anchor violations. Please review the output above."
         )
         if extractor:
-            extractor._written = True
+            extractor.captured_blocks.append(("Linter Violation", ["Semantic Anchor Linter failed. Please review the console output for details.\n"]))
+            extractor.finish_and_write()
         sys.exit(1)
 
 
@@ -1153,7 +1171,8 @@ def main():
                 rc_init = run_cmd(init_cmd, extractor)
                 if rc_init != 0:
                     print("❌ ERROR: Database initialization failed!")
-                    extractor._written = True
+                    if extractor:
+                        extractor.finish_and_write()
                     sys.exit(rc_init)
                 save_db_cache(args.db, cache_file, mod_string)
 

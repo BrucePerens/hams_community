@@ -116,9 +116,6 @@
             <field name="perm_unlink" eval="True"/>
         </record>
 
-    </data>
-
-    <data noupdate="1">
         <record id="content_violation_report_user_rule" model="ir.rule">
             <field name="name">Content Violation Report User Rule</field>
             <field name="model_id" ref="model_content_violation_report"/>
@@ -217,7 +214,6 @@
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
         </record>
-
 
         <record id="content_violation_appeal_user_rule" model="ir.rule">
             <field name="name">Content Violation Appeal User Rule</field>

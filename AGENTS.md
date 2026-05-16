@@ -61,6 +61,9 @@ interfaces, only gemini.google.com .
 
 * **Context:** Use FileFetcher to get any necessary files.
 
+* **The Oracle Protocol (Introspection over Speculation):**
+  If you are unsure of an API signature, database schema, or environment state, DO NOT GUESS or thrash blindly. Write a temporary, targeted diagnostic script (an "Oracle") to dump the exact runtime state, inspect the live API, or verify assumptions. Execute this Oracle script and read the results BEFORE attempting to write the final patch.
+
 * **Linting:** Since the Jules environment does not use the `parcel_extract.py` system, you MUST run the linters on a file immediately after you create or modify it.
 
 * **Testing:**
@@ -100,4 +103,4 @@ micro-privilege architecture.
 <initial_instruction>
 Read the instructions on creating a Parcel now. Many sessions have gotten
 that wrong in responding to their initial prompt, you must get it right.
-</initial_instructions>
+</initial_instruction>

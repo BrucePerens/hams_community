@@ -20,8 +20,8 @@
         "python": ["redis", "psutil", "ntplib", "pymysql", "ldap3"],
     },
     "data": [
-        "data/cron.xml",
         "security/security.xml",
+        "data/cron.xml",
         "security/ir.model.access.csv",
         "views/incident_views.xml",
         "views/schedule_views.xml",
