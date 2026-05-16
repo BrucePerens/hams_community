@@ -17,7 +17,7 @@ registry.category("web_tour.tours").add("violation_report_tour", {
             run: () => {
                 const val = document.querySelector('#reportViolationModal input[name="url"]').value;
                 if (!val) {
-                    console.error("URL field is empty! The JS logic failed to inject it.");
+                    throw new Error("URL field is empty! The JS logic failed to inject the current URL.");
                 }
             }
         }

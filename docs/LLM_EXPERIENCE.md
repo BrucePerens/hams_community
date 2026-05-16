@@ -114,3 +114,10 @@ It must guarantee that EVERY single rule, bullet point, table, and constraint fr
 * **The Solution:** If the AI detects this, write any relevant experience to pass
 on to the next session in docs/LLM_EXPERIENCE.md, and ask the user to start a new
 session.
+### The Dirty Form Test Corruption Trap
+* **The Trap:** Odoo automatically attempts to save dirty (unsaved) forms when a page unloads or a tour finishes. This leads to asynchronous network requests extending beyond the lifespan of the tour, often causing the test runner to randomly crash or fail the *next* test in the suite with "Tour finished with a dirty form view being open."
+* **The Solution:** Always use `...TourUtils.safeSave()` instead of manually clicking the save button. This macro explicitly clicks the form sheet to force a DOM blur and then waits for `.o_form_button_create` to ensure the RPC request fully resolves before proceeding.
+
+### The Tour URL Initialization Race Condition
+* **The Trap:** Starting a tour by having the first step execute `document.location.href = ...` with `expectUnloadPage: true` often causes a race condition where the Odoo tour runner tries to execute the next step before the redirect completes.
+* **The Solution:** Always use the native `url: "/your_path"` property in the tour definition block (`registry.category("web_tour.tours").add(..., { url: "...", steps: [...] })`).

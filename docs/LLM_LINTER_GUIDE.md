@@ -154,6 +154,9 @@ Ensure all dynamic data injected into the DOM is sanitized.
 * **Tour Page Unloads (expectUnloadPage):** While `expectUnloadPage: true` is still used for hard browser reloads, you MUST NOT use it on steps where navigation is conditional (e.g., inside an `if` statement) or when triggering an OWL soft-route (client action). The Odoo test runner will fatally timeout after 20,000ms if the page does not actually unload.
 * **Tour Dropdown Selection:** Native `<select>` elements are deprecated in backend form views. Odoo 19 uses `.o_select_menu`. Tours must use two steps: click the dropdown, then click `.o_select_menu_item`.
 * **Tour Trigger Brittleness:** Using `a:contains(...)` or `button:contains(...)` is banned because internal text is often wrapped in `<span>` tags. Use `*:contains(...)` or target explicit `[data-menu-xmlid=...]` attributes.
+* **Native URL Initialization:** Tours MUST initialize using the native `url: "/path"` property within the tour definition. Using a manual `run` step with `document.location.href = ...` to start the tour is strictly banned due to race conditions.
+* **Dirty Form Crash Prevention:** Tours MUST NEVER manually click the save button (`.o_form_button_save`) and immediately end or navigate away. You MUST spread the `...TourUtils.safeSave()` macro into the step array to force a DOM blur and wait for the `.o_form_button_create` state. Tours finishing with dirty forms cause asynchronous network requests that corrupt subsequent tests.
+* **Fatal Tour Assertions:** Using `console.error` for validation in a tour step is banned as it does not fail the CI test runner. You MUST `throw new Error("...")` to ensure the test fails.
 </javascript_standards>
 
 ---

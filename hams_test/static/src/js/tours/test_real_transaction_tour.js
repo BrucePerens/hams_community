@@ -1,5 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("test_real_transaction_tour", {
     url: "/odoo?action=hams_test.action_noisy_table",
@@ -15,10 +16,6 @@ registry.category("web_tour.tours").add("test_real_transaction_tour", {
             content: "Enter table name",
             run: "edit tour_test_table",
         },
-        {
-            trigger: ".o_form_button_save",
-            content: "Save",
-            run: "click",
-        },
+        ...TourUtils.safeSave(),
     ],
 });

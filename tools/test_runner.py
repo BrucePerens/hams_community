@@ -78,7 +78,7 @@ class FailureExtractor:
         self.log_prefix_pattern = re.compile(
             r"^(?:\s*)?\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}"
         )
-        self.safe_log_levels = re.compile(r"\s(INFO|WARNING|DEBUG)\s")
+        self.safe_log_levels = re.compile(r"\b(INFO|WARNING|DEBUG)\b")
         self.test_start_pattern = re.compile(r"Starting Test|^test_.*?\s\.\.\.")
 
         self.current_context = "Global / Module Loading"

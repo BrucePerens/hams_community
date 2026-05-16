@@ -5,15 +5,8 @@ import { registry } from "@web/core/registry";
 // Tests [@ANCHOR: controller_user_websites_home]
 // Tests [@ANCHOR: UX_CREATE_SITE]
 registry.category("web_tour.tours").add("create_site_tour", {
+    url: "/sitetour/home",
     steps: () => [
-        {
-            content: "Navigate from the portal to the site home page placeholder",
-            trigger: 'body',
-            run: () => {
-                document.location.href = '/sitetour/home';
-            },
-            expectUnloadPage: true,
-        },
         {
             content: "Click Create using namespaced fallback class",
             trigger: 'button.o_tour_create_site_btn',
@@ -27,7 +20,7 @@ registry.category("web_tour.tours").add("create_site_tour", {
         },
         {
             content: "Verify the Website Builder 'New' button is accessible to the owner to make a new page",
-            trigger: 'body',
+            trigger: '.o_menu_systray, a[data-action="edit"], a[data-action="show-new-content-modal"], #o_new_content_menu_btn, .o_new_content_btn',
             run: () => {},
         }
     ],

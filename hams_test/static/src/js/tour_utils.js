@@ -9,7 +9,7 @@ export const TourUtils = {
      * Executes the mandated safe-save sequence for forms with `type="object"` buttons.
      * Forces a DOM blur, clicks save, and explicitly waits for the RPC to resolve.
      */
-    safeSave(saveButtonTrigger = '.o_form_button_save', waitTrigger = '.o_notification:contains("Success")') {
+    safeSave(saveButtonTrigger = '.o_form_button_save', waitTrigger = '.o_form_button_create') {
         return [
             {
                 content: "[MACRO] Click away to force DOM blur and commit pending text inputs",
