@@ -1,4 +1,12 @@
-# 💾 Backup Management (`backup_management`)
+# Backup Management (`backup_management`)
+
+*Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).*
+
+Implements a centralized "single pane of glass" GUI in Odoo to orchestrate and monitor `kopia` and `pgBackRest` system backups.
+
+---
+
+# Technical Documentation
 
 ## Architecture
 * **Self-Healing Dependencies:** Uses `shutil.which` to detect tools. If `kopia` is missing from the system path, it automatically fetches and extracts the pre-compiled Linux binary into the `var/lib/odoo/ext_bin` local data directory to ensure uninterrupted operation.

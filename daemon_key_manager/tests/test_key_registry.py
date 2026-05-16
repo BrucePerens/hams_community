@@ -147,9 +147,14 @@ class TestKeyRegistry(TransactionCase):
             model = "manual.article"
 
         if model:
+            _logger.info("Verifying documentation installation for model %s", model)
+            # Trigger manual bootstrap as we removed it from hooks
+            self.env["ir.module.module"]._bootstrap_knowledge_docs()
+
             article = self.env[model].search([('name', '=', 'Daemon Key Manager Documentation')], limit=1)
             self.assertTrue(article, "Documentation article not found")
             self.assertIn("Daemon Key Manager", article.body)
+            _logger.info("Documentation found and verified.")
         else:
             self.skipTest("No documentation model available")
 
