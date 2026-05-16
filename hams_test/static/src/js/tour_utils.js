@@ -63,5 +63,57 @@ export const TourUtils = {
                 };
             }
         };
+    },
+
+    /**
+     * Safely inputs text bypassing the 'edit' helper's character-by-character simulation.
+     * Prevents race conditions on strict validation fields (Enforces ADR-0081 Section 9).
+     */
+    deterministicInput(trigger, value) {
+        return {
+            content: `[MACRO] Deterministic input for ${trigger}`,
+            trigger: trigger,
+            run: () => {
+                const el = document.querySelector(trigger);
+                if (!el) {
+                    throw new Error(`[FATAL] Element not found for deterministic input: ${trigger}`);
+                }
+                el.value = value;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        };
+    },
+
+    /**
+     * Executes a click that initiates a hard browser navigation or standard HTML form submit.
+     * Warns the test runner to expect the unload event (Enforces ADR-0081 Section 3).
+     */
+    clickAndUnload(trigger) {
+        return {
+            content: `[MACRO] Click and expect page unload: ${trigger}`,
+            trigger: trigger,
+            run: 'click',
+            expectUnloadPage: true,
+        };
+    },
+
+    /**
+     * Odoo 19 removed native <select> elements in backend views.
+     * This macro executes the two-step click sequence for the new .o_select_menu.
+     */
+    selectDropdown(dropdownTrigger, itemText) {
+        return [
+            {
+                content: `[MACRO] Open select menu: ${dropdownTrigger}`,
+                trigger: dropdownTrigger,
+                run: 'click',
+            },
+            {
+                content: `[MACRO] Select menu item: ${itemText}`,
+                trigger: `.o_select_menu_item:contains("${itemText}")`,
+                run: 'click',
+            }
+        ];
     }
 };

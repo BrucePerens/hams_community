@@ -17,12 +17,12 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         },
         {
             content: "Edit the SEO Meta Title",
-            trigger: 'div[name="website_meta_title"] input',
+            trigger: 'div[name="website_meta_title"] .o_input',
             run: 'edit Test SEO Title',
         },
         {
             content: "Edit the SEO Meta Description",
-            trigger: 'div[name="website_meta_description"] textarea',
+            trigger: 'div[name="website_meta_description"] .o_input',
             run: 'edit Test SEO Description',
         },
         ...TourUtils.safeSave(),

@@ -341,9 +341,7 @@ class WebsitePage(models.Model):
             "user_websites.user_user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
-        )
+        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
         records = super(WebsitePage, self_svc).create(vals_list)
         records._invalidate_cloudflare_cache()
         return records
@@ -442,9 +440,7 @@ class WebsitePage(models.Model):
             "user_websites.user_user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
-        )
+        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
         res = super(WebsitePage, self_svc).write(vals)
 
         # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
@@ -475,9 +471,7 @@ class WebsitePage(models.Model):
             "user_websites.user_user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
-        )
+        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
         res = super(WebsitePage, self_svc).unlink()
 
         utils = self.env["zero_sudo.security.utils"]
@@ -556,6 +550,4 @@ class WebsitePage(models.Model):
             )
             cron = self.env.ref("user_websites.ir_cron_flush_view_counters", raise_if_not_found=False)
             if cron:
-                cron.with_user(svc_uid).with_context(
-                    mail_notrack=True, prefetch_fields=False
-                )._trigger()
+                cron.with_user(svc_uid).with_context(mail_notrack=True)._trigger()

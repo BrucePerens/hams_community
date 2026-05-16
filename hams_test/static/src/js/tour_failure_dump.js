@@ -80,3 +80,9 @@ console.error = function (...args) {
         }
     }
 };
+
+// 3. Catch Unhandled Promise Rejections to prevent silent headless browser deadlocks
+window.addEventListener('unhandledrejection', function(event) {
+    let reason = event.reason ? (event.reason.stack || event.reason) : "Unknown Error";
+    originalConsoleError.call(console, `\n========== UNHANDLED PROMISE REJECTION ==========\n${reason}\n=================================================\n`);
+});
