@@ -6,7 +6,6 @@ import threading
 import concurrent.futures
 import atexit
 import time
-import sys
 
 from odoo import models, tools
 from odoo.http import request
@@ -88,9 +87,8 @@ class IrHttp(models.AbstractModel):
 
         test_mode = tools.config.get("test_enable")
         is_test_cr = getattr(request.env.registry, "test_cr", False)
-        in_args = any("test_runner.py" in a for a in sys.argv)
 
-        if not (test_mode or is_test_cr or in_args):
+        if not (test_mode or is_test_cr):
             if not _listener_started:
                 with _listener_lock:
                     if not _listener_started:
