@@ -60,8 +60,7 @@ class CloudflarePurgeQueue(models.Model):
             )
 
         if create_vals:
-            # Preserve the environment but explicitly override the poisoned prefetch_fields key
-            self.env["cloudflare.purge.queue"].with_context(prefetch_fields=True).create(create_vals)
+            self.env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
     def enqueue_tags(self, tags, website_id=None):
@@ -82,8 +81,7 @@ class CloudflarePurgeQueue(models.Model):
             if t
         ]
         if create_vals:
-            # Preserve the environment but explicitly override the poisoned prefetch_fields key
-            self.env["cloudflare.purge.queue"].with_context(prefetch_fields=True).create(create_vals)
+            self.env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
     def process_queue(self):

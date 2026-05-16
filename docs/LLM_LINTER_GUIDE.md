@@ -27,9 +27,9 @@ You MUST use the **Service Account Pattern** (`with_user(svc_uid)`) or the **Pub
 * **Code Execution:** `eval()`, `exec()`, `pickle.loads/dumps`, and `yaml.load` are strictly banned. Use `ast.literal_eval()`, `odoo.tools.safe_eval()`, or `json`.
 * **Service Account Base Groups:** You MUST NOT grant `base.group_user` to domain-specific Service Accounts.
 Only a *special* user (`odoo_facility_service_internal`) may possess `base.group_user`, and it MUST only be assumed via `with_user()` when strictly necessary.
-* *** **Weak Cryptography:** `md5`, `sha1`, and the `random` module are banned for security tokens.
+* **Weak Cryptography:** `md5`, `sha1`, and the `random` module are banned for security tokens.
 Use `hashlib.sha256` and the `secrets` module.
-* *** **RPC Bearer Tokens:** The use of the Odoo facility to allocate RPC bearer tokens (`res.users.apikeys`) will immediately break the build.
+* **RPC Bearer Tokens:** The use of the Odoo facility to allocate RPC bearer tokens (`res.users.apikeys`) will immediately break the build.
 The `daemon_key_manager` must be the only facility used, and is the only module allowed to internally allocate keys.
 </critical_guardrails>
 
@@ -68,13 +68,18 @@ If testing background loop functions, you MUST conditionally bypass commits usin
 <python_standards>
 ## 3.5 📜 Imports
 
-* **Top of File Requirement:** All Python imports MUST be at the top of the file. The linters enforce Flake8 rule `E402`.
+* **Top of File Requirement:** All Python imports MUST be at the top of the file.
+The linters enforce Flake8 rule `E402`.
 * **Local Imports Banned:** Local imports (imports inside functions, methods, or classes) are completely banned.
 * **Circular Dependency Bypass:** The use of `# noqa` to bypass local import restrictions or any other linter rules is strictly forbidden.
-Refactor architecture to avoid circular dependencies instead of using inline imports. **EXCEPTION (The E402 Daemon Rule):** The strict ban on `# noqa` has one explicit exception. When writing tests for isolated background daemons that require `sys.path.insert()` to resolve sibling imports, you MUST append `  # noqa: E402` to the module imports that occur after the path modification to satisfy Flake8.
-* **The SUDO Override:** You may use `# audit-ignore-sudo` to bypass the strict `.sudo()` AST ban ONLY for legitimately approved administrative operations (like API key rotation).
-* **Zero-Sudo Architecture:** The use of `su=True` and `SUPERUSER_ID` are strictly forbidden for bypassing access rights. Use explicit `.sudo()  # audit-ignore-sudo: <reason>` when absolutely required.
-* **Daemon Decoupling:** Standalone daemons (and their tests) located in `daemon/` or `daemons/` directories MUST NOT import any Odoo libraries or testing decorators (e.g., `from odoo.tests.common import tagged`). They must be completely decoupled from the Odoo framework.
+Refactor architecture to avoid circular dependencies instead of using inline imports.
+**EXCEPTION (The E402 Daemon Rule):** The strict ban on `# noqa` has one explicit exception.
+When writing tests for isolated background daemons that require `sys.path.insert()` to resolve sibling imports, you MUST append `  # noqa: E402` to the module imports that occur after the path modification to satisfy Flake8.
+* **The SUDO Override:** You may use `# burn-ignore-sudo` to bypass the strict `.sudo()` AST ban ONLY for legitimately approved administrative operations (like API key rotation).
+* **Zero-Sudo Architecture:** The use of `su=True` and `SUPERUSER_ID` are strictly forbidden for bypassing access rights.
+Use explicit `.sudo()  # burn-ignore-sudo: <reason>` when absolutely required.
+* **Daemon Decoupling:** Standalone daemons (and their tests) located in `daemon/` or `daemons/` directories MUST NOT import any Odoo libraries or testing decorators (e.g., `from odoo.tests.common import tagged`).
+They must be completely decoupled from the Odoo framework.
 
 ## 3. 🐍 Python Odoo 19 Core Deprecations & Formatting
 
@@ -103,9 +108,10 @@ use a name that can be resolved using Docker or `/etc/hosts` .
 * **Thread Blocking:** `time.sleep()` in main application code is banned..
 If used in a background daemon for rate-limiting, it MUST be appended with `# audit-ignore-sleep`.
 * **Thread Spawning:** `threading.Thread` is banned as a DoS vector. Use `concurrent.futures.ThreadPoolExecutor`.
-* *** **Import Error Evasion:** Wrapping imports in `try...except ImportError` blocks is strictly forbidden (ADR-0073).
+* **Import Error Evasion:** Wrapping imports in `try...except ImportError` blocks is strictly forbidden (ADR-0073).
 You MUST declare dependencies in `__manifest__.py` and let the system fail-fast.
-* **Hallucinatory sys.path Manipulation:** You MUST NOT use `sys.path.append` or `sys.path.insert` to resolve sibling imports using `..` or to redundantly append the script directory (using `__file__`). Python naturally resolves local imports. Isolated background daemons are the only permitted exception.
+* **Hallucinatory sys.path Manipulation:** You MUST NOT use `sys.path.append` or `sys.path.insert` to resolve sibling imports using `..` or to redundantly append the script directory (using `__file__`).
+Python naturally resolves local imports. Isolated background daemons are the only permitted exception.
 </python_standards>
 
 ---
@@ -153,12 +159,19 @@ You MUST use Vanilla JS or modern OWL components.
 * **DOM XSS:** Passing template literals (backtick strings) into `.innerHTML` or `.bindPopup` is flagged.
 Ensure all dynamic data injected into the DOM is sanitized.
 * **Deprecated Services:** `useService('company')` is banned.
-* **Tour Page Unloads (expectUnloadPage):** While `expectUnloadPage: true` is still used for hard browser reloads, you MUST NOT use it on steps where navigation is conditional (e.g., inside an `if` statement) or when triggering an OWL soft-route (client action). The Odoo test runner will fatally timeout after 20,000ms if the page does not actually unload.
-* **Tour Dropdown Selection:** Native `<select>` elements are deprecated in backend form views. Odoo 19 uses `.o_select_menu`. Tours must use two steps: click the dropdown, then click `.o_select_menu_item`.
-* **Tour Trigger Brittleness:** Using `a:contains(...)` or `button:contains(...)` is banned because internal text is often wrapped in `<span>` tags. Use `*:contains(...)` or target explicit `[data-menu-xmlid=...]` attributes.
-* **Native URL Initialization:** Tours MUST initialize using the native `url: "/path"` property within the tour definition. Using a manual `run` step with `document.location.href = ...` to start the tour is strictly banned due to race conditions.
-* **Dirty Form Crash Prevention:** Tours MUST NEVER manually click the save button (`.o_form_button_save`) and immediately end or navigate away. You MUST spread the `...TourUtils.safeSave()` macro into the step array to force a DOM blur and wait for the `.o_form_button_create` state. Tours finishing with dirty forms cause asynchronous network requests that corrupt subsequent tests.
-* **Fatal Tour Assertions:** Using `console.error` for validation in a tour step is banned as it does not fail the CI test runner. You MUST `throw new Error("...")` to ensure the test fails.
+* **Tour Page Unloads (expectUnloadPage):** While `expectUnloadPage: true` is still used for hard browser reloads, you MUST NOT use it on steps where navigation is conditional (e.g., inside an `if` statement) or when triggering an OWL soft-route (client action).
+The Odoo test runner will fatally timeout after 20,000ms if the page does not actually unload.
+* **Tour Dropdown Selection:** Native `<select>` elements are deprecated in backend form views. Odoo 19 uses `.o_select_menu`.
+Tours must use two steps: click the dropdown, then click `.o_select_menu_item`.
+* **Tour Trigger Brittleness:** Using `a:contains(...)` or `button:contains(...)` is banned because internal text is often wrapped in `<span>` tags.
+Use `*:contains(...)` or target explicit `[data-menu-xmlid=...]` attributes.
+* **Native URL Initialization:** Tours MUST initialize using the native `url: "/path"` property within the tour definition.
+Using a manual `run` step with `document.location.href = ...` to start the tour is strictly banned due to race conditions.
+* **Dirty Form Crash Prevention:** Tours MUST NEVER manually click the save button (`.o_form_button_save`) and immediately end or navigate away.
+You MUST spread the `...TourUtils.safeSave()` macro into the step array to force a DOM blur and wait for the `.o_form_button_create` state.
+Tours finishing with dirty forms cause asynchronous network requests that corrupt subsequent tests.
+* **Fatal Tour Assertions:** Using `console.error` for validation in a tour step is banned as it does not fail the CI test runner.
+You MUST `throw new Error("...")` to ensure the test fails.
 </javascript_standards>
 
 ---
@@ -196,7 +209,8 @@ Auto-formatters and long attributes (like `model` or `inherit_id`) will wrap the
     <field name="name">...</field>
 </record>
 ```
-3. **The Web UI Destruction Trap (XML Protection):** When writing the XML comments shown in Rule 2, the Web UI might silently intercept and delete them from your output before they are saved to disk if formatted as standard markdown. To survive the UI parser, you MUST ensure your entire Parcel payload is wrapped exclusively inside a `python` markdown code block, which prevents the UI from evaluating the internal HTML/XML tags.
+3. **The Web UI Destruction Trap (XML Protection):** When writing the XML comments shown in Rule 2, the Web UI might silently intercept and delete them from your output before they are saved to disk if formatted as standard markdown.
+To survive the UI parser, you MUST ensure your entire Parcel payload is wrapped exclusively inside a `python` markdown code block, which prevents the UI from evaluating the internal HTML/XML tags.
 </ci_cd_bypasses>
 
 ---
@@ -214,6 +228,8 @@ These documentation references MUST be placed inline, immediately adjacent to th
 </semantic_anchors>
 
 ## 7. Shebang Usage & `__manifest__.py` Formatting
-Shebangs (`#!/usr/bin/env python3`) are strictly prohibited in standard Odoo module files (e.g., `models/`, `controllers/`, `__init__.py`, `__manifest__.py`). They can interfere with packaging and execution expectations inside standard Odoo modules. This restriction does not apply to isolated daemon scripts in the `daemons/` or `tools/` directories.
-
-Additionally, `__manifest__.py` files must strictly conform to dictionary structures without shebangs. Odoo's `ast.literal_eval` parser requires valid, strict Python dictionary syntax, and any extraneous bash-style lines will cause fatal `ParseError: while parsing None:101` exceptions during test or registry initialization.
+Shebangs (`#!/usr/bin/env python3`) are strictly prohibited in standard Odoo module files (e.g., `models/`, `controllers/`, `__init__.py`, `__manifest__.py`).
+They can interfere with packaging and execution expectations inside standard Odoo modules.
+This restriction does not apply to isolated daemon scripts in the `daemons/` or `tools/` directories.
+Additionally, `__manifest__.py` files must strictly conform to dictionary structures without shebangs.
+Odoo's `ast.literal_eval` parser requires valid, strict Python dictionary syntax, and any extraneous bash-style lines will cause fatal `ParseError: while parsing None:101` exceptions during test or registry initialization.

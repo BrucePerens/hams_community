@@ -22,7 +22,7 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         },
         {
             content: "Edit the SEO Meta Description",
-            trigger: 'div[name="website_meta_description"] input',
+            trigger: 'div[name="website_meta_description"] textarea',
             run: 'edit Test SEO Description',
         },
         ...TourUtils.safeSave(),
