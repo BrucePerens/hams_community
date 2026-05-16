@@ -135,3 +135,28 @@ The `HamsIntegrationCase` class ([@ANCHOR: integration_daemon_testing]) simplifi
 - **Documentation Injection Story**: Describes the automated documentation setup process ([@ANCHOR: documentation_bootstrap]).
 - **Developer Testing Flow Journey**: Guides developers through using `RealTransactionCase` for advanced integration tests.
 - **Documentation Setup Flow Journey**: Details the technical steps of injecting documentation into the knowledge base.
+
+## 8. Jules VM Testing Facilities
+
+To handle the specific constraints and environmental fragilities of the Jules VM (like websocket flappiness or asset loading races), `hams_test` provides specialized decorators and base classes.
+
+### The `jules_ui_bypass` Decorator
+UI tours implemented in the Jules VM environment should include the `@jules_ui_bypass` decorator. This decorator detects the `IN_JULES_VM` environment variable and automatically skips the test execution, preventing false negatives from environmental flappiness while ensuring backend (non-UI) tests continue to run normally.
+
+**Usage Example:**
+```python
+from odoo.tests import tagged
+from odoo.addons.hams_test.common import JulesUITestCase, jules_ui_bypass
+
+@tagged('-at_install', 'post_install')
+class MyUITest(JulesUITestCase):
+    @jules_ui_bypass
+    def test_01_tour(self):
+        # This test will be skipped if IN_JULES_VM=1
+        self.start_jules_tour('my_tour_name', login="admin")
+```
+
+### The `JulesUITestCase` Base Class
+When writing UI tests intended to run in the Jules VM, inherit from `JulesUITestCase` instead of the standard `HttpCase`. This provides the `start_jules_tour` helper method.
+
+* **`start_jules_tour(tour_name, login="admin", url="/web?debug=1", **kwargs)`**: A wrapper around `start_tour` that defaults the URL to include `?debug=1`. This bypasses fragile 'Activate Developer Mode' UI triggers which frequently timeout in the Jules environment.

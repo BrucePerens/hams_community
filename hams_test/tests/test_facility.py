@@ -63,7 +63,7 @@ class TestRealTransactionFacility(RealTransactionCase):
         leaks = []
         noisy_tables = set()
         try:
-            noisy_tables_records = self.env['test_real_transaction.noisy_table'].search([])
+            noisy_tables_records = self.env['hams_test.noisy_table'].search([])
             noisy_tables = {record.name for record in noisy_tables_records}
         except KeyError:
             pass # Model may not be registered in all environments
@@ -113,7 +113,7 @@ class TestRealTransactionFacility(RealTransactionCase):
         from catching it.
         """
         # Add ir_module_category to noisy tables
-        noisy_table_record = self.env['test_real_transaction.noisy_table'].create({
+        noisy_table_record = self.env['hams_test.noisy_table'].create({
             'name': 'ir_module_category'
         })
         self.env.cr.commit()
@@ -129,7 +129,7 @@ class TestRealTransactionFacility(RealTransactionCase):
         leaks = []
         noisy_tables = set()
         try:
-            noisy_tables_records = self.env['test_real_transaction.noisy_table'].search([])
+            noisy_tables_records = self.env['hams_test.noisy_table'].search([])
             noisy_tables = {record.name for record in noisy_tables_records}
         except KeyError:
             pass # Model may not be registered in all environments
