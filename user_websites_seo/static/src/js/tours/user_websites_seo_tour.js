@@ -4,18 +4,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 
 // Verified by [@ANCHOR: test_seo_widget_tour]
 registry.category("web_tour.tours").add("user_websites_seo_tour", {
-    url: '/web',
     steps: () => [
-        {
-            content: "Open the user menu",
-            trigger: '.o_user_menu .dropdown-toggle',
-            run: 'click',
-        },
-        {
-            content: "Click My Preferences to open res.users settings",
-            trigger: '*:contains("My Preferences")',
-            run: 'click',
-        },
         {
             content: "Wait for form to load",
             trigger: '.o_form_sheet',

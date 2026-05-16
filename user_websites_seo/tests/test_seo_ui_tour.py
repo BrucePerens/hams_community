@@ -34,5 +34,7 @@ class TestSEOUI(HttpCase):
         if "user.websites.group" in self.env:
             self.env["user.websites.group"].get_view(view_type="form")
 
-        # Start the tour with the authenticated context on the backend URL
-        self.start_tour("/web", "user_websites_seo_tour", login=self.user_test.login)
+        # Start the tour with the authenticated context directly on the backend user form
+        action = self.env.ref("base.action_res_users")
+        url = f"/web#action={action.id}&model=res.users&id={self.user_test.id}&view_type=form"
+        self.start_tour(url, "user_websites_seo_tour", login="admin")

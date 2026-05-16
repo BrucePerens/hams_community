@@ -60,8 +60,10 @@ class CloudflarePurgeQueue(models.Model):
             )
 
         if create_vals:
-            # Safely override the poisoned upstream key without destroying the entire context
-            self.env["cloudflare.purge.queue"].with_context(prefetch_fields=True).create(create_vals)
+            # Force a completely pristine context to physically block poisoned
+            # upstream keys (like prefetch_fields=False) from crashing the ORM.
+            clean_env = self.env(context={})
+            clean_env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
     def enqueue_tags(self, tags, website_id=None):
@@ -82,8 +84,9 @@ class CloudflarePurgeQueue(models.Model):
             if t
         ]
         if create_vals:
-            # Safely override the poisoned upstream key without destroying the entire context
-            self.env["cloudflare.purge.queue"].with_context(prefetch_fields=True).create(create_vals)
+            # Force a completely pristine context to physically block poisoned upstream keys
+            clean_env = self.env(context={})
+            clean_env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
     def process_queue(self):
