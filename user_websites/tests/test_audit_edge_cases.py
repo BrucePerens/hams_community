@@ -305,7 +305,7 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 self.assertNotIn("website_page", call[0][0])
 
         # 3. Trigger Invalidation (Verify the targeted NOTIFY logic doesn't crash)
-        with patch.object(self.env.cr, "execute") as mock_execute:
+        with patch.object(self.env.cr, "execute", wraps=self.env.cr.execute) as mock_execute:
             page.write({"website_published": False})
 
             # The write method should have called _notify_cache_invalidation which executes pg_notify

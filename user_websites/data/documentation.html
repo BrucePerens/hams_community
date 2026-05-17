@@ -1,115 +1,101 @@
 <h1 class="mb-4">User Websites Module Documentation</h1>
 <p class="lead text-muted"><strong>Version:</strong> Odoo 19 Community<br/>
-<strong>Summary:</strong> Lets users build personal or group-managed websites and blogs inside a single Odoo instance.</p>
+<strong>Summary:</strong> This module allows community members to create and manage their own personal or group websites and blogs directly within this Odoo instance. It provides a simple way to share content while maintaining privacy and security.</p>
 
 <hr class="mt-4 mb-4"/>
 
-<h2 class="mt-4">1. System Configuration</h2>
-<p>Administrators can configure global module behaviors by navigating to <strong>Settings &gt; General Settings &gt; User Websites</strong>.</p>
+<h2 class="mt-4">1. System Configuration (For Administrators)</h2>
+<p>Administrators can manage how the module behaves globally by going to <strong>Settings &gt; General Settings &gt; User Websites</strong>.</p>
 <ul class="mb-4">
-    <li><strong>Global Page Limit:</strong> Define the default maximum number of web pages a standard user can create. (Note: A user-specific limit defined on their profile will override this global setting).</li>
-    <li><strong>User Websites Administrators:</strong> Assign specific users to the administrative group. These users receive full access to manage all group sites, personal sites, and content violation reports.</li>
+    <li><strong>Global Page Limit:</strong> This sets the maximum number of web pages a regular user can create by default. You can also set a specific limit for an individual user on their profile page.</li>
+    <li><strong>User Websites Administrators:</strong> Choose which users have permission to manage group sites, review abuse reports, and lift suspensions.</li>
 </ul>
 
 <hr class="mt-4 mb-4"/>
 
-<h2 class="mt-4">2. End-User Guide</h2>
-<p>The User Websites module allows you to host your own personal corner of the community or collaborate with others on a group page.</p>
+<h2 class="mt-4">2. Using Your Personal Website</h2>
+<p>Every member of our community can have their own corner on the web. Here is how you can get started and manage your content.</p>
 
-<h4 class="mt-4" id="UX_CREATE_SITE" data-trace="[@ANCHOR: UX_CREATE_SITE]">2.1. Managing Your Personal Website</h4>
+<h4 class="mt-4" id="UX_CREATE_SITE" data-trace="[@ANCHOR: UX_CREATE_SITE]">2.1. Setting Up Your Site</h4>
 <ul>
-    <li><strong>Your URL:</strong> Your personal website is located at <code>/&lt;your-username&gt;/home</code>.</li>
-    <li><strong>Getting Started:</strong> Your site is not created automatically. To build it, navigate to your personal URL while logged in. The system will prompt you to create your homepage.</li>
-    <li><strong>Editing:</strong> Once created, use the standard Odoo website builder to drag and drop blocks, write text, and publish your pages.</li>
+    <li><strong>Your Personal URL:</strong> Your website is located at <code>/&lt;your-username&gt;/home</code>.</li>
+    <li><strong>Initialization:</strong> To create your site, simply visit your personal URL while you are logged in. If you haven't started yet, you will see a "Welcome" page with a button to "Create Your Home Page". Click it to generate your initial layout.</li>
+    <li><strong>Designing Your Pages:</strong> Use Odoo's built-in "Edit" mode to drag and drop blocks, change text, and add images. Don't forget to click "Save" when you are finished.</li>
 </ul>
 
-<h4 class="mt-4" id="UX_CREATE_BLOG_POST" data-trace="[@ANCHOR: UX_CREATE_BLOG_POST]">2.2. Managing Your Blog</h4>
-<p>Your personal blog is located at <code>/&lt;your-username&gt;/blog</code>. Just like your website, it is not created until you need it. Navigate to the blog URL and click the button to generate your first post.</p>
+<h4 class="mt-4" id="UX_CREATE_BLOG_POST" data-trace="[@ANCHOR: UX_CREATE_BLOG_POST]">2.2. Starting Your Blog</h4>
+<p>Your personal blog is located at <code>/&lt;your-username&gt;/blog</code>. Just like your main site, it starts as a placeholder. Visit your blog URL and click "Create Your Blog" to publish your very first post.</p>
 
-<h4 class="mt-4" id="UX_COMMUNITY_DIRECTORY" data-trace="[@ANCHOR: UX_COMMUNITY_DIRECTORY]">2.3. Joining the Community Directory</h4>
-<p>By default, your website is hidden from the public community list to protect your privacy. To make your site discoverable:</p>
+<h4 class="mt-4" id="UX_COMMUNITY_DIRECTORY" data-trace="[@ANCHOR: UX_COMMUNITY_DIRECTORY]">2.3. Showing Up in the Community Directory</h4>
+<p>We value your privacy. By default, your website is hidden from the public list. If you want others to find your site more easily:</p>
 <ol>
-    <li>Go to your <strong>Preferences</strong> (My Profile).</li>
-    <li>Navigate to the <strong>User Websites</strong> tab.</li>
-    <li>Check the box labeled <strong>"Show in Public Directory"</strong>.</li>
+    <li>Click on your user icon in the top right and select <strong>My Profile</strong>.</li>
+    <li>Go to the <strong>User Websites</strong> tab.</li>
+    <li>Check the box for <strong>"Show in Public Directory"</strong> and save your profile.</li>
 </ol>
 
-<h4 class="mt-4">2.4. Group Websites</h4>
-<p>If you are part of a User Website Group (like a club, committee, or project team), you share ownership of a group website.</p>
+<h4 class="mt-4">2.4. Group Shared Websites</h4>
+<p>Clubs, teams, or project groups can also share a website.</p>
 <ul>
-    <li>Group sites function exactly like personal sites but are located at the group's specific URL.</li>
-    <li>Any member of the group can edit pages and publish blog posts on behalf of the group.</li>
+    <li>These sites have their own unique URL, similar to personal sites.</li>
+    <li>Any member of the group has full editing rights and can post to the group blog.</li>
 </ul>
 
-<h4 class="mt-4" id="UX_SUBSCRIBE" data-trace="[@ANCHOR: UX_SUBSCRIBE]">2.5. Subscribing to Updates</h4>
-<p>You can subscribe to any personal or group website to automatically receive a weekly email digest summarizing their new blog posts. You can instantly unsubscribe at any time using the secure link at the bottom of the emails.</p>
+<h4 class="mt-4" id="UX_SUBSCRIBE" data-trace="[@ANCHOR: UX_SUBSCRIBE]">2.5. Following Other Sites</h4>
+<p>If you enjoy another community member's content, you can click "Subscribe" on their site. This will sign you up for a weekly email digest that summarizes any new blog posts they have published. You can unsubscribe at any time using the link in the email.</p>
 
-<h4 class="mt-4" id="UX_REPORT_VIOLATION" data-trace="[@ANCHOR: UX_REPORT_VIOLATION]">2.6. Reporting Content Violations</h4>
-<p>If you see a page or blog post that violates community guidelines:</p>
-<ol>
-    <li>Click the <strong>Report Violation</strong> button (marked with a flag icon) located at the bottom of the content.</li>
-    <li>Submit the report.</li>
-</ol>
+<h4 class="mt-4" id="UX_REPORT_VIOLATION" data-trace="[@ANCHOR: UX_REPORT_VIOLATION]">2.6. Reporting Inappropriate Content</h4>
+<p>To keep our community safe, every page has a <strong>Report Violation</strong> button (look for the red flag icon). If you see something that breaks our rules, please report it. Our administrators will review the report and take action if necessary.</p>
 <div class="alert alert-info mt-3">
-    <i class="fa fa-info-circle" aria-hidden="true"></i> <em>Note: To protect you against retaliation, the owner of the content cannot see who reported them, nor can they view the report itself. It goes directly to the site administrators.</em>
+    <i class="fa fa-info-circle" aria-hidden="true"></i> <em>Privacy Note: The owner of the website cannot see who reported them. Reports are completely confidential and seen only by administrators.</em>
 </div>
 
-<h4 class="mt-4" id="UX_SUBMIT_APPEAL" data-trace="[@ANCHOR: UX_SUBMIT_APPEAL]">2.7. Submitting a Moderation Appeal</h4>
-<p>If your account is suspended due to accumulating three or more violation strikes, your content will be locked and unpublished. You may submit a one-time appeal directly through your portal dashboard (<code>/my/home</code>) to petition administrators for a pardon.</p>
+<h4 class="mt-4" id="UX_SUBMIT_APPEAL" data-trace="[@ANCHOR: UX_SUBMIT_APPEAL]">2.7. Appealing a Suspension</h4>
+<p>If your account is suspended for rules violations, your content will be hidden. You can submit an appeal through your main account dashboard (<code>/my/home</code>) to explain the situation to administrators.</p>
 
-<h4 class="mt-4" id="UX_GDPR_EXPORT" data-trace="[@ANCHOR: UX_GDPR_EXPORT]">2.8. Exporting Your Data</h4>
-<p>You can download a machine-readable JSON copy of all your generated content, pages, and blog posts via the Privacy Dashboard at <code>/my/privacy</code>.</p>
+<h4 class="mt-4" id="UX_GDPR_EXPORT" data-trace="[@ANCHOR: UX_GDPR_EXPORT]">2.8. Your Data Rights: Exporting Content</h4>
+<p>You can download a full copy of all your website and blog content in a computer-readable format by visiting the <strong>Privacy &amp; Data</strong> section in your account dashboard (<code>/my/privacy</code>).</p>
 
-<h4 class="mt-4" id="UX_GDPR_ERASURE" data-trace="[@ANCHOR: UX_GDPR_ERASURE]">2.9. Right to Erasure</h4>
-<p>If you wish to leave the platform, you can permanently and irreversibly delete all of your generated content and opt-out of the public directory via the Privacy Dashboard.</p>
+<h4 class="mt-4" id="UX_GDPR_ERASURE" data-trace="[@ANCHOR: UX_GDPR_ERASURE]">2.9. Your Data Rights: Deleting Your Content</h4>
+<p>If you decide to leave our platform, you can permanently delete all your websites, blog posts, and personal data through the Privacy Dashboard. Please be careful: <strong>this action cannot be reversed.</strong></p>
 
 <hr class="mt-4 mb-4"/>
 
+<h2 class="mt-4">3. Developer and Technical Information</h2>
 
-<h2 class="mt-4">3. Integrator & Developer Guide</h2>
-
-<h4 class="mt-4">3.1. Core Architecture & Security</h4>
+<h4 class="mt-4">3.1. Security Architecture</h4>
 <ul>
-    <li><strong>Lazy JIT Provisioning:</strong> Websites and Blogs do not exist upon user creation. They are provisioned Just-In-Time to ensure explicit user consent to publish.</li>
-    <li><strong>Shared Blog Container:</strong> All user blog posts are housed in a single standard <code>blog.blog</code> record named "Community Blog" to prevent database bloat.</li>
-    <li><strong>Proxy Ownership Pattern:</strong> Standard users cannot create views or pages natively. The module securely circumvents this by explicitly assigning the <code>owner_user_id</code> upon creation, evaluating custom Record Rules against these fields, and then escalating privileges via a dedicated <strong>Service Account</strong> strictly for the database write.</li>
-    <li><strong>Service Workers and Caching:</strong> High-performance frontend caching is managed via a dedicated Service Worker <span data-trace="[@ANCHOR: simulation_environment]">[@ANCHOR: simulation_environment]</span>.</li>
-    <li><strong>Slug Management:</strong> Automated slug generation and high-performance caching ensure unique and fast URL resolution <span data-trace="[@ANCHOR: slug_cache_invalidation_unlink]">[@ANCHOR: slug_cache_invalidation_unlink]</span>, <span data-trace="[@ANCHOR: group_slug_cache_invalidation_unlink]">[@ANCHOR: group_slug_cache_invalidation_unlink]</span>.</li>
+    <li><strong>Just-In-Time Provisioning:</strong> Website and blog records are only created when the user first visits their slug, ensuring no wasted database space for inactive users.</li>
+    <li><strong>Zero-Sudo Design:</strong> The module uses restricted Service Accounts to perform background tasks like creating pages and unpublishing content, ensuring that no user ever has more power than they strictly need.</li>
+    <li><strong>Content Sanitization:</strong> All user-submitted HTML is strictly cleaned to prevent security issues like Cross-Site Scripting (XSS). Attempting to bypass these checks will automatically trigger a moderation strike.</li>
 </ul>
 
-<h4 class="mt-4">3.2. Explicit Dropzones</h4>
-<p>Integrators can extend the UI by targeting these IDs:</p>
+<h4 class="mt-4">3.2. Extension Points (Dropzones)</h4>
+<p>Developers can add new features to the user websites by targeting these specific structural IDs in their own modules:</p>
 <ul>
     <li id="dropzone_home_header" data-trace="[@ANCHOR: dropzone_home_header]"><strong>Home Header:</strong> <code>user_websites_dropzone_home_header</code></li>
     <li id="dropzone_home_footer" data-trace="[@ANCHOR: dropzone_home_footer]"><strong>Home Footer:</strong> <code>user_websites_dropzone_home_footer</code></li>
     <li id="dropzone_navbar_actions" data-trace="[@ANCHOR: dropzone_navbar_actions]"><strong>Navbar Actions:</strong> <code>user_websites_dropzone_navbar_actions</code></li>
     <li id="dropzone_directory_card" data-trace="[@ANCHOR: dropzone_directory_card]"><strong>Directory Card:</strong> <code>user_websites_dropzone_directory_card</code></li>
     <li id="dropzone_blog_post" data-trace="[@ANCHOR: dropzone_blog_post]"><strong>Blog Post:</strong> <code>user_websites_dropzone_blog_post</code></li>
-    <li id="dropzone_settings" data-trace="[@ANCHOR: dropzone_settings]"><strong>Settings:</strong> Target <code>res.config.settings</code> view.</li>
+    <li id="dropzone_settings" data-trace="[@ANCHOR: dropzone_settings]"><strong>Settings:</strong> Inherit <code>res.config.settings</code> view.</li>
 </ul>
 
-<h4 class="mt-4">3.3. Background Operations</h4>
+<h4 class="mt-4">3.3. Scheduled Background Tasks</h4>
 <ul>
-    <li id="ir_cron_send_weekly_digest" data-trace="[@ANCHOR: ir_cron_send_weekly_digest]"><strong>Weekly Digest:</strong> Automated blog post summaries for subscribers.</li>
-    <li id="ir_cron_notify_pending_reports" data-trace="[@ANCHOR: ir_cron_notify_pending_reports]"><strong>Moderation Notifications:</strong> Alerts admins of unhandled reports.</li>
-    <li id="ir_cron_flush_view_counters" data-trace="[@ANCHOR: ir_cron_flush_view_counters]"><strong>View Counter Sync:</strong> Flushes Redis counters to PostgreSQL.</li>
+    <li id="ir_cron_send_weekly_digest" data-trace="[@ANCHOR: ir_cron_send_weekly_digest]"><strong>Weekly Digest:</strong> Automatically sends summaries of new posts to followers.</li>
+    <li id="ir_cron_notify_pending_reports" data-trace="[@ANCHOR: ir_cron_notify_pending_reports]"><strong>Moderation Alerts:</strong> Notifies administrators when there are new abuse reports to review.</li>
+    <li id="ir_cron_flush_view_counters" data-trace="[@ANCHOR: ir_cron_flush_view_counters]"><strong>View Counter Sync:</strong> High-performance view tracking that saves data from memory to the database periodically.</li>
 </ul>
 
-<h4 class="mt-4">3.4. Security Logic</h4>
-<ul>
-    <li id="violation_report_logic" data-trace="[@ANCHOR: violation_report_logic]"><strong>Reporting Logic:</strong> Masked originator reporting.</li>
-    <li id="toast_notifications_logic" data-trace="[@ANCHOR: toast_notifications_logic]"><strong>Admin Toasts:</strong> Real-time alerts for moderators.</li>
-</ul>
 <hr class="mt-4 mb-4"/>
 
-<h2 class="mt-4" id="documentation_bootstrap" data-trace="[@ANCHOR: documentation_bootstrap]">4. Documentation Bootstrap</h2>
-<p>This module utilizes the standard <code>_register_hook</code> pattern to ensure its documentation is automatically installed into the system knowledge repository.</p>
+<h2 class="mt-4" id="documentation_bootstrap" data-trace="[@ANCHOR: documentation_bootstrap]">4. Automated Documentation</h2>
+<p>This module uses the <code>knowledge_docs</code> feature to ensure that this manual is always available to you directly within the system.</p>
 
-<h2 class="mt-4">5. Regulatory Compliance Statement</h2>
-<p><strong>How the <code>user_websites</code> module complies with regulations:</strong></p>
+<h2 class="mt-4">5. Compliance Summary</h2>
 <ul>
-    <li><strong>GDPR / CCPA (Data Portability & Erasure):</strong> Provides the <code>/my/privacy</code> portal dashboard, allowing users to export their generated content to a machine-readable JSON format and permanently hard-delete all their pages, blogs, and directory listings instantly.</li>
-    <li><strong>ePrivacy (Cookies):</strong> Uses privacy-friendly server-side view counters (<code>view_count</code>) instead of tracking cookies. It relies natively on Odoo's framework consent state.</li>
-    <li><strong>WCAG 2.1 AA:</strong> All frontend templates and modals use semantic HTML. Icon-only buttons (like the Report Violation flag and trash icons) include <code>aria-label</code> or <code>title</code> attributes. It uses proper heading hierarchies within page layouts.</li>
-    <li><strong>DSA (Digital Services Act):</strong> Features a built-in "Report Violation" tool that strictly shields the reporter's identity from the content owner. It enforces a Three-Strike moderation system with an automated suspension and an integrated appeals process.</li>
+    <li><strong>Privacy:</strong> We use privacy-friendly counters instead of cookies for tracking views.</li>
+    <li><strong>Accessibility:</strong> Our templates follow standard accessibility rules to ensure they are usable by everyone.</li>
+    <li><strong>Moderation:</strong> We provide transparent reporting and appeal processes to maintain a healthy community environment.</li>
 </ul>

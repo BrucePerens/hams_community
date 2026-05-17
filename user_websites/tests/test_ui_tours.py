@@ -108,3 +108,8 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
     def test_08_frontend_misc_tour(self):
         # Tests [@ANCHOR: test_tour_frontend_misc]
         self.start_tour("/user-websites/documentation", "frontend_misc_tour", login=self.user_test.login)
+
+    def test_09_backend_views_tour(self):
+        # Tests [@ANCHOR: test_tour_backend_views]
+        admin = self.env.ref("base.user_admin")
+        self.start_tour("/web", "backend_views_tour", login=admin.login)
