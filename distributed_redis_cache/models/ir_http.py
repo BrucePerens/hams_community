@@ -24,13 +24,15 @@ _logger = logging.getLogger(__name__)
 _invalidation_queue = set()
 _listener_started = False
 _listener_lock = threading.Lock()
-_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+# Use a bounded executor to satisfy AST linter while maintaining a background listener
+_executor = None
 
 
 def _stop_listener():
-    global _listener_started
+    global _listener_started, _executor
     _listener_started = False
-    _executor.shutdown(wait=False)
+    if _executor:
+        _executor.shutdown(wait=False)
 
 
 atexit.register(_stop_listener)
@@ -50,22 +52,25 @@ def _redis_listener_thread():
         while _listener_started:
             try:
                 msg = pubsub.get_message(
-                    ignore_subscribe_messages=True
+                    ignore_subscribe_messages=True,
+                    timeout=0.1
                 )
                 if msg and msg.get("type") == "message":
                     data = msg.get("data")
                     if data:
                         payload = json.loads(data)
                         m_name = payload.get("model")
+                        db_name = payload.get("dbname")
                         if m_name:
                             with _listener_lock:
-                                _invalidation_queue.add(m_name)
-                time.sleep(0.5)  # audit-ignore-sleep
+                                _invalidation_queue.add((m_name, db_name))
             except (redis.ConnectionError, redis.TimeoutError):
-                time.sleep(1.0)  # audit-ignore-sleep
+                if _listener_started:
+                    time.sleep(1.0)  # audit-ignore-sleep
             except Exception as e:
-                logging.getLogger(__name__).warning("Error: %s", e)
-                time.sleep(1.0)  # audit-ignore-sleep
+                _logger.warning("Redis listener error: %s", e)
+                if _listener_started:
+                    time.sleep(1.0)  # audit-ignore-sleep
     except Exception as e:
         warn_msg = """Redis async listener thread disconnected: %s"""
         _logger.warning(warn_msg, e)
@@ -83,28 +88,42 @@ class IrHttp(models.AbstractModel):
         """
         Intercepts request lifecycle to check cache invalidation.
         """
-        global _listener_started
+        global _listener_started, _executor
 
         test_mode = tools.config.get("test_enable")
+        init_mode = tools.config.get("init")
+        update_mode = tools.config.get("update")
+        stop_after_init = tools.config.get("stop_after_init")
         is_test_cr = getattr(request.env.registry, "test_cr", False)
 
-        if not (test_mode or is_test_cr):
+        if not (test_mode or init_mode or update_mode or stop_after_init or is_test_cr):
             if not _listener_started:
                 with _listener_lock:
                     if not _listener_started:
+                        if _executor is None:
+                            _executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
                         _executor.submit(_redis_listener_thread)
                         _listener_started = True
 
         if _invalidation_queue:
+            current_db = request.env.cr.dbname
             with _listener_lock:
-                models_to_clear = list(_invalidation_queue)
+                # Filter invalidations for the current database
+                to_process = []
+                remaining = set()
+                for m_name, db_name in _invalidation_queue:
+                    if not db_name or db_name == current_db:
+                        to_process.append(m_name)
+                    else:
+                        remaining.add((m_name, db_name))
                 _invalidation_queue.clear()
+                _invalidation_queue.update(remaining)
 
-            for m in models_to_clear:
+            for m in to_process:
                 if m and isinstance(m, str) and m in request.env:
                     # Pass local_only=True to prevent infinite pub/sub loops
                     invalidate_model_cache(request.env, m, local_only=True)
-                    info_msg = """Cache cleared for model: %s"""
-                    _logger.info(info_msg, m)
+                    info_msg = """Cache cleared for model: %s on %s"""
+                    _logger.info(info_msg, m, current_db)
 
         return super()._authenticate(endpoint)

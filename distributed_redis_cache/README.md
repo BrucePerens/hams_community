@@ -64,8 +64,8 @@ If the Redis server crashes or the `redis` Python module is uninstalled, the cac
 from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache, notify_model_invalidation
 ```
 
-* **`@distributed_cache()`**: Use this decorator on `api.model` functions to automatically generate HMAC-SHA256 cache keys based on serialized arguments and write them to Redis with a 24h TTL.
-* **`invalidate_model_cache(env, model_name, local_only=False)`**: Use this to forcibly flush local WSGI memory. If `local_only` is False, it also attempts to delete keys from Redis.
+* **`@distributed_cache()`**: Use this decorator on `api.model` functions to automatically generate SHA256 cache keys based on serialized arguments and write them to Redis with a 24h TTL. [@ANCHOR: distributed_cache_decorator]
+* **`invalidate_model_cache(env, model_name, local_only=False)`**: Use this to forcibly flush local WSGI memory. If `local_only` is False, it also attempts to delete keys from Redis. [@ANCHOR: invalidate_model_cache_logic]
 * **`notify_model_invalidation(env, model_name)`**: Use this to trigger a cross-worker invalidation signal via Postgres NOTIFY. [@ANCHOR: notify_model_invalidation_logic]
 </api>
 

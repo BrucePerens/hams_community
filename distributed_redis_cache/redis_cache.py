@@ -139,11 +139,13 @@ def notify_model_invalidation(env, model_name):
     if model_name not in env:
         return
 
+    dbname = env.cr.dbname
+
     # 1. Invalidate locally and in Redis
     invalidate_model_cache(env, model_name, local_only=False)
 
     # 2. Notify all other workers via Postgres -> Daemon -> Redis Pub/Sub
-    payload = json.dumps({"model": model_name})
+    payload = json.dumps({"model": model_name, "dbname": dbname})
     env.cr.execute(
         "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
     )
