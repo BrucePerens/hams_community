@@ -141,6 +141,10 @@ class BackupConfig(models.Model):
                 validate_backup_path(rec.restore_drill_script)
 
     def _get_executable(self, engine):
+        """
+        Retrieves the path to the backup engine binary.
+        If Kopia is missing, it attempts to download it via binary_downloader.
+        """
         cmd_path = shutil.which(engine)
         if cmd_path:
             return cmd_path
@@ -156,18 +160,22 @@ class BackupConfig(models.Model):
             msg_body = _(
                 "Kopia binary not found. Deferring to central generalized downloader..."
             )
-            mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "zero_sudo.mail_service_internal"
+            # Use Service ID for security & audit trails
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "backup_management.user_backup_service_internal"
             )
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
-            # Ensure the installation happens under the context of the service user to maintain proper ACLs
+            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
+
+            # Binary manifestation is centralized in binary_downloader
             bin_path = (
                 self.env["binary.manifest"]
+                .with_user(svc_uid)
                 .with_context(active_test=False)
                 .ensure_executable("kopia")
             )
+
             msg_body = _("Kopia successfully installed to %s") % bin_path
-            self.with_user(mail_svc).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
+            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
             return bin_path
 
         raise UserError(_("Unknown engine: %s") % engine)
@@ -286,10 +294,10 @@ class BackupConfig(models.Model):
             except Exception as e:
                 logging.getLogger(__name__).warning("An error occurred: %s", e)
 
-        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.mail_service_internal"
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
         )
-        self.with_user(mail_svc).message_post(body=message) # audit-ignore-mail: Tested by [@ANCHOR: backup_pager_synergy]  # fmt: skip
+        self.with_user(svc_uid).message_post(body=message) # audit-ignore-mail: Tested by [@ANCHOR: backup_pager_synergy]  # fmt: skip
 
     @api.model
     def get_board_data(self):
