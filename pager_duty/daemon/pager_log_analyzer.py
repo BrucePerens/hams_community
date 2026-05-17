@@ -15,6 +15,8 @@ import json
 import logging
 import concurrent.futures
 import ctypes
+import pwd
+import grp
 
 import redis
 
@@ -86,8 +88,6 @@ if os.geteuid() == 0:
 
     # C. Drop to nobody:adm
     try:
-        import pwd, grp
-
         uid = pwd.getpwnam("nobody").pw_uid
         gid = grp.getgrnam("adm").gr_gid
         os.setgroups([])
