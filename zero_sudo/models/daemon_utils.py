@@ -50,9 +50,12 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
                     if response.status == 200:
                         _logger.info("Health check %s passed.", url)
                         return True
+            except urllib.error.URLError as e:
+                _logger.info("Health check polling connection issue: %s", e)
             except Exception as e: # audit-ignore-catch-all
-                _logger.info("Health check polling exception: %s", e)
-            time.sleep(interval)  # audit-ignore-sleep
+                _logger.warning("Unexpected error during health check: %s", e)
+                raise
+            time.sleep(interval) # audit-ignore-sleep
 
         error_msg = _("Daemon health check failed for %s after %s seconds.") % (url, timeout)
         _logger.error(error_msg)

@@ -20,4 +20,11 @@ class TestZeroSudoViews(HttpCase):
         # Tests [@ANCHOR: journey_service_account_lifecycle]
         # Tests [@ANCHOR: zero_sudo_tour]
         """Run the zero_sudo_tour to verify UI functionality."""
+        # Use the security utility to safely check for installed modules without violating Zero-Sudo
+        utils = self.env['zero_sudo.security.utils']
+        facility_uid = utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
+        installed_modules = self.env['ir.module.module'].with_user(facility_uid).search([('state', '=', 'installed')]).mapped('name')
+
+        if 'hams_test' not in installed_modules:
+            self.skipTest("hams_test module not installed, skipping tour that depends on its utilities.")
         self.start_tour("/web", "zero_sudo_tour", login="admin")
