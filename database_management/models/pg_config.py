@@ -61,10 +61,10 @@ class PgOptimizeWizard(models.TransientModel):
 
         # micro-privilege: Use service account cursor for sensitive operations
         utils = self.env["zero_sudo.security.utils"]
-        svc_uid = utils._get_service_uid(
+        env_svc = utils._get_service_env(
             "database_management.user_database_management_service"
         )
-        cr_svc = self.env.cr.with_user(svc_uid) if hasattr(self.env.cr, "with_user") else self.env.cr
+        cr_svc = env_svc.cr
 
         # Standard DBA Tuning Algorithms
         shared_buffers_mb = int((self.ram_gb * 1024) * 0.25)
