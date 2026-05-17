@@ -1,0 +1,51 @@
+/** @odoo-module **/
+
+import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
+
+registry.category("web_tour.tours").add("pager_duty_incident_tour", {
+    url: "/odoo?debug=1",
+    steps: () => [
+        {
+            trigger: '.o_navbar_apps_menu button',
+            content: "Open apps menu",
+            run: "click",
+        },
+        {
+            trigger: '[data-menu-xmlid="pager_duty.menu_admin_root"]',
+            content: "Open Pager Duty app",
+            run: "click",
+        },
+        {
+            trigger: '[data-menu-xmlid="pager_duty.menu_pager_incident"]',
+            content: "Go to Incidents",
+            run: "click",
+        },
+        {
+            trigger: ".o_list_button_add, .o-kanban-button-new",
+            content: "Create a new incident",
+            run: "click",
+        },
+        {
+            trigger: '.o_field_widget[name="source"] input',
+            content: "Enter incident source",
+            run: "edit Manual Test",
+        },
+        {
+            trigger: '.o_field_widget[name="severity"] .o_select_menu',
+            content: "Open severity dropdown",
+            run: "click",
+        },
+        {
+            trigger: '.o_select_menu_item:contains("High"), .o_select_menu_item:contains("high")',
+            content: "Select High severity",
+            run: "click",
+        },
+        {
+            trigger: '.o_field_widget[name="description"] textarea',
+            content: "Enter description",
+            run: "edit This is a manual test incident.",
+        },
+        ...TourUtils.safeSave(),
+    ],
+});

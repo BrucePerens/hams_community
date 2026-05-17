@@ -71,7 +71,7 @@ class PagerIncident(models.Model):
             vals["time_resolved"] = now
 
         res = super(
-            PagerIncident, self.with_context(mail_notrack=True, prefetch_fields=False)
+            PagerIncident, self.with_context(mail_notrack=True)
         ).write(vals)
 
         # ADR 0078: O(1) Memory Mapping / Event Bus Optimization
@@ -191,7 +191,7 @@ class PagerIncident(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super(
-            PagerIncident, self.with_context(mail_notrack=True, prefetch_fields=False)
+            PagerIncident, self.with_context(mail_notrack=True)
         ).create(vals_list)
         if records:
             self.env["bus.bus"]._sendone("pager_duty", "update_board", {})

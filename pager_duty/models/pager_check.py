@@ -199,7 +199,7 @@ class PagerCheck(models.Model):
 
     def write(self, vals):
         res = super(
-            PagerCheck, self.with_context(mail_notrack=True, prefetch_fields=False)
+            PagerCheck, self.with_context(mail_notrack=True)
         ).write(vals)
         invalidate_model_cache(self.env, self._name)
         payload = json.dumps({"model": self._name})
@@ -215,7 +215,7 @@ class PagerCheck(models.Model):
             "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
         )
         return super(
-            PagerCheck, self.with_context(mail_notrack=True, prefetch_fields=False)
+            PagerCheck, self.with_context(mail_notrack=True)
         ).unlink()
 
     @api.model

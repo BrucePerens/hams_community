@@ -15,6 +15,7 @@
         "bus",
         "zero_sudo",
         "distributed_redis_cache",
+        "hams_test",
     ],
     "external_dependencies": {
         "python": ["redis", "psutil", "ntplib", "pymysql", "ldap3"],
@@ -42,6 +43,9 @@
             "pager_duty/static/src/components/board/board.xml",
             "pager_duty/static/src/components/log_viewer/log_viewer.js",
             "pager_duty/static/src/components/log_viewer/log_viewer.xml",
+        ],
+        "web.assets_tests": [
+            "pager_duty/static/src/tours/incident_tour.js",
         ]
     },
 }
