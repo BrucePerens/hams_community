@@ -58,7 +58,7 @@ def _async_gdpr_erasure(db_name, user_id):
             )
 
             user = env["res.users"].with_user(svc_uid).with_context(
-                active_test=False, mail_notrack=True, prefetch_fields=False
+                active_test=False, mail_notrack=True
             ).browse(user_id)
             if user.exists():
                 user._execute_gdpr_erasure()

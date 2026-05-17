@@ -101,7 +101,7 @@ class BlogPost(models.Model):
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
+            mail_notrack=True
         )
         posts = super(BlogPost, self_svc).create(vals_list)
 
@@ -188,7 +188,7 @@ class BlogPost(models.Model):
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
+            mail_notrack=True
         )
         res = super(BlogPost, self_svc).write(vals)
 
@@ -213,7 +213,7 @@ class BlogPost(models.Model):
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True, prefetch_fields=False
+            mail_notrack=True
         )
         res = super(BlogPost, self_svc).unlink()
 
