@@ -8,7 +8,7 @@ from odoo.tests.common import tagged, HttpCase
 from odoo.addons.hams_test.common import HamsIntegrationCase
 from odoo.addons.distributed_redis_cache.models.ir_http import (
     _invalidation_queue,
-    _listener_lock,
+    _listener_lock
 )
 from odoo.addons.distributed_redis_cache.redis_cache import (
     invalidate_model_cache,
@@ -32,7 +32,7 @@ class TestDistributedCacheStandard(HttpCase):
         mock_endpoint.routing = {"auth": "none"}
 
         with _listener_lock:
-            _invalidation_queue.add("res.users")
+            _invalidation_queue.add(("res.users", self.env.cr.dbname))
 
         with patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", MagicMock()), \
              patch("odoo.addons.distributed_redis_cache.models.ir_http.redis") as mock_redis, \
@@ -43,7 +43,7 @@ class TestDistributedCacheStandard(HttpCase):
             mock_pubsub = MagicMock()
             mock_redis_client.pubsub.return_value = mock_pubsub
 
-            payload = json.dumps({"model": "res.users"})
+            payload = json.dumps({"model": "res.users", "dbname": self.env.cr.dbname})
             mock_pubsub.listen.side_effect = [
                 [{"type": "message", "data": payload}],
             ]
@@ -61,6 +61,7 @@ class TestDistributedCacheStandard(HttpCase):
             ) as mock_invalidate:
                 mock_req_inst.env.__contains__.return_value = True
                 mock_req_inst.env.__getitem__.return_value = self.env["res.users"]
+                mock_req_inst.env.cr.dbname = self.env.cr.dbname
 
                 self.env["ir.http"]._authenticate(mock_endpoint)
                 mock_invalidate.assert_called_with(mock_req_inst.env, "res.users", local_only=True)
@@ -202,6 +203,7 @@ class TestDistributedCacheStandard(HttpCase):
             self.assertEqual(args[0], "SELECT pg_notify(%s, %s)")
             self.assertEqual(args[1][0], "distributed_cache_invalidation")
             self.assertIn('"model": "res.users"', args[1][1])
+            self.assertIn(f'"dbname": "{self.env.cr.dbname}"', args[1][1])
 
 
 @tagged("integration", "post_install", "-at_install")
@@ -222,7 +224,7 @@ class TestDistributedCacheIntegration(HamsIntegrationCase):
         mock_endpoint.routing = {"auth": "none"}
 
         with _listener_lock:
-            _invalidation_queue.add("res.users")
+            _invalidation_queue.add(("res.users", self.env.cr.dbname))
 
         mock_req_inst = unittest.mock.MagicMock()
         mock_req_inst.httprequest.method = "GET"
@@ -232,6 +234,7 @@ class TestDistributedCacheIntegration(HamsIntegrationCase):
         mock_req_inst.session.uid = self.env.user.id
         mock_req_inst.session.db = self.env.cr.dbname
         mock_req_inst.env.cr = self.env.cr
+        mock_req_inst.env.cr.dbname = self.env.cr.dbname
         mock_req_inst.env.context = self.env.context
 
         # We must patch the HTTP request object to trick Odoo's internal _authenticate router,
@@ -240,3 +243,12 @@ class TestDistributedCacheIntegration(HamsIntegrationCase):
              patch("odoo.addons.distributed_redis_cache.models.ir_http.request", mock_req_inst), \
              patch("odoo.service.security.check_session", return_value=True):
             self.env["ir.http"]._authenticate(mock_endpoint)
+
+
+@tagged("post_install", "-at_install")
+class TestDistributedCacheTour(HttpCase):
+    def test_distributed_cache_admin_tour(self):
+        """Verify the cache management UI via tour."""
+        if os.environ.get("IN_JULES_VM"):
+            self.skipTest("Skipping UI tour in Jules VM environment due to UI instability.")
+        self.start_tour("/odoo", "distributed_cache_admin_tour", login="admin")

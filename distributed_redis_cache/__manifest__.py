@@ -21,6 +21,11 @@ Distributed Redis Cache
         "security/ir.model.access.csv",
         "views/distributed_cache_views.xml",
     ],
+    "assets": {
+        "web.assets_tests": [
+            "distributed_redis_cache/static/src/js/distributed_cache_tour.js",
+        ],
+    },
     "knowledge_docs": [
         {
             "name": "Distributed Redis Cache",
