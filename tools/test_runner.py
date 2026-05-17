@@ -10,7 +10,6 @@ import copy
 import glob
 import logging
 import os
-import psycopg2
 import re
 import signal
 import socket
@@ -21,8 +20,6 @@ import time
 import concurrent.futures
 import queue
 import threading
-from psycopg2.errors import UndefinedTable
-from psycopg2 import sql
 
 # Import the centralized infrastructure blueprint
 import infrastructure
@@ -1580,16 +1577,25 @@ def main():
                 daemon_env["DISABLE_AI_EXPLANATIONS"] = "1"
                 daemon_env["GEMINI_API_KEY"] = "dummy_key_to_bypass"
 
-                c_kwargs = {"dbname": args.db, "user": db_user, "port": db_port}
+                pg_env = os.environ.copy()
+                if db_user:
+                    pg_env["PGUSER"] = db_user
                 if db_password:
-                    c_kwargs["password"] = db_password
+                    pg_env["PGPASSWORD"] = db_password
                 if db_host:
-                    c_kwargs["host"] = db_host
+                    pg_env["PGHOST"] = db_host
+                if db_port:
+                    pg_env["PGPORT"] = str(db_port)
 
                 try:
-                    conn = psycopg2.connect(**c_kwargs)
+                    subprocess.run(
+                        ["psql", "-c", "SELECT 1;", args.db],
+                        env=pg_env,
+                        check=True,
+                        capture_output=True
+                    )
                 except Exception as e:
-                    print("[!] Failed to connect to PostgreSQL: {}".format(e))
+                    print("[!] Failed to connect to PostgreSQL via psql: {}".format(e))
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
 
@@ -1658,28 +1664,29 @@ def main():
                     "ham_au_register",
                 ]
 
-                def get_table_counts(db_conn):
+                def get_table_counts():
                     counts = {}
-                    cr = db_conn.cursor()
-                    try:
-                        for table in TABLES_TO_TRACK:
-                            try:
-                                q_str = "SELECT count(*) FROM {}"
-                                q = sql.SQL(q_str).format(sql.Identifier(table))
-                                cr.execute(q)
-                                counts[table] = cr.fetchone()[0]
-                            except UndefinedTable:
-                                db_conn.rollback()
+                    for table in TABLES_TO_TRACK:
+                        try:
+                            q_str = "SELECT count(*) FROM {};".format(table)
+                            res = subprocess.run(
+                                ["psql", "-t", "-A", "-c", q_str, args.db],
+                                env=pg_env,
+                                capture_output=True,
+                                text=True
+                            )
+                            if res.returncode == 0 and res.stdout.strip().isdigit():
+                                counts[table] = int(res.stdout.strip())
+                            elif "does not exist" in res.stderr:
                                 counts[table] = "Not Installed"
-                            except Exception:
-                                db_conn.rollback()
+                            else:
                                 counts[table] = "Error"
-                    finally:
-                        cr.close()
+                        except Exception:
+                            counts[table] = "Error"
                     return counts
 
                 print("\n[*] Fetching Initial Database Counts...")
-                initial_counts = get_table_counts(conn)
+                initial_counts = get_table_counts()
 
                 print("\n[*] Bootstrapping Real Bearer Tokens via Odoo Shell...")
                 bootstrap_script = os.path.join(
@@ -1781,8 +1788,7 @@ def main():
                         final_rc = 1
 
                 print("\n[*] Fetching Final Database Counts...")
-                final_counts = get_table_counts(conn)
-                conn.close()
+                final_counts = get_table_counts()
 
                 print("\nFinal Record Counts Comparison:")
                 for t in TABLES_TO_TRACK:

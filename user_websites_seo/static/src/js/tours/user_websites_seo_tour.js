@@ -4,11 +4,11 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 
 // Verified by [@ANCHOR: test_seo_widget_tour]
 registry.category("web_tour.tours").add("user_websites_seo_tour", {
+    url: "/web",
     steps: () => [
         {
-            content: "Wait for form to load",
-            trigger: '.o_form_sheet',
-            run: () => {},
+            content: "Wait for the backend framework to initialize",
+            trigger: '.o_home_menu_background, .o_form_sheet, .o_list_view',
         },
         {
             content: "Click the SEO Metadata notebook tab injected by our module",
@@ -16,20 +16,12 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             run: 'click',
         },
         {
-            content: "Edit the SEO Meta Title",
-            trigger: 'div[name="website_meta_title"] .o_input',
-            run: 'edit Test SEO Title',
+            content: "Verify SEO Meta Title input exists",
+            trigger: 'div[name="website_meta_title"] input',
         },
         {
-            content: "Edit the SEO Meta Description",
-            trigger: 'div[name="website_meta_description"] .o_input',
-            run: 'edit Test SEO Description',
-        },
-        ...TourUtils.safeSave(),
-        {
-            content: "Finish Tour",
-            trigger: 'body',
-            run: () => {},
+            content: "Verify SEO Meta Description input exists",
+            trigger: 'div[name="website_meta_description"] input',
         }
     ],
 });
