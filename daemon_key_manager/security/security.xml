@@ -12,6 +12,13 @@
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
             <field name="comment">Users with this privilege can manage API keys for background daemons.</field>
         </record>
+
+        <record id="group_daemon_key_usage" model="res.groups">
+            <field name="name">Daemon Key Usage</field>
+            <field name="privilege_id" ref="res_groups_privilege_daemon_key_manager"/>
+            <field name="api_key_duration">90</field>
+            <field name="comment">This group allows service accounts to have API keys with a 90-day duration.</field>
+        </record>
     </data>
     <data>
         <record id="user_daemon_key_manager_service" model="res.users">

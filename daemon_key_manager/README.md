@@ -6,7 +6,7 @@ An Open Source, generalized utility that manages Odoo API Keys for external back
 It removes the need to store static passwords in repository code or manually rotate tokens by generating native Odoo API keys and exporting them to highly restricted local `.env` files.
 
 ## Integration API
-Other modules can request a bearer token and configure a file drop path during their installation or upon configuration:
+Other modules can request a bearer token and configure a file drop path during their installation or upon configuration. This registration is idempotent and handles the initial key generation synchronously.
 
 ```python
 def setup_daemon_credentials(env):
@@ -18,8 +18,11 @@ def setup_daemon_credentials(env):
 ```
 
 ## Security Design
-* **OS-Level Sandboxing:** The `.env` files are written with strict `chmod 0600` permissions.
+* **Zero-Sudo Compliance:** The module strictly avoids the use of `.sudo()` for privilege escalation, instead utilizing Odoo 19's native API key duration controls and micro-privilege service accounts.
+* **OS-Level Sandboxing:** The `.env` files are written with strict `chmod 0600` permissions. Directories are created with `0700`.
+* **Path Validation:** All file paths are strictly validated to prevent directory traversal and ensure they reside within the mandated `/var/lib/odoo/daemon_keys/` prefix.
 * **Auto-Rotation:** An `ir.cron` job automatically revokes and regenerates the keys every 60 days, pushing the new credentials to the designated `.env` files automatically. Daemons utilizing these files simply need to reload their environment variables upon detecting an `AccessError` via JSON-RPC.
+* **Micro-Privilege Architecture:** All operations are performed under the context of the `user_daemon_key_manager_service` account, which possesses only the minimal necessary permissions.
 
 ---
 
