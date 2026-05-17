@@ -2,7 +2,7 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verified by [@ANCHOR: test_db_bloat_tour]
-    url: "/web",
+    url: "/web?debug=1",
     steps: () => [
         {
             trigger: '.o_navbar_apps_menu button',
@@ -25,15 +25,11 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             run: () => {},
         },
         {
-            trigger: 'tr.o_data_row .o_list_record_selector input',
+            trigger: '.o_list_table .o_data_row .o_list_record_selector input',
             run: 'click',
         },
         {
-            trigger: '*:contains("Action"), .o_cp_action_menus button',
-            run: 'click',
-        },
-        {
-            trigger: '*:contains("Vacuum Analyze")',
+            trigger: '*:contains("Vacuum Analyze Selected")',
             run: 'click',
         },
     ],
