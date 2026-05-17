@@ -3,49 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <title>Daemon Key Manager - User Guide</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #e67e22; margin-top: 30px; }
+        h3 { color: #2980b9; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .note { background: #fff3cd; border-left: 5px solid #ffeeba; padding: 15px; margin: 20px 0; }
+        .warning { background: #f8d7da; border-left: 5px solid #f5c6cb; padding: 15px; margin: 20px 0; }
+        ul, ol { margin-bottom: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
 </head>
 <body>
     <h1>Daemon Key Manager</h1>
-    <p>The Daemon Key Manager is a security utility that handles the "handshake" between Odoo and external background programs (daemons). It eliminates the need to manually create and share passwords by automatically generating secure API keys and placing them in protected files that only the daemon can read.</p>
+    <p>The Daemon Key Manager is a security tool that manages the connection between Odoo and external background programs (often called "daemons"). Its job is to make these connections secure and easy to manage without you ever needing to handle passwords manually.</p>
 
-    <h2>How it Works</h2>
-    <p>When a module requires an external daemon to talk to Odoo, it registers that daemon with this manager. The manager then:</p>
-    <ol>
-        <li>Generates a secure, long-term API key.</li>
-        <li>Writes that key, along with the correct username, into a <code>.env</code> file.</li>
-        <li>Locks the file so that only the Odoo system user can access it.</li>
-        <li>Automatically replaces the key every 60 days to keep the system secure.</li>
-    </ol>
-
-    <h2>For Site Owners: Managing Daemons</h2>
-    <p>As a site owner or administrator, you can view and manage these connections from the <b>Settings > Security > Daemon Key Registry</b> menu.</p>
-
-    <h3>Viewing Registered Daemons</h3>
-    <p>The registry list shows you every external program currently authorized to connect to your Odoo instance. You can see:</p>
+    <h2>What does this module do?</h2>
+    <p>When an external program needs to talk to Odoo—for example, a service that monitors your server or a tool that automatically clears your website's cache—it needs a way to prove who it is. Usually, people use passwords for this, but passwords can be lost, stolen, or forgotten.</p>
+    <p>This module replaces passwords with <b>API Keys</b>. An API Key is a long, random string of characters that acts like a single-purpose password. The Daemon Key Manager:</p>
     <ul>
-        <li><b>Daemon Name:</b> A friendly name for the external program (e.g., "Cloudflare Purge Worker").</li>
-        <li><b>Service Account:</b> The specific Odoo user identity the daemon uses. These are restricted "Service Accounts" that cannot log in through the web interface.</li>
-        <li><b>Environment File Path:</b> Where the secret key is stored on your server's disk.</li>
-        <li><b>Last Rotated:</b> The last time the key was updated.</li>
+        <li><b>Generates</b> these keys automatically.</li>
+        <li><b>Stores</b> them in a secure file on the server's disk where only the authorized program can find them.</li>
+        <li><b>Rotates</b> them every 60 days, meaning it throws away the old key and makes a new one, so even if a key were somehow discovered, it would soon become useless.</li>
     </ul>
 
-    <h3>Manual Key Refresh</h3>
-    <p>While the system updates keys automatically every 60 days, you might occasionally need to refresh them manually (for example, if you suspect a key might have been compromised). To do this:</p>
-    <ol>
-        <li>Open any daemon record from the registry.</li>
-        <li>Click the <b>"Force Provision All"</b> button in the top header.</li>
-        <li>This will immediately invalidate all existing daemon keys and generate fresh ones for all registered daemons.</li>
-    </ol>
+    <h2>How to use the Registry</h2>
+    <p>You can find the management screen by going to <b>Settings > Security > Daemon Key Registry</b>.</p>
 
-    <h2>Security Rules</h2>
-    <p>To keep your server safe, the Daemon Key Manager enforces strict rules:</p>
+    <h3>1. Viewing Connections</h3>
+    <p>The main list shows you all the external programs currently registered to talk to your Odoo system. For each one, you can see:</p>
     <ul>
-        <li><b>Protected Location:</b> All key files must be stored inside <code>/var/lib/odoo/daemon_keys/</code>. The system will block attempts to write keys to sensitive system folders like <code>/etc/</code> or <code>/root/</code>.</li>
-        <li><b>No Admin Access:</b> Keys can only be created for "Service Accounts." You cannot create an API key for a regular administrator or the system superuser using this tool.</li>
-        <li><b>Automatic Cleanup:</b> When a key is rotated, the old key is immediately deleted from Odoo, ensuring it can never be used again.</li>
+        <li><b>Daemon Name:</b> The name of the external program.</li>
+        <li><b>Service Account:</b> The "identity" the program uses inside Odoo. These are special accounts that cannot log in through a web browser, making them extra secure.</li>
+        <li><b>Environment File Path:</b> The exact location on the server where the key is stored.</li>
+        <li><b>Last Rotated:</b> When the key was last updated.</li>
     </ul>
 
-    <h2>What to do if a Daemon stops working?</h2>
-    <p>If an external program suddenly loses its connection to Odoo, it usually means its key has expired or been rotated. Well-designed daemons will automatically detect this, re-read their <code>.env</code> file, and continue working. If a daemon remains disconnected, ensure that it has permission to read the file in <code>/var/lib/odoo/daemon_keys/</code> and that the Odoo "Cron" jobs are running correctly.</p>
+    <h3>2. Refreshing Keys Manually</h3>
+    <p>Normally, the system handles everything. However, if you suspect a key might have been compromised, or if you've just moved your system to a new server, you can refresh the keys immediately.</p>
+    <ol>
+        <li>Open the <b>Daemon Key Registry</b>.</li>
+        <li>Open any individual record.</li>
+        <li>Click the <b>"Force Provision All"</b> button at the top of the screen.</li>
+        <li>The system will immediately generate fresh keys for <i>every</i> daemon in the list and update their files on the disk.</li>
+    </ol>
+
+    <div class="note">
+        <b>Tip:</b> If an external program stops working after a refresh, it should be designed to "self-heal" by re-reading its configuration file. If it doesn't, you may need to restart that specific external program.
+    </div>
+
+    <h2>Security Rules and Safety</h2>
+    <p>To protect your data, this module follows strict safety rules:</p>
+    <ul>
+        <li><b>Strict Locations:</b> All key files MUST be stored inside the <code>/var/lib/odoo/daemon_keys/</code> folder. The system will block any attempt to save keys in sensitive areas like your system's configuration folders.</li>
+        <li><b>No "Superuser" Access:</b> You cannot create a key for the main "System" or "Admin" accounts. Keys are only for restricted "Service Accounts."</li>
+        <li><b>File Protection:</b> When a key file is created, the system sets the permissions so that only the Odoo process can read or write it.</li>
+    </ul>
+
+    <h2>Common Troubleshooting</h2>
+    <h3>A daemon cannot connect</h3>
+    <p>If a daemon says "Access Denied," check the following:</p>
+    <ol>
+        <li>Ensure the <b>Environment File Path</b> in Odoo matches where the daemon is looking for its file.</li>
+        <li>Ensure the Odoo server has permission to write to that location.</li>
+        <li>Ensure the <b>Service Account</b> assigned to the daemon is still "Active" in the Users menu.</li>
+    </ol>
+
+    <h3>The "Last Rotated" date is very old</h3>
+    <p>If the keys haven't been updated in more than 60 days, it might mean the Odoo "Scheduled Actions" (Crons) are not running. Ask your system administrator to check if the Odoo Cron runner is active.</p>
+
+    <div class="warning">
+        <b>Important:</b> Never share the contents of the <code>.env</code> files with anyone. They contain the "master keys" for your background services.
+    </div>
 </body>
 </html>

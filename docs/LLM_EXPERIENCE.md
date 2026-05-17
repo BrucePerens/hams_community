@@ -128,3 +128,14 @@ session.
 * **The Trap:** Attempting to bypass tracking by using `with_context(mail_notrack=True)` or wiping the context entirely via `self.env(context={})` during a `.create()` operation on a model that *does not* implement chatter (i.e., does not inherit from `mail.thread`).
 * **The Failure:** Odoo 19's internal ORM `_create` loop relies heavily on specific context propagation for internal record mapping during batch creation. Stripping or manipulating the context on pure, non-chatter models corrupts this mapping, resulting in a fatal `KeyError: 'record'` deep within `odoo/orm/models.py`. AI agents frequently attempt this when trying to implement stealth/sterile queues.
 * **The Solution:** NEVER use `mail_notrack=True` or empty contexts (`context={}`) when creating records for pure data models (e.g., `cloudflare.purge.queue`). If an existing BDD test forces this pattern to verify zero-query caching, the test must be skipped, or the underlying model must be re-architected to formally support chatter if tracking manipulation is strictly required by the business logic.
+
+## 35. Odoo 19 Group Membership & Privilege Architecture
+**The Trap:**
+1. Using the legacy `groups_id` field name instead of the normalized `group_ids` in Odoo 18+.
+2. Attempting to use `category_id` in `res.groups` definitions, which is banned by the repo's linter in favor of the custom `privilege_id`.
+3. Attempting to mutate `group_ids` directly in Python, which is blocked by the AST linter to enforce static privilege definitions.
+
+**The Solution:**
+1. Always use `group_ids` for the Many2many relationship on `res.users`.
+2. Use `privilege_id` instead of `category_id` in XML records for `res.groups`.
+3. Define all necessary group memberships statically in XML/CSV. If a dynamic override is absolutely required for a restricted operation (like API key duration), use `.sudo()` with a `# burn-ignore-sudo` comment in an approved administrative module.

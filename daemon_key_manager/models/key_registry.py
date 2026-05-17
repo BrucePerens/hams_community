@@ -156,9 +156,11 @@ class DaemonKeyRegistry(models.Model):
         # [@ANCHOR: generate_new_key_logic]
         expiration_date = fields.Datetime.now() + datetime.timedelta(days=90)
 
-        # Odoo enforces a strict 1-day expiration limit on API keys created by non-administrators.
+        # Odoo enforces a strict expiration limit on API keys based on the user's groups.
         # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
         # a 90-day key for the service account without exposing the entire ERP.
+        # This bypasses the group-based duration checks while ensuring the key is still
+        # correctly owned by the service account.
         # Tested by [@ANCHOR: test_key_ownership]
         # Verified by [@ANCHOR: test_key_ownership]
         raw_key = (
@@ -226,10 +228,14 @@ class DaemonKeyRegistry(models.Model):
                 reg._rotate_key_and_write_file()
                 if not tools.config.get('test_enable'):
                     self.env.cr.commit()
-            except Exception as e: # audit-ignore-catch-all
+            except (OSError, UserError) as e:
                 if not tools.config.get('test_enable'):
                     self.env.cr.rollback()
-                _logger.error("Failed to rotate key for daemon %s: %s", reg.name, e)
+                _logger.error("Managed failure rotating key for daemon %s: %s", reg.name, e)
+            except Exception: # audit-ignore-catch-all
+                if not tools.config.get('test_enable'):
+                    self.env.cr.rollback()
+                _logger.exception("Unexpected AI Laziness: Uncaught exception during key rotation for %s", reg.name)
 
         if len(registries) == 10:
             self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo

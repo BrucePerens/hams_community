@@ -5,7 +5,7 @@
     "category": "Security",
     "author": "Bruce Perens K6BP",
     "license": "AGPL-3",
-    "depends": ["base", "zero_sudo"],
+    "depends": ["base", "zero_sudo", "hams_test"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -13,7 +13,7 @@
         "views/registry_views.xml",
     ],
     "assets": {
-        "web.assets_backend": [
+        "web.assets_tests": [
             "daemon_key_manager/static/src/js/tours/daemon_key_manager_tour.js",
         ],
     },
