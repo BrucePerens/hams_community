@@ -10,7 +10,7 @@ class BackupLatestSnapshotView(models.Model):
     config_id = fields.Many2one("backup.config", readonly=True)
     snapshot_id = fields.Char(readonly=True)
     start_time = fields.Datetime(readonly=True)
-    size_bytes = fields.Integer(readonly=True)
+    size_bytes = fields.Float(readonly=True)
     status = fields.Char(readonly=True)
 
     def init(self):

@@ -9,11 +9,11 @@ Implements a centralized "single pane of glass" GUI in Odoo to orchestrate and m
 # Technical Documentation
 
 ## Architecture
-* **Self-Healing Dependencies:** Uses `shutil.which` to detect tools. If `kopia` is missing from the system path, it automatically fetches and extracts the pre-compiled Linux binary into the `var/lib/odoo/ext_bin` local data directory to ensure uninterrupted operation.
+* **Self-Healing Dependencies:** Uses `shutil.which` to detect tools. If `kopia` is missing from the system path, it automatically fetches and extracts the pre-compiled Linux binary into the `var/lib/odoo/ext_bin` local data directory via `binary_downloader` to ensure uninterrupted operation.
 Implements a Hybrid Architecture for unified backup management.
-* **Kopia:** Used for file/system state. Parsed via `kopia snapshot list --json`. State is synchronized via `_sync_kopia` `[@ANCHOR: backup_sync_kopia]`. Retention policies are applied natively via `[@ANCHOR: backup_apply_policies]`.
-* **pgBackRest:** Used for PostgreSQL WAL archiving. Parsed via `pgbackrest info --output=json`. State is synchronized via `_sync_pgbackrest` `[@ANCHOR: backup_sync_pgbackrest]`.
-* **Orchestration:** Capable of pushing execution commands (`kopia snapshot create`, `pgbackrest backup`) directly to the underlying daemons via `subprocess` from the UI `[@ANCHOR: backup_trigger_execution]`. Can generate automated restore drill commands `[@ANCHOR: backup_restore_command]`.
+* **Kopia:** Used for file/system state. Parsed via `kopia snapshot list --json`. State is synchronized via `action_sync_snapshots` `[@ANCHOR: backup_sync_kopia]`. Retention policies are applied natively via `action_apply_policies` `[@ANCHOR: backup_apply_policies]`.
+* **pgBackRest:** Used for PostgreSQL WAL archiving. Parsed via `pgbackrest info --output=json`. State is synchronized via `action_sync_snapshots` `[@ANCHOR: backup_sync_pgbackrest]`.
+* **Orchestration:** Capable of pushing execution commands (`kopia snapshot create`, `pgbackrest backup`) directly to the underlying daemons via RabbitMQ offloading `[@ANCHOR: backup_trigger_execution]`. Can generate automated restore drill commands `[@ANCHOR: backup_restore_command]`.
 
 ## Security & Operations
 * **Service Account:** Utilizes `user_backup_service_internal` for background synchronization.
