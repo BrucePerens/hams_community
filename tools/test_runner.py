@@ -1065,12 +1065,17 @@ def main():
                 print("[*] Installing Python dependencies from requirements.txt...")
                 req_file = os.path.join(base_dir, "requirements.txt")
                 if os.path.exists(req_file):
-                    _run_sudo_cmd(f"pip3 install --break-system-packages -r {req_file} || true")
+                    _run_sudo_cmd(f"pip3 install --break-system-packages --ignore-installed -r {req_file}")
                 else:
                     print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
-                # Failsafe for missing packages on Jules VM system Python
-                _run_sudo_cmd("pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 || true")
+                print("[*] Configuring local PostgreSQL for test paths...")
+                print("[*] Installing Python dependencies from requirements.txt...")
+                req_file = os.path.join(base_dir, "requirements.txt")
+                if os.path.exists(req_file):
+                    _run_sudo_cmd(f"pip3 install --break-system-packages --ignore-installed -r {req_file}")
+                else:
+                    print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"

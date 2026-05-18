@@ -45,26 +45,28 @@
 
 <h3 class="mt-3">The "Non-Destructive Mandate"</h3>
 <p>We respect your work. If you have already created a custom page at one of these URLs before installing this module, we will <strong>not</strong> overwrite it. Instead, the module will automatically "unpublish" its own boilerplate version to ensure your custom content remains the one your visitors see. [@ANCHOR: test_compliance_non_destructive_mandate]</p>
+<p>If you want to go back to using our boilerplate after having unpublished it (or having it automatically unpublished), simply delete your custom page or unpublish it, and then re-publish the "Global Compliance" version of the page in the <b>Site -> Pages</b> menu. The module's background processes will also automatically re-publish its boilerplate if no custom version is detected for that specific website.</p>
 <p>Additionally, because these pages are created as "noupdate" records, any edits you make using the website builder will be preserved even when you update the <code>compliance</code> module in the future.</p>
 
 <hr class="mt-4 mb-4"/>
 
 <h2 class="mt-4">5. Web Accessibility (WCAG 2.1 AA)</h2>
 <p>The Web Content Accessibility Guidelines (WCAG) ensure that web content is accessible to people with disabilities. Many jurisdictions now legally require WCAG 2.1 AA compliance.</p>
+<p>Our platform is designed to facilitate compliance, but the responsibility for accessible content remains with the site owner. Key features include:</p>
 <ul>
-    <li><strong>Semantic HTML:</strong> The platform mandates proper tag hierarchy (e.g., using <code>&lt;button&gt;</code> instead of styled <code>&lt;div&gt;</code> elements) for screen readers.</li>
-    <li><strong>Keyboard Navigability:</strong> All interactive elements must be fully navigable via the <code>Tab</code> key with visible focus states.</li>
-    <li><strong>ARIA Labels:</strong> Icon-only buttons (like the moderation flag) are equipped with <code>aria-label</code> attributes to describe their function to assistive technologies.</li>
+    <li><strong>Semantic HTML:</strong> The legal page templates use proper tag hierarchy (e.g., <code>&lt;h1&gt;</code>, <code>&lt;h2&gt;</code>, <code>&lt;p&gt;</code>) to ensure screen readers can navigate the content logically.</li>
+    <li><strong>Keyboard Navigability:</strong> All standard interactive elements are navigable via the <code>Tab</code> key with visible focus states.</li>
+    <li><strong>ARIA Labels:</strong> Where necessary, elements are equipped with <code>aria-label</code> attributes to describe their function to assistive technologies.</li>
 </ul>
 
 <hr class="mt-4 mb-4"/>
 
 <h2 class="mt-4">6. Platform Moderation (Digital Services Act / DSA)</h2>
-<p>Regulations governing user-generated content, such as the EU's Digital Services Act (DSA), require platforms to have transparent, accessible, and fair moderation processes.</p>
+<p>Regulations governing user-generated content, such as the EU's Digital Services Act (DSA), require platforms to have transparent, accessible, and fair moderation processes. While the <code>compliance</code> module doesn't handle moderation itself, our platform architecture supports these requirements through other integrated modules:</p>
 <ul>
-    <li><strong>Notice and Action Mechanism:</strong> The platform features a persistent "Report Violation" button on user-generated content, allowing guests and users to report abuse.</li>
+    <li><strong>Notice and Action Mechanism:</strong> Integrated modules provide a "Report Violation" button on user-generated content, allowing guests and users to report abuse.</li>
     <li><strong>Reporter Shielding:</strong> To prevent retaliation, the identity of the complainant is strictly shielded from the content owner.</li>
-    <li><strong>Fair Appeals:</strong> The automated Three-Strike suspension system is paired with a built-in appeals process, ensuring users can contest moderation decisions.</li>
+    <li><strong>Fair Appeals:</strong> The automated Three-Strike suspension system implemented across the platform ensures users can contest moderation decisions fairly.</li>
 </ul>
 
 <hr class="mt-4 mb-4"/>
