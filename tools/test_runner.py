@@ -1074,7 +1074,7 @@ def main():
                 _run_sudo_cmd(f"mkdir -p {pg_data_dir} {pg_socket_dir}")
                 _run_sudo_cmd(f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}")
                 _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
-                _run_sudo_cmd(f"chmod 777 {pg_socket_dir}")
+                _run_sudo_cmd(f"chmod 2775 {pg_socket_dir}")
 
                 # Check if already initialized to avoid initdb error
                 res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
@@ -1101,7 +1101,7 @@ def main():
                     subprocess.run(["sudo", "systemctl", "stop", "postgresql"])
                     subprocess.run(["sudo", "mkdir", "-p", pg_socket_dir])
                     subprocess.run(["sudo", "chown", "-R", "postgres:postgres", pg_socket_dir])
-                    subprocess.run(["sudo", "chmod", "777", pg_socket_dir])
+                    subprocess.run(["sudo", "chmod", "2775", pg_socket_dir])
                     subprocess.run(["sudo", "chmod", "700", pg_data_dir])
                     subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"])
