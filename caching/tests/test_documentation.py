@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 
+
 @tagged("post_install", "-at_install")
 class TestDocumentation(TransactionCase):
 
@@ -14,9 +15,16 @@ class TestDocumentation(TransactionCase):
             article_model = "manual.article"
 
         if not article_model:
-            self.skipTest("Neither knowledge.article nor manual.article model available")
+            self.skipTest(
+                "Neither knowledge.article nor manual.article model available"
+            )
 
-        article = self.env[article_model].search([("name", "=", "Caching Module Documentation")], limit=1)
-        self.assertTrue(article, f"Caching Module Documentation should be created in {article_model}.")
+        article = self.env[article_model].search(
+            [("name", "=", "Caching Module Documentation")], limit=1
+        )
+        self.assertTrue(
+            article,
+            f"Caching Module Documentation should be created in {article_model}.",
+        )
         self.assertIn("Caching Module", article.body)
         self.assertEqual(article.icon, "⚡")

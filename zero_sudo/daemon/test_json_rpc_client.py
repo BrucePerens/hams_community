@@ -6,6 +6,7 @@ import shutil
 
 from json_rpc_client import SecureJSONRPCClient
 
+
 class TestSecureJSONRPCClient(unittest.TestCase):
 
     def setUp(self):
@@ -81,6 +82,7 @@ class TestSecureJSONRPCClient(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             SecureJSONRPCClient(self.env_path, self.base_url)
+
 
 if __name__ == "__main__":
     unittest.main()

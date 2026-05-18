@@ -6,6 +6,7 @@ from odoo.addons.user_websites.hooks import post_init_hook
 
 _logger = logging.getLogger(__name__)
 
+
 @odoo.tests.common.tagged("post_install", "-at_install")
 class TestDocumentation(odoo.tests.common.HttpCase):
 
@@ -116,7 +117,7 @@ class TestDocumentation(odoo.tests.common.HttpCase):
             "The redirect to the login page should resolve successfully.",
         )
         self.assertIn(
-            b"/web/login", # burn-ignore-route
+            b"/web/login", # burn-ignore-route  # fmt: skip
             response.url.encode(),
             "Unauthenticated guest users should be redirected to the login screen.",
         )
@@ -135,6 +136,6 @@ class TestDocumentation(odoo.tests.common.HttpCase):
         try:
             response = self.url_open("/user-websites/documentation")
             self.assertEqual(response.status_code, 200)
-        except Exception as e:  # audit-ignore-catch-all
+        except Exception as e:  # audit-ignore-catch-all  # fmt: skip
             _logger.error("Route failed unexpectedly when API is absent: %s", e)
             self.fail(f"Route failed unexpectedly when API is absent: {e}")

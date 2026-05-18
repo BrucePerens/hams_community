@@ -219,11 +219,11 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
                 content,
                 "CRITICAL SSTI VULNERABILITY: Malicious QWeb evaluated successfully and leaked database records!",
             )
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.warning("An error occurred: %s", e)
             # If the rendering engine crashes entirely due to the illegal syntax (e.g. QWebException),
             # that is also considered a successful defense against extraction.
-            _logger.info('QWeb rendering exception caught as expected.')
+            _logger.info("QWeb rendering exception caught as expected.")
 
     def test_05_blog_post_cross_tenant_mutation(self):
         """
@@ -326,4 +326,4 @@ class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
             Exception,
             msg="RPC call MUST fail proxy ownership validation and raise an exception.",
         ):
-            self.make_jsonrpc_request("/web/dataset/call_kw/blog.post/create", payload) # burn-ignore-route
+            self.make_jsonrpc_request("/web/dataset/call_kw/blog.post/create", payload) # burn-ignore-route  # fmt: skip

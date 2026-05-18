@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import HttpCase, tagged
 
+
 @tagged("post_install", "-at_install")
 class TestUITours(HttpCase):
     def test_pager_duty_incident_tour(self):

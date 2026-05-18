@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from odoo.tests import HttpCase, tagged
 
-@tagged('-at_install', 'post_install')
+
+@tagged("-at_install", "post_install")
 class TestNoisyTableUI(HttpCase):
     def test_01_tour(self):
         # trigger: .o_list_button_add
@@ -10,4 +11,8 @@ class TestNoisyTableUI(HttpCase):
         # Verified by [@ANCHOR: test_noisy_table_tour]
 
         # Bypass fragile root menu navigation by jumping directly to the action endpoint
-        self.start_tour("/odoo?action=hams_test.action_noisy_table", 'test_real_transaction_tour', login="admin")
+        self.start_tour(
+            "/odoo?action=hams_test.action_noisy_table",
+            "test_real_transaction_tour",
+            login="admin",
+        )

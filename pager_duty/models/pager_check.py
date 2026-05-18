@@ -15,6 +15,7 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
 
 _logger = logging.getLogger(__name__)
 
+
 class PagerCheck(models.Model):
     _name = "pager.check"
     _description = "Graphical Pager Duty Check"
@@ -198,9 +199,7 @@ class PagerCheck(models.Model):
         return check.id if check else False
 
     def write(self, vals):
-        res = super(
-            PagerCheck, self.with_context(mail_notrack=True)
-        ).write(vals)
+        res = super(PagerCheck, self.with_context(mail_notrack=True)).write(vals)
         invalidate_model_cache(self.env, self._name)
         payload = json.dumps({"model": self._name})
         self.env.cr.execute(
@@ -214,9 +213,7 @@ class PagerCheck(models.Model):
         self.env.cr.execute(
             "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
         )
-        return super(
-            PagerCheck, self.with_context(mail_notrack=True)
-        ).unlink()
+        return super(PagerCheck, self.with_context(mail_notrack=True)).unlink()
 
     @api.model
     def _valid_field_parameter(self, field, name):
@@ -230,8 +227,12 @@ class PagerCheck(models.Model):
         except (ValueError, FileNotFoundError, PermissionError) as e:
             _logger.warning("Executable provisioning failed for %s: %s", cmd_name, e)
             return {"status": "error", "message": str(e)}
-        except Exception as e: # audit-ignore-catch-all
-            _logger.error("Unexpected error during executable provisioning for %s: %s", cmd_name, e)
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
+            _logger.error(
+                "Unexpected error during executable provisioning for %s: %s",
+                cmd_name,
+                e,
+            )
             return {"status": "error", "message": _("Internal server error.")}
 
     @api.model
@@ -532,7 +533,7 @@ class PagerCheck(models.Model):
                             "comment": f"Autodiscovered disk space monitor for {p.mountpoint}",
                         }
                     )
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.warning("An error occurred getting disk partitions: %s", e)
 
         # 3. Common Services
@@ -608,7 +609,7 @@ class PagerCheck(models.Model):
                         "comment": "Autodiscovered Docker daemon monitor",
                     }
                 )
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.warning("An error occurred interacting with systemd: %s", e)
 
         # 4. Odoo Web Server

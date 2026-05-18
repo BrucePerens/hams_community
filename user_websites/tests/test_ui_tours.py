@@ -53,7 +53,9 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
         # Tests [@ANCHOR: test_tour_moderation_appeal]
         # Tests [@ANCHOR: UX_SUBMIT_APPEAL]
         self.user_test.is_suspended_from_websites = True
-        self.start_tour("/my/home", "moderation_appeal_tour", login=self.user_test.login)
+        self.start_tour(
+            "/my/home", "moderation_appeal_tour", login=self.user_test.login
+        )
 
     def test_05_create_site_tour(self):
         # Tests [@ANCHOR: test_tour_create_site]
@@ -107,7 +109,11 @@ class TestUserWebsitesUITours(odoo.tests.HttpCase):
 
     def test_08_frontend_misc_tour(self):
         # Tests [@ANCHOR: test_tour_frontend_misc]
-        self.start_tour("/user-websites/documentation", "frontend_misc_tour", login=self.user_test.login)
+        self.start_tour(
+            "/user-websites/documentation",
+            "frontend_misc_tour",
+            login=self.user_test.login,
+        )
 
     def test_09_backend_views_tour(self):
         # Tests [@ANCHOR: test_tour_backend_views]

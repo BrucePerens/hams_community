@@ -55,17 +55,17 @@ class TestComplianceHooks(TransactionCase):
         # Tests [@ANCHOR: story_automatic_legal_pages]
 
         # Create a "custom" page at /privacy
-        custom_view = self.env["ir.ui.view"].create({
-            "name": "Custom Privacy",
-            "type": "qweb",
-            "arch": "<div>Custom Content</div>",
-            "key": "custom.privacy_view"
-        })
-        custom_page = self.env["website.page"].create({
-            "url": "/privacy",
-            "view_id": custom_view.id,
-            "is_published": True
-        })
+        custom_view = self.env["ir.ui.view"].create(
+            {
+                "name": "Custom Privacy",
+                "type": "qweb",
+                "arch": "<div>Custom Content</div>",
+                "key": "custom.privacy_view",
+            }
+        )
+        custom_page = self.env["website.page"].create(
+            {"url": "/privacy", "view_id": custom_view.id, "is_published": True}
+        )
 
         # Ensure our boilerplate page exists and is published (default state)
         boilerplate_page = self.env.ref("compliance.page_privacy_policy")
@@ -77,12 +77,11 @@ class TestComplianceHooks(TransactionCase):
         # Check that the boilerplate is now unpublished
         self.assertFalse(
             boilerplate_page.is_published,
-            "Boilerplate page should be unpublished when a custom page exists at the same URL."
+            "Boilerplate page should be unpublished when a custom page exists at the same URL.",
         )
         # Check that the custom page is still published
         self.assertTrue(
-            custom_page.is_published,
-            "Custom page should remain published."
+            custom_page.is_published, "Custom page should remain published."
         )
 
         # Cleanup

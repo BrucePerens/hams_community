@@ -8,6 +8,7 @@ from odoo.modules.module import get_module_path
 
 _logger = logging.getLogger(__name__)
 
+
 class ServiceWorkerController(http.Controller):
 
     _fs_cache = None
@@ -23,9 +24,9 @@ class ServiceWorkerController(http.Controller):
         """
         # Gating for Jules VM stability during Odoo initialization.
         # This prevents the scanner from firing during the heavy --init phase of tests.
-        is_test = tools.config.get('test_enable')
-        is_boot = tools.config.get('init') or tools.config.get('stop_after_init')
-        if is_test and is_boot and not request.env.context.get('force_fs_scan'):
+        is_test = tools.config.get("test_enable")
+        is_boot = tools.config.get("init") or tools.config.get("stop_after_init")
+        if is_test and is_boot and not request.env.context.get("force_fs_scan"):
             return (0.0, [])
 
         if type(self)._fs_cache:
@@ -41,15 +42,16 @@ class ServiceWorkerController(http.Controller):
             # STRICT ZERO-SUDO COMPLIANCE: Escalate to micro-privilege service account
             # to retrieve the list of installed modules without using .sudo().
             # Tested by [@ANCHOR: test_caching_zero_sudo_scan]
-            utils = request.env['zero_sudo.security.utils']
-            env_svc = utils._get_service_env('caching.user_caching_service')
+            utils = request.env["zero_sudo.security.utils"]
+            env_svc = utils._get_service_env("caching.user_caching_service")
 
             # Use ORM to get installed modules.
             # This ensures consistent Zero-Sudo architecture. Bound the search to satisfy AST linters.
-            installed_modules = env_svc['ir.module.module'].search(
-                [('state', '=', 'installed')],
-                limit=10000
-            ).mapped('name')
+            installed_modules = (
+                env_svc["ir.module.module"]
+                .search([("state", "=", "installed")], limit=10000)
+                .mapped("name")
+            )
 
             def _scan_recursive(path):
                 nonlocal max_mtime
@@ -90,7 +92,12 @@ class ServiceWorkerController(http.Controller):
         max_mtime, file_sizes = self._get_fs_stats()
 
         #
-        quota_mb = int(request.env['zero_sudo.security.utils']._get_system_param('caching.safe_quota_mb', '35') or 35) # Tested by [@ANCHOR: test_caching_sudo_params]
+        quota_mb = int(
+            request.env["zero_sudo.security.utils"]._get_system_param(
+                "caching.safe_quota_mb", "35"
+            )
+            or 35
+        )  # Tested by [@ANCHOR: test_caching_sudo_params]
 
         # Reserve 15MB for Odoo's compiled /web/assets/ bundles and overhead
         SAFE_QUOTA = quota_mb * 1024 * 1024
@@ -134,9 +141,16 @@ class ServiceWorkerController(http.Controller):
 
         latest_mtime, max_file_size = self._get_global_static_info()
 
-        invalidation_version = request.env['zero_sudo.security.utils']._get_system_param('caching.invalidation_version', '1') # Tested by [@ANCHOR: test_caching_sudo_params]
+        invalidation_version = request.env[
+            "zero_sudo.security.utils"
+        ]._get_system_param(
+            "caching.invalidation_version", "1"
+        )  # Tested by [@ANCHOR: test_caching_sudo_params]
 
-        content = content.replace("__CACHE_NAME__", f"odoo-assets-cache-{latest_mtime}-v{invalidation_version}")
+        content = content.replace(
+            "__CACHE_NAME__",
+            f"odoo-assets-cache-{latest_mtime}-v{invalidation_version}",
+        )
         content = content.replace("__MAX_FILE_SIZE_BYTES__", max_file_size)
 
         headers = [

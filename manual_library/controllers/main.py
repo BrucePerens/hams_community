@@ -58,7 +58,9 @@ class ManualLibraryController(http.Controller):
                 raise werkzeug.exceptions.NotFound()
 
         # 2. Fetch root articles for the sidebar navigation
-        workspace_articles, shared_articles, private_articles = self._get_sidebar_articles()
+        workspace_articles, shared_articles, private_articles = (
+            self._get_sidebar_articles()
+        )
 
         # 3. If no specific article is requested, default to the first available root article
         if not article:
@@ -110,7 +112,9 @@ class ManualLibraryController(http.Controller):
         articles = request.env["knowledge.article"].search(domain, limit=1000)
 
         # Fetch and group root articles for the sidebar navigation
-        workspace_articles, shared_articles, private_articles = self._get_sidebar_articles()
+        workspace_articles, shared_articles, private_articles = (
+            self._get_sidebar_articles()
+        )
 
         return request.render(
             "manual_library.search_results_template",

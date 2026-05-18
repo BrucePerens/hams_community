@@ -4,7 +4,7 @@ import { registry } from "@web/core/registry";
 import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("binary_install_tour", {
-    url: "/odoo",
+    url: "/odoo?action=binary_downloader.action_binary_downloader_manifest",
     steps: () => [
         {
             trigger: '.o_navbar_apps_menu button',

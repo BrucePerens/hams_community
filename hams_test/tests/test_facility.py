@@ -63,16 +63,21 @@ class TestRealTransactionFacility(RealTransactionCase):
         leaks = []
         noisy_tables = set()
         try:
-            noisy_tables_records = self.env['test_real_transaction.noisy_table'].search([])
+            noisy_tables_records = self.env["test_real_transaction.noisy_table"].search(
+                []
+            )
             noisy_tables = {record.name for record in noisy_tables_records}
         except KeyError:
-            pass # Model may not be registered in all environments
+            pass  # Model may not be registered in all environments
 
         self.cr.execute("SELECT count(1) FROM ir_module_category")
         final_count = self.cr.fetchone()[0]
         initial_count = self._initial_counts.get("ir_module_category", 0)
 
-        if "ir_module_category" not in noisy_tables and final_count - initial_count != 0:
+        if (
+            "ir_module_category" not in noisy_tables
+            and final_count - initial_count != 0
+        ):
             leaks.append("ir_module_category")
 
         # Clean up the raw SQL insertion so the REAL tearDown doesn't crash the test suite
@@ -121,13 +126,18 @@ class TestRealTransactionFacility(RealTransactionCase):
 
         # Run the leak detector logic
         leaks = []
-        noisy_tables = set(["ir_module_category"]) # Mock the set directly instead of relying on the transient model
+        noisy_tables = set(
+            ["ir_module_category"]
+        )  # Mock the set directly instead of relying on the transient model
 
         self.cr.execute("SELECT count(1) FROM ir_module_category")
         final_count = self.cr.fetchone()[0]
         initial_count = self._initial_counts.get("ir_module_category", 0)
 
-        if "ir_module_category" not in noisy_tables and final_count - initial_count != 0:
+        if (
+            "ir_module_category" not in noisy_tables
+            and final_count - initial_count != 0
+        ):
             leaks.append("ir_module_category")
 
         # Clean up the leak AND the noisy table record to keep the DB clean for tearDown
@@ -169,7 +179,9 @@ class TestRealTransactionFacility(RealTransactionCase):
         """
         try:
             # 1. Ensure we have an initial count
-            self.cr.execute("INSERT INTO hams_test_noisy_table (name) VALUES ('temp_table_leak_test')")
+            self.cr.execute(
+                "INSERT INTO hams_test_noisy_table (name) VALUES ('temp_table_leak_test')"
+            )
             self.env.cr.commit()
 
             # We need to re-run snapshotting logic or simulate it
@@ -177,7 +189,9 @@ class TestRealTransactionFacility(RealTransactionCase):
             initial_count = self.cr.fetchone()[0]
 
             # 2. Add another record via SQL (bypass ORM)
-            self.cr.execute("INSERT INTO hams_test_noisy_table (name) VALUES ('temp_table_leak_test_2')")
+            self.cr.execute(
+                "INSERT INTO hams_test_noisy_table (name) VALUES ('temp_table_leak_test_2')"
+            )
             self.env.cr.commit()
 
             # 3. Verify leak detector would catch it
@@ -187,12 +201,14 @@ class TestRealTransactionFacility(RealTransactionCase):
             self.assertEqual(final_count - initial_count, 1)
         finally:
             # Cleanup
-            self.cr.execute("DELETE FROM hams_test_noisy_table WHERE name IN ('temp_table_leak_test', 'temp_table_leak_test_2')")
+            self.cr.execute(
+                "DELETE FROM hams_test_noisy_table WHERE name IN ('temp_table_leak_test', 'temp_table_leak_test_2')"
+            )
             self.env.cr.commit()
 
     @classmethod
     def tearDownClass(cls):
         # Stop integration daemon if active
-        if hasattr(cls, '_integration_daemon_process'):
+        if hasattr(cls, "_integration_daemon_process"):
             cls._integration_daemon_process.terminate()
         super().tearDownClass()

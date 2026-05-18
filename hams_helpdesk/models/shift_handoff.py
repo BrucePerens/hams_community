@@ -3,14 +3,21 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
 class ShiftHandoffWizard(models.TransientModel):
     _name = "hams_helpdesk.shift_handoff"
     _description = "Shift Handoff Wizard"
 
     ticket_id = fields.Many2one("hams_helpdesk.ticket", string="Ticket", required=True)
     old_user_id = fields.Many2one("res.users", string="Current Assignee", readonly=True)
-    new_user_id = fields.Many2one("res.users", string="Next Shift Assignee", required=True)
-    handoff_notes = fields.Text(string="Handoff Notes", required=True, help="Detailed context for the incoming operator.")
+    new_user_id = fields.Many2one(
+        "res.users", string="Next Shift Assignee", required=True
+    )
+    handoff_notes = fields.Text(
+        string="Handoff Notes",
+        required=True,
+        help="Detailed context for the incoming operator.",
+    )
 
     def action_confirm_handoff(self):
         # [@ANCHOR: helpdesk_handoff_execution]
@@ -35,6 +42,6 @@ class ShiftHandoffWizard(models.TransientModel):
         ticket.message_post(
             body=body,
             subject=_("Shift Handoff: %s") % ticket.name,
-            partner_ids=[self.new_user_id.partner_id.id]
+            partner_ids=[self.new_user_id.partner_id.id],
         )
         return {"type": "ir.actions.act_window_close"}

@@ -10,6 +10,7 @@ from odoo import fields, _
 
 _logger = logging.getLogger(__name__)
 
+
 @tagged("standard", "post_install", "-at_install")
 class TestPagerIncidentStandard(TransactionCase):
     def setUp(self):
@@ -25,8 +26,9 @@ class TestPagerIncidentStandard(TransactionCase):
             "description": "Test breach",
         }
 
-        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, \
-             patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()):
+        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, patch(
+            "odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()
+        ):
             mock_client = MagicMock()
             mock_redis.Redis.return_value = mock_client
             mock_client.get.return_value = b"1"
@@ -47,8 +49,9 @@ class TestPagerIncidentStandard(TransactionCase):
             "description": "Zero sudo test",
         }
 
-        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, \
-             patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()):
+        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, patch(
+            "odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()
+        ):
             mock_client = MagicMock()
             mock_redis.Redis.return_value = mock_client
             mock_client.get.return_value = None
@@ -144,7 +147,11 @@ class TestPagerIncidentIntegration(HamsIntegrationCase):
     def setUpClass(cls):
         super().setUpClass()
         base_dir = os.path.join(os.path.dirname(__file__), "..", "daemon")
-        daemons = ["pager_smart_spooler.py", "pager_log_analyzer.py", "pager_synthetic_spooler.py"]
+        daemons = [
+            "pager_smart_spooler.py",
+            "pager_log_analyzer.py",
+            "pager_synthetic_spooler.py",
+        ]
         for d in daemons:
             daemon_path = os.path.abspath(os.path.join(base_dir, d))
             if os.path.exists(daemon_path):
@@ -169,7 +176,7 @@ class TestPagerIncidentIntegration(HamsIntegrationCase):
                 db=0,
             )
             r.delete("pager_rate_limit:test_daemon")
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.warning("An error occurred communicating with Redis: %s", e)
 
         # First request passes the cache check
@@ -194,13 +201,11 @@ class TestPagerIncidentIntegration(HamsIntegrationCase):
                 db=0,
             )
             r.delete("pager_rate_limit:test_daemon_2")
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.warning("An error occurred communicating with Redis: %s", e)
 
         incident_id = self.incident_model.report_incident(vals)
-        self.assertTrue(
-            incident_id, "Incident failed to create in integration mode."
-        )
+        self.assertTrue(incident_id, "Incident failed to create in integration mode.")
 
         incident = self.incident_model.browse(incident_id)
         self.assertEqual(

@@ -75,7 +75,7 @@ def get_odoo_client(logger, config):
                     db = dbs[0]
         except (urllib.error.URLError, json.JSONDecodeError, socket.timeout) as e:
             logger.warning("Failed to query Odoo databases (Network/JSON): %s", e)
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.error("Unexpected error querying Odoo databases: %s", e)
     if not db:
         db = "odoo"
@@ -84,7 +84,7 @@ def get_odoo_client(logger, config):
     password = os.environ.get("ODOO_PASSWORD") or ""
     try:
         return OdooClient(url, db, user, password)
-    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
         logger.error(f"Failed to connect to Odoo: {e}")
         return None
 
@@ -151,7 +151,7 @@ def verify_and_install_dependencies(client, checks):
                     else:
                         err_msg = res.get("message") if res else "Unknown error"
                         logger.warning(f"Provision failed: {err_msg}")
-                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                     logger.warning(f"RPC unavailable, waiting... ({e})")
                 time.sleep(10)
 
@@ -169,8 +169,10 @@ def verify_and_install_dependencies(client, checks):
                         "description": msg,
                     },
                 )
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
-                logger.warning("Failed to report missing dependency incident via RPC: %s", e)
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
+                logger.warning(
+                    "Failed to report missing dependency incident via RPC: %s", e
+                )
             sys.exit(1)
 
 
@@ -189,7 +191,7 @@ def is_in_maintenance(check):
             now = datetime.datetime.utcnow()
             if start <= now <= end:
                 return True
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Maintenance time parse error: %s", e)
     return False
 
@@ -224,7 +226,7 @@ def fallback_notify(source, msg, severity):
                 server.login(smtp_user, smtp_pass)
             server.send_message(em)
         logger.info("Successfully dispatched SMTP fallback email.")
-    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
         logger.critical(f"SMTP Fallback completely failed: {e}")
 
 
@@ -243,14 +245,14 @@ def report(client, source, msg, severity="high"):
             )
             with urllib.request.urlopen(req, timeout=5):
                 pass
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Webhook dispatch failed: %s", e)
 
     try:
         payload = {"source": source, "description": msg, "severity": severity}
         client.execute("pager.incident", "report_incident", vals=payload)
         logger.error(f"Incident reported [{source}]: {msg}")
-    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
         logger.error(
             f"Failed to report incident via RPC: {e}. Triggering SMTP fallback."
         )
@@ -261,7 +263,7 @@ def auto_resolve(client, source):
     try:
         client.execute("pager.incident", "auto_resolve_incidents", source=source)
         logger.info(f"[{source}] System stable. Auto-resolved open incidents.")
-    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
         logger.error(f"Failed to auto-resolve incidents for {source}: {e}")
 
 
@@ -276,7 +278,7 @@ def execute_check(check, client=None):
                 pct = psutil.disk_usage(part).percent
                 if pct > check.get("critical", 90):
                     return False, f"Disk space at {pct}% on {part}"
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning("Disk check failed: %s", e)
                 return False, f"Disk check failed for {part}: {e}"
         elif target == "memory":
@@ -304,7 +306,7 @@ def execute_check(check, client=None):
             if crit > 0 and load1 > crit:
                 return False, f"Load average {load1:.2f} exceeds {crit}"
             return True, f"OK (Load: {load1:.2f})"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Load check failed: %s", e)
             return False, f"Load check failed: {e}"
 
@@ -320,7 +322,7 @@ def execute_check(check, client=None):
                 else:
                     ftp.login()
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("FTP check failed: %s", e)
             return False, f"FTP check failed: {e}"
 
@@ -337,7 +339,7 @@ def execute_check(check, client=None):
                 imap.login(user, password)
             imap.logout()
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("IMAP check failed: %s", e)
             return False, f"IMAP check failed: {e}"
 
@@ -355,7 +357,7 @@ def execute_check(check, client=None):
                 pop.pass_(password)
             pop.quit()
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("POP3 check failed: %s", e)
             return False, f"POP3 check failed: {e}"
 
@@ -380,7 +382,7 @@ def execute_check(check, client=None):
             finally:
                 conn.close()
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("MySQL check failed: %s", e)
             return False, f"MySQL/MariaDB check failed: {e}"
 
@@ -393,7 +395,7 @@ def execute_check(check, client=None):
             conn = ldap3.Connection(server, auto_bind=True, receive_timeout=5)
             conn.unbind()
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("LDAP check failed: %s", e)
             return False, f"LDAP check failed: {e}"
 
@@ -403,7 +405,7 @@ def execute_check(check, client=None):
             client_ntp = ntplib.NTPClient()
             response = client_ntp.request(target, version=3, timeout=5)
             return True, f"OK (Offset: {response.offset:.4f}s)"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("NTP check failed: %s", e)
             return False, f"NTP check failed: {e}"
 
@@ -429,7 +431,7 @@ def execute_check(check, client=None):
             if expect and expect not in res.stdout:
                 return False, "SNMP payload mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("SNMP check failed: %s", e)
             return False, f"SNMP check error: {e}"
 
@@ -445,7 +447,7 @@ def execute_check(check, client=None):
                     return True, "OK"
             socket.gethostbyname(domain)
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("DNS check failed: %s", e)
             return False, f"DNS resolution failed: {e}"
 
@@ -461,7 +463,7 @@ def execute_check(check, client=None):
                         return False, "HTTP body mismatch"
                     return True, "OK"
                 return False, f"HTTP status {response.status}"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("HTTP check failed: %s", e)
             return False, f"HTTP check failed: {e}"
 
@@ -482,7 +484,7 @@ def execute_check(check, client=None):
             if expect and expect not in res.stdout:
                 return False, "HTTP/3 body mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("HTTP3 check failed: %s", e)
             return False, f"HTTP/3 check failed: {e}"
 
@@ -507,7 +509,7 @@ def execute_check(check, client=None):
                     if expect.encode("utf-8") not in response:
                         return False, "TCP payload mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("TCP check failed: %s", e)
             return False, f"TCP connection failed: {e}"
 
@@ -536,7 +538,7 @@ def execute_check(check, client=None):
                     if expect.encode("utf-8") not in response:
                         return False, "UDP payload mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("UDP check failed: %s", e)
             return False, f"UDP connection failed: {e}"
 
@@ -550,7 +552,7 @@ def execute_check(check, client=None):
             if r.ping():
                 return True, "OK"
             return False, "Redis PING returned False"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Redis check failed: %s", e)
             return False, f"Redis connection failed: {e}"
 
@@ -563,7 +565,7 @@ def execute_check(check, client=None):
                 if len(res) > 0:
                     return True, "OK"
                 return False, "RabbitMQ handshake mismatch"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("RabbitMQ check failed: %s", e)
             return False, f"RabbitMQ connection failed: {e}"
 
@@ -580,7 +582,7 @@ def execute_check(check, client=None):
             if expect and expect not in str(res):
                 return False, "XML-RPC output mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("XMLRPC check failed: %s", e)
             return False, f"XML-RPC check failed: {e}"
 
@@ -604,7 +606,7 @@ def execute_check(check, client=None):
                 if expect and expect not in body:
                     return False, "JSON-RPC output mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("JSONRPC check failed: %s", e)
             return False, f"JSON-RPC check failed: {e}"
 
@@ -642,7 +644,7 @@ def execute_check(check, client=None):
                             f"Anomaly Threshold Breached: {val} < {critical_min}",
                         )
                 return True, "OK"
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning("Postgres check failed: %s", e)
                 return False, f"PostgreSQL/Anomaly check failed: {e}"
             finally:
@@ -654,7 +656,7 @@ def execute_check(check, client=None):
             try:
                 with socket.create_connection((target, port), timeout=2):
                     return True, "OK"
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning("Postgres socket check failed: %s", e)
                 return False, f"PostgreSQL socket fallback failed: {e}"
 
@@ -673,7 +675,7 @@ def execute_check(check, client=None):
                     if days_left <= critical_days:
                         return False, f"SSL Cert expires in {days_left} days"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("SSL check failed: %s", e)
             return False, f"SSL check failed: {e}"
 
@@ -695,7 +697,7 @@ def execute_check(check, client=None):
                     f"Synthetic failure (Code {res.returncode}): {res.stderr[:100]}",
                 )
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Synthetic check failed: %s", e)
             return False, f"Synthetic execution error: {e}"
 
@@ -708,7 +710,7 @@ def execute_check(check, client=None):
             with urllib.request.urlopen(req, timeout=10) as response:
                 if response.status != 200:
                     return False, f"Let's Encrypt API unreachable ({response.status})"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Certbot check failed: %s", e)
             return False, f"Let's Encrypt API unreachable: {e}"
 
@@ -730,7 +732,7 @@ def execute_check(check, client=None):
                             )
                     except socket.gaierror:
                         return False, f"Domain {d} failed DNS resolution."
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning(f"Could not verify public IP for domain matching: {e}")
 
         exe, _ = ensure_executable("certbot")
@@ -754,7 +756,7 @@ def execute_check(check, client=None):
                     return False, err_msg
             except subprocess.TimeoutExpired:
                 return False, "Certbot dry-run timed out."
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning("Certbot renew check failed: %s", e)
                 return False, f"Certbot execution error: {e}"
 
@@ -793,7 +795,7 @@ def execute_check(check, client=None):
             if res.returncode != 0:
                 return False, f"pg_dump pre-flight failed: {res.stderr[:100]}"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("pg_dump check failed: %s", e)
             return False, f"pg_dump execution error: {e}"
 
@@ -808,7 +810,7 @@ def execute_check(check, client=None):
             if res.returncode != 0:
                 return False, f"Nginx config error: {res.stderr[:100]}"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Nginx check failed: %s", e)
             return False, f"Nginx execution error: {e}"
 
@@ -824,7 +826,7 @@ def execute_check(check, client=None):
             if res.returncode != 0:
                 return False, f"Logrotate dry-run failed: {res.stderr[:100]}"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("logrotate check failed: %s", e)
             return False, f"Logrotate execution error: {e}"
 
@@ -844,7 +846,7 @@ def execute_check(check, client=None):
             if res.returncode != 0:
                 return False, f"Cloudflared tunnel info failed: {res.stderr[:100]}"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("cloudflared check failed: %s", e)
             return False, f"Cloudflared execution error: {e}"
 
@@ -863,7 +865,7 @@ def execute_check(check, client=None):
                 if user and password:
                     server.login(user, password)
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("SMTP dryrun failed: %s", e)
             return False, f"SMTP dry-run failed: {e}"
 
@@ -886,7 +888,7 @@ def execute_check(check, client=None):
                     f"ICMP ping failed: {res.stderr.strip() or res.stdout.strip()[:100]}",
                 )
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("ICMP check failed: %s", e)
             return False, f"ICMP execution error: {e}"
 
@@ -908,7 +910,7 @@ def execute_check(check, client=None):
             if res.stdout.strip().lower() != "true":
                 return False, f"Docker container {target} is not running"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Docker check failed: %s", e)
             return False, f"Docker execution error: {e}"
 
@@ -923,7 +925,7 @@ def execute_check(check, client=None):
                 if b"STAT " not in res:
                     return False, "Memcached stats mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Memcached check failed: %s", e)
             return False, f"Memcached connection failed: {e}"
 
@@ -937,7 +939,7 @@ def execute_check(check, client=None):
                 if not res.startswith(b"SSH-"):
                     return False, "SSH protocol mismatch"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("SSH check failed: %s", e)
             return False, f"SSH connection failed: {e}"
 
@@ -955,7 +957,7 @@ def execute_check(check, client=None):
             if res:
                 return True, "OK"
             return False, "Heartbeat missing"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Heartbeat check failed: %s", e)
             return False, f"Heartbeat check failed: {e}"
 
@@ -995,7 +997,7 @@ def execute_check(check, client=None):
                 )
 
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("SMART check failed: %s", e)
             return False, f"SMART spool read error: {e}"
 
@@ -1027,7 +1029,7 @@ def execute_check(check, client=None):
                 err = str(res.get("error", "Unknown error"))
                 return False, f"Execution Failed: {err[:200]}"
             return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Synthetic script check failed: %s", e)
             return False, f"Synthetic spool read error: {e}"
 
@@ -1098,7 +1100,7 @@ def execute_check(check, client=None):
                         f"Systemd services not active: {', '.join(failed_svcs)}",
                     )
                 return True, "OK"
-        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
             logger.warning("Systemd check failed: %s", e)
             return False, f"Systemd execution error: {e}"
 
@@ -1132,7 +1134,7 @@ def polling_thread(client, check):
                 logger.info(f"[{name}] Triggering auto-remediation script: {remedy}")
                 try:
                     subprocess.Popen([remedy], shell=False)
-                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                     logger.error(f"Remediation failed: {e}")
     else:
         FAILING_CHECKS.discard(name)
@@ -1170,7 +1172,7 @@ def polling_thread(client, check):
                     )
                     try:
                         subprocess.Popen([remedy], shell=False)
-                    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                         logger.error(f"Remediation failed: {e}")
             clean_loops = 0
         else:
@@ -1241,7 +1243,7 @@ if __name__ == "__main__":
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
-    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
         msg = f"FATAL: Failed to parse {config_path} as valid JSON: {e}"
         logger.critical(msg)
         fallback_notify("Daemon Boot", msg, "critical")
@@ -1280,7 +1282,7 @@ if __name__ == "__main__":
                         payload["description"],
                         payload["severity"],
                     )
-            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all  # fmt: skip
                 logger.warning("Anomaly proxy loop error: %s", e)
                 time.sleep(1)
 

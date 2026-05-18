@@ -5,6 +5,7 @@ from odoo.tests.common import TransactionCase, tagged
 
 _logger = logging.getLogger(__name__)
 
+
 @tagged("post_install", "-at_install")
 class TestPurgeQueue(TransactionCase):
     def setUp(self):
@@ -28,11 +29,13 @@ class TestPurgeQueue(TransactionCase):
         QueueModel = self.env["cloudflare.purge.queue"]
         vals = []
         for i in range(310):
-            vals.append({
-                "target_item": f"https://example.com/page-{i}",
-                "purge_type": "url",
-                "website_id": self.website.id,
-            })
+            vals.append(
+                {
+                    "target_item": f"https://example.com/page-{i}",
+                    "purge_type": "url",
+                    "website_id": self.website.id,
+                }
+            )
         QueueModel.create(vals)
         self.assertEqual(QueueModel.search_count([]), 310)
 

@@ -65,9 +65,7 @@ class CloudflareIPBan(models.Model):
 
         if not token or not zone_id:
             # ADR-0001: Headless Mutation Context
-            self.env["cloudflare.ip.ban"].with_context(
-                mail_notrack=True
-            ).create(
+            self.env["cloudflare.ip.ban"].with_context(mail_notrack=True).create(
                 {
                     "ip_address": ip_address,
                     "mode": mode,
@@ -82,9 +80,7 @@ class CloudflareIPBan(models.Model):
 
         if success:
             # ADR-0001: Headless Mutation Context
-            self.env["cloudflare.ip.ban"].with_context(
-                mail_notrack=True
-            ).create(
+            self.env["cloudflare.ip.ban"].with_context(mail_notrack=True).create(
                 {
                     "ip_address": ip_address,
                     "mode": mode,
@@ -97,9 +93,7 @@ class CloudflareIPBan(models.Model):
             return True
         else:
             # ADR-0001: Headless Mutation Context
-            self.env["cloudflare.ip.ban"].with_context(
-                mail_notrack=True
-            ).create(
+            self.env["cloudflare.ip.ban"].with_context(mail_notrack=True).create(
                 {
                     "ip_address": ip_address,
                     "mode": mode,

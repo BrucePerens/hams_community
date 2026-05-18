@@ -44,13 +44,15 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
         """Executes the JS tour for the Manual Cache Purge Wizard."""
         # Seed credentials so the wizard doesn't crash
         website = self.env["website"].get_current_website()
-        website.write({
-            "cloudflare_api_token": "fake_token",
-            "cloudflare_zone_id": "fake_zone"
-        })
+        website.write(
+            {"cloudflare_api_token": "fake_token", "cloudflare_zone_id": "fake_zone"}
+        )
 
         self.authenticate(self.admin.login, self.admin.login)
-        with patch("odoo.addons.cloudflare.models.purge_wizard.purge_everything", return_value=True):
+        with patch(
+            "odoo.addons.cloudflare.models.purge_wizard.purge_everything",
+            return_value=True,
+        ):
             self.start_tour("/odoo", "cf_purge_wizard_tour", login=self.admin.login)
 
     def test_04_backend_views_rendering(self):

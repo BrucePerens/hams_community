@@ -283,7 +283,9 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
     # KeyError: 'record' within the ORM _create loop.
     # There is currently no safe way to execute this flow without side-effects in Odoo 19.
     def test_07_bdd_ormcache_query_counting_page_urls(self):
-        self.skipTest("Disabled due to Odoo 19 ORM restrictions with context annihilation on non-chatter models during purge queue creation.")
+        self.skipTest(
+            "Disabled due to Odoo 19 ORM restrictions with context annihilation on non-chatter models during purge queue creation."
+        )
         """
         BDD: Given ADR-0049 Cache Verification
         When resolving page URLs repeatedly
@@ -312,7 +314,9 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
                 self.assertNotIn("website_page", call[0][0])
 
         # 3. Trigger Invalidation (Verify the targeted NOTIFY logic doesn't crash)
-        with patch.object(self.env.cr, "execute", wraps=self.env.cr.execute) as mock_execute:
+        with patch.object(
+            self.env.cr, "execute", wraps=self.env.cr.execute
+        ) as mock_execute:
             page.write({"website_published": False})
 
             # The write method should have called _notify_cache_invalidation which executes pg_notify

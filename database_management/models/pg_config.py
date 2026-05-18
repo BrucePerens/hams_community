@@ -137,7 +137,7 @@ class PgHaWizard(models.TransientModel):
         return self.env["zero_sudo.security.utils"]._ensure_executable(
             cmd_name,
             svc_xml_id="database_management.user_database_management_service",
-            pkg_name=pkg_map.get(cmd_name, cmd_name)
+            pkg_name=pkg_map.get(cmd_name, cmd_name),
         )
 
     def _validate_inputs(self):
@@ -147,13 +147,17 @@ class PgHaWizard(models.TransientModel):
         if not self.secondary_ip or not ip_pattern.match(self.secondary_ip):
             raise UserError(_("Invalid Secondary Node IP format."))
         if not self.replication_pass or len(self.replication_pass) < 8:
-            raise UserError(_("Replication Password must be at least 8 characters long."))
+            raise UserError(
+                _("Replication Password must be at least 8 characters long.")
+            )
 
     def action_generate(self):
         # [@ANCHOR: pg_ha_wizard]
         # Tests [@ANCHOR: pg_ha_wizard]
         self._validate_inputs()
-        if not getattr(self.env.registry, 'in_test', False) and not self.env.context.get('test_mode'):
+        if not getattr(
+            self.env.registry, "in_test", False
+        ) and not self.env.context.get("test_mode"):
             self._get_executable("etcd")
             self._get_executable("patroni")
             self._get_executable("pgbouncer")

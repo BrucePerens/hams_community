@@ -2,6 +2,7 @@
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 from odoo import models
 
+
 class SEOMetadataMixin(models.AbstractModel):
     _name = "user.websites.seo.metadata.mixin"
     _description = "User Websites SEO Metadata Mixin"
@@ -12,7 +13,7 @@ class SEOMetadataMixin(models.AbstractModel):
             "website_meta_description",
             "website_meta_keywords",
             "website_meta_og_img",
-            "seo_name"
+            "seo_name",
         }
 
     def _check_seo_write_permission(self):

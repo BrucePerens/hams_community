@@ -4,6 +4,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
 @odoo.tests.common.tagged("post_install", "-at_install")
 class TestBlogPostOwnership(odoo.tests.common.HttpCase):
     def setUp(self):
@@ -121,7 +122,7 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
                 data={"csrf_token": odoo.http.Request.csrf_token(self)},
                 method="POST",
             )
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.info("Expected error on public blog creation: %s", e)
 
         public_created_post = self.env["blog.post"].search(

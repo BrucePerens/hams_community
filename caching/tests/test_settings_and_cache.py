@@ -4,6 +4,7 @@ from odoo.tests.common import HttpCase, tagged
 from lxml import etree
 from odoo.addons.caching.controllers.main import ServiceWorkerController
 
+
 @tagged("post_install", "-at_install")
 class TestSettingsAndCache(HttpCase):
 
@@ -16,7 +17,9 @@ class TestSettingsAndCache(HttpCase):
         updates the MAX_FILE_SIZE_BYTES in the /sw.js payload.
         """
         # Get baseline response
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "caching.user_caching_service"
+        )
 
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
         response_35 = self.url_open("/sw.js")
@@ -41,12 +44,14 @@ class TestSettingsAndCache(HttpCase):
         ServiceWorkerController._fs_cache = None
 
         mock_req = MagicMock()
-        mock_req.env = self.env['res.users'].env
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        mock_req.env = self.env["res.users"].env
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "caching.user_caching_service"
+        )
 
         # Case 1: No files
-        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [])):
-            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+        with patch.object(controller, "_get_fs_stats", return_value=(1000.0, [])):
+            with patch("odoo.addons.caching.controllers.main.request", mock_req):
                 # Set specific param for this sub-test
                 self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
                 mtime, max_size = controller._get_global_static_info()
@@ -54,21 +59,29 @@ class TestSettingsAndCache(HttpCase):
 
         # Case 2: Files fit within quota
         # Total size: 10MB + 5MB = 15MB. Quota: 35MB.
-        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [10*1024*1024, 5*1024*1024])):
-            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+        with patch.object(
+            controller,
+            "_get_fs_stats",
+            return_value=(1000.0, [10 * 1024 * 1024, 5 * 1024 * 1024]),
+        ):
+            with patch("odoo.addons.caching.controllers.main.request", mock_req):
                 self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
                 mtime, max_size = controller._get_global_static_info()
-                self.assertEqual(max_size, str(10*1024*1024 + 1024))
+                self.assertEqual(max_size, str(10 * 1024 * 1024 + 1024))
 
         # Case 3: Files exceed quota
         # Total size: 30MB + 10MB = 40MB. Quota: 35MB.
         # Should drop the 30MB file. Remaining: 10MB. 10MB <= 35MB.
         # max_size should be 30MB - 1.
-        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [30*1024*1024, 10*1024*1024])):
-            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+        with patch.object(
+            controller,
+            "_get_fs_stats",
+            return_value=(1000.0, [30 * 1024 * 1024, 10 * 1024 * 1024]),
+        ):
+            with patch("odoo.addons.caching.controllers.main.request", mock_req):
                 self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
                 mtime, max_size = controller._get_global_static_info()
-                self.assertEqual(max_size, str(30*1024*1024 - 1))
+                self.assertEqual(max_size, str(30 * 1024 * 1024 - 1))
 
     def test_02_force_invalidation(self):
         """
@@ -76,21 +89,23 @@ class TestSettingsAndCache(HttpCase):
         and that this change is reflected in the /sw.js CACHE_NAME.
         """
         # Ensure we have a starting state
-        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "caching.user_caching_service"
+        )
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.invalidation_version', '1') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
 
         response_1 = self.url_open("/sw.js")
         content_1 = response_1.text
-        self.assertIn('-v1', content_1)
+        self.assertIn("-v1", content_1)
 
         # Simulate button click
-        settings = self.env['res.config.settings'].create({})
+        settings = self.env["res.config.settings"].create({})
         settings.action_force_cache_invalidation()
 
         response_2 = self.url_open("/sw.js")
         content_2 = response_2.text
-        self.assertIn('-v2', content_2)
-        self.assertNotIn('-v1', content_2)
+        self.assertIn("-v2", content_2)
+        self.assertNotIn("-v1", content_2)
 
     def test_03_caching_sudo_params(self):
         """
@@ -110,9 +125,9 @@ class TestSettingsAndCache(HttpCase):
         ServiceWorkerController._fs_cache = None
 
         mock_req = MagicMock()
-        mock_req.env = self.env['res.users'].with_context(force_fs_scan=True).env
+        mock_req.env = self.env["res.users"].with_context(force_fs_scan=True).env
 
-        with patch('odoo.addons.caching.controllers.main.request', mock_req):
+        with patch("odoo.addons.caching.controllers.main.request", mock_req):
             mtime, sizes = controller._get_fs_stats()
             self.assertGreater(mtime, 0)
             self.assertIsInstance(sizes, list)

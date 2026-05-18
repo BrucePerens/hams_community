@@ -58,7 +58,7 @@ def _notify_gdpr_failure(env, user_id, error, error_details):
             note=f"The background GDPR erasure process failed. Exception: {error}<br/><pre>{error_details}</pre>",
         )
         env.cr.commit()
-    except Exception: # audit-ignore-catch-all
+    except Exception: # audit-ignore-catch-all  # fmt: skip
         _logger.critical(
             "Failed to notify admin of GDPR erasure failure for user %s", user_id
         )
@@ -76,9 +76,12 @@ def _async_gdpr_erasure(db_name, user_id):
                 "user_websites.user_user_websites_service_account"
             )
 
-            user = env["res.users"].with_user(svc_uid).with_context(
-                active_test=False, mail_notrack=True
-            ).browse(user_id)
+            user = (
+                env["res.users"]
+                .with_user(svc_uid)
+                .with_context(active_test=False, mail_notrack=True)
+                .browse(user_id)
+            )
             if user.exists():
                 user._execute_gdpr_erasure()
 
@@ -93,13 +96,21 @@ def _async_gdpr_erasure(db_name, user_id):
                     }
                 )
                 env.cr.commit()
-        except (odoo.exceptions.AccessError, odoo.exceptions.ValidationError, odoo.exceptions.UserError) as e:
+        except (
+            odoo.exceptions.AccessError,
+            odoo.exceptions.ValidationError,
+            odoo.exceptions.UserError,
+        ) as e:
             env.cr.rollback()
-            _logger.warning("GDPR Erasure business logic failure for user %s: %s", user_id, e)
+            _logger.warning(
+                "GDPR Erasure business logic failure for user %s: %s", user_id, e
+            )
             _notify_gdpr_failure(env, user_id, e, traceback.format_exc())
-        except Exception: # audit-ignore-catch-all
+        except Exception: # audit-ignore-catch-all  # fmt: skip
             env.cr.rollback()
-            _logger.exception("Fatal system error during GDPR Erasure for user %s", user_id)
+            _logger.exception(
+                "Fatal system error during GDPR Erasure for user %s", user_id
+            )
             _notify_gdpr_failure(env, user_id, "System Error", traceback.format_exc())
     finally:
         cr.close()
@@ -171,7 +182,7 @@ class UserWebsitesController(http.Controller):
 
     # --- 2. Abuse Reporting ---
     @http.route(
-        "/website/report_violation", # burn-ignore-route
+        "/website/report_violation", # burn-ignore-route  # fmt: skip
         type="http",
         auth="public",
         methods=["POST"],
@@ -288,7 +299,11 @@ class UserWebsitesController(http.Controller):
                 if hasattr(request, "website") and request.website
                 else False
             )
-            target_url = f"/{user.website_slug}/{page_path}" if page_path else f"/{user.website_slug}/home"
+            target_url = (
+                f"/{user.website_slug}/{page_path}"
+                if page_path
+                else f"/{user.website_slug}/home"
+            )
             page_id = request.env["website.page"]._get_page_id_by_url(
                 target_url, website_id
             )
@@ -329,7 +344,9 @@ class UserWebsitesController(http.Controller):
                 if request.env.user._is_public():
                     response.headers["Cache-Control"] = "public, max-age=60"
                     response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=604800"
-                    response.headers["Cache-Tag"] = f"site-{user.website_slug or slug_lower}"
+                    response.headers["Cache-Tag"] = (
+                        f"site-{user.website_slug or slug_lower}"
+                    )
                 return response
 
             return request.render(
@@ -350,7 +367,11 @@ class UserWebsitesController(http.Controller):
                 if hasattr(request, "website") and request.website
                 else False
             )
-            target_url = f"/{group.website_slug}/{page_path}" if page_path else f"/{group.website_slug}/home"
+            target_url = (
+                f"/{group.website_slug}/{page_path}"
+                if page_path
+                else f"/{group.website_slug}/home"
+            )
             page_id = request.env["website.page"]._get_page_id_by_url(
                 target_url, website_id
             )
@@ -789,8 +810,10 @@ class UserWebsitesController(http.Controller):
             svc_uid = request.env["zero_sudo.security.utils"]._get_service_uid(
                 "zero_sudo.odoo_facility_service_internal"
             )
-            article = request.env[article_model_name].with_user(svc_uid).search(
-                [("name", "=", "User Websites Documentation")], limit=1
+            article = (
+                request.env[article_model_name]
+                .with_user(svc_uid)
+                .search([("name", "=", "User Websites Documentation")], limit=1)
             )
             if article and hasattr(article, "website_url") and article.website_url:
                 return request.redirect(article.website_url)
@@ -799,7 +822,7 @@ class UserWebsitesController(http.Controller):
 
     # --- 8. Moderation Appeals ---
     @http.route(
-        "/website/submit_appeal", # burn-ignore-route
+        "/website/submit_appeal", # burn-ignore-route  # fmt: skip
         type="http",
         auth="user",
         methods=["POST"],
@@ -877,7 +900,7 @@ class UserWebsitesController(http.Controller):
         return request.redirect(f"{referrer}?subscribed=1")
 
     @http.route(
-        "/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<int:timestamp>/<string:token>", # burn-ignore-route
+        "/website/unsubscribe/<string:model_name>/<int:record_id>/<int:partner_id>/<int:timestamp>/<string:token>", # burn-ignore-route  # fmt: skip
         type="http",
         auth="public",
         website=True,
@@ -889,7 +912,6 @@ class UserWebsitesController(http.Controller):
         # Verified by [@ANCHOR: test_unsubscribe_secret]
         if model_name not in ["res.partner", "user.websites.group"]:
             raise werkzeug.exceptions.NotFound()
-
 
         current_time = int(time.time())
         # ADR-0025: Enforce a strict 30-day TTL on the stateless token
@@ -999,12 +1021,12 @@ class UserWebsitesController(http.Controller):
             yield "\n}"
 
         headers = {
-            "Content-Disposition": content_disposition(f"{user.website_slug}_data_export.json"),
+            "Content-Disposition": content_disposition(
+                f"{user.website_slug}_data_export.json"
+            ),
         }
         return werkzeug.wrappers.Response(
-            generate_json_stream(),
-            headers=headers,
-            content_type="application/json"
+            generate_json_stream(), headers=headers, content_type="application/json"
         )
 
     @http.route(
@@ -1043,4 +1065,4 @@ class UserWebsitesController(http.Controller):
             BACKGROUND_EXECUTOR.submit(_async_gdpr_erasure, db_name, user_id)
 
         request.session.logout()
-        return request.redirect("/web/login?erased=1") # burn-ignore-route
+        return request.redirect("/web/login?erased=1") # burn-ignore-route  # fmt: skip

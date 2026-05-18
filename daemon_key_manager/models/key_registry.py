@@ -171,11 +171,11 @@ class DaemonKeyRegistry(models.Model):
         # [@ANCHOR: revoke_old_keys_logic]
         # Tested by [@ANCHOR: test_key_ownership]
         # Note: res.users.apikeys access is granted via ir.model.access.csv for our group
-        old_keys = self.env["res.users.apikeys"].sudo().search( # burn-ignore-sudo
+        old_keys = self.env["res.users.apikeys"].sudo().search( # burn-ignore-sudo  # fmt: skip
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
         if old_keys:
-            old_keys.sudo().unlink() # burn-ignore-sudo
+            old_keys.sudo().unlink() # burn-ignore-sudo  # fmt: skip
 
         # Generate new key
         # Tested by [@ANCHOR: test_cron_rotate_all_keys]
@@ -190,7 +190,7 @@ class DaemonKeyRegistry(models.Model):
         # This bypasses the group-based duration checks while ensuring the key is still
         # correctly owned by the service account.
         raw_key = (
-            self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date) # burn-ignore-sudo
+            self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date) # burn-ignore-sudo  # fmt: skip
         )
 
         # Write to secure file
@@ -261,7 +261,7 @@ class DaemonKeyRegistry(models.Model):
                 _logger.error(
                     "Managed failure rotating key for daemon %s: %s", reg.name, e
                 )
-            except Exception as e:  # audit-ignore-catch-all
+            except Exception as e:  # audit-ignore-catch-all  # fmt: skip
                 if not tools.config.get("test_enable"):
                     self.env.cr.rollback()
                 _logger.exception(
@@ -270,4 +270,4 @@ class DaemonKeyRegistry(models.Model):
                 )
 
         if len(registries) == 10:
-            self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo
+            self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo  # fmt: skip

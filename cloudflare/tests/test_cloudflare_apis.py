@@ -69,7 +69,12 @@ class TestCloudflareAPIs(TransactionCase):
         # [@ANCHOR: test_cf_sync_tunnels]
         # Tests [@ANCHOR: cf_sync_tunnels]
         mock_list.return_value = [
-            {"id": "t1", "name": "Tunnel 1", "status": "healthy", "created_at": "2021-01-01T00:00:00Z"}
+            {
+                "id": "t1",
+                "name": "Tunnel 1",
+                "status": "healthy",
+                "created_at": "2021-01-01T00:00:00Z",
+            }
         ]
         website = self.env["website"].get_current_website()
         website.write(
@@ -90,11 +95,9 @@ class TestCloudflareAPIs(TransactionCase):
         website.write(
             {"cloudflare_account_id": "acc123", "cloudflare_api_token": "tok123"}
         )
-        tunnel = self.env["cloudflare.tunnel"].create({
-            "cf_tunnel_id": "t1",
-            "name": "Tunnel 1",
-            "website_id": website.id
-        })
+        tunnel = self.env["cloudflare.tunnel"].create(
+            {"cf_tunnel_id": "t1", "name": "Tunnel 1", "website_id": website.id}
+        )
         tunnel.action_delete_tunnel()
         self.assertFalse(tunnel.exists())
 

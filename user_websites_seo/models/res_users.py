@@ -3,6 +3,7 @@
 from odoo import models, _
 from odoo.exceptions import AccessError
 
+
 class ResUsersSEO(models.Model):
     _name = "res.users"
     _inherit = ["res.users", "website.seo.metadata", "user.websites.seo.metadata.mixin"]

@@ -43,7 +43,9 @@ class WebsitePage(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" in self.env and not odoo.tools.config.get("test_enable"):
+        if "cloudflare.purge.queue" in self.env and not odoo.tools.config.get(
+            "test_enable"
+        ):
             # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
             self.mapped("owner_user_id.website_slug")
             self.mapped("user_websites_group_id.website_slug")
@@ -67,11 +69,17 @@ class WebsitePage(models.Model):
                     )
                 except AccessError as e:
                     if "Service Account" in str(e):
-                        logging.getLogger(__name__).debug("Cloudflare purge skipped: %s", e)
+                        logging.getLogger(__name__).debug(
+                            "Cloudflare purge skipped: %s", e
+                        )
                     else:
-                        logging.getLogger(__name__).exception("Access error during Cloudflare purge")
-                except Exception: # audit-ignore-catch-all
-                    logging.getLogger(__name__).exception("Fatal error during Cloudflare purge")
+                        logging.getLogger(__name__).exception(
+                            "Access error during Cloudflare purge"
+                        )
+                except Exception: # audit-ignore-catch-all  # fmt: skip
+                    logging.getLogger(__name__).exception(
+                        "Fatal error during Cloudflare purge"
+                    )
 
     @api.model
     def _sanitize_user_arch(self, arch_content):
@@ -127,7 +135,7 @@ class WebsitePage(models.Model):
                 [etree.tostring(child, encoding="unicode") for child in root]
             )
             return sanitized_content, was_modified
-        except Exception: # audit-ignore-catch-all
+        except Exception: # audit-ignore-catch-all  # fmt: skip
             _logger.exception("Failed to sanitize user arch")
             return "<div>Sanitization Error</div>", True
 
@@ -523,7 +531,9 @@ class WebsitePage(models.Model):
                     increment = int(val)
                     updates.append((increment, page_id))
                 except ValueError:
-                    _logger.warning('Failed to parse Redis key or value for view count.')
+                    _logger.warning(
+                        "Failed to parse Redis key or value for view count."
+                    )
 
         if updates:
             try:
@@ -544,7 +554,7 @@ class WebsitePage(models.Model):
 
                 if not odoo.tools.config.get("test_enable"):
                     self.env.cr.commit()
-            except Exception: # audit-ignore-catch-all
+            except Exception: # audit-ignore-catch-all  # fmt: skip
                 if not odoo.tools.config.get("test_enable"):
                     self.env.cr.rollback()
                 _logger.exception("Error updating PostgreSQL view counts")
@@ -553,6 +563,8 @@ class WebsitePage(models.Model):
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_user_websites_service_account"
             )
-            cron = self.env.ref("user_websites.ir_cron_flush_view_counters", raise_if_not_found=False)
+            cron = self.env.ref(
+                "user_websites.ir_cron_flush_view_counters", raise_if_not_found=False
+            )
             if cron:
                 cron.with_user(svc_uid).with_context(mail_notrack=True)._trigger()

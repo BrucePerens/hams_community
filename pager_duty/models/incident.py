@@ -70,9 +70,7 @@ class PagerIncident(models.Model):
         elif vals.get("status") == "resolved":
             vals["time_resolved"] = now
 
-        res = super(
-            PagerIncident, self.with_context(mail_notrack=True)
-        ).write(vals)
+        res = super(PagerIncident, self.with_context(mail_notrack=True)).write(vals)
 
         # ADR 0078: O(1) Memory Mapping / Event Bus Optimization
         for rec in self:
@@ -152,11 +150,13 @@ class PagerIncident(models.Model):
         # Suppress native pager notifications if helpdesk integration is active
         # to prevent duplicate alerting (Helpdesk will handle the page).
         try:
-            use_helpdesk = self.env["zero_sudo.security.utils"]._get_system_param("pager_duty.helpdesk_model")
+            use_helpdesk = self.env["zero_sudo.security.utils"]._get_system_param(
+                "pager_duty.helpdesk_model"
+            )
         except (ValueError, KeyError, AttributeError) as e:
             _logger.warning("Helpdesk integration check failed (Config missing): %s", e)
             use_helpdesk = False
-        except Exception as e: # audit-ignore-catch-all
+        except Exception as e: # audit-ignore-catch-all  # fmt: skip
             _logger.error("Unexpected error during helpdesk integration check: %s", e)
             use_helpdesk = False
 
@@ -194,9 +194,9 @@ class PagerIncident(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        records = super(
-            PagerIncident, self.with_context(mail_notrack=True)
-        ).create(vals_list)
+        records = super(PagerIncident, self.with_context(mail_notrack=True)).create(
+            vals_list
+        )
         if records:
             self.env["bus.bus"]._sendone("pager_duty", "update_board", {})
         return records

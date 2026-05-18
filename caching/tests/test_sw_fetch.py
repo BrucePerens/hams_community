@@ -2,6 +2,7 @@
 import re
 from odoo.tests.common import HttpCase, tagged
 
+
 @tagged("post_install", "-at_install")
 class TestServiceWorkerFetch(HttpCase):
 
@@ -19,13 +20,13 @@ class TestServiceWorkerFetch(HttpCase):
         response = self.url_open("/sw.js")
         content = response.text
         # Extract regex from sw.js
-        match = re.search(r'const CACHE_URL_REGEX = (/.+/);', content)
+        match = re.search(r"const CACHE_URL_REGEX = (/.+/);", content)
         if match:
-            regex_str = match.group(1).strip('/')
+            regex_str = match.group(1).strip("/")
             # Use Python's re to test the same regex
             pattern = re.compile(regex_str)
-            self.assertTrue(pattern.search("/web/assets/debug/web.assets_backend.js")) # burn-ignore-route
-            self.assertTrue(pattern.search("/web/assets/12345/web.assets_frontend.css")) # burn-ignore-route
+            self.assertTrue(pattern.search("/web/assets/debug/web.assets_backend.js")) # burn-ignore-route  # fmt: skip
+            self.assertTrue(pattern.search("/web/assets/12345/web.assets_frontend.css")) # burn-ignore-route  # fmt: skip
             self.assertTrue(pattern.search("/my_module/static/src/js/script.js"))
-            self.assertFalse(pattern.search("/web/image/123")) # burn-ignore-route
+            self.assertFalse(pattern.search("/web/image/123")) # burn-ignore-route  # fmt: skip
             self.assertFalse(pattern.search("/api/v1/data"))
