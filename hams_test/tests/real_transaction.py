@@ -4,6 +4,7 @@ import logging
 import odoo
 from odoo.tests.common import HttpCase, get_db_name
 from odoo.modules.registry import Registry
+import psycopg2
 from psycopg2 import sql
 from odoo.tools import mute_logger, _
 
@@ -120,7 +121,7 @@ class RealTransactionCase(HttpCase):
                                 records.unlink()
                         # If we reach here, the unlink was successful
                         self._tracked_records[model_name] = set()
-                    except (psycopg2.IntegrityError, odoo.exceptions.AccessError, odoo.exceptions.UserError) as e:
+                    except (psycopg2.IntegrityError, odoo.exceptions.AccessError, odoo.exceptions.UserError, odoo.exceptions.RedirectWarning, odoo.exceptions.ValidationError) as e:
                         # These are expected if records are still referenced or have access restrictions
                         pending_deletes = True
                         if attempt == 2:
