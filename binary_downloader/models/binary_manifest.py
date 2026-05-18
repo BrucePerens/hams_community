@@ -13,6 +13,7 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
+
 class BinaryManifest(models.Model):
     _name = "binary.manifest"
     _description = "Binary Download Manifest"
@@ -37,11 +38,13 @@ class BinaryManifest(models.Model):
         for record in self:
             if record.url:
                 if not record.url.startswith(("http://", "https://")):
-                    raise ValidationError(_("Only http:// and https:// URLs are allowed for security reasons."))
+                    raise ValidationError(
+                        _(
+                            "Only http:// and https:// URLs are allowed for security reasons."
+                        )
+                    )
 
-    is_installed = fields.Boolean(
-        string="Installed", compute="_compute_is_installed"
-    )
+    is_installed = fields.Boolean(string="Installed", compute="_compute_is_installed")
 
     _name_uniq = models.Constraint("UNIQUE(name)", "The binary name must be unique!")
     _name_not_empty = models.Constraint(
@@ -58,11 +61,13 @@ class BinaryManifest(models.Model):
     def _check_name_no_slashes(self):
         for record in self:
             if "/" in record.name or "\\" in record.name:
-                raise ValidationError(_("The binary name cannot contain slashes or backslashes."))
+                raise ValidationError(
+                    _("The binary name cannot contain slashes or backslashes.")
+                )
             if record.name in (".", ".."):
                 raise ValidationError(_("The binary name cannot be '.' or '..'."))
 
-    @api.depends('name')
+    @api.depends("name")
     def _compute_is_installed(self):
         # [@ANCHOR: binary_compute_installed]
         # Verified by [@ANCHOR: test_binary_manifest_standard]
@@ -90,8 +95,13 @@ class BinaryManifest(models.Model):
         # Verified by [@ANCHOR: test_binary_manifest_standard]
         self.ensure_one()
         # Security: ensure only users with appropriate groups can trigger this
-        if not (self.env.user.has_group('binary_downloader.group_binary_downloader_manager') or self.env.is_admin()):
-            raise UserError(_("You do not have sufficient permissions to install binaries."))
+        if not (
+            self.env.user.has_group("binary_downloader.group_binary_downloader_manager")
+            or self.env.is_admin()
+        ):
+            raise UserError(
+                _("You do not have sufficient permissions to install binaries.")
+            )
 
         self.ensure_executable(self.name)
         return {
@@ -102,14 +112,19 @@ class BinaryManifest(models.Model):
                 "message": _("Successfully installed %s.") % self.name,
                 "sticky": False,
                 "type": "success",
-            }
+            },
         }
 
     @api.model
     def ensure_executable(self, cmd_name):
         # [@ANCHOR: binary_ensure_executable]
         # Verified by [@ANCHOR: test_binary_manifest_standard]
-        if not cmd_name or "/" in cmd_name or "\\" in cmd_name or cmd_name in (".", ".."):
+        if (
+            not cmd_name
+            or "/" in cmd_name
+            or "\\" in cmd_name
+            or cmd_name in (".", "..")
+        ):
             raise ValidationError(_("Invalid binary name: %s") % cmd_name)
 
         path = shutil.which(cmd_name)
@@ -150,7 +165,9 @@ class BinaryManifest(models.Model):
         target_bin = os.path.join(bin_dir, cmd_name)
 
         # Deterministic advisory lock to prevent concurrent downloads of the SAME binary
-        lock_id = self.env["zero_sudo.security.utils"]._get_deterministic_hash(f"binary_install_{cmd_name}")
+        lock_id = self.env["zero_sudo.security.utils"]._get_deterministic_hash(
+            f"binary_install_{cmd_name}"
+        )
         self.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_id,))
 
         if os.path.exists(target_bin):
@@ -170,28 +187,16 @@ class BinaryManifest(models.Model):
                 _logger.warning("Failed to check existing binary %s: %s", target_bin, e)
 
         try:
-            req = urllib.request.Request(
-                manifest_record.url,
-                headers={"User-Agent": "OdooBinaryDownloader/1.0"}
-            )
-
-            # Ethical Crawling: Use HEAD requests to evaluate ETags before downloading
-            req.method = "HEAD"
-            try:
-                with urllib.request.urlopen(req, timeout=15) as head_resp:
-                    _logger.info("HEAD successful, ETag: %s", head_resp.getheader("ETag"))
-            except urllib.error.URLError as e:
-                _logger.warning("HEAD request failed or unsupported: %s", e)
-
-            # Create a fresh request for the actual download to prevent 400 Bad Request issues
-            # from reusing the HEAD request object.
             get_req = urllib.request.Request(
-                manifest_record.url,
-                headers={"User-Agent": "OdooBinaryDownloader/1.0"}
+                manifest_record.url, headers={"User-Agent": "OdooBinaryDownloader/1.0"}
             )
             tmp_path = None
             try:
                 with urllib.request.urlopen(get_req, timeout=600) as response:
+                    etag = response.getheader("ETag")
+                    if etag:
+                        _logger.info("Download successful, ETag: %s", etag)
+
                     with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
                         tmp_path = tmp.name
                         shutil.copyfileobj(response, tmp)
@@ -221,21 +226,35 @@ class BinaryManifest(models.Model):
 
                                 # Deep link/symlink protection
                                 if member.islnk() or member.issym():
-                                    raise UserError(_("Security Alert: Links are not allowed in the archive."))
+                                    raise UserError(
+                                        _(
+                                            "Security Alert: Links are not allowed in the archive."
+                                        )
+                                    )
 
                                 # Provide `data` filter if available in python version to prevent slip
-                                if hasattr(tarfile, 'data_filter'):
-                                    tar.extract(member, path=bin_dir, filter='data')
+                                if hasattr(tarfile, "data_filter"):
+                                    tar.extract(member, path=bin_dir, filter="data")
                                 else:
                                     # Fallback for older python: manual path check
-                                    target_path = os.path.abspath(os.path.join(bin_dir, member.name))
-                                    if not target_path.startswith(os.path.abspath(bin_dir)):
-                                        raise UserError(_("Security Alert: Tar slip attempt detected."))
+                                    target_path = os.path.abspath(
+                                        os.path.join(bin_dir, member.name)
+                                    )
+                                    if not target_path.startswith(
+                                        os.path.abspath(bin_dir)
+                                    ):
+                                        raise UserError(
+                                            _(
+                                                "Security Alert: Tar slip attempt detected."
+                                            )
+                                        )
                                     tar.extract(member, path=bin_dir)
                                 found = True
                                 break
                         if not found:
-                            raise UserError(_("Member %s not found in archive.") % extract_target)
+                            raise UserError(
+                                _("Member %s not found in archive.") % extract_target
+                            )
                 else:
                     shutil.copy2(tmp_path, target_bin)
 

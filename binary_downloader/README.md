@@ -32,7 +32,17 @@ The primary interface for dependency resolution.
 #### `ensure_executable(cmd_name)`
 `[@ANCHOR: binary_ensure_executable]`
 
-Resolves and ensures a binary is available and executable. Returns the absolute path to the binary. It first checks the system `PATH`, then `hams_bin`. If not found, it attempts an automatic download and installation.
+Resolves and ensures a binary is available and executable. Returns the absolute path to the binary. It first checks the system `PATH`, then Odoo's private binary directory (`hams_bin`). If not found, it attempts an automatic download and installation.
+
+**Parameters:**
+- `cmd_name` (str): The name of the command to ensure (e.g., `"kopia"`).
+
+**Returns:**
+- Absolute path (str) to the verified executable.
+
+**Raises:**
+- `ValidationError`: If the command name is invalid (contains slashes, etc.).
+- `UserError`: If the manifest is missing, the platform is unsupported, or checksum/integrity checks fail.
 
 #### `_compute_is_installed()`
 `[@ANCHOR: binary_compute_installed]`
