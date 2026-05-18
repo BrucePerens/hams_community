@@ -280,6 +280,8 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         env["RMQ_USER"] = "guest"
     if "RMQ_PASS" not in env:
         env["RMQ_PASS"] = "guest"
+    if "ODOO_TEST_CHROME_ARGS" not in env:
+        env["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage"
 
     process = subprocess.Popen(
         cmd,
@@ -790,7 +792,7 @@ sleep 3
 
 export PYTHONDONTWRITEBYTECODE=1
 
-sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
+sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
 su -s /bin/bash rabbitmq -c 'rabbitmqctl stop' >/dev/null 2>&1
 pkill -u redis redis-server >/dev/null 2>&1
@@ -856,6 +858,9 @@ def main():
     try:
         # Silence Odoo's core framework noise (Cybercrud Policy)
         os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+
+        if "ODOO_TEST_CHROME_ARGS" not in os.environ:
+            os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage"
 
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         os.environ["REPO_ROOT"] = base_dir
@@ -1045,16 +1050,9 @@ def main():
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
                 _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes")
                 _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
-                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client chromium-browser python3-pip")
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client python3-pip")
+                _run_sudo_cmd("DEBIAN_FRONTEND=noninteractive apt-get install -y chromium || DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser || true")
 
-                print("[*] Installing Python dependencies from requirements.txt...")
-                req_file = os.path.join(base_dir, "requirements.txt")
-                if os.path.exists(req_file):
-                    _run_sudo_cmd(f"pip3 install --break-system-packages -r {req_file}")
-                else:
-                    print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
-
-                print("[*] Configuring local PostgreSQL for test paths...")
                 print("[*] Installing Python dependencies from requirements.txt...")
                 req_file = os.path.join(base_dir, "requirements.txt")
                 if os.path.exists(req_file):
