@@ -5,6 +5,8 @@ import os
 import socket
 import time
 import unittest
+import urllib.error
+import urllib.error
 from unittest.mock import patch, MagicMock
 
 import generalized_monitor
@@ -21,7 +23,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         # Tests [@ANCHOR: daemon_report_incident]
         """Verify that if the Odoo client crashes, the report gracefully triggers the SMTP fallback."""
         mock_client = MagicMock()
-        mock_client.execute.side_effect = Exception("Connection Refused (Odoo Down)")
+        mock_client.execute.side_effect = urllib.error.URLError("Connection Refused (Odoo Down)")
 
         mock_smtp_instance = MagicMock()
         mock_smtp.return_value.__enter__.return_value = mock_smtp_instance

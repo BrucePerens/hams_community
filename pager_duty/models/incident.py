@@ -125,7 +125,7 @@ class PagerIncident(models.Model):
                 if r_client.get(redis_key):
                     return False
                 r_client.setex(redis_key, 60, "1")
-            except Exception as e:  # audit-ignore-catch-all
+            except (redis.RedisError, redis.ConnectionError, redis.TimeoutError) as e:
                 _logger.warning("An error occurred: %s", e)
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -153,7 +153,7 @@ class PagerIncident(models.Model):
         # to prevent duplicate alerting (Helpdesk will handle the page).
         try:
             use_helpdesk = self.env["zero_sudo.security.utils"]._get_system_param("pager_duty.helpdesk_model")
-        except Exception as e:  # audit-ignore-catch-all
+        except (redis.RedisError, redis.ConnectionError, redis.TimeoutError) as e:
             _logger.warning("Helpdesk integration check failed: %s", e)
             use_helpdesk = False
 

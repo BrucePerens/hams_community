@@ -1,3 +1,5 @@
+import redis
+import redis
 # -*- coding: utf-8 -*-
 from odoo.tests.common import TransactionCase, tagged
 from unittest.mock import patch, MagicMock
@@ -13,8 +15,10 @@ class TestIncidentEdgeCases(TransactionCase):
     @patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock())
     def test_01_redis_fail_open(self, mock_redis):
         """Verify that if Redis crashes during report_incident, it safely fails open and logs the incident."""
-        mock_redis.Redis.side_effect = Exception("Redis connection timeout")
-        mock_redis.exceptions.RedisError = Exception
+        mock_redis.Redis.side_effect = redis.RedisError("Redis connection timeout")
+        mock_redis.RedisError = redis.RedisError
+        mock_redis.ConnectionError = redis.ConnectionError
+        mock_redis.TimeoutError = redis.TimeoutError
 
         with patch.object(type(self.env["bus.bus"]), "_sendone", create=True):
             incident_id = self.incident_model.report_incident(

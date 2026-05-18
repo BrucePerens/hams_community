@@ -169,7 +169,7 @@ class TestPagerIncidentIntegration(HamsIntegrationCase):
                 db=0,
             )
             r.delete("pager_rate_limit:test_daemon")
-        except Exception as e: # audit-ignore-catch-all
+        except redis.RedisError as e:
             _logger.warning("An error occurred communicating with Redis: %s", e)
 
         # First request passes the cache check
@@ -194,7 +194,7 @@ class TestPagerIncidentIntegration(HamsIntegrationCase):
                 db=0,
             )
             r.delete("pager_rate_limit:test_daemon_2")
-        except Exception as e: # audit-ignore-catch-all
+        except redis.RedisError as e:
             _logger.warning("An error occurred communicating with Redis: %s", e)
 
         incident_id = self.incident_model.report_incident(vals)

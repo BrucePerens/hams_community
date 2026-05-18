@@ -15,6 +15,10 @@ class TestHelpdeskAdapter(TransactionCase):
         })
 
     def test_01_adapter_creates_ticket_and_event(self):
+        if "hams_helpdesk.ticket" not in self.env:
+            self.skipTest("hams_helpdesk not installed")
+        if "hams_helpdesk.ticket" not in self.env:
+            self.skipTest("hams_helpdesk not installed")
         """Verify the adapter successfully creates a ticket and a calendar event when an incident fires."""
         # Tests [@ANCHOR: pd_helpdesk_adapter]
         # Ensure the parameter is set to a valid model

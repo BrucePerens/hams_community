@@ -15,7 +15,7 @@
         "bus",
         "zero_sudo",
         "distributed_redis_cache",
-        "hams_test",
+        "hams_test", "binary_downloader",
     ],
     "external_dependencies": {
         "python": ["redis", "psutil", "ntplib", "pymysql", "ldap3"],

@@ -55,4 +55,24 @@
 
     <h2>9. Helpdesk Integration</h2>
     <p>The Pager Duty module can automatically dispatch tickets to internal Helpdesk systems. This is managed via an Adapter pattern that dynamically resolves the target model (e.g., <code>hams_helpdesk.ticket</code>) and creates a unified tracking record. If the target system is unreachable, it automatically triggers a <strong>Direct SMTP Fallback</strong> to ensure the alert is never lost. <code>[@ANCHOR: pd_helpdesk_adapter]</code></p>
+
+    <h2>10. User Operations Guide</h2>
+    <p>The Pager Duty module is designed to be intuitive for operators while providing powerful tools for administrators.</p>
+
+    <h3>For Operators (On-Call Staff)</h3>
+    <ul>
+        <li><strong>Monitoring the System:</strong> The <strong>NOC Dashboard</strong> is your primary tool. It displays a real-time summary of all active health checks. Items in green are healthy, while red items indicate a failure.</li>
+        <li><strong>Responding to Alerts:</strong> When a failure occurs, an <strong>Incident</strong> is created. You will receive a notification (email or internal message).
+            Navigate to <strong>Monitoring > Incidents</strong> to see the list.
+        </li>
+        <li><strong>Acknowledging Incidents:</strong> Once you see an incident, click the <strong>Acknowledge</strong> button. This communicates to the rest of the team that someone is investigating, and it prevents the incident from being escalated to management.</li>
+        <li><strong>Resolving Incidents:</strong> After the underlying issue is fixed, click <strong>Resolve</strong>. The system will also try to detect if the check is passing again and may resolve it automatically.</li>
+    </ul>
+
+    <h3>For Administrators</h3>
+    <ul>
+        <li><strong>Configuring Checks:</strong> Go to <strong>System Health &gt; Monitoring Checks</strong>. Here you can add new targets like websites, databases, or servers. Each check has an interval (how often to check) and a grace period (to avoid alerts during startup).</li>
+        <li><strong>Managing the Schedule:</strong> Use the standard <strong>Calendar</strong>. Create a new event for the on-call shift, add the relevant users, and ensure the <strong>Is Pager Duty Shift</strong> checkbox is selected. Only users in these shifts will receive initial alerts.</li>
+        <li><strong>Analyzing Performance:</strong> Review the Incidents list to see <em>Mean Time To Acknowledge</em> (MTTA) and <em>Mean Time To Resolve</em> (MTTR) metrics. These help in evaluating team responsiveness and system reliability.</li>
+    </ul>
 </div>

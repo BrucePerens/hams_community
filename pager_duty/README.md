@@ -91,6 +91,11 @@ To extend the daemon with a new capability (e.g., a `docker` API health check), 
 
 ## 4. Programmatic Setup & Hooks
 **The Secure Cached Resolver Pattern (ADR-0066)**: The `pager_duty` module offers high-performance `@tools.ormcache` resolvers for cross-module use. ALWAYS use these instead of `.search()` in frontend controllers or background daemons to prevent database exhaustion. Callers **MUST** pass their own `override_svc_uid` to execute the database search under their own service account's context.
+
+## 9. Security & Compliance
+* **Least Privilege:** The daemon operates using the `pager_service_internal` service account, strictly limiting its ORM access scope.
+* **Sandboxing:** Synthetic checks (Bash, Executable) are executed within `bwrap` (Bubblewrap) containers to prevent filesystem and network escapes.
+* **Input Validation:** All user-supplied targets and scripts are treated as untrusted. Subprocess calls use `shell=False`.
 * **`pager.check._get_check_id_by_uuid(hb_uuid, override_svc_uid=None)`**: Resolves a heartbeat UUID string to its database ID safely.
 
 ---
@@ -137,10 +142,15 @@ The Pager Duty module exposes a native API allowing other Odoo modules (like Hel
   if hasattr(self.env["calendar.event"], "get_current_on_duty_admin"):
       try:
           svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid("pager_duty.user_pager_service_internal")
-      except Exception:
+      except (ValueError, KeyError, AttributeError):
           svc_uid = self.env.uid
       on_duty_user = self.env["calendar.event"].with_user(svc_uid).get_current_on_duty_admin()
       if on_duty_user:
           # Route ticket or notification to on_duty_user.partner_id
           pass
+
+## 9. Security & Compliance
+* **Least Privilege:** The daemon operates using the `pager_service_internal` service account, strictly limiting its ORM access scope.
+* **Sandboxing:** Synthetic checks (Bash, Executable) are executed within `bwrap` (Bubblewrap) containers to prevent filesystem and network escapes.
+* **Input Validation:** All user-supplied targets and scripts are treated as untrusted. Subprocess calls use `shell=False`.
   ```
