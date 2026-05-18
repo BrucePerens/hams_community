@@ -1043,4 +1043,4 @@ class UserWebsitesController(http.Controller):
             BACKGROUND_EXECUTOR.submit(_async_gdpr_erasure, db_name, user_id)
 
         request.session.logout()
-        return request.redirect("/odoo/login?erased=1")
+        return request.redirect("/web/login?erased=1") # burn-ignore-route

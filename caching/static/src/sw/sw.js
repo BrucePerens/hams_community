@@ -4,7 +4,7 @@ const CACHE_NAME = '__CACHE_NAME__';
 const CACHE_URL_REGEX = /(\/web\/assets\/|\/[a-zA-Z0-9_-]+\/static\/)/;
 
 // Dynamically calculated by the Python backend to prevent quota exhaustion
-const MAX_FILE_SIZE_BYTES = __MAX_FILE_SIZE_BYTES__; 
+const MAX_FILE_SIZE_BYTES = __MAX_FILE_SIZE_BYTES__;
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -41,13 +41,7 @@ self.addEventListener('fetch', (event) => {
                     return cachedResponse;
                 }
                 return fetch(request).then((networkResponse) => {
-                    if (!networkResponse || networkResponse.status !== 200) {
-                        return networkResponse;
-                    }
-
-                    // Only cache 'basic' or 'cors' (if served from same origin) responses.
-                    // This prevents caching opaque responses or error pages.
-                    if (networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
+                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
                         return networkResponse;
                     }
 
@@ -62,7 +56,7 @@ self.addEventListener('fetch', (event) => {
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(request, responseToCache).catch(err => {
                             // Non-fatal, just log and continue
-                            console.debug(`[Caching SW] Failed to cache ${request.url}:`, err);
+                            console.error(`[Caching SW] Failed to cache ${request.url}:`, err);
                         });
                     }).catch(err => {
                         // Non-fatal, just log and continue
@@ -70,8 +64,6 @@ self.addEventListener('fetch', (event) => {
                     });
                     return networkResponse;
                 });
-            }).catch(() => {
-                // Network failure or other error, return nothing and let browser handle it.
             })
         );
     }
