@@ -33,7 +33,7 @@ registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
             run: "edit res.users",
         },
         {
-            trigger: '.dropdown-item:contains("res.users"), .ui-menu-item *:contains("res.users")',
+            trigger: '.dropdown-item:contains("User"), .ui-menu-item *:contains("User")',
             run: "click",
         },
         {
