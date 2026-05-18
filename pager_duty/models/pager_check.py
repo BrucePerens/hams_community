@@ -635,7 +635,9 @@ class PagerCheck(models.Model):
 
         if new_checks:
             self.env["pager.check"].create(new_checks)
-            self.action_push_to_json()
+
+        # Always synchronize the JSON file after an autodiscovery run
+        self.action_push_to_json()
 
     def action_autodiscover(self):
         self._run_autodiscovery()

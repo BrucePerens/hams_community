@@ -204,6 +204,7 @@ The AST parser physically reads your test files to verify the assertions exist.
 | `time.sleep()` | `# audit-ignore-sleep` | (Visual check only; indicates daemon rate-limiting). |
 | `ir.ui.view` | `<!-- audit-ignore-view: Tested by [@ANCHOR: example_name] -->` | MUST be placed on the EXACT same line as the `<record>` or `<template>` node. Test MUST execute `get_view` or `url_open`. |
 | I18N Strings | `# audit-ignore-i18n: Tested by [@ANCHOR: example_name]` | Safely ignore headless API translations (ADR-0065). |
+| Legacy Web Routes | `# burn-ignore-route` | Explicitly permits the use of native `/web` routing prefixes (like `/web/login` or `/web/assets`) instead of the Odoo 19 `/odoo` prefix in tests and controllers. |
 
 ### 🚨 Critical Formatting & Placement Rules for Bypasses
 1. **The Python Formatter (`# fmt: skip`) Trap:** The Black code formatter will wrap long lines and detach your inline linter comments, causing the AST linter to fail.
