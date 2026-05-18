@@ -17,12 +17,15 @@ class ServiceWorkerController(http.Controller):
         # [@ANCHOR: caching_fs_scan_logic]
         # Verified by [@ANCHOR: test_settings_and_cache_01]
         """
-        Scans the 'static/' directories of all installed modules.
+        Scans the 'static/' directories of all installed modules efficiently.
         Returns a tuple: (latest_mtime, file_sizes).
         Cached in RAM at the class level so the disk walk only executes once per worker lifecycle.
         """
-        # Gating for Jules VM stability during Odoo initialization
-        if tools.config.get('test_enable') and (tools.config.get('init') or tools.config.get('stop_after_init')) and not request.env.context.get('force_fs_scan'):
+        # Gating for Jules VM stability during Odoo initialization.
+        # This prevents the scanner from firing during the heavy --init phase of tests.
+        is_test = tools.config.get('test_enable')
+        is_boot = tools.config.get('init') or tools.config.get('stop_after_init')
+        if is_test and is_boot and not request.env.context.get('force_fs_scan'):
             return (0.0, [])
 
         if type(self)._fs_cache:
@@ -43,7 +46,25 @@ class ServiceWorkerController(http.Controller):
 
             # Use ORM to get installed modules.
             # This ensures consistent Zero-Sudo architecture. Bound the search to satisfy AST linters.
-            installed_modules = env_svc['ir.module.module'].search([('state', '=', 'installed')], limit=10000).mapped('name')
+            installed_modules = env_svc['ir.module.module'].search(
+                [('state', '=', 'installed')],
+                limit=10000
+            ).mapped('name')
+
+            def _scan_recursive(path):
+                nonlocal max_mtime
+                try:
+                    with os.scandir(path) as it:
+                        for entry in it:
+                            if entry.is_dir(follow_symlinks=False):
+                                _scan_recursive(entry.path)
+                            elif entry.is_file(follow_symlinks=False):
+                                stat = entry.stat()
+                                if stat.st_mtime > max_mtime:
+                                    max_mtime = stat.st_mtime
+                                file_sizes.append(stat.st_size)
+                except OSError as e:
+                    _logger.warning("Could not access path %s: %s", path, e)
 
             for module_name in installed_modules:
                 mod_path = get_module_path(module_name)
@@ -52,16 +73,7 @@ class ServiceWorkerController(http.Controller):
 
                 static_path = os.path.join(mod_path, "static")
                 if os.path.exists(static_path):
-                    for root, dirs, files in os.walk(static_path):
-                        for file in files:
-                            filepath = os.path.join(root, file)
-                            try:
-                                mtime = os.path.getmtime(filepath)
-                                if mtime > max_mtime:
-                                    max_mtime = mtime
-                                file_sizes.append(os.path.getsize(filepath))
-                            except OSError as e:
-                                _logger.warning("Could not access file %s: %s", filepath, e)
+                    _scan_recursive(static_path)
 
             file_sizes.sort(reverse=True)
             res = (max_mtime, file_sizes)
