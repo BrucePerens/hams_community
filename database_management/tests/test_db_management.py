@@ -120,9 +120,17 @@ class TestDatabaseTours(odoo.tests.HttpCase):
         # [@ANCHOR: test_db_bloat_tour]
         # Tests [@ANCHOR: db_index_stats]
         # Tests [@ANCHOR: vacuum_analyze]
-        self.start_tour("/web", "db_management_bloat_tour", login="admin")
+        self.start_tour(
+            "/odoo?debug=1&action=database_management.action_db_table_stat",
+            "db_management_bloat_tour",
+            login="admin",
+        )
 
     def test_db_slow_query_tour(self):
         # [@ANCHOR: test_db_slow_query_tour]
         # Tests [@ANCHOR: db_slow_queries]
-        self.start_tour("/web", "db_management_slow_query_tour", login="admin")
+        self.start_tour(
+            "/odoo?debug=1&action=database_management.action_db_query_stat",
+            "db_management_slow_query_tour",
+            login="admin",
+        )
