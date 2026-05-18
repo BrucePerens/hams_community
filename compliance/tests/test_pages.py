@@ -28,14 +28,19 @@ class TestCompliancePages(TransactionCase):
         # Non-Destructive Mandate check:
         # Only check our own pages if they are NOT shadowed by custom ones.
         for page in pages:
-            if page.view_id.key.startswith("compliance.compliance_"):
-                # If there's another page for the same URL that isn't ours,
+            if page.view_id and page.view_id.key and page.view_id.key.startswith("compliance.compliance_"):
+                # If there's another page for the same URL and SAME WEBSITE scope that isn't ours,
                 # our page should be UNPUBLISHED. Otherwise it should be published.
-                other_page = pages.filtered(lambda p: p.url == page.url and not p.view_id.key.startswith("compliance.compliance_"))
+                other_page = pages.filtered(lambda p: (
+                    p.url == page.url and
+                    p.website_id == page.website_id and
+                    p.view_id and p.view_id.key and
+                    not p.view_id.key.startswith("compliance.compliance_")
+                ))
                 if other_page:
-                    self.assertFalse(page.is_published, f"Boilerplate page for {page.url} should be unpublished because a custom one exists.")
+                    self.assertFalse(page.is_published, f"Boilerplate page for {page.url} should be unpublished because a custom one exists in the same scope.")
                 else:
-                    self.assertTrue(page.is_published, f"Boilerplate page for {page.url} should be published since no custom one exists.")
+                    self.assertTrue(page.is_published, f"Boilerplate page for {page.url} should be published since no custom one exists in the same scope.")
             else:
                 self.assertTrue(page.is_published, f"Custom page for {page.url} should be published.")
 

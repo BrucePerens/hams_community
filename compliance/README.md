@@ -72,10 +72,13 @@ Dependent modules requiring legal links MUST use:
 This module adheres to **ADR-0002 (Zero-Sudo)** and **ADR-0005 (Service Account Web Isolation)**.
 
 * **Micro-Privilege Account:** Automated post-install configuration is executed via the `compliance.user_compliance_service` service account.
-* **ACLs:** The service account is granted minimal read/write access to `website`, `website.page`, and `ir.ui.view` models.
-* **Impersonation:** Escalation is handled via `env.with_user(svc_uid)` instead of `.sudo()` for core operations.
+* **ACLs:** The service account is granted minimal read/write access to `website`, `website.page`, and `ir.ui.view` models. `[@ANCHOR: compliance_security_acls]`
+* **Impersonation:** Escalation is handled via `env.with_user(svc_uid)` instead of `.sudo()` for core operations. `[@ANCHOR: compliance_zero_sudo_impersonation]`
 
-## 5. Documentation Installation
+## 5. Website-Aware Scope
+The module is multi-website aware. When detecting custom pages at target URLs, it only unpublishes the boilerplate for the specific website scope (or global scope) where the custom page is found. If a custom page is removed, the boilerplate is automatically restored. `[@ANCHOR: compliance_website_aware_scope]`
+
+## 6. Documentation Installation
 This module implements a **soft dependency** on documentation providers (`manual_library` or Odoo Enterprise `knowledge`).
 
 * **Mechanism:** Documentation is automatically provisioned during the final registry reload by the central engine (`_bootstrap_knowledge_docs` in `zero_sudo`). `[@ANCHOR: zero_sudo_doc_installer]`

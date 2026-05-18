@@ -22,31 +22,53 @@ def post_init_hook(env):
     env_svc = env["zero_sudo.security.utils"]._get_service_env("compliance.user_compliance_service")
 
     _logger.info("Enforcing Cookie Consent Bar on all websites.")
-    websites = env_svc["website"].search([], limit=10000)
+    # AI Laziness Fix: Ensure we see all websites across all scopes.
+    # Removed arbitrary limit to ensure total compliance.
+    websites = env_svc["website"].with_context(active_test=False).search([])
     if "cookies_bar" in env_svc["website"]._fields:
-        websites.write({"cookies_bar": True})
+        # AI Laziness Fix: Some Odoo website logic expects singletons during write.
+        for website in websites:
+            website.write({"cookies_bar": True})
 
     # Non-Destructive Legal Page Mandate:
     # If a page already exists at these URLs, we unpublish our boilerplate to avoid duplication.
-    # ADR-0022: Prevent N+1 queries by pre-fetching outside the loop.
     # [@ANCHOR: story_automatic_legal_pages]
     # Verified by [@ANCHOR: test_compliance_non_destructive_mandate]
     legal_urls = ["/privacy", "/cookie-policy", "/terms"]
 
-    # Pre-fetch all pages for the target URLs
-    all_pages = env_svc["website.page"].search([
+    # ADR-0022: Prevent N+1 queries by pre-fetching outside the loop.
+    # AI Laziness Fix: Use website_id=False in context to ensure we see pages across all websites.
+    # Also use active_test=False to see unpublished pages.
+    # Removed arbitrary limit to ensure all pages are processed.
+    all_pages = env_svc["website.page"].with_context(website_id=False, active_test=False).search([
         ("url", "in", legal_urls)
-    ], limit=1000)
+    ])
 
-    for url in legal_urls:
-        url_pages = all_pages.filtered(lambda p: p.url == url)
+    def is_boilerplate(page):
+        # AI Laziness Fix: Guard against missing view_id or key to avoid AttributeErrors.
+        return page.view_id and page.view_id.key and page.view_id.key.startswith("compliance.compliance_")
 
-        # Check for pages that are NOT owned by this module
-        custom_pages = url_pages.filtered(lambda p: not p.view_id.key.startswith("compliance.compliance_"))
+    for bp in all_pages.filtered(is_boilerplate):
+        # Identify custom pages in the SAME scope (same URL and same website_id).
+        # We use IDs for comparison to be safe across environments.
+        bp_website_id = bp.website_id.id if bp.website_id else False
+
+        custom_pages = all_pages.filtered(lambda p: (
+            p.url == bp.url and
+            (p.website_id.id if p.website_id else False) == bp_website_id and
+            p.id != bp.id and
+            not is_boilerplate(p)
+        ))
 
         if custom_pages:
-            _logger.info("Custom page detected at %s. Shielding existing content.", url)
-            # Find OUR boilerplate pages and unpublish them to defer to the site owner's version
-            boilerplate_pages = url_pages.filtered(lambda p: p.view_id.key.startswith("compliance.compliance_"))
-            if boilerplate_pages:
-                boilerplate_pages.write({"is_published": False})
+            if bp.is_published:
+                _logger.info("Shielding boilerplate page %s (url %s, scope %s) because custom version detected.",
+                             bp.id, bp.url, bp_website_id or "global")
+                bp.write({"is_published": False})
+        else:
+            # If no custom page exists in this specific scope, ensure our boilerplate is published.
+            # This allows reverting to boilerplate by deleting the custom page and re-running the hook.
+            if not bp.is_published:
+                _logger.info("No custom page for %s in scope %s. Restoring boilerplate page %s.",
+                             bp.url, bp_website_id or "global", bp.id)
+                bp.write({"is_published": True})
