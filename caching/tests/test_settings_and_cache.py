@@ -27,8 +27,6 @@ class TestSettingsAndCache(HttpCase):
         response_10 = self.url_open("/sw.js")
         self.assertEqual(response_10.status_code, 200)
 
-        # They should be different (assuming file size sums hit these thresholds)
-        # But at the very least, they evaluate dynamically.
         # We can test that it evaluates dynamically by setting it extremely low
         self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '0') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
         response_0 = self.url_open("/sw.js")
@@ -36,6 +34,41 @@ class TestSettingsAndCache(HttpCase):
         # If quota is 0, the max file size should be 0 or slightly less than the smallest file
         # We can just verify that it doesn't crash
         self.assertEqual(response_0.status_code, 200)
+
+    def test_06_quota_edge_cases(self):
+        """Test quota calculation edge cases with mocked filesystem data."""
+        controller = ServiceWorkerController()
+        ServiceWorkerController._fs_cache = None
+
+        mock_req = MagicMock()
+        mock_req.env = self.env['res.users'].env
+        svc_uid = self.env['zero_sudo.security.utils']._get_service_uid('caching.user_caching_service')
+
+        # Case 1: No files
+        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [])):
+            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+                # Set specific param for this sub-test
+                self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
+                mtime, max_size = controller._get_global_static_info()
+                self.assertEqual(max_size, str(10 * 1024 * 1024))
+
+        # Case 2: Files fit within quota
+        # Total size: 10MB + 5MB = 15MB. Quota: 35MB.
+        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [10*1024*1024, 5*1024*1024])):
+            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+                self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
+                mtime, max_size = controller._get_global_static_info()
+                self.assertEqual(max_size, str(10*1024*1024 + 1024))
+
+        # Case 3: Files exceed quota
+        # Total size: 30MB + 10MB = 40MB. Quota: 35MB.
+        # Should drop the 30MB file. Remaining: 10MB. 10MB <= 35MB.
+        # max_size should be 30MB - 1.
+        with patch.object(controller, '_get_fs_stats', return_value=(1000.0, [30*1024*1024, 10*1024*1024])):
+            with patch('odoo.addons.caching.controllers.main.request', mock_req):
+                self.env['ir.config_parameter'].with_user(svc_uid).set_param('caching.safe_quota_mb', '35') # Tested by [@ANCHOR: test_caching_sudo_params]  # fmt: skip
+                mtime, max_size = controller._get_global_static_info()
+                self.assertEqual(max_size, str(30*1024*1024 - 1))
 
     def test_02_force_invalidation(self):
         """

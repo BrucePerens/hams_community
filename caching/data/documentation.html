@@ -3,30 +3,30 @@
     <p><em>Copyright © Bruce Perens K6BP. AGPL-3.0.</em></p>
 
     <h2>1. Overview</h2>
-    <p>The Caching module speeds up your website by saving important files directly in your browser. This means that after the first time you visit, the website loads almost instantly because it doesn't have to download the same files again. This module acts like a high-speed personal library for your web browser, keeping the most important parts of the website ready for use at a moment's notice.</p>
+    <p>The Caching module dramatically speeds up your website by saving essential design files (like JavaScript, CSS, and UI icons) directly in your browser's local storage. This means that after the first time you visit, the website loads almost instantly because it doesn't have to wait for the same files to download over the internet again. This module acts like a high-speed personal library for your web browser, keeping the website's interface ready for use at a moment's notice.</p>
 
-    <h2>2. How it works</h2>
-    <p>When you visit the site, a "Service Worker" is installed in your browser. This is like a small assistant that remembers the website's design (its "assets").</p>
+    <h2>2. How it Works</h2>
+    <p>When you visit the site, a "Service Worker" is installed in your browser. This is a small, specialized script that acts as an intelligent assistant for your web requests.</p>
     <ul>
-        <li><strong>Smart Saving:</strong> It automatically saves JavaScript, CSS, and images used by the website.</li>
-        <li><strong>Fast Loading:</strong> Next time you visit, these files are loaded from your computer's storage instead of over the internet.</li>
-        <li><strong>Automatic Updates:</strong> If the website owner updates the design, your browser will automatically notice and update its saved files.</li>
+        <li><strong>Smart Asset Interception:</strong> It automatically identifies and saves Odoo's core assets and custom module files.</li>
+        <li><strong>Local Fulfillment:</strong> On subsequent visits, these files are delivered from your computer's storage with near-zero latency, even on slow connections.</li>
+        <li><strong>Automatic Background Updates:</strong> If the website design is updated, your browser will automatically detect the change on the next visit, download the new versions in the background, and seamlessly update your local cache.</li>
     </ul>
 
     <h2>3. Important Safety Features</h2>
     <ul>
-        <li><strong>Storage Limit:</strong> Browsers only allow a certain amount of space for saved files. Our assistant calculates exactly how much space is safe and only saves the most important files. It skips very large files to prevent filling up your storage.</li>
-        <li><strong>Privacy & Security:</strong> It only saves public files needed to display the website. It never saves your personal information, login details, or private data.</li>
-        <li><strong>Real-time Communication:</strong> Chat and other live features are not affected and will continue to work perfectly.</li>
+        <li><strong>Intelligent Quota Management:</strong> Browsers limit how much data a Service Worker can save. To prevent the browser from "panicking" and deleting the entire cache, our assistant calculates exactly how much space is safe. It prioritizes small, essential UI files and automatically skips very large media files.</li>
+        <li><strong>Privacy-First Architecture:</strong> The module only saves public technical assets required to display the website. It never saves your personal information, login credentials, or private data.</li>
+        <li><strong>Real-time Compatibility:</strong> Live communication features like chat and notifications are explicitly bypassed by the caching system to ensure they always provide real-time updates.</li>
     </ul>
 
     <h2>4. Administrator Controls</h2>
-    <p>Administrators can manage the Caching Service Worker from the <strong>Website Settings</strong> (Configuration &gt; Settings &gt; Website section):</p>
+    <p>Administrators can fine-tune the caching behavior from the <strong>Website Settings</strong> (Configuration &gt; Settings &gt; Website section):</p>
     <ul>
-        <li><strong>Safe Quota (MB):</strong> Adjust the maximum total size of files the browser is allowed to save. If the website's assets exceed this, the module will automatically prioritize small, essential files and skip large ones. This prevents the website from taking up too much space on a visitor's device.</li>
-        <li><strong>Cache Invalidation:</strong> If you have made changes to the website and want to ensure all users see the update immediately, click the <strong>Invalidate Cache Now</strong> button. This increments the cache version and forces all browsers to clear their saved assets on their next visit. This is useful after major updates to logos, colors, or website behavior.</li>
+        <li><strong>Safe Quota (MB):</strong> Adjust the maximum total size of files the browser is allowed to save. The default is 35MB, which is safe for most modern browsers. If your website's assets exceed this limit, the module will automatically prioritize essential files and skip the heaviest ones to maintain stability.</li>
+        <li><strong>Force Cache Invalidation:</strong> If you have made major visual changes (like updating logos, brand colors, or custom scripts) and want to ensure all users see the update immediately on their next visit, click the <strong>Invalidate Cache Now</strong> button. This increments the cache version and forces all browsers to purge their saved assets and download fresh ones.</li>
     </ul>
 
     <h2>5. Troubleshooting</h2>
-    <p>If the website looks strange after an update, it's possible that some old files are still being used. Although the module handles this automatically, an administrator can use the "Invalidate Cache Now" button described above to fix the issue globally.</p>
+    <p>If the website layout appears inconsistent or "broken" after a major update, it is possible that some browsers are still holding onto stale cached files. An administrator can resolve this globally by using the <strong>Invalidate Cache Now</strong> button in the Website Settings. For individual users, a simple page refresh is usually enough to trigger the Service Worker's background update mechanism.</p>
 </section>

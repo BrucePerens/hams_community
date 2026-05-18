@@ -41,7 +41,13 @@ self.addEventListener('fetch', (event) => {
                     return cachedResponse;
                 }
                 return fetch(request).then((networkResponse) => {
-                    if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                    if (!networkResponse || networkResponse.status !== 200) {
+                        return networkResponse;
+                    }
+
+                    // Only cache 'basic' or 'cors' (if served from same origin) responses.
+                    // This prevents caching opaque responses or error pages.
+                    if (networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
                         return networkResponse;
                     }
 
@@ -56,7 +62,7 @@ self.addEventListener('fetch', (event) => {
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(request, responseToCache).catch(err => {
                             // Non-fatal, just log and continue
-                            console.error(`[Caching SW] Failed to cache ${request.url}:`, err);
+                            console.debug(`[Caching SW] Failed to cache ${request.url}:`, err);
                         });
                     }).catch(err => {
                         // Non-fatal, just log and continue
@@ -64,6 +70,8 @@ self.addEventListener('fetch', (event) => {
                     });
                     return networkResponse;
                 });
+            }).catch(() => {
+                // Network failure or other error, return nothing and let browser handle it.
             })
         );
     }

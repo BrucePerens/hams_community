@@ -39,7 +39,22 @@ class TestPgConfig(RealTransactionCase):
         with patch.object(type(self.env.cr), "execute") as mock_execute:
             res = wizard.action_apply_optimizations()
             self.assertEqual(res.get("type"), "ir.actions.client")
-            mock_execute.assert_called()
+
+            # Verify specific calculations
+            # 16GB * 0.25 = 4GB = 4096MB
+            # 16GB * 0.75 = 12GB = 12288MB
+            # min(1024, 16GB * 0.05) = min(1024, 819) = 819MB
+            # max(4, (16GB * 0.25) / 500) = max(4, 4096 / 500) = max(4, 8.19) = 8MB
+
+            calls = [call[0][0] for call in mock_execute.call_args_list if hasattr(call[0][0], 'as_string')]
+            query_strings = [c.as_string(self.env.cr._obj) for c in calls]
+
+            self.assertTrue(any('SET "shared_buffers" = \'4096MB\'' in s for s in query_strings))
+            self.assertTrue(any('SET "effective_cache_size" = \'12288MB\'' in s for s in query_strings))
+            self.assertTrue(any('SET "maintenance_work_mem" = \'819MB\'' in s for s in query_strings))
+            self.assertTrue(any('SET "work_mem" = \'8MB\'' in s for s in query_strings))
+            self.assertTrue(any('SET "max_connections" = \'500\'' in s for s in query_strings))
+            self.assertTrue(any('SET "random_page_cost" = \'1.1\'' in s for s in query_strings))
 
     @patch(
         "odoo.addons.database_management.models.pg_config.PgHaWizard._get_executable",
@@ -61,9 +76,19 @@ class TestPgConfig(RealTransactionCase):
         wizard.action_generate()
 
         self.assertEqual(wizard.state, "generated")
-        self.assertIn("192.168.1.10", wizard.patroni_primary)
-        self.assertIn("192.168.1.11", wizard.patroni_secondary)
-        self.assertIn("pgbouncer", wizard.pgbouncer_ini)
+        # Assert Patroni Primary details
+        self.assertIn("192.168.1.10:8008", wizard.patroni_primary)
+        self.assertIn("password: testpass", wizard.patroni_primary)
+        self.assertIn("name: node1", wizard.patroni_primary)
+
+        # Assert Patroni Secondary details
+        self.assertIn("192.168.1.11:8008", wizard.patroni_secondary)
+        self.assertIn("password: testpass", wizard.patroni_secondary)
+        self.assertIn("name: node2", wizard.patroni_secondary)
+
+        # Assert PgBouncer details
+        self.assertIn("pool_mode = transaction", wizard.pgbouncer_ini)
+        self.assertIn("listen_port = 6432", wizard.pgbouncer_ini)
 
     def test_01b_optimization_wizard_errors(self):
         wizard = (
@@ -74,12 +99,35 @@ class TestPgConfig(RealTransactionCase):
         with self.assertRaises(UserError):
             wizard.action_apply_optimizations()
 
+    def test_02d_ha_wizard_validation_errors(self):
+        # Test invalid IP
+        wizard = (
+            self.env["pg.ha.wizard"]
+            .with_user(self.admin)
+            .create({"primary_ip": "invalid-ip", "secondary_ip": "10.0.0.2"})
+        )
+        with self.assertRaisesRegex(UserError, "Invalid Primary Node IP format"):
+            wizard.action_generate()
+
+        # Test short password
+        wizard2 = (
+            self.env["pg.ha.wizard"]
+            .with_user(self.admin)
+            .create({
+                "primary_ip": "10.0.0.1",
+                "secondary_ip": "10.0.0.2",
+                "replication_pass": "short"
+            })
+        )
+        with self.assertRaisesRegex(UserError, "Password must be at least 8 characters"):
+            wizard2.action_generate()
+
     @patch("shutil.which")
     def test_02b_ha_wizard_missing_binaries(self, mock_which):
         wizard = (
             self.env["pg.ha.wizard"]
             .with_user(self.admin)
-            .create({"primary_ip": "10.0.0.1"})
+            .create({"primary_ip": "10.0.0.1", "secondary_ip": "10.0.0.2"})
         )
 
         # Test missing patroni throws error
@@ -102,7 +150,7 @@ class TestPgConfig(RealTransactionCase):
         wizard = (
             self.env["pg.ha.wizard"]
             .with_user(self.admin)
-            .create({"primary_ip": "10.0.0.1"})
+            .create({"primary_ip": "10.0.0.1", "secondary_ip": "10.0.0.2"})
         )
         exe_path = wizard._get_executable("etcd")
 

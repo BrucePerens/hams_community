@@ -22,7 +22,7 @@ As long as you place your Javascript, CSS, and UI icons inside your module's sta
 This module eliminates the need for manual version bumping or complex cache-busting query parameters.
 
 **Filesystem-Linked Invalidation:**
-- **Boot Scan:** During server startup, the module performs a comprehensive scan of all `static/` directories across all installed modules ([@ANCHOR: caching_fs_scan_logic]).
+- **Boot Scan:** During server startup, the module performs an efficient recursive scan using `os.scandir` of all `static/` directories across all installed modules ([@ANCHOR: caching_fs_scan_logic]).
 - **MTime Tracking:** It identifies the latest modification timestamp (`mtime`) among all discovered assets.
 - **Dynamic SW Generation:** This timestamp is injected into the `/sw.js` payload, effectively versioning the Service Worker script itself.
 - **Automatic Refresh:** When any static file is modified and the server restarts, the Service Worker's signature changes. Browsers detect this update on the next visit, triggering a background installation of the new worker and an immediate purge of the stale cache.
@@ -31,7 +31,7 @@ This module eliminates the need for manual version bumping or complex cache-bust
 
 Browsers give Service Workers a strict storage limit. If a Service Worker tries to cache massive files, it will max out the quota and the browser will panic and delete the entire cache—destroying the performance benefits of this module.
 
-**The Dynamic Safety Valve:** To protect against this, our Service Worker runs a mathematical calculation on the server during boot. It sums up the sizes of all static files across all installed modules. If the total size exceeds the safe limits of the browser's cache quota (~35MB), it automatically calculates a dynamic max file size limit. It instructs the browser to cache as many small files as possible while intentionally rejecting the largest, heaviest files, keeping the total cache footprint safely underneath the browser's panic threshold.
+**The Dynamic Safety Valve:** To protect against this, our Service Worker runs a mathematical calculation on the server during boot. It sums up the sizes of all static files across all installed modules. If the total size exceeds the safe limits of the browser's cache quota (configurable, default 35MB), it automatically calculates a dynamic max file size limit. It instructs the browser to cache as many small files as possible while intentionally rejecting the largest, heaviest files, keeping the total cache footprint safely underneath the browser's panic threshold.
 
 **The Golden Rule:** Keep your `static/` folders strictly reserved for lightweight UI code (JS, CSS) and small layout graphics. If you need to serve heavy media, user uploads, or large datasets, use Odoo's standard attachment routes (`/web/image` or `/web/content`). The Service Worker explicitly ignores those routes, allowing Cloudflare to handle the heavy lifting safely.
 
@@ -50,8 +50,7 @@ Implements a global, root-scoped Service Worker (`/sw.js`) that proxies and cach
 * **WebSockets:** `ws://` protocols are hardcoded to bypass the proxy.
 * **Dynamic Large File Prohibition**: The worker mathematically calculates an active quota limit (approx 35MB) [@ANCHOR: caching_quota_calculation]. Heavy media MUST route via `/web/image` to prevent the cache from ejecting critical UI bundles.
 * **Layout Injection**: The service worker registration script is injected globally into the frontend `website.layout` via XPath [@ANCHOR: xpath_rendering_caching_layout].
-
-* **Settings Layout Injection**: The settings UI is injected into `website.layout` via XPath [@ANCHOR: xpath_rendering_caching_settings].
+* **Settings Layout Injection**: The settings UI is injected into `website.res_config_settings_view_form` via XPath [@ANCHOR: xpath_rendering_caching_settings].
 
 ## 3. Zero-Sudo Architecture
 This module is built with security as a primary concern, adhering strictly to the Zero-Sudo architecture:
@@ -79,3 +78,4 @@ Tests are located in the `tests/` directory and cover:
 - Quota calculation logic [@ANCHOR: caching_quota_calculation].
 - Cache invalidation triggers.
 - UI Tour for registration check [@ANCHOR: caching_sw_fetch_interceptor].
+- Zero-Sudo compliance for FS scan [@ANCHOR: caching_fs_scan_logic].
