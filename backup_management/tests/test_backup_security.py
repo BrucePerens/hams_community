@@ -135,7 +135,7 @@ class TestBackupSecurity(RealTransactionCase):
     def test_access_restriction(self):
         # Ensure non-admins cannot trigger backups or restores
         with self.assertRaises(AccessError):
-            self.config.with_user(self.user_no_group).action_trigger_backup()
+            self.config.with_user(self.user_no_group.id).action_trigger_backup()
             self.env.flush_all()
 
         snapshot = self.env["backup.snapshot"].create({
@@ -143,8 +143,17 @@ class TestBackupSecurity(RealTransactionCase):
             "snapshot_id": "snap_acc",
         })
         with self.assertRaises(AccessError):
-            self.env["backup.restore.wizard"].with_user(self.user_no_group).create({
+            self.env["backup.restore.wizard"].with_user(self.user_no_group.id).create({
                 "snapshot_id": snapshot.id,
                 "restore_target_path": "/var/lib/odoo/backups/safe"
             })
             self.env.flush_all()
+
+    def tearDown(self):
+        # Explicit cleanup to avoid hams_test teardown issues with res.users/res.partner cleanup order
+        if hasattr(self, 'user_no_group') and self.user_no_group.exists():
+            partner = self.user_no_group.partner_id
+            self.user_no_group.unlink()
+            if partner.exists():
+                partner.unlink()
+        super().tearDown()

@@ -10,17 +10,17 @@ Implements a centralized "single pane of glass" GUI in Odoo to orchestrate and m
 
 ## Architecture
 * **Self-Healing Dependencies:** Uses `shutil.which` to detect tools. If `kopia` is missing from the system path, it automatically fetches and extracts the pre-compiled Linux binary into the `var/lib/odoo/ext_bin` local data directory via `binary_downloader` to ensure uninterrupted operation.
-Implements a Hybrid Architecture for unified backup management.
 * **Kopia:** Used for file/system state. Parsed via `kopia snapshot list --json`. State is synchronized via `action_sync_snapshots` `[@ANCHOR: backup_sync_kopia]`. Retention policies are applied natively via `action_apply_policies` `[@ANCHOR: backup_apply_policies]`.
 * **pgBackRest:** Used for PostgreSQL WAL archiving. Parsed via `pgbackrest info --output=json`. State is synchronized via `action_sync_snapshots` `[@ANCHOR: backup_sync_pgbackrest]`.
 * **Orchestration:** Capable of pushing execution commands (`kopia snapshot create`, `pgbackrest backup`) directly to the underlying daemons via RabbitMQ offloading `[@ANCHOR: backup_trigger_execution]`. Can generate automated restore drill commands `[@ANCHOR: backup_restore_command]`.
+* **Asynchronous Bastion Pattern:** Implements ADR-0071, offloading long-running CLI operations to a RabbitMQ-backed worker daemon (`backup_worker.py`) to prevent Odoo worker timeouts and ensure reliability.
 
 ## Security & Operations
-* **Service Account:** Utilizes `user_backup_service_internal` for background synchronization and audit-trailed operations.
-* **Encryption:** Kopia passwords and other sensitive keys are encrypted at rest using the system's `ODOO_BACKUP_CRYPTO_KEY` (or fallback `HAMS_CRYPTO_KEY`) Fernet key.
-* **Subprocess Execution:** Uses Python's `subprocess.run` to interrogate local CLIs.
-* **Pager Duty Synergy:** Employs a soft-dependency on `pager_duty`. If a CLI command fails or a backup snapshot becomes stale (no new snapshots in >26 hours), the module directly invokes `pager.incident.report_incident()` `[@ANCHOR: backup_pager_synergy]` using the `pager_service_internal` micro-account to instantly alert the on-call SRE.
-* **Size Anomaly Detection:** The config model evaluates newly ingested snapshots against `minimum_size_mb`. If an empty or suspiciously small snapshot is generated (e.g., missing Docker volume mounts), it escalates a critical alert.
+* **Zero-Sudo Compliance:** Strictly adheres to Zero-Sudo architecture. All background operations and privilege elevations use the `backup_management.user_backup_service_internal` service account via `zero_sudo.security.utils`. Use of `.sudo()` is strictly prohibited.
+* **Micro-Privilege Architecture:** Executes operations with minimum required privileges. The `backup_worker.py` daemon uses a dedicated service account and its keys are provisioned automatically via `daemon_key_manager`.
+* **Encryption:** Kopia passwords and other sensitive keys (S3 secret keys) are encrypted at rest using the system's `ODOO_BACKUP_CRYPTO_KEY` (or fallback `HAMS_CRYPTO_KEY`) Fernet key.
+* **Path & Input Validation:** Implements strict validation for backup targets, restore paths, and pgBackRest stanzas to prevent shell injection and accidental overwriting of critical system files.
+* **Pager Duty Synergy:** Employs a soft-dependency on `pager_duty`. If a CLI command fails, a snapshot size anomaly is detected, or a backup snapshot becomes stale (no new snapshots in >26 hours), the module directly invokes `pager.incident.report_incident()` `[@ANCHOR: backup_pager_synergy]` using the `pager_service_internal` micro-account to instantly alert the on-call SRE.
 
 ## Automated Subsystems & Reporting
 * **Dashboard Status:** Aggregates target state and snapshot staleness for the NOC display `[@ANCHOR: backup_board_data]`.
