@@ -64,15 +64,18 @@ class TestComplianceHooks(TransactionCase):
         custom_page = self.env["website.page"].create({
             "url": "/privacy",
             "view_id": custom_view.id,
-            "is_published": True
+            "is_published": True,
+            "website_id": False
         })
 
         # Ensure our boilerplate page exists and is published (default state)
         boilerplate_page = self.env.ref("compliance.page_privacy_policy")
-        boilerplate_page.write({"is_published": True})
+        boilerplate_page.write({"is_published": True, "website_id": False})
 
+        self.env.flush_all()
         # Run the hook
         post_init_hook(self.env)
+        self.env['website.page'].invalidate_model(['is_published'])
 
         # Check that the boilerplate is now unpublished
         self.assertFalse(
@@ -85,6 +88,66 @@ class TestComplianceHooks(TransactionCase):
             "Custom page should remain published."
         )
 
+        # Multi-Website awareness test
+        website_2 = self.env["website"].create({"name": "Test Website 2"})
+        # Create a custom page ONLY for website_2
+        custom_view_2 = self.env["ir.ui.view"].create({
+            "name": "Custom Cookie 2",
+            "type": "qweb",
+            "arch": "<div>Custom Cookie 2</div>",
+            "key": "custom.cookie_view_2"
+        })
+        custom_page_2 = self.env["website.page"].create({
+            "url": "/cookie-policy",
+            "view_id": custom_view_2.id,
+            "is_published": True,
+            "website_id": website_2.id
+        })
+
+        # Ensure boilerplate is published
+        boilerplate_cookie = self.env.ref("compliance.page_cookie_policy")
+        boilerplate_cookie.write({"is_published": True, "website_id": False})
+
+        # Pre-cleanup: unpublish any existing boilerplate for website 2
+        existing_bp_2 = self.env["website.page"].with_context(active_test=False).search([
+            ("url", "=", "/cookie-policy"),
+            ("website_id", "=", website_2.id)
+        ]).filtered(lambda p: p.view_id.key and p.view_id.key.startswith("compliance.compliance_"))
+        existing_bp_2.write({"is_published": False})
+
+        self.env.flush_all()
+        post_init_hook(self.env)
+        boilerplate_cookie.invalidate_recordset(['is_published'])
+
+        # Global boilerplate should NOT be unpublished by a website-specific custom page
+        self.assertTrue(
+            boilerplate_cookie.is_published,
+            "Global boilerplate should NOT be unpublished by a website-specific custom page."
+        )
+
+        # Now create a boilerplate specifically for website 2
+        boilerplate_cookie_2 = boilerplate_cookie.copy({
+            "website_id": website_2.id,
+            "url": "/cookie-policy",
+            "is_published": True
+        })
+
+        self.env.flush_all()
+        post_init_hook(self.env)
+
+        # Invalidate properly to see changes
+        self.env['website.page'].invalidate_model(['is_published'])
+        boilerplate_cookie_2_fresh = self.env['website.page'].browse(boilerplate_cookie_2.id)
+
+        self.assertFalse(
+            boilerplate_cookie_2_fresh.is_published,
+            "Website-specific boilerplate should be unpublished by a website-specific custom page."
+        )
+
         # Cleanup
         custom_page.unlink()
         custom_view.unlink()
+        custom_page_2.unlink()
+        custom_view_2.unlink()
+        boilerplate_cookie_2.unlink()
+        website_2.unlink()
