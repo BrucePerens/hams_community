@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo.tests import HttpCase, tagged
 
-
 @tagged("post_install", "-at_install")
 class TestSEOUI(HttpCase):
     def setUp(self):

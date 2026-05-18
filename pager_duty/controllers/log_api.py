@@ -66,7 +66,7 @@ class PagerLogAPI(http.Controller):
         except json.JSONDecodeError as e:
             _logger.error("JSON Decode Failure during log search: %s", e)
             return {"error": _("Protocol Error: Failed to parse response.")}
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
+        except Exception as e: # audit-ignore-catch-all
             _logger.error("Unexpected Failure during log search: %s", e)
             return {"error": _("An unexpected error occurred.")}
 

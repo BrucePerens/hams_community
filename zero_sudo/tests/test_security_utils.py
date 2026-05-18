@@ -132,14 +132,10 @@ class TestSecurityUtils(TransactionCase):
             query = args[0]
             params = args[1]
 
-            self.assertEqual(
-                query, "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload"
-            )
+            self.assertEqual(query, "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload")
             self.assertEqual(params[0], "cache_invalidation")
             # We must sort the payloads because set conversion makes the order non-deterministic
-            self.assertListEqual(
-                sorted(params[1]), sorted(["test.model:key1", "test.model:key2"])
-            )
+            self.assertListEqual(sorted(params[1]), sorted(["test.model:key1", "test.model:key2"]))
 
     def test_06_get_deterministic_hash(self):
         # [@ANCHOR: test_deterministic_hash]
@@ -155,13 +151,9 @@ class TestSecurityUtils(TransactionCase):
 
         self.assertIsInstance(hash1, int)
         self.assertEqual(hash1, hash2, "Same input should yield same hash")
-        self.assertNotEqual(
-            hash1, hash3, "Different inputs should yield different hashes"
-        )
+        self.assertNotEqual(hash1, hash3, "Different inputs should yield different hashes")
         self.assertIsInstance(hash4, int, "Should handle non-string inputs gracefully")
-        self.assertTrue(
-            0 <= hash1 <= 2147483647, "Hash should be within 32-bit integer range"
-        )
+        self.assertTrue(0 <= hash1 <= 2147483647, "Hash should be within 32-bit integer range")
 
     @patch("subprocess.run")
     @patch("os.path.exists")
@@ -183,20 +175,16 @@ class TestSecurityUtils(TransactionCase):
         self.assertTrue(utils._update_python_venv())
 
         # Test 3: subprocess fails
-        mock_run.side_effect = subprocess.CalledProcessError(
-            1, "cmd", stderr="pip error"
-        )
+        mock_run.side_effect = subprocess.CalledProcessError(1, "cmd", stderr="pip error")
         with self.assertRaises(UserError) as cm:
             utils._update_python_venv()
         self.assertIn("pip error", str(cm.exception))
 
         # Test 4: AccessError for non-admin
-        non_admin = self.env["res.users"].create(
-            {
-                "name": "Non Admin",
-                "login": "non_admin_no_groups",
-            }
-        )
+        non_admin = self.env["res.users"].create({
+            "name": "Non Admin",
+            "login": "non_admin_no_groups",
+        })
         with self.assertRaises(AccessError):
             utils.with_user(non_admin)._update_python_venv()
 
@@ -216,9 +204,7 @@ class TestSecurityUtils(TransactionCase):
 
             # 3. Test configuration fallback
             with patch("builtins.open", side_effect=OSError("File not found")):
-                with patch.object(
-                    odoo.tools.config, "get", return_value="test_config_key"
-                ):
+                with patch.object(odoo.tools.config, "get", return_value="test_config_key"):
                     self.assertEqual(utils._get_crypto_secret(), "test_config_key")
 
     def test_09_bootstrap_knowledge_docs(self):
@@ -243,12 +229,8 @@ class TestSecurityUtils(TransactionCase):
         self.env["ir.module.module"]._bootstrap_knowledge_docs()
 
         # Check if the primary documentation was successfully injected
-        article = self.env[article_model_name].search(
-            [("name", "=", "Zero-Sudo Security Core")], limit=1
-        )
-        self.assertTrue(
-            article, "Documentation for zero_sudo should be installed via the manifest."
-        )
+        article = self.env[article_model_name].search([("name", "=", "Zero-Sudo Security Core")], limit=1)
+        self.assertTrue(article, "Documentation for zero_sudo should be installed via the manifest.")
 
     def test_10_get_service_env(self):
         """Verify _get_service_env correctly disables tracking and prefetching."""
@@ -281,7 +263,7 @@ class TestSecurityUtils(TransactionCase):
         mock_which.return_value = None
         # We use patch.dict to avoid 'res.users' KeyError during translation lookup
         with patch.dict(self.env.registry.models, clear=False) as mock_models:
-            mock_models.pop("binary.manifest", None)
+            mock_models.pop('binary.manifest', None)
             with self.assertRaises(UserError) as cm:
                 utils._ensure_executable("missing_bin", pkg_name="apt-pkg-missing")
             self.assertIn("Missing dependency", str(cm.exception))
@@ -292,21 +274,12 @@ class TestSecurityUtils(TransactionCase):
         mock_manifest.ensure_executable.return_value = "/var/lib/odoo/hams_bin/kopia"
         mock_env = MagicMock()
         # Mocking __getitem__ to handle 'binary.manifest'
-        mock_env.__getitem__.side_effect = lambda k: (
-            mock_manifest if k == "binary.manifest" else None
-        )
+        mock_env.__getitem__.side_effect = lambda k: mock_manifest if k == "binary.manifest" else None
 
-        with patch(
-            "odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._get_service_env",
-            return_value=mock_env,
-        ):
+        with patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._get_service_env", return_value=mock_env):
             # Use patch.dict to make "binary.manifest in self.env" return True
-            with patch.dict(
-                self.env.registry.models, {"binary.manifest": MagicMock()}, clear=False
-            ):
-                res = utils._ensure_executable(
-                    "kopia", svc_xml_id="zero_sudo.mail_service_internal"
-                )
+            with patch.dict(self.env.registry.models, {"binary.manifest": MagicMock()}, clear=False):
+                res = utils._ensure_executable("kopia", svc_xml_id="zero_sudo.mail_service_internal")
                 self.assertEqual(res, "/var/lib/odoo/hams_bin/kopia")
                 mock_manifest.ensure_executable.assert_called_once_with("kopia")
 
@@ -350,22 +323,18 @@ class TestSecurityUtils(TransactionCase):
         self.assertIn("is a human user", str(cm.exception))
 
         # 4. Deny Disabled Accounts
-        disabled_user = self.env["res.users"].create(
-            {
-                "name": "Disabled SA",
-                "login": "disabled_sa",
-                "is_service_account": True,
-                "active": False,
-            }
-        )
-        self.env["ir.model.data"].create(
-            {
-                "module": "zero_sudo",
-                "name": "disabled_sa_xml",
-                "model": "res.users",
-                "res_id": disabled_user.id,
-            }
-        )
+        disabled_user = self.env["res.users"].create({
+            "name": "Disabled SA",
+            "login": "disabled_sa",
+            "is_service_account": True,
+            "active": False,
+        })
+        self.env["ir.model.data"].create({
+            "module": "zero_sudo",
+            "name": "disabled_sa_xml",
+            "model": "res.users",
+            "res_id": disabled_user.id,
+        })
 
         with self.assertRaises(AccessError) as cm:
             utils._get_service_uid("zero_sudo.disabled_sa_xml")

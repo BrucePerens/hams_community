@@ -48,7 +48,7 @@
             "path": "docs/journeys/shift_handoff_protocol.md",
             "icon": "🤝",
             "category": "technical",
-        },
+        }
     ],
     "installable": True,
     "application": True,

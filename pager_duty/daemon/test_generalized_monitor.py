@@ -436,11 +436,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         )
         self.assertTrue(success)
         # Verify docker inspect call
-        docker_call = [
-            call
-            for call in mock_run.call_args_list
-            if "/bin/mock" in call[0][0] and "inspect" in call[0][0]
-        ]
+        docker_call = [call for call in mock_run.call_args_list if '/bin/mock' in call[0][0] and 'inspect' in call[0][0]]
         self.assertTrue(docker_call, "Docker call not found")
 
         # Systemd
@@ -573,9 +569,7 @@ class TestMonitorExhaustive(unittest.TestCase):
         # SNMP
         with patch("generalized_monitor.shutil.which", return_value="/bin/mock"):
             with patch("generalized_monitor.subprocess.run") as mock_run_snmp:
-                mock_run_snmp.return_value = MagicMock(
-                    returncode=0, stdout="Timeout", stderr=""
-                )
+                mock_run_snmp.return_value = MagicMock(returncode=0, stdout="Timeout", stderr="")
                 success, msg = generalized_monitor.execute_check(
                     {
                         "type": "snmp",
@@ -586,9 +580,7 @@ class TestMonitorExhaustive(unittest.TestCase):
                 )
                 self.assertFalse(success, msg)
 
-                mock_run_snmp.return_value = MagicMock(
-                    returncode=0, stdout="OK", stderr=""
-                )
+                mock_run_snmp.return_value = MagicMock(returncode=0, stdout="OK", stderr="")
                 success, msg = generalized_monitor.execute_check(
                     {
                         "type": "snmp",

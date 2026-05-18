@@ -186,12 +186,10 @@ class TestManualAccessRights(TransactionCase):
 
     def test_08_owner_unpublished_visibility(self):
         """Owners must be able to see their own articles even if they are NOT published."""
-        unpublished_owned = self.env["knowledge.article"].create(
-            {
-                "name": "My Secret Draft",
-                "is_published": False,
-            }
-        )
+        unpublished_owned = self.env["knowledge.article"].create({
+            "name": "My Secret Draft",
+            "is_published": False,
+        })
         self.env.cr.execute(
             "UPDATE knowledge_article SET create_uid = %s WHERE id = %s",
             (self.internal_user.id, unpublished_owned.id),

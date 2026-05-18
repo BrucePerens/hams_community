@@ -1,7 +1,6 @@
 from odoo.tests import HttpCase, tagged
 
-
-@tagged("post_install", "-at_install", "ui", "integration")
+@tagged('post_install', '-at_install', 'ui', 'integration')
 class TestHelpdeskTours(HttpCase):
 
     def test_01_helpdesk_operator_tour(self):

@@ -13,7 +13,6 @@ import urllib.parse
 import shutil
 import check_burn_list
 
-
 def _cluster_indices(indices, max_gap):
     """
     Groups overlapping or adjacent match indices into clusters.
@@ -57,9 +56,7 @@ def lint_file_content(filepath, content):
                     out = res.stdout.strip().replace(tmp_filepath, filepath)
                     post_errors.append(f"[ERROR] flake8 found issues:\n{out}")
             except FileNotFoundError:
-                warnings.append(
-                    "[WARN] flake8 is not installed. Skipping verification."
-                )
+                warnings.append("[WARN] flake8 is not installed. Skipping verification.")
 
         # 2. XML
         elif ext == ".xml":
@@ -92,13 +89,9 @@ def lint_file_content(filepath, content):
                     errs, warns = check_burn_list.scan_file(tmp_filepath)
                     if errs:
                         err_str = "\n".join(errs).replace(tmp_filepath, filepath)
-                        post_errors.append(
-                            f"[ERROR] check_burn_list.py rejected:\n{err_str}"
-                        )
+                        post_errors.append(f"[ERROR] check_burn_list.py rejected:\n{err_str}")
                     for w in warns:
-                        warnings.append(
-                            f"[WARN] check_burn_list.py warning: {w.replace(tmp_filepath, filepath)}"
-                        )
+                        warnings.append(f"[WARN] check_burn_list.py warning: {w.replace(tmp_filepath, filepath)}")
                 except Exception as e:
                     warnings.append(f"[WARN] Failed to execute custom linter: {e}")
 
@@ -619,7 +612,7 @@ def fuzzy_markdown_replace(original_text, search_text, replace_text, filepath=""
             best_ratio = ratio
             best_indices = [i]
         elif ratio == best_ratio and ratio > 0:
-            best_indices.append(i)
+             best_indices.append(i)
 
     if best_ratio > 0.90:
         clusters = _cluster_indices(best_indices, search_len)
@@ -865,14 +858,7 @@ def extract_parcel(raw_text):
 
     tasks_by_file = {}
 
-    VALID_HEADERS = (
-        "Path:",
-        "Operation:",
-        "New-Path:",
-        "Mode:",
-        "Encoding:",
-        "Repository:",
-    )
+    VALID_HEADERS = ("Path:", "Operation:", "New-Path:", "Mode:", "Encoding:", "Repository:")
 
     for part in parts:
         if not part.strip() or part.strip().startswith("--"):
@@ -892,9 +878,7 @@ def extract_parcel(raw_text):
                 if line.startswith(VALID_HEADERS):
                     header_lines.append(line)
                 elif re.match(r"^[A-Za-z0-9\-]+:", line):
-                    print(
-                        f"❌ Error: Unknown or malformed header '{line.strip()}' in Parcel block.\nRejecting payload."
-                    )
+                    print(f"❌ Error: Unknown or malformed header '{line.strip()}' in Parcel block.\nRejecting payload.")
                     return
                 else:
                     in_header = False
@@ -903,9 +887,7 @@ def extract_parcel(raw_text):
                 payload_lines.append(line)
 
         if not header_lines:
-            print(
-                "❌ Error: Parcel block missing headers (e.g., 'Path:').\nRejecting payload."
-            )
+            print("❌ Error: Parcel block missing headers (e.g., 'Path:').\nRejecting payload.")
             return
 
         header = "\n".join(header_lines)
@@ -913,23 +895,15 @@ def extract_parcel(raw_text):
 
         path_lines = [l for l in header.splitlines() if l.startswith("Path:")]
         if not path_lines:
-            print(
-                f"❌ Error: Parcel block missing 'Path:' header.\nHeader content:\n{header}\nRejecting payload."
-            )
+            print(f"❌ Error: Parcel block missing 'Path:' header.\nHeader content:\n{header}\nRejecting payload.")
             return
         filepath = path_lines[0].split(":", 1)[1].strip()
 
         operation_lines = [l for l in header.splitlines() if l.startswith("Operation:")]
-        operation = (
-            operation_lines[0].split(":", 1)[1].strip().lower()
-            if operation_lines
-            else "overwrite"
-        )
+        operation = operation_lines[0].split(":", 1)[1].strip().lower() if operation_lines else "overwrite"
 
         new_path_lines = [l for l in header.splitlines() if l.startswith("New-Path:")]
-        new_filepath = (
-            new_path_lines[0].split(":", 1)[1].strip() if new_path_lines else None
-        )
+        new_filepath = new_path_lines[0].split(":", 1)[1].strip() if new_path_lines else None
 
         mode_lines = [l for l in header.splitlines() if l.startswith("Mode:")]
         mode_str = mode_lines[0].split(":", 1)[1].strip() if mode_lines else None
@@ -939,24 +913,16 @@ def extract_parcel(raw_text):
 
         if expected_repo:
             try:
-                top_level = subprocess.check_output(
-                    ["git", "rev-parse", "--show-toplevel"],
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                ).strip()
+                top_level = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], stderr=subprocess.STDOUT, text=True).strip()
                 current_repo = os.path.basename(top_level)
             except Exception:
                 current_repo = os.path.basename(os.getcwd())
 
-            exp_base = expected_repo.split("/")[-1].lower()
+            exp_base = expected_repo.split('/')[-1].lower()
             curr_base = current_repo.lower()
 
             if not (curr_base.startswith(exp_base) or exp_base.startswith(curr_base)):
-                tasks_by_file.setdefault(filepath, []).append(
-                    {
-                        "error": f"Repository mismatch. Expected '{expected_repo}', but currently in '{current_repo}'."
-                    }
-                )
+                tasks_by_file.setdefault(filepath, []).append({"error": f"Repository mismatch. Expected '{expected_repo}', but currently in '{current_repo}'."})
                 continue
 
         if terminator in payload:
@@ -964,20 +930,18 @@ def extract_parcel(raw_text):
 
         payload = urllib.parse.unquote(payload)
 
-        if filepath.endswith(
-            (".py", ".sh", ".conf", ".yaml", ".json", ".xml", ".csv", ".md")
-        ):
+        if filepath.endswith((".py", ".sh", ".conf", ".yaml", ".json", ".xml", ".csv", ".md")):
             # 1. Fix standard or escaped markdown links wrapping URLs: https://a.com or \"https://a.com"\
             payload = re.sub(
                 r'\\?\[\s*(["\']?)\s*(https?://[^\]"\'\s]+)\s*\1\s*\\?\]\s*\\?\(\s*(https?://[^)\s]+)\s*\\?\)',
-                r"\1\2\1",
-                payload,
+                r'\1\2\1',
+                payload
             )
             # 2. Fix the https://a.com mangling
             payload = re.sub(
                 r"(https?://)?\[([^\]]+)\]\([^)]*https?://[^)]+\)",
                 lambda m: (m.group(1) or "") + m.group(2),
-                payload,
+                payload
             )
 
         try:
@@ -1032,7 +996,7 @@ def extract_parcel(raw_text):
 
         target_dir = os.path.dirname(filepath)
         if target_dir:
-            os.makedirs(target_dir, exist_ok=True)
+             os.makedirs(target_dir, exist_ok=True)
 
         if os.path.exists(filepath):
             try:
@@ -1080,7 +1044,7 @@ def extract_parcel(raw_text):
                     if not task["new_filepath"]:
                         raise ValueError("Rename requires 'New-Path: <target>'")
                     if not os.path.exists(filepath):
-                        raise FileNotFoundError(
+                         raise FileNotFoundError(
                             f"Cannot rename missing file: {filepath}"
                         )
                     renamed_to = task["new_filepath"]
@@ -1141,22 +1105,22 @@ def extract_parcel(raw_text):
                                 )
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(
-                                    current_text, search_text, replace_text, filepath
+                                 current_text, search_text, replace_text, filepath
                                 )
                             elif filepath.endswith(".md"):
                                 new_text = fuzzy_line_replace(
-                                    current_text, search_text, replace_text, filepath
-                                )
+                                 current_text, search_text, replace_text, filepath
+                            )
                             if new_text is None:
                                 new_text = semantic_markdown_replace(
                                     current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
                                 new_text = boundary_markdown_replace(
-                                    current_text, search_text, replace_text, filepath
+                                     current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
-                                new_text = fuzzy_markdown_replace(
+                               new_text = fuzzy_markdown_replace(
                                     current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
@@ -1165,11 +1129,11 @@ def extract_parcel(raw_text):
                                 )
                         elif filepath.endswith(".xml"):
                             new_text = fuzzy_line_replace(
-                                current_text, search_text, replace_text, filepath
+                                 current_text, search_text, replace_text, filepath
                             )
                             if new_text is None:
                                 new_text = semantic_xml_replace(
-                                    current_text, search_text, replace_text, filepath
+                                     current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(
@@ -1178,7 +1142,7 @@ def extract_parcel(raw_text):
                         else:
                             new_text = fuzzy_line_replace(
                                 current_text, search_text, replace_text, filepath
-                            )
+                             )
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(
                                     current_text, search_text, replace_text, filepath

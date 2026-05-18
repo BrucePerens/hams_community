@@ -10,7 +10,6 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-
 class ZeroSudoDaemonUtils(models.AbstractModel):
     _name = "zero_sudo.daemon.utils"
     _description = "Daemon Management Utilities"
@@ -18,7 +17,7 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
     @api.model
     def start_daemon_process(self, script_path, args=None, env_vars=None):
         """Starts a python daemon script as a subprocess."""
-        cmd = ["python3", script_path] + (args or [])
+        cmd = ['python3', script_path] + (args or [])
         env = os.environ.copy()
         if env_vars:
             env.update(env_vars)
@@ -36,9 +35,7 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
                 os.kill(process.pid, signal.SIGTERM)
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                _logger.warning(
-                    "Daemon PID %s did not terminate, forcing SIGKILL", process.pid
-                )
+                _logger.warning("Daemon PID %s did not terminate, forcing SIGKILL", process.pid)
                 os.kill(process.pid, signal.SIGKILL)
 
     @api.model
@@ -55,14 +52,11 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
                         return True
             except urllib.error.URLError as e:
                 _logger.info("Health check polling connection issue: %s", e)
-            except Exception as e: # audit-ignore-catch-all  # fmt: skip
+            except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Unexpected error during health check: %s", e)
                 raise
-            time.sleep(interval) # audit-ignore-sleep  # fmt: skip
+            time.sleep(interval) # audit-ignore-sleep
 
-        error_msg = _("Daemon health check failed for %s after %s seconds.") % (
-            url,
-            timeout,
-        )
+        error_msg = _("Daemon health check failed for %s after %s seconds.") % (url, timeout)
         _logger.error(error_msg)
         raise UserError(error_msg)

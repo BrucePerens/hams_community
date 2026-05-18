@@ -5,7 +5,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-
 class HelpdeskTicket(models.Model):
     _name = "hams_helpdesk.ticket"
     _description = "Helpdesk Ticket"
@@ -20,9 +19,7 @@ class HelpdeskTicket(models.Model):
     user_id = fields.Many2one(
         "res.users", string="Assigned To", tracking=True, index=True
     )
-    partner_id = fields.Many2one(
-        "res.partner", string="Customer", index=True, tracking=True
-    )
+    partner_id = fields.Many2one("res.partner", string="Customer", index=True, tracking=True)
 
     stage = fields.Selection(
         [
@@ -99,14 +96,11 @@ class HelpdeskTicket(models.Model):
         if "is_pager_duty" in Calendar._fields:
             now = fields.Datetime.now()
             thirty_mins = now + datetime.timedelta(minutes=30)
-            upcoming_shifts = Calendar.search(
-                [
-                    ("is_pager_duty", "=", True),
-                    ("start", ">", now),
-                    ("start", "<=", thirty_mins),
-                ],
-                limit=100,
-            )
+            upcoming_shifts = Calendar.search([
+                ("is_pager_duty", "=", True),
+                ("start", ">", now),
+                ("start", "<=", thirty_mins),
+            ], limit=100)
             upcoming_partner_ids = upcoming_shifts.mapped("user_id.partner_id.id")
 
         # 2. Apply assignments and send notifications via Helpdesk Service Account
@@ -124,7 +118,7 @@ class HelpdeskTicket(models.Model):
                 ticket.message_post(
                     body=_("Helpdesk Ticket #%s assigned to you.") % ticket.id,
                     partner_ids=[ticket.user_id.partner_id.id],
-                    subject=_("Ticket Assigned: %s") % ticket.name,
+                    subject=_("Ticket Assigned: %s") % ticket.name
                 )
                 # Bus Toast
                 self.env["bus.bus"]._sendone(
@@ -133,28 +127,21 @@ class HelpdeskTicket(models.Model):
                     {
                         "type": "warning",
                         "title": _("New Helpdesk Ticket"),
-                        "message": _("Ticket %s requires your attention.")
-                        % ticket.name,
-                    },
+                        "message": _("Ticket %s requires your attention.") % ticket.name
+                    }
                 )
 
             # Pre-Shift Awareness (CC upcoming admins)
             if upcoming_partner_ids:
-                current_assignee_pid = (
-                    ticket.user_id.partner_id.id if ticket.user_id else False
-                )
-                cc_pids = [
-                    pid for pid in upcoming_partner_ids if pid != current_assignee_pid
-                ]
+                current_assignee_pid = ticket.user_id.partner_id.id if ticket.user_id else False
+                cc_pids = [pid for pid in upcoming_partner_ids if pid != current_assignee_pid]
                 if cc_pids:
                     ticket.message_subscribe(partner_ids=cc_pids)
                     ticket.message_post(
-                        body=_(
-                            "Upcoming shift awareness: A new ticket was created near your shift start."
-                        ),
+                        body=_("Upcoming shift awareness: A new ticket was created near your shift start."),
                         partner_ids=cc_pids,
                         subject=_("Shift CC: %s") % ticket.name,
-                        subtype_xmlid="mail.mt_note",
+                        subtype_xmlid="mail.mt_note"
                     )
 
             # Ensure customer is subscribed
@@ -169,10 +156,9 @@ class HelpdeskTicket(models.Model):
                 if ticket.partner_id:
                     stage_str = dict(self._fields["stage"].selection).get(ticket.stage)
                     ticket.message_post(
-                        body=_("Your issue has been updated. New Status: %s")
-                        % stage_str,
+                        body=_("Your issue has been updated. New Status: %s") % stage_str,
                         partner_ids=[ticket.partner_id.id],
-                        subject=_("Ticket Update: %s") % ticket.name,
+                        subject=_("Ticket Update: %s") % ticket.name
                     )
         return res
 
@@ -190,5 +176,5 @@ class HelpdeskTicket(models.Model):
             "context": {
                 "default_ticket_id": self.id,
                 "default_old_user_id": self.user_id.id if self.user_id else False,
-            },
+            }
         }

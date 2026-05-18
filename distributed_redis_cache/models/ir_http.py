@@ -17,6 +17,7 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
     invalidate_model_cache,
 )
 
+
 _logger = logging.getLogger(__name__)
 
 _invalidation_queue = set()
@@ -43,13 +44,18 @@ def _redis_listener_thread():
     if not redis or not redis_pool:
         return
     try:
-        r_client = redis.Redis(connection_pool=redis_pool, socket_timeout=2.0)
+        r_client = redis.Redis(
+            connection_pool=redis_pool, socket_timeout=2.0
+        )
         pubsub = r_client.pubsub()
         pubsub.subscribe("odoo_cache_invalidation_bus")
 
         while _listener_started:
             try:
-                msg = pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
+                msg = pubsub.get_message(
+                    ignore_subscribe_messages=True,
+                    timeout=0.1
+                )
                 if msg and msg.get("type") == "message":
                     data = msg.get("data")
                     if data:
@@ -99,7 +105,8 @@ class IrHttp(models.AbstractModel):
                     if not _listener_started:
                         if _executor is None:
                             _executor = concurrent.futures.ThreadPoolExecutor(
-                                max_workers=1, thread_name_prefix="RedisListener"
+                                max_workers=1,
+                                thread_name_prefix="RedisListener"
                             )
                         _stop_event.clear()
                         _executor.submit(_redis_listener_thread)

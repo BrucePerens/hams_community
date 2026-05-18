@@ -89,23 +89,15 @@ class RealTransactionCase(HttpCase):
         try:
             self.env.cr.commit()
         except odoo.exceptions.UserError as e:
-            _logger.warning(
-                "A UserError occurred during final commit in tearDown: %s", e
-            )
+            _logger.warning("A UserError occurred during final commit in tearDown: %s", e)
             self.env.cr.rollback()
         except odoo.exceptions.ValidationError as e:
-            _logger.warning(
-                "A ValidationError occurred during final commit in tearDown: %s", e
-            )
+            _logger.warning("A ValidationError occurred during final commit in tearDown: %s", e)
             self.env.cr.rollback()
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
+        except Exception as e: # audit-ignore-catch-all
             # This is a fallback for unexpected errors during teardown to prevent
             # crashing the entire test runner process if possible, but still logged.
-            _logger.error(
-                "An unexpected error occurred during final commit in tearDown: %s",
-                e,
-                exc_info=True,
-            )
+            _logger.error("An unexpected error occurred during final commit in tearDown: %s", e, exc_info=True)
             self.env.cr.rollback()
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
@@ -129,13 +121,7 @@ class RealTransactionCase(HttpCase):
                                 records.unlink()
                         # If we reach here, the unlink was successful
                         self._tracked_records[model_name] = set()
-                    except (
-                        psycopg2.IntegrityError,
-                        odoo.exceptions.AccessError,
-                        odoo.exceptions.UserError,
-                        odoo.exceptions.RedirectWarning,
-                        odoo.exceptions.ValidationError,
-                    ) as e:
+                    except (psycopg2.IntegrityError, odoo.exceptions.AccessError, odoo.exceptions.UserError, odoo.exceptions.RedirectWarning, odoo.exceptions.ValidationError) as e:
                         # These are expected if records are still referenced or have access restrictions
                         pending_deletes = True
                         if attempt == 2:
@@ -145,16 +131,10 @@ class RealTransactionCase(HttpCase):
                                 ids,
                                 e,
                             )
-                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
+                    except Exception as e: # audit-ignore-catch-all
                         # Fallback for truly unexpected errors during cleanup
                         pending_deletes = True
-                        _logger.error(
-                            "Unexpected error during auto-cleanup of %s %s: %s",
-                            model_name,
-                            ids,
-                            e,
-                            exc_info=True,
-                        )
+                        _logger.error("Unexpected error during auto-cleanup of %s %s: %s", model_name, ids, e, exc_info=True)
             if not pending_deletes:
                 break
 
@@ -168,7 +148,7 @@ class RealTransactionCase(HttpCase):
         noisy_tables = set()
         if "hams_test.noisy_table" in self.env:
             noisy_records = self.env["hams_test.noisy_table"].search(
-                [("active", "=", True)], limit=1000
+                [('active', '=', True)], limit=1000
             )
             noisy_tables = {r.name for r in noisy_records}
 
@@ -191,8 +171,8 @@ class RealTransactionCase(HttpCase):
                 "database_query_stat",
                 "database_activity",
                 "database_index_stat",
-                "ir_attachment",  # Often modified by documentation injection
-                "ir_model_data",  # Often modified by documentation injection
+                "ir_attachment", # Often modified by documentation injection
+                "ir_model_data", # Often modified by documentation injection
             }
 
         # Optimization: Pre-fetch all table counts in a single pass if possible?
@@ -224,8 +204,5 @@ class RealTransactionCase(HttpCase):
 
         if leaks:
             raise AssertionError(
-                _(
-                    "Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s"
-                )
-                % ", ".join(leaks)
+                _("Database pollution detected! Auto-cleanup failed or raw SQL was used. Leaked records: %s") % ", ".join(leaks)
             )

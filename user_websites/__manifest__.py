@@ -53,7 +53,7 @@ This module enables:
             "name": "User Websites Documentation",
             "path": "data/documentation.html",
             "icon": "🌐",
-            "category": "workspace",
+            "category": "workspace"
         }
     ],
     "assets": {

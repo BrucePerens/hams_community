@@ -4,7 +4,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-
 def post_init_hook(env):
     """
     Hook executed upon module installation.
@@ -20,9 +19,7 @@ def post_init_hook(env):
 
     # ADR-0002: Zero-Sudo Architecture. We must not use .sudo() or stay as SUPERUSER.
     # We switch to a dedicated micro-privilege service account.
-    env_svc = env["zero_sudo.security.utils"]._get_service_env(
-        "compliance.user_compliance_service"
-    )
+    env_svc = env["zero_sudo.security.utils"]._get_service_env("compliance.user_compliance_service")
 
     _logger.info("Enforcing Cookie Consent Bar on all websites.")
     websites = env_svc["website"].search([], limit=10000)
@@ -37,21 +34,19 @@ def post_init_hook(env):
     legal_urls = ["/privacy", "/cookie-policy", "/terms"]
 
     # Pre-fetch all pages for the target URLs
-    all_pages = env_svc["website.page"].search([("url", "in", legal_urls)], limit=1000)
+    all_pages = env_svc["website.page"].search([
+        ("url", "in", legal_urls)
+    ], limit=1000)
 
     for url in legal_urls:
         url_pages = all_pages.filtered(lambda p: p.url == url)
 
         # Check for pages that are NOT owned by this module
-        custom_pages = url_pages.filtered(
-            lambda p: not p.view_id.key.startswith("compliance.compliance_")
-        )
+        custom_pages = url_pages.filtered(lambda p: not p.view_id.key.startswith("compliance.compliance_"))
 
         if custom_pages:
             _logger.info("Custom page detected at %s. Shielding existing content.", url)
             # Find OUR boilerplate pages and unpublish them to defer to the site owner's version
-            boilerplate_pages = url_pages.filtered(
-                lambda p: p.view_id.key.startswith("compliance.compliance_")
-            )
+            boilerplate_pages = url_pages.filtered(lambda p: p.view_id.key.startswith("compliance.compliance_"))
             if boilerplate_pages:
                 boilerplate_pages.write({"is_published": False})

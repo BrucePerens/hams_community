@@ -14,13 +14,27 @@
 
     <h2 id="how_to_use" data-trace="[@ANCHOR: UX_BINARY_INSTALL]">2. Operating the Module</h2>
     <p>
-        While most operations happen automatically, administrators can monitor and trigger installations manually:
+        While most operations happen automatically when other Odoo modules require them, administrators can monitor, configure, and trigger installations manually:
     </p>
+    <h3>2.1. Monitoring and Manual Installation</h3>
     <ol>
         <li>Navigate to <strong>Settings -> Technical -> Binary Manifests</strong>.</li>
         <li>Review the list of binaries. The <strong>Installed</strong> column indicates if the dependency is currently available on the system PATH or in Odoo's private binary directory (<code>hams_bin</code>).</li>
         <li>To manually install or update a dependency, click the <strong>Install</strong> button on the list view, or open the record and click <strong>Install Now</strong>.</li>
         <li>If an installation fails, a detailed notification will explain the cause (e.g., network error or checksum mismatch).</li>
+    </ol>
+
+    <h3>2.2. Adding New Binaries</h3>
+    <p>
+        If you need to add a new tool for a custom module:
+    </p>
+    <ol>
+        <li>Click the <strong>New</strong> button in the Binary Manifests list.</li>
+        <li><strong>Binary Name:</strong> Enter the command name (e.g., <code>my-utility</code>). Do not use slashes.</li>
+        <li><strong>Download URL:</strong> Provide the HTTPS link to the raw binary or <code>.tar.gz</code> archive.</li>
+        <li><strong>SHA-256 Checksum:</strong> Provide the expected SHA-256 hash of the file. This is mandatory for security.</li>
+        <li><strong>Archive Type:</strong> Select "Raw Binary" if the URL points directly to the executable, or "Tarball (.tar.gz)" if it's an archive.</li>
+        <li><strong>Extract Member:</strong> For tarballs, specify the filename within the archive that should be extracted as the executable.</li>
     </ol>
 
     <h2 id="binary_security">3. Security Architecture</h2>

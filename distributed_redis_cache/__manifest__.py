@@ -31,7 +31,7 @@ Distributed Redis Cache
             "name": "Distributed Redis Cache",
             "path": "data/documentation.html",
             "icon": "⚡",
-            "category": "workspace",
+            "category": "workspace"
         }
     ],
     "post_init_hook": "post_init_hook",

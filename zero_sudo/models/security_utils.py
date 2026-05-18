@@ -10,7 +10,6 @@ from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
-
 class ZeroSudoSecurityUtils(models.AbstractModel):
     _name = "zero_sudo.security.utils"
     _description = "Centralized Security and Privilege Utilities"
@@ -44,7 +43,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # STRICT ZERO-SUDO MANDATE: Resolve the ID using raw SQL to prevent any ORM/sudo bypasses
         self.env.cr.execute(
             "SELECT res_id FROM ir_model_data WHERE module = %s AND name = %s AND model = 'res.users'",
-            (module, name),
+            (module, name)
         )
         res_id_row = self.env.cr.fetchone()
         if not res_id_row:
@@ -116,9 +115,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
         pkg = pkg_name or cmd_name
         raise UserError(
-            _(
-                "Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s')."
-            )
+            _("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').")
             % (cmd_name, pkg)
         )
 
@@ -166,13 +163,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         whitelist = self._get_param_whitelist()
 
         banned_substrings = [
-            "secret",
-            "key",
-            "password",
-            "token",
-            "auth",
-            "crypt",
-            "cert",
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
         ]
         lower_key = key.lower()
 
@@ -200,13 +191,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         whitelist = self._get_param_whitelist()
 
         banned_substrings = [
-            "secret",
-            "key",
-            "password",
-            "token",
-            "auth",
-            "crypt",
-            "cert",
+            "secret", "key", "password", "token", "auth", "crypt", "cert",
         ]
         lower_key = key.lower()
 
@@ -215,8 +200,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 raise AccessError(
                     _(
                         "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
-                    )
-                    % key
+                    ) % key
                 )
             raise AccessError(
                 _(
@@ -232,18 +216,18 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     @api.model
     def _get_kv(self, key):
         env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
-        record = env_svc["zero_sudo.kv"].search([("key", "=", key)], limit=1)
+        record = env_svc['zero_sudo.kv'].search([('key', '=', key)], limit=1)
         return record.value if record else None
 
     @api.model
     def _set_kv(self, key, value):
         env_svc = self._get_service_env("zero_sudo.odoo_facility_service_internal")
-        KV = env_svc["zero_sudo.kv"]
-        record = KV.search([("key", "=", key)], limit=1)
+        KV = env_svc['zero_sudo.kv']
+        record = KV.search([('key', '=', key)], limit=1)
         if record:
-            record.write({"value": value})
+            record.write({'value': value})
         else:
-            KV.create({"key": key, "value": value})
+            KV.create({'key': key, 'value': value})
 
     @api.model
     def _update_python_venv(self):
@@ -251,9 +235,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_update_python_venv]
         # Tests [@ANCHOR: story_venv_management]
         if not self.env.user.has_group("base.group_system"):
-            raise AccessError(
-                _("Only administrators can update the Python environment.")
-            )
+            raise AccessError(_("Only administrators can update the Python environment."))
 
         req_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")

@@ -3,7 +3,6 @@
 from odoo import http
 from odoo.addons.user_websites.controllers.main import UserWebsitesController
 
-
 class UserWebsitesSEOController(UserWebsitesController):
 
     @http.route(

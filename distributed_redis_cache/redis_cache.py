@@ -86,9 +86,7 @@ def distributed_cache():
                     r.setex(cache_key, 86400, serialized_result)  # 24h TTL
                     return result
                 except (redis.RedisError, TypeError) as e:
-                    _logger.warning(
-                        "Redis cache write failed, falling back to local: %s", e
-                    )
+                    _logger.warning("Redis cache write failed, falling back to local: %s", e)
 
             # Fallback to local memory cache
             _local_cache[cache_key] = result

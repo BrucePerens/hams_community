@@ -43,4 +43,8 @@ class TestBinaryDownloaderTour(HttpCase):
     )
     def test_binary_install_tour(self, mock_ensure):
         # Tested by [@ANCHOR: test_binary_install_tour]
-        self.start_tour("/odoo?action=binary_downloader.action_binary_downloader_manifest", "binary_install_tour", login="admin")
+        self.start_tour(
+            "/odoo?action=binary_downloader.action_binary_downloader_manifest",
+            "binary_install_tour",
+            login="admin",
+        )

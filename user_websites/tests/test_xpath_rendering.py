@@ -149,17 +149,17 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.assertIn(
             b'id="user_websites_dropzone_home_header"',
             response.content,
-            "The home header dropzone must render.",
+            "The home header dropzone must render."
         )
         self.assertIn(
             b'id="user_websites_dropzone_home_footer"',
             response.content,
-            "The home footer dropzone must render.",
+            "The home footer dropzone must render."
         )
         self.assertIn(
             b'id="user_websites_dropzone_navbar_actions"',
             response.content,
-            "The navbar actions dropzone must render.",
+            "The navbar actions dropzone must render."
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn(
@@ -255,5 +255,5 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
         self.assertIn(
             b'id="user_websites_dropzone_directory_card"',
             response.content,
-            "The community directory must render the directory card dropzone.",
+            "The community directory must render the directory card dropzone."
         )

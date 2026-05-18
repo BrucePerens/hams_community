@@ -22,7 +22,7 @@
             "name": "Daemon Key Manager Documentation",
             "path": "data/documentation.html",
             "icon": "🔑",
-            "category": "workspace",
+            "category": "workspace"
         }
     ],
     "installable": True,

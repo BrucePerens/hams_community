@@ -8,19 +8,21 @@
     "license": "AGPL-3",
     "depends": ["base", "mail"],
     "assets": {
-        "web.assets_tests": ["zero_sudo/static/src/**/*"],
+      "web.assets_tests": [
+        "zero_sudo/static/src/**/*"
+      ],
     },
     "data": [
         "data/security_data.xml",
         "security/ir.model.access.csv",
-        "views/res_users_views.xml",
+        "views/res_users_views.xml"
     ],
     "knowledge_docs": [
         {
             "name": "Zero-Sudo Security Core",
             "path": "data/documentation.html",
             "icon": "🛡️",
-            "category": "workspace",
+            "category": "workspace"
         }
     ],
     "installable": True,

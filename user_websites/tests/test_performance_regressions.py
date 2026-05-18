@@ -162,7 +162,7 @@ class TestPerformanceRouting(odoo.tests.common.HttpCase):
             try:
                 self.url_open("/")
                 self.url_open("/community")
-            except Exception as e: # audit-ignore-catch-all  # fmt: skip
+            except Exception as e: # audit-ignore-catch-all
                 _logger.warning("An error occurred: %s", e)
             logger.warning("DUMMY_WARNING_TO_SATISFY_ASSERTLOGS")
 

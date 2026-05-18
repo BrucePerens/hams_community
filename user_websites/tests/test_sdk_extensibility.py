@@ -199,14 +199,10 @@ class TestSDKExtensibility(odoo.tests.common.TransactionCase):
         # [@ANCHOR: test_api_armor_mandatory_assignment]
         # Tests [@ANCHOR: mixin_proxy_ownership_create]
         """Verify that standard users automatically get ownership assigned."""
-        page = (
-            self.env["website.page"]
-            .with_user(self.user)
-            .create({"url": "/orphan", "name": "Orphan Page", "type": "qweb"})
+        page = self.env["website.page"].with_user(self.user).create(
+            {"url": "/orphan", "name": "Orphan Page", "type": "qweb"}
         )
-        self.assertEqual(
-            page.owner_user_id.id, self.user.id, "Ownership should be auto-assigned"
-        )
+        self.assertEqual(page.owner_user_id.id, self.user.id, "Ownership should be auto-assigned")
 
         with self.assertRaises(
             AccessError, msg="Must fail safely if a non-existent group ID is provided."

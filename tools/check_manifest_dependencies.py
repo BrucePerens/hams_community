@@ -12,7 +12,6 @@ import sys
 import ast
 import re
 
-
 def check_manifest(base_dir):
     errors = []
 
@@ -27,14 +26,14 @@ def check_manifest(base_dir):
             manifest_path = os.path.join(root, "__manifest__.py")
             module_name = os.path.basename(root)
 
-            with open(manifest_path, "r", encoding="utf-8") as f:
+            with open(manifest_path, 'r', encoding='utf-8') as f:
                 try:
                     manifest_data = ast.literal_eval(f.read())
                 except Exception as e:
                     errors.append(f"❌ ERROR: Failed to parse {manifest_path}: {e}")
                     continue
 
-            data_files = manifest_data.get("data", [])
+            data_files = manifest_data.get('data', [])
             defined_ids = set()
 
             for data_file in data_files:
@@ -42,8 +41,8 @@ def check_manifest(base_dir):
                 if not os.path.exists(file_path):
                     continue
 
-                if file_path.endswith(".xml"):
-                    with open(file_path, "r", encoding="utf-8") as f:
+                if file_path.endswith('.xml'):
+                    with open(file_path, 'r', encoding='utf-8') as f:
                         for line_num, line in enumerate(f, 1):
 
                             # 1. Add new definitions to the simulated registry
@@ -60,15 +59,12 @@ def check_manifest(base_dir):
                             for ref_id in refs_to_check:
                                 # Skip Odoo's implicit Python-generated model IDs (e.g., model_res_users)
                                 # These are instantiated in PostgreSQL before XML evaluation begins.
-                                if ref_id.startswith("model_") or (
-                                    "." in ref_id
-                                    and ref_id.split(".")[1].startswith("model_")
-                                ):
+                                if ref_id.startswith('model_') or ('.' in ref_id and ref_id.split('.')[1].startswith('model_')):
                                     continue
 
                                 # Skip external dependencies (trusting the manifest 'depends' array)
-                                if "." in ref_id:
-                                    ref_module, _ = ref_id.split(".", 1)
+                                if '.' in ref_id:
+                                    ref_module, _ = ref_id.split('.', 1)
                                     if ref_module != module_name:
                                         continue
 
@@ -79,17 +75,17 @@ def check_manifest(base_dir):
                                         f"Check the data array sequence in __manifest__.py."
                                     )
 
-                elif file_path.endswith(".csv"):
+                elif file_path.endswith('.csv'):
                     # Basic CSV ID extraction
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, 'r', encoding='utf-8') as f:
                         lines = f.readlines()
                         if not lines:
                             continue
-                        headers = lines[0].strip().split(",")
-                        if "id" in headers:
-                            id_idx = headers.index("id")
+                        headers = lines[0].strip().split(',')
+                        if 'id' in headers:
+                            id_idx = headers.index('id')
                             for line in lines[1:]:
-                                parts = line.strip().split(",")
+                                parts = line.strip().split(',')
                                 if len(parts) > id_idx:
                                     csv_id = parts[id_idx]
                                     defined_ids.add(csv_id)
@@ -99,11 +95,8 @@ def check_manifest(base_dir):
         print("\n".join(errors))
         sys.exit(1)
     else:
-        print(
-            "[+] SUCCESS: Manifest Dependency Graph validated. No chronological forward references found."
-        )
+        print("[+] SUCCESS: Manifest Dependency Graph validated. No chronological forward references found.")
         sys.exit(0)
-
 
 if __name__ == "__main__":
     base_dir = sys.argv[1] if len(sys.argv) > 1 else "."

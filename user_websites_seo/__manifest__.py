@@ -24,7 +24,7 @@
             "name": "User Websites SEO Guide",
             "path": "data/documentation.html",
             "icon": "🔍",
-            "category": "workspace",
+            "category": "workspace"
         }
     ],
     "assets": {

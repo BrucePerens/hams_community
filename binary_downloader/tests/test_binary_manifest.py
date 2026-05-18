@@ -137,6 +137,7 @@ class TestBinaryManifest(TransactionCase):
 
         mock_response = MagicMock()
         mock_response.read.side_effect = [b"chunk", b""]
+        mock_response.getheader.return_value = "dummy-etag"
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
 
@@ -173,6 +174,57 @@ class TestBinaryManifest(TransactionCase):
                         path = self.env["binary.manifest"].ensure_executable("testbin")
                         self.assertTrue(path.endswith("testbin"))
                         self.assertTrue(mock_urlopen.called)
+
+    @mock_if_standard("shutil.which", return_value=None)
+    @mock_if_standard("platform.system", return_value="Linux")
+    @mock_if_standard("platform.machine", return_value="x86_64")
+    @mock_if_standard("urllib.request.urlopen")
+    @mock_if_standard(
+        "odoo.addons.binary_downloader.models.binary_manifest.open", create=True
+    )
+    def test_09_checksum_mismatch(
+        self,
+        mock_open=None,
+        mock_urlopen=None,
+        mock_machine=None,
+        mock_system=None,
+        mock_which=None,
+    ):
+        if INTEGRATION_MODE:
+            return
+
+        mock_response = MagicMock()
+        mock_response.read.side_effect = [b"bad_data", b""]
+        mock_response.getheader.return_value = "dummy-etag"
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+
+        real_sha256 = hashlib.sha256
+        mock_hasher = MagicMock()
+        mock_hasher.hexdigest.return_value = "mismatch_hash"
+
+        def side_effect(data=None):
+            if data and data.startswith(b"binary_install_"):
+                return real_sha256(data)
+            return mock_hasher
+
+        with patch("hashlib.sha256", side_effect=side_effect):
+            mock_open.return_value.__enter__.return_value.read.side_effect = [
+                b"bad_data",
+                b"",
+            ]
+            with patch("os.path.exists", return_value=False):
+                with patch("tempfile.NamedTemporaryFile") as mock_temp:
+                    mock_temp_inst = MagicMock()
+                    data_dir = tools.config.get("data_dir", "/var/lib/odoo")
+                    bin_dir = os.path.join(data_dir, "hams_bin")
+                    mock_temp_inst.name = os.path.join(bin_dir, "fake_bad")
+                    mock_temp.return_value.__enter__.return_value = mock_temp_inst
+                    with patch("os.unlink"):
+                        with self.assertRaisesRegex(
+                            UserError, "Security Alert: Checksum mismatch"
+                        ):
+                            self.env["binary.manifest"].ensure_executable("testbin")
 
     def test_05_views_render(self):
         # [@ANCHOR: test_binary_manifest_views]
@@ -290,14 +342,12 @@ class TestBinaryManifest(TransactionCase):
             }
         )
 
-        mock_response_head = MagicMock()
-        mock_response_head.__enter__.return_value = mock_response_head
-
         mock_response_get = MagicMock()
         mock_response_get.read.side_effect = [b"data", b""]
+        mock_response_get.getheader.return_value = "dummy-etag"
         mock_response_get.__enter__.return_value = mock_response_get
 
-        mock_urlopen.side_effect = [mock_response_head, mock_response_get]
+        mock_urlopen.side_effect = [mock_response_get]
 
         real_sha256 = hashlib.sha256
         mock_hasher_tar = MagicMock()
@@ -393,14 +443,12 @@ class TestBinaryManifest(TransactionCase):
             }
         )
 
-        mock_response_head = MagicMock()
-        mock_response_head.__enter__.return_value = mock_response_head
-
         mock_response_get = MagicMock()
         mock_response_get.read.side_effect = [b"data", b""]
+        mock_response_get.getheader.return_value = "dummy-etag"
         mock_response_get.__enter__.return_value = mock_response_get
 
-        mock_urlopen.side_effect = [mock_response_head, mock_response_get]
+        mock_urlopen.side_effect = [mock_response_get]
 
         real_sha256 = hashlib.sha256
         mock_hasher_sym = MagicMock()

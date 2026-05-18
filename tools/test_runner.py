@@ -295,13 +295,12 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     force_killed = False
 
     q = queue.Queue()
-
     def reader():
         try:
             for line in process.stdout:
                 q.put(line)
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
-            logging.getLogger("tools.test_runner").warning("Reader exception: %s", e)
+        except Exception as e: # audit-ignore-catch-all
+            logging.getLogger('tools.test_runner').warning("Reader exception: %s", e)
             pass
         q.put(None)
 
@@ -341,15 +340,11 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     force_killed = True
                     break
             except queue.Empty:
-                print(
-                    "\n[!] WARNING: Test runner hung for 120 seconds with no output! Killing to continue..."
-                )
+                print("\n[!] WARNING: Test runner hung for 120 seconds with no output! Killing to continue...")
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                 force_killed = True
                 if extractor:
-                    extractor.process_line(
-                        "CRITICAL: Test execution hung for 120 seconds. Process forcefully killed.\n"
-                    )
+                    extractor.process_line("CRITICAL: Test execution hung for 120 seconds. Process forcefully killed.\n")
                 break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")
@@ -402,18 +397,9 @@ def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
     manifest_script = os.path.join(base_dir, "tools", "check_manifest_dependencies.py")
     res_manifest = subprocess.run([venv_python, manifest_script, base_dir])
     if res_manifest.returncode != 0:
-        print(
-            "🛑 Halting due to manifest load-order violations. Please review the output above."
-        )
+        print("🛑 Halting due to manifest load-order violations. Please review the output above.")
         if extractor:
-            extractor.captured_blocks.append(
-                (
-                    "Linter Violation",
-                    [
-                        "Manifest Dependency Graph Linter failed. Forward references detected.\n"
-                    ],
-                )
-            )
+            extractor.captured_blocks.append(("Linter Violation", ["Manifest Dependency Graph Linter failed. Forward references detected.\n"]))
             extractor.finish_and_write()
         sys.exit(1)
 
@@ -425,14 +411,7 @@ def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
     if res_burn.returncode != 0:
         print("🛑 Halting due to burn list violations. Please review the output above.")
         if extractor:
-            extractor.captured_blocks.append(
-                (
-                    "Linter Violation",
-                    [
-                        "AST Burn List Linter failed. Please review the console output for details.\n"
-                    ],
-                )
-            )
+            extractor.captured_blocks.append(("Linter Violation", ["AST Burn List Linter failed. Please review the console output for details.\n"]))
             extractor.finish_and_write()
         sys.exit(1)
 
@@ -444,14 +423,7 @@ def check_linters(venv_python, base_dir, ignore_filepath, extractor=None):
             "🛑 Halting due to linter/anchor violations. Please review the output above."
         )
         if extractor:
-            extractor.captured_blocks.append(
-                (
-                    "Linter Violation",
-                    [
-                        "Semantic Anchor Linter failed. Please review the console output for details.\n"
-                    ],
-                )
-            )
+            extractor.captured_blocks.append(("Linter Violation", ["Semantic Anchor Linter failed. Please review the console output for details.\n"]))
             extractor.finish_and_write()
         sys.exit(1)
 
@@ -469,7 +441,8 @@ def run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns, target_m
         if is_ignored(daemon_dir, ignore_patterns):
             continue
         has_tests = any(
-            f.startswith("test_") and f.endswith(".py") for f in os.listdir(daemon_dir)
+            f.startswith("test_") and f.endswith(".py")
+            for f in os.listdir(daemon_dir)
         )
         if has_tests:
             print("\n[*] ----------------------------------------------------")
@@ -667,8 +640,8 @@ def save_db_cache(db_name, cache_file, mod_string):
     print(f"[*] Caching newly initialized DB to {cache_file}...")
     try:
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-        logging.getLogger("tools.test_runner").warning("An error occurred: %s", e)
+    except Exception as e: # audit-ignore-catch-all
+        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
         pass
 
     env = dict(os.environ)
@@ -678,10 +651,7 @@ def save_db_cache(db_name, cache_file, mod_string):
     try:
         with open(cache_file, "wb") as f:
             res = subprocess.run(
-                ["pg_dump", "-Fc", "-Z", "1", db_name],
-                stdout=f,
-                stderr=subprocess.PIPE,
-                env=env,
+                ["pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env
             )
 
         if res.returncode == 0:
@@ -697,16 +667,7 @@ def save_db_cache(db_name, cache_file, mod_string):
                 if os.path.exists(filestore_path):
                     print("[*] Caching Filestore...")
                     filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")
-                    subprocess.run(
-                        [
-                            "tar",
-                            "-czf",
-                            filestore_tar,
-                            "-C",
-                            os.path.dirname(filestore_path),
-                            db_name,
-                        ]
-                    )
+                    subprocess.run(["tar", "-czf", filestore_tar, "-C", os.path.dirname(filestore_path), db_name])
             else:
                 print(
                     f"[*] WARNING: pg_dump produced a file that is suspiciously small ({sz} bytes). Discarding cache."
@@ -727,10 +688,8 @@ def save_db_cache(db_name, cache_file, mod_string):
                 os.remove(cache_file)
             except OSError:
                 pass
-    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-        logging.getLogger("tools.test_runner").warning(
-            "Failed to execute pg_dump: %s", e
-        )
+    except Exception as e: # audit-ignore-catch-all
+        logging.getLogger('tools.test_runner').warning("Failed to execute pg_dump: %s", e)
         print(f"[*] WARNING: Failed to execute pg_dump: {e}")
 
 
@@ -881,10 +840,8 @@ exit $RET
     try:
         result = subprocess.run(exec_cmd)
         sys.exit(result.returncode)
-    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-        logging.getLogger("tools.test_runner").error(
-            "ERROR launching isolated environment: %s", e
-        )
+    except Exception as e: # audit-ignore-catch-all
+        logging.getLogger('tools.test_runner').error("ERROR launching isolated environment: %s", e)
         print(f"❌ ERROR launching isolated environment: {e}")
         sys.exit(1)
     finally:
@@ -1006,19 +963,15 @@ def main():
                 infrastructure.execute_hooks(
                     "test", scaffold_run_cmd, env_vars=os.environ.copy(), dest_dir=""
                 )
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
-            logging.getLogger("tools.test_runner").warning(
-                "Could not provision directories natively: %s", e
-            )
+        except Exception as e: # audit-ignore-catch-all
+            logging.getLogger('tools.test_runner').warning("Could not provision directories natively: %s", e)
             print(
                 f"[*] Note: Could not provision directories natively ({e}). Ensure they exist."
             )
 
         real_error_log = os.path.abspath(os.path.expanduser(args.error_log))
 
-        is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(
-            os.environ.get("JULES_SESSION_ID")
-        )
+        is_jules_vm = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
         # Environment Provisioning (Moved here to execute on Host with RW access)
@@ -1059,9 +1012,7 @@ def main():
                     sys.exit(1)
 
         if os.environ.get("HAMS_ISOLATED_NS") != "1" and not is_jules_vm:
-            print(
-                "[*] Routing test execution to isolated namespace to protect environment..."
-            )
+            print("[*] Routing test execution to isolated namespace to protect environment...")
             run_in_isolated_environment(real_error_log)
             return
 
@@ -1071,54 +1022,37 @@ def main():
             # Use /opt/hams/pgsock to closely mimic the isolated environment
             pg_socket_dir = "/opt/hams/pgsock"
             os.environ["PGHOST"] = pg_socket_dir
-            os.environ["HAMS_ISOLATED_NS"] = (
-                "1"  # Set to 1 so paths behave like prod/isolated
-            )
+            os.environ["HAMS_ISOLATED_NS"] = "1"  # Set to 1 so paths behave like prod/isolated
 
             orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
 
             if args.provision_jules:
-                print(
-                    "[*] Provisioning local Jules environment (apt packages, services)..."
-                )
-
+                print("[*] Provisioning local Jules environment (apt packages, services)...")
                 def _run_sudo_cmd(cmd, env=None):
                     if isinstance(cmd, str):
                         subprocess.run(["sudo", "bash", "-c", cmd], check=True, env=env)
                     else:
                         subprocess.run(["sudo"] + cmd, check=True, env=env)
-
                 print("[*] Installing APT packages for early_prod...")
                 old_apt = copy.deepcopy(infrastructure.MANIFEST.get("apt_packages", []))
                 infrastructure.MANIFEST["apt_packages"] = [
-                    pkg
-                    for pkg in infrastructure.MANIFEST.get("apt_packages", [])
+                    pkg for pkg in infrastructure.MANIFEST.get("apt_packages", [])
                     if pkg["name"] not in ("postgresql-17-pgvector", "kopia")
                 ]
-                infrastructure.provision_apt_packages(
-                    _run_sudo_cmd, environment="early_prod"
-                )
+                infrastructure.provision_apt_packages(_run_sudo_cmd, environment="early_prod")
                 infrastructure.MANIFEST["apt_packages"] = old_apt
 
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
-                _run_sudo_cmd(
-                    "wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes"
-                )
-                _run_sudo_cmd(
-                    'echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list'
-                )
-                _run_sudo_cmd(
-                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client chromium-browser python3-pip"
-                )
+                _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes")
+                _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client chromium-browser python3-pip")
 
                 print("[*] Installing Python dependencies from requirements.txt...")
                 req_file = os.path.join(base_dir, "requirements.txt")
                 if os.path.exists(req_file):
                     _run_sudo_cmd(f"pip3 install --break-system-packages -r {req_file}")
                 else:
-                    print(
-                        "⚠️ WARNING: requirements.txt not found, skipping Python dependency installation."
-                    )
+                    print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 print("[*] Installing Python dependencies from requirements.txt...")
@@ -1126,46 +1060,30 @@ def main():
                 if os.path.exists(req_file):
                     _run_sudo_cmd(f"pip3 install --break-system-packages -r {req_file}")
                 else:
-                    print(
-                        "⚠️ WARNING: requirements.txt not found, skipping Python dependency installation."
-                    )
+                    print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"
                 pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
                 if not pg_bins:
-                    print(
-                        "❌ ERROR: PostgreSQL initdb not found. Did the apt install fail?"
-                    )
+                    print("❌ ERROR: PostgreSQL initdb not found. Did the apt install fail?")
                     sys.exit(1)
                 pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
 
                 _run_sudo_cmd("systemctl stop postgresql || true")
                 _run_sudo_cmd(f"mkdir -p {pg_data_dir} {pg_socket_dir}")
-                _run_sudo_cmd(
-                    f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}"
-                )
+                _run_sudo_cmd(f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}")
                 _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
                 _run_sudo_cmd(f"chmod 2775 {pg_socket_dir}")
 
                 # Check if already initialized to avoid initdb error
-                res = subprocess.run(
-                    ["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True
-                )
+                res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
                 if not res.stdout.strip():
-                    _run_sudo_cmd(
-                        f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'"
-                    )
+                    _run_sudo_cmd(f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
 
-                _run_sudo_cmd(
-                    f'su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop" || true'
-                )
-                _run_sudo_cmd(
-                    f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\""
-                )
-                _run_sudo_cmd(
-                    f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres' || true"
-                )
+                _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop\" || true")
+                _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\"")
+                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres' || true")
 
                 print("[*] Starting local Redis and RabbitMQ...")
                 _run_sudo_cmd("systemctl start redis-server || true")
@@ -1173,20 +1091,7 @@ def main():
 
                 def teardown_jules():
                     print("[*] Tearing down local test PostgreSQL...")
-                    subprocess.run(
-                        [
-                            "sudo",
-                            "su",
-                            "-s",
-                            "/bin/bash",
-                            "postgres",
-                            "-c",
-                            f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop",
-                        ],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 atexit.register(teardown_jules)
             elif args.already_provisioned:
                 pg_data_dir = "/opt/hams/pgdata"
@@ -1195,58 +1100,18 @@ def main():
                     pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
                     subprocess.run(["sudo", "systemctl", "stop", "postgresql"])
                     subprocess.run(["sudo", "mkdir", "-p", pg_socket_dir])
-                    subprocess.run(
-                        ["sudo", "chown", "-R", "postgres:postgres", pg_socket_dir]
-                    )
+                    subprocess.run(["sudo", "chown", "-R", "postgres:postgres", pg_socket_dir])
                     subprocess.run(["sudo", "chmod", "2775", pg_socket_dir])
                     subprocess.run(["sudo", "chmod", "700", pg_data_dir])
-                    subprocess.run(
-                        [
-                            "sudo",
-                            "su",
-                            "-s",
-                            "/bin/bash",
-                            "postgres",
-                            "-c",
-                            f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop",
-                        ],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                    subprocess.run(
-                        [
-                            "sudo",
-                            "su",
-                            "-s",
-                            "/bin/bash",
-                            "postgres",
-                            "-c",
-                            f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start",
-                        ]
-                    )
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"])
                     subprocess.run(["sudo", "systemctl", "start", "redis-server"])
                     subprocess.run(["sudo", "systemctl", "start", "rabbitmq-server"])
-
                     def teardown_jules():
-                        subprocess.run(
-                            [
-                                "sudo",
-                                "su",
-                                "-s",
-                                "/bin/bash",
-                                "postgres",
-                                "-c",
-                                f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop",
-                            ],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                        )
-
+                        subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     atexit.register(teardown_jules)
             else:
-                print(
-                    "⚠️ Please run with --provision-jules first, or --already-provisioned if already set up."
-                )
+                print("⚠️ Please run with --provision-jules first, or --already-provisioned if already set up.")
                 sys.exit(1)
 
         venv_python = os.path.join(base_dir, ".venv", "bin", "python")
@@ -1280,11 +1145,7 @@ def main():
             cmd = [venv_python]
             if args.profile:
                 base_name = f"odoo_test{suffix}.prof"
-                prof_path = (
-                    f"/opt/hams/spool/{base_name}"
-                    if os.environ.get("HAMS_ISOLATED_NS") == "1"
-                    else os.path.join(os.path.dirname(real_error_log), base_name)
-                )
+                prof_path = f"/opt/hams/spool/{base_name}" if os.environ.get("HAMS_ISOLATED_NS") == "1" else os.path.join(os.path.dirname(real_error_log), base_name)
                 cmd.extend(["-m", "cProfile", "-o", prof_path])
             return cmd
 
@@ -1411,29 +1272,16 @@ def main():
                     s.bind(("", 0))
                     free_port = s.getsockname()[1]
 
-                print(
-                    f"[*] Starting background Odoo on port {free_port} for integration daemons..."
-                )
+                print(f"[*] Starting background Odoo on port {free_port} for integration daemons...")
                 odoo_proc = subprocess.Popen(
                     [
-                        venv_python,
-                        odoo_bin,
-                        "--addons-path",
-                        addons_path,
-                        "-d",
-                        args.db,
-                        "--db-filter",
-                        f"^{args.db}$",
-                        "--workers=0",
-                        "--max-cron-threads=0",
-                        "--http-port",
-                        str(free_port),
-                        "--http-interface",
-                        "localhost",
+                        venv_python, odoo_bin, "--addons-path", addons_path,
+                        "-d", args.db, "--db-filter", f"^{args.db}$",
+                        "--workers=0", "--max-cron-threads=0",
+                        "--http-port", str(free_port), "--http-interface", "localhost",
                         "--log-level=warn",
                     ],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
 
@@ -1456,21 +1304,12 @@ def main():
                         daemon_dir = os.path.join(base_dir, mod, "daemons")
                     if os.path.exists(daemon_dir):
                         for f in os.listdir(daemon_dir):
-                            if (
-                                f.endswith(".py")
-                                and not f.startswith("test_")
-                                and not f.startswith("__")
-                            ):
+                            if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__"):
                                 daemon_scripts.append(os.path.join(daemon_dir, f))
 
                 for ds in daemon_scripts:
                     if os.path.exists(ds):
-                        p = subprocess.Popen(
-                            [venv_python, ds],
-                            env=daemon_env,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                        )
+                        p = subprocess.Popen([venv_python, ds], env=daemon_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         d_procs.append(p)
 
                 integration_tags = test_tags + ",-standard"
@@ -1501,10 +1340,8 @@ def main():
                     p.terminate()
                 try:
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                    logging.getLogger("tools.test_runner").warning(
-                        "Failed to kill pg: %s", e
-                    )
+                except Exception as e: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').warning("Failed to kill pg: %s", e)
                     pass
 
         elif args.mode == "individual":
@@ -1674,13 +1511,12 @@ def main():
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                         odoo_proc.wait(timeout=2)
-                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                        logging.getLogger("tools.test_runner").warning(
-                            "An error occurred: %s", e
-                        )
+                    except Exception as e: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
 
                 atexit.register(cleanup_odoo)
+
 
                 odoo_extractor = FailureExtractor(args.error_log, disable_atexit=True)
 
@@ -1701,9 +1537,7 @@ def main():
                             o_extr.process_line(line)
 
                 odoo_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                odoo_executor.submit(
-                    stream_odoo_output, odoo_proc, odoo_extractor, extractor
-                )
+                odoo_executor.submit(stream_odoo_output, odoo_proc, odoo_extractor, extractor)
 
                 print(f"[*] Waiting for Odoo to bind to port {free_port}...")
 
@@ -1716,10 +1550,8 @@ def main():
                     print(f"❌ ERROR: Odoo failed to start on port {free_port}!")
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                        logging.getLogger("tools.test_runner").warning(
-                            "An error occurred: %s", e
-                        )
+                    except Exception as e: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
                         pass
                     sys.exit(1)
 
@@ -1787,12 +1619,10 @@ def main():
                         ["psql", "-c", "SELECT 1;", args.db],
                         env=pg_env,
                         check=True,
-                        capture_output=True,
+                        capture_output=True
                     )
-                except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                    logging.getLogger("tools.test_runner").error(
-                        "Failed to connect to PostgreSQL via psql: %s", e
-                    )
+                except Exception as e: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').error("Failed to connect to PostgreSQL via psql: %s", e)
                     print("[!] Failed to connect to PostgreSQL via psql: {}".format(e))
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
@@ -1833,12 +1663,10 @@ def main():
                                                 args_list = [rel_path]
                                                 if daemon_name == "ncvec_sync":
                                                     ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
-                                                    args_list.extend(
-                                                        ["--url", ncvec_url]
-                                                    )
+                                                    args_list.extend(["--url", ncvec_url])
                                                 daemons.append((daemon_name, args_list))
-                                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                                        logging.getLogger("tools.test_runner").warning(
+                                    except Exception as e: # audit-ignore-catch-all
+                                        logging.getLogger('tools.test_runner').warning(
                                             "An error occurred: %s", e
                                         )
                                         pass
@@ -1867,25 +1695,23 @@ def main():
                 def get_table_counts():
                     counts = {}
                     for table in TABLES_TO_TRACK:
-                        try:
-                            q_str = "SELECT count(*) FROM {};".format(table)
-                            res = subprocess.run(
-                                ["psql", "-t", "-A", "-c", q_str, args.db],
-                                env=pg_env,
-                                capture_output=True,
-                                text=True,
-                            )
-                            if res.returncode == 0 and res.stdout.strip().isdigit():
-                                counts[table] = int(res.stdout.strip())
-                            elif "does not exist" in res.stderr:
-                                counts[table] = "Not Installed"
-                            else:
+                            try:
+                                q_str = "SELECT count(*) FROM {};".format(table)
+                                res = subprocess.run(
+                                    ["psql", "-t", "-A", "-c", q_str, args.db],
+                                    env=pg_env,
+                                    capture_output=True,
+                                    text=True
+                                )
+                                if res.returncode == 0 and res.stdout.strip().isdigit():
+                                    counts[table] = int(res.stdout.strip())
+                                elif "does not exist" in res.stderr:
+                                    counts[table] = "Not Installed"
+                                else:
+                                    counts[table] = "Error"
+                            except Exception as e: # audit-ignore-catch-all
+                                logging.getLogger('tools.test_runner').warning("Table count error: %s", e)
                                 counts[table] = "Error"
-                        except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                            logging.getLogger("tools.test_runner").warning(
-                                "Table count error: %s", e
-                            )
-                            counts[table] = "Error"
                     return counts
 
                 print("\n[*] Fetching Initial Database Counts...")
@@ -1938,10 +1764,8 @@ def main():
                             print(
                                 "[+] Real daemon bearer tokens provisioned successfully."
                             )
-                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                        logging.getLogger("tools.test_runner").error(
-                            "Bootstrapper error: %s", e
-                        )
+                    except Exception as e: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').error("Bootstrapper error: %s", e)
                         print(f"❌ ERROR: Failed to execute bootstrapper: {e}")
                         if extractor:
                             extractor.captured_blocks.append(
@@ -1989,10 +1813,8 @@ def main():
                     except KeyboardInterrupt:
                         print("\n[!] Execution aborted by user.")
                         break
-                    except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                        logging.getLogger("tools.test_runner").error(
-                            "Error executing %s: %s", name, e
-                        )
+                    except Exception as e: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').error("Error executing %s: %s", name, e)
                         print("[!] Error executing {}: {}".format(name, e))
                         final_rc = 1
 
@@ -2010,10 +1832,8 @@ def main():
                     atexit.unregister(cleanup_odoo)
                 try:
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                except Exception as e: # audit-ignore-catch-all  # fmt: skip
-                    logging.getLogger("tools.test_runner").warning(
-                        "Could not kill process group: %s", e
-                    )
+                except Exception as e: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').warning("Could not kill process group: %s", e)
                     print("[!] Note: Could not kill process group.")
                 odoo_proc.wait()
 

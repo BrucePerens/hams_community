@@ -3,7 +3,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-
 def post_init_hook(env):
     """
     Register daemon keys and trigger autodiscovery upon installation.
@@ -14,7 +13,7 @@ def post_init_hook(env):
             env["pager.check"]._run_autodiscovery()
         except (RuntimeError, ValueError, AttributeError) as e:
             _logger.warning("Configuration error during autodiscovery: %s", e)
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
+        except Exception as e: # audit-ignore-catch-all
             _logger.error("Unexpected error during autodiscovery: %s", e)
 
     # Register Daemons for Automated Key Vault Provisioning
@@ -27,5 +26,5 @@ def post_init_hook(env):
             )
         except (ValueError, KeyError, AttributeError) as e:
             _logger.warning("Configuration error during daemon registration: %s", e)
-        except Exception as e: # audit-ignore-catch-all  # fmt: skip
+        except Exception as e: # audit-ignore-catch-all
             _logger.error("Unexpected error during daemon registration: %s", e)

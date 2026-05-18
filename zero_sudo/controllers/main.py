@@ -21,11 +21,11 @@ class ZeroSudoHome(Home):
             # Tests [@ANCHOR: story_login_blocking]
             request.env.cr.execute(
                 "SELECT is_service_account FROM res_users WHERE id = %s",
-                (request.session.uid,),
+                (request.session.uid,)
             )
             res = request.env.cr.fetchone()
             if res and res[0]:
                 request.session.logout()
                 # Use query parameter to show error on login page after redirect
-                return request.redirect("/web/login?error=access_denied_service") # burn-ignore-route  # fmt: skip
+                return request.redirect("/web/login?error=access_denied_service") # burn-ignore-route
         return response

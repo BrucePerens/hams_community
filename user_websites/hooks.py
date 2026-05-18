@@ -4,7 +4,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-
 def post_init_hook(env):
     # [@ANCHOR: documentation_bootstrap]
     """
@@ -27,11 +26,7 @@ def post_init_hook(env):
         if public_user:
             domain.append(("id", "!=", public_user.id))
 
-        users = (
-            env_svc["res.users"]
-            .with_context(active_test=False)
-            .search(domain, limit=100000)
-        )
+        users = env_svc["res.users"].with_context(active_test=False).search(domain, limit=100000)
         user_group.write({"user_ids": [(4, u.id) for u in users]})
 
     env.cr.execute(

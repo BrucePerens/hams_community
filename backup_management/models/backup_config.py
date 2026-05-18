@@ -33,14 +33,12 @@ class BackupConfig(models.Model):
         help="Triggers a Pager Duty alert if a new snapshot is smaller than this.",
     )
 
-    kopia_password_crypt = fields.Char(
-        string="Encrypted Kopia Password", groups="backup_management.group_backup_admin"
-    )
+    kopia_password_crypt = fields.Char(string="Encrypted Kopia Password", groups="backup_management.group_backup_admin")
     kopia_password = fields.Char(
         string="Kopia Password",
         compute="_compute_kopia_password",
         inverse="_inverse_kopia_password",
-        groups="backup_management.group_backup_admin",
+        groups="backup_management.group_backup_admin"
     )
 
     storage_type = fields.Selection(
@@ -51,17 +49,13 @@ class BackupConfig(models.Model):
     )
     bucket_name = fields.Char(string="Bucket Name")
     endpoint_url = fields.Char(string="Endpoint URL")
-    access_key = fields.Char(
-        string="Access Key", groups="backup_management.group_backup_admin"
-    )
-    secret_key_crypt = fields.Char(
-        string="Encrypted Secret Key", groups="backup_management.group_backup_admin"
-    )
+    access_key = fields.Char(string="Access Key", groups="backup_management.group_backup_admin")
+    secret_key_crypt = fields.Char(string="Encrypted Secret Key", groups="backup_management.group_backup_admin")
     secret_key = fields.Char(
         string="Secret Key",
         compute="_compute_secret_key",
         inverse="_inverse_secret_key",
-        groups="backup_management.group_backup_admin",
+        groups="backup_management.group_backup_admin"
     )
 
     keep_daily = fields.Integer(string="Keep Daily", default=7)
@@ -101,9 +95,7 @@ class BackupConfig(models.Model):
     )
 
     def _get_fernet(self):
-        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get(
-            "HAMS_CRYPTO_KEY"
-        )
+        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get("HAMS_CRYPTO_KEY")
         if not key:
             return None
         try:
@@ -127,9 +119,7 @@ class BackupConfig(models.Model):
     @api.depends("kopia_password_crypt")
     def _compute_kopia_password(self):
         for rec in self:
-            rec.kopia_password = rec._crypt_field(
-                rec.kopia_password_crypt, decrypt=True
-            )
+            rec.kopia_password = rec._crypt_field(rec.kopia_password_crypt, decrypt=True)
 
     def _inverse_kopia_password(self):
         for rec in self:
@@ -151,17 +141,10 @@ class BackupConfig(models.Model):
                 validate_backup_path(rec.target_path)
 
             if rec.engine == "pgbackrest":
-                # pgBackRest target_path is a stanza name, not a direct path.
-                # Ensure no shell metacharacters in stanza name.
-                if (
-                    not rec.target_path
-                    or ";" in rec.target_path
-                    or "&" in rec.target_path
-                    or "|" in rec.target_path
-                ):
-                    raise UserError(
-                        _("Invalid pgBackRest stanza name: %s") % rec.target_path
-                    )
+                 # pgBackRest target_path is a stanza name, not a direct path.
+                 # Ensure no shell metacharacters in stanza name.
+                 if not rec.target_path or ";" in rec.target_path or "&" in rec.target_path or "|" in rec.target_path:
+                      raise UserError(_("Invalid pgBackRest stanza name: %s") % rec.target_path)
 
             if rec.restore_drill_script:
                 validate_backup_path(rec.restore_drill_script)
@@ -210,12 +193,8 @@ class BackupConfig(models.Model):
         """
         Internal helper to offload tasks to the RabbitMQ Bastion.
         """
-        if not self.env.su and not self.env.user.has_group(
-            "backup_management.group_backup_admin"
-        ):
-            raise AccessError(
-                _("Only Backup Administrators can trigger backup operations.")
-            )
+        if not self.env.su and not self.env.user.has_group("backup_management.group_backup_admin"):
+             raise AccessError(_("Only Backup Administrators can trigger backup operations."))
 
         jobs = self.env["backup.job"]
         created_jobs = []
@@ -224,9 +203,7 @@ class BackupConfig(models.Model):
             job = jobs.create(
                 {
                     "config_id": rec.id,
-                    "job_type": (
-                        rec.engine if engine != "restore_cmd" else "kopia"
-                    ),  # map restore_cmd to engine for UI
+                    "job_type": rec.engine if engine != "restore_cmd" else "kopia",  # map restore_cmd to engine for UI
                     "state": "pending",
                     "output_log": "Queued in RabbitMQ...",
                 }
@@ -305,9 +282,7 @@ class BackupConfig(models.Model):
         """
         Offloads the restore drill to the worker.
         """
-        return self._publish_to_worker(
-            "restore_drill", {"script": self.restore_drill_script}
-        )
+        return self._publish_to_worker("restore_drill", {"script": self.restore_drill_script})
 
     def _report_backup_failure(self, message):
         # [@ANCHOR: backup_pager_synergy]
@@ -406,7 +381,7 @@ class BackupConfig(models.Model):
 
         if creates:
             # Sort by start_time to ensure we check the absolute latest if multiple are created
-            creates.sort(key=lambda x: x["start_time"], reverse=True)
+            creates.sort(key=lambda x: x['start_time'], reverse=True)
             Snapshot.create(creates)
             if self.minimum_size_mb > 0:
                 for c in creates:
