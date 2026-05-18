@@ -45,6 +45,7 @@ class BackupConfig(models.Model):
         [("local", "Local Directory"), ("s3", "AWS S3"), ("b2", "Backblaze B2")],
         default="local",
         string="Storage Type",
+        required=True,
     )
     bucket_name = fields.Char(string="Bucket Name")
     endpoint_url = fields.Char(string="Endpoint URL")
@@ -138,8 +139,13 @@ class BackupConfig(models.Model):
         for rec in self:
             if rec.engine == "kopia" and rec.storage_type == "local":
                 validate_backup_path(rec.target_path)
-            # pgBackRest target_path is a stanza name, not a direct path,
-            # but we still validate the restore drill script path.
+
+            if rec.engine == "pgbackrest":
+                 # pgBackRest target_path is a stanza name, not a direct path.
+                 # Ensure no shell metacharacters in stanza name.
+                 if not rec.target_path or ";" in rec.target_path or "&" in rec.target_path or "|" in rec.target_path:
+                      raise UserError(_("Invalid pgBackRest stanza name: %s") % rec.target_path)
+
             if rec.restore_drill_script:
                 validate_backup_path(rec.restore_drill_script)
 
