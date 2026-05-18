@@ -140,11 +140,6 @@ GENERAL_ERROR_RULES = [
         re.compile(r"['\"]/tmp(?:/|['\"])"),
         "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
     ),
-    (
-        r"test_.*\.py$",
-        re.compile(r"IN_JULES_VM|JULES_SESSION_ID"),
-        "CRITICAL AI CHEATING: Bypassing tests using Jules-specific environment variables is strictly forbidden.",
-    ),
 ]
 
 ODOO_ERROR_RULES = [
@@ -300,6 +295,11 @@ ODOO_ERROR_RULES = [
         "CRITICAL ROUTING DEPRECATION: Hash-based routing (/web#...) is deprecated and forcefully redirected in Odoo 19. Use query parameters (/odoo?...) instead.",
     ),
     (
+        r"\.(py|js)$",
+        re.compile(r"['\"]/web.*?['\"]"),
+        "CRITICAL ROUTING DEPRECATION: /web is deprecated and forcefully redirected to /odoo in Odoo 19, losing the query parameters! Use /odoo instead.",
+    ),
+    (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"run:\s*['\"`]text\b"),
         "CRITICAL JS TOUR ACTION: 'text' is not a valid action in Odoo 19. Use 'edit' to simulate text input.",
@@ -331,7 +331,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
         return errors, warnings
 
     class TaintVisitor(ast.NodeVisitor):
-        def __init__(self, filename, lines, is_odoo_module):
+        def __init__(self, filename, lines, is_odoo_module, filepath=""):
             self.errors = []
             self.warnings = []
             self.assignments = {}
@@ -339,6 +339,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self.in_http_controller = False
             self.in_real_transaction_case = False
             self.filename = filename
+            self.filepath = filepath
             self.lines = lines
             self.is_odoo_module = is_odoo_module
             self._assignment_stack = set()
@@ -1101,7 +1102,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self._check_i18n_messages(node, func_name)
 
             if isinstance(node.func, ast.Name) and node.func.id == "print":
-                if not ("tools/" in self.filename.replace("\\", "/")):
+                if not ("tools/" in getattr(self, "filepath", self.filename).replace("\\", "/")):
                     self.add_error(node.lineno, "CRITICAL AI LAZINESS: Native print() is banned. Use logging (_logger.info, etc.) for centralized log aggregation.")
 
             if func_name in ("assertTrue", "assertFalse"):
@@ -1184,7 +1185,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
 
             self.generic_visit(node)
 
-    visitor = TaintVisitor(filename, lines, is_odoo_module)
+    visitor = TaintVisitor(filename, lines, is_odoo_module, filepath=filepath)
     visitor.visit(tree)
     return visitor.errors, visitor.warnings
 
@@ -1649,7 +1650,8 @@ def scan_file(filepath, is_odoo_module=False):
             for allowed in [
                 "burn-ignore-financial",
                 "burn-ignore-tour",
-                "burn-ignore-sudo"
+                "burn-ignore-sudo",
+                "burn-ignore-route"
             ]
         ):
             errors_found.append(

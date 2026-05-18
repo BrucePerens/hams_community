@@ -43,11 +43,11 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         },
         {
             content: "Verify SEO Meta Title input exists",
-            trigger: '.o_field_widget[name="website_meta_title"] input',
+            trigger: 'div[name="website_meta_title"] input',
         },
         {
             content: "Verify SEO Meta Description input exists",
-            trigger: '.o_field_widget[name="website_meta_description"] textarea',
+            trigger: 'div[name="website_meta_description"] textarea',
         }
     ],
 });
