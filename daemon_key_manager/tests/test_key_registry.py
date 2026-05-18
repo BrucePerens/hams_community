@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import datetime
 from odoo.tests import TransactionCase, HttpCase, tagged
 from odoo.exceptions import UserError, AccessError
-from odoo import SUPERUSER_ID, fields
+from odoo import SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
