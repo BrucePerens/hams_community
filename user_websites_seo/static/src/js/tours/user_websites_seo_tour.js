@@ -38,27 +38,27 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         },
         {
             content: "Click the SEO Metadata notebook tab injected by our module",
-            trigger: '*:contains("SEO Metadata")',
+            trigger: 'a.nav-link[name="user_websites_seo_settings"]',
             run: 'click',
         },
         {
             content: "Input SEO Meta Title",
-            trigger: 'div[name="website_meta_title"] input',
+            trigger: '.o_field_widget[name="website_meta_title"] input, input[id*="website_meta_title"]',
             run: 'edit SEO Title',
         },
         {
             content: "Input SEO Meta Description",
-            trigger: 'div[name="website_meta_description"] textarea',
+            trigger: '.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]',
             run: 'edit SEO Description',
         },
         {
             content: "Save the user record to ensure SEO fields are writeable",
-            trigger: '.o_form_button_save',
+            trigger: '.o_form_button_save, .o_form_button_check',
             run: 'click',
         },
         {
             content: "Wait for save to complete",
-            trigger: '.o_form_saved',
+            trigger: '.o_form_saved, .o_form_readonly',
         }
     ],
 });

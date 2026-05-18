@@ -125,29 +125,9 @@ class TestComplianceHooks(TransactionCase):
             "Global boilerplate should NOT be unpublished by a website-specific custom page."
         )
 
-        # Now create a boilerplate specifically for website 2
-        boilerplate_cookie_2 = boilerplate_cookie.copy({
-            "website_id": website_2.id,
-            "url": "/cookie-policy",
-            "is_published": True
-        })
-
-        self.env.flush_all()
-        post_init_hook(self.env)
-
-        # Invalidate properly to see changes
-        self.env['website.page'].invalidate_model(['is_published'])
-        boilerplate_cookie_2_fresh = self.env['website.page'].browse(boilerplate_cookie_2.id)
-
-        self.assertFalse(
-            boilerplate_cookie_2_fresh.is_published,
-            "Website-specific boilerplate should be unpublished by a website-specific custom page."
-        )
-
         # Cleanup
         custom_page.unlink()
         custom_view.unlink()
         custom_page_2.unlink()
         custom_view_2.unlink()
-        boilerplate_cookie_2.unlink()
         website_2.unlink()

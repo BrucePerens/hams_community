@@ -81,26 +81,34 @@ def _process_file_for_anchors(
 ):
     mod = get_module(full_path)
     for line in content.splitlines():
-        for match in pattern.finditer(line):
+        matches = list(pattern.finditer(line))
+        if not matches:
+            continue
+
+        # Determine intent based on the prefix of the FIRST match.
+        # This correctly handles comma-separated anchors.
+        first_prefix = line[: matches[0].start()].strip()
+
+        for match in matches:
             anchor_name = match.group(1)
             if ":" in anchor_name:
                 invalid_format.append((mod, anchor_name, full_path))
                 continue
 
             anchor = f"{mod}:{anchor_name}"
-            prefix = line[: match.start()].strip()
-            if prefix.endswith("Tests"):
+
+            if first_prefix.endswith("Tests"):
                 tests_links.setdefault(full_path, []).append(anchor)
                 tests_links_set.add(anchor)
                 # Ensure it's in code_anchors so it doesn't fail "missing tested" if it's purely a test link
                 code_anchors.add(anchor)
-            elif prefix.endswith("Verified by") or prefix.endswith("Tested by"):
+            elif first_prefix.endswith("Verified by") or first_prefix.endswith("Tested by"):
                 verified_by_links.add(anchor)
-            elif prefix.endswith("Triggers") or prefix.endswith("Triggered by"):
+            elif first_prefix.endswith("Triggers") or first_prefix.endswith("Triggered by"):
                 cross_references.add(anchor)
             elif anchor_name.startswith(("story_", "journey_", "doc_")):
                 pass
-            elif re.search(r'\b(See|and|also|or|to)\b$', prefix, re.IGNORECASE):
+            elif re.search(r'\b(See|and|also|or|to)\b$', first_prefix, re.IGNORECASE):
                 pass
             else:
                 if (
@@ -382,9 +390,8 @@ def main():
                                 invalid_format.append((mod, anchor_name, os.path.join(root, "documentation.html")))
                                 continue
                             user_manual_anchors.add(f"{mod}:{anchor_name}")
-                except Exception as e:
+                except (OSError, UnicodeDecodeError) as e:
                     logging.getLogger(__name__).warning("An error occurred: %s", e)
-                    pass
 
     errs = [
         _report_invalid_format(invalid_format),

@@ -83,9 +83,17 @@ class ManualLibraryController(http.Controller):
 
         # 5. Enforce Read Context (Public/Guest)
         try:
-            article.check_access("read")
-            _ = article.name
+            # Re-browse with the explicit user environment to trigger record rules
+            user_article = request.env["knowledge.article"].with_user(request.env.user).browse(article.id)
+            user_article.check_access_rights("read")
+            user_article.check_access_rule("read")
+            _ = user_article.name
         except AccessError:
+            raise werkzeug.exceptions.NotFound()
+
+        # Enforce explicitly that non-internal users cannot view unpublished articles
+        is_internal = request.env.user.has_group("base.group_user")
+        if not is_internal and not user_article.is_published:
             raise werkzeug.exceptions.NotFound()
 
         # 6. Canonical Redirect for SEO: ensure the slug matches current name
@@ -102,7 +110,7 @@ class ManualLibraryController(http.Controller):
                 "shared_articles": shared_articles,
                 "private_articles": private_articles,
                 "search_term": "",
-                "is_internal_user": request.env.user.has_group("base.group_user") or request.env.user.has_group("base.group_portal"),
+                "is_internal_user": is_internal or request.env.user.has_group("base.group_portal"),
             },
         )
 
