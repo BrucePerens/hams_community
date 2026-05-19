@@ -190,6 +190,11 @@ class TestBinaryManifest(TransactionCase):
             })
             self.env.flush_all()
 
+    def test_09_constraints(self):
+        with self.assertRaises(ValidationError):
+            self.manifest.write({"name": "bad/bin"})
+            self.env.flush_all()
+
     def test_12_action_install_permissions(self):
         restricted_user = self.env["res.users"].create({
             "name": "Restricted User",
