@@ -6,6 +6,7 @@ import { useService } from "@web/core/utils/hooks";
 export class BackupBoard extends Component {
     setup() {
         this.orm = useService("orm");
+        this.website = useService("website");
         this.state = useState({
             configs: [],
             transformStyle: ""
@@ -22,7 +23,12 @@ export class BackupBoard extends Component {
     }
 
     async fetchData() {
-        this.state.configs = await this.orm.call("backup.config", "get_board_data", []);
+        // Isolation by website_id
+        const context = {};
+        if (this.website.currentWebsite) {
+            context.website_id = this.website.currentWebsite.id;
+        }
+        this.state.configs = await this.orm.call("backup.config", "get_board_data", [], { context: context });
         this.applyBurnInShift();
     }
 
