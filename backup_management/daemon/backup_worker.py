@@ -62,7 +62,7 @@ def execute_job(ch, method, properties, body):
         try:
             payload = json.loads(body)
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode RabbitMQ message body: {e}")
+            logger.error("Failed to decode RabbitMQ message body: %s", e)
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
@@ -73,11 +73,11 @@ def execute_job(ch, method, properties, body):
         svc_uid = payload.get("svc_uid")
 
         if not job_id or not engine:
-            logger.error("Missing job_id or engine in payload")
+            logger.error("Missing job_id or engine in payload: %s", payload)
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        logger.info(f"Processing job {job_id} ({engine})")
+        logger.info("Processing job %s (%s)", job_id, engine)
 
         _json2_call(
             "backup.job",
@@ -152,15 +152,13 @@ def execute_job(ch, method, properties, body):
             ):
                 cmd = [script_path]
             else:
-                raise Exception(
-                    f"Invalid or missing restore drill script: {script_path}"
-                )
+                raise ValueError(f"Invalid or missing restore drill script: {script_path}")
         elif engine == "restore_cmd":
             cmd = payload.get("cmd_args", [])
             # Security hardening: ensure cmd is a list and contains only allowed binaries
             allowed_binaries = ["kopia", "pgbackrest"]
-            if not cmd or cmd[0] not in allowed_binaries:
-                raise Exception(f"Unauthorized command execution attempt: {cmd}")
+            if not cmd or not isinstance(cmd, list) or cmd[0] not in allowed_binaries:
+                raise PermissionError(f"Unauthorized command execution attempt: {cmd}")
 
             if cmd[0] == "kopia":
                 # Ensure we don't accidentally write where we shouldn't
@@ -169,9 +167,9 @@ def execute_job(ch, method, properties, body):
                 pass
 
         if not cmd:
-            raise Exception(f"No command generated for engine: {engine}")
+            raise ValueError(f"No command generated for engine: {engine}")
 
-        logger.info(f"Executing: {' '.join(shlex.quote(c) for c in cmd)}")
+        logger.info("Executing: %s", " ".join(shlex.quote(c) for c in cmd))
 
         proc = subprocess.Popen(
             cmd,
@@ -198,7 +196,7 @@ def execute_job(ch, method, properties, body):
                         vals={"output_log": log_buffer},
                     )
                 except urllib.error.URLError as e:
-                    logger.warning(f"Throttled log update failed: {e}")
+                    logger.warning("Throttled log update failed: %s", e)
                 last_update = time.time()
 
         proc.stdout.close()
@@ -226,12 +224,9 @@ def execute_job(ch, method, properties, body):
             elif engine == "sync_snapshots":
                 try:
                     # Clean the buffer of the exit message before parsing JSON
-                    # We look for the last valid JSON block if possible, or just the whole buffer before the exit message
                     parts = log_buffer.split("\nProcess exited")
                     json_str = parts[0].strip()
-                    # Kopia might output some info before JSON if not careful, though --json should be clean.
-                    # Let's try to find the START of the JSON array or object.
-                    # We look for the first [ or { that precedes the end of the string.
+
                     start_idx_arr = json_str.find("[")
                     start_idx_obj = json_str.find("{")
                     if start_idx_arr != -1 and start_idx_obj != -1:
@@ -252,7 +247,7 @@ def execute_job(ch, method, properties, body):
                         engine=config.get("engine"),
                     )
                 except (json.JSONDecodeError, KeyError, ValueError) as e:
-                    logger.error(f"Failed to parse sync data: {e}")
+                    logger.error("Failed to parse sync data for engine %s: %s", engine, e)
                     _json2_call(
                         "backup.config",
                         "_report_backup_failure",
@@ -282,10 +277,10 @@ def execute_job(ch, method, properties, body):
             )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info(f"Job {job_id} finished: {final_state}")
+        logger.info("Job %s finished: %s", job_id, final_state)
 
-    except (OdooAPIError, subprocess.SubprocessError, OSError, ValueError) as e:
-        logger.error(f"Expected error processing job: {type(e).__name__}: {e}")
+    except (OdooAPIError, subprocess.SubprocessError, OSError, ValueError, PermissionError) as e:
+        logger.error("Error processing job %s: %s: %s", job_id if 'job_id' in locals() else 'unknown', type(e).__name__, e)
         # If possible, report the failure back to Odoo before acking
         try:
             payload = json.loads(body)
@@ -308,8 +303,8 @@ def execute_job(ch, method, properties, body):
                     ids=[config_id],
                     message=f"Worker Error ({type(e).__name__}): {e}",
                 )
-        except (OdooAPIError, json.JSONDecodeError) as inner_e:
-            logger.error(f"Failed to report failure back to Odoo: {inner_e}")
+        except (OdooAPIError, json.JSONDecodeError, urllib.error.URLError) as inner_e:  # audit-ignore-catch-all: Reporting failure is best-effort.
+            logger.error("Failed to report failure back to Odoo: %s", inner_e)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
@@ -333,11 +328,14 @@ def main():
             logger.warning("RabbitMQ offline. Retrying in 5s...")
             time.sleep(5)
         except pika.exceptions.AMQPError as e:
-            logger.error(f"RabbitMQ protocol error: {e}. Restarting...")
+            logger.error("RabbitMQ protocol error: %s. Restarting...", e)
             time.sleep(5)
         except OdooAPIError as e:
-            logger.error(f"Fatal Odoo API error in main loop: {e}. Retrying in 10s...")
+            logger.error("Fatal Odoo API error in main loop: %s. Retrying in 10s...", e)
             time.sleep(10)
+        except (ValueError, TypeError, OSError) as e:  # audit-ignore-catch-all: General daemon recovery loop.
+             logger.error("Unexpected error in main loop: %s. Restarting...", e)
+             time.sleep(5)
 
 
 if __name__ == "__main__":
