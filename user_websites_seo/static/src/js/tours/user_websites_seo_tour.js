@@ -59,6 +59,12 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         {
             content: "Wait for save to complete",
             trigger: '.o_form_saved, .o_form_button_create',
+            run: () => {}, // wait
+        },
+        {
+            content: "Go back to list to close the form",
+            trigger: 'button[data-menu-xmlid="base.menu_users"]',
+            run: 'click',
         }
     ],
 });
