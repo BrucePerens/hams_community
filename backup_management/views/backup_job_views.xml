@@ -50,6 +50,6 @@
     <record id="action_backup_job" model="ir.actions.act_window">
         <field name="name">Backup Jobs (Active)</field>
         <field name="res_model">backup.job</field>
-        <field name="view_mode canvas,form">list,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 </odoo>

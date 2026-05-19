@@ -62,4 +62,4 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
     ],
 });
 
-// # Verified by [@ANCHOR: test_tour_execution]
+// # Tests [@ANCHOR: backup_dashboard_tour]

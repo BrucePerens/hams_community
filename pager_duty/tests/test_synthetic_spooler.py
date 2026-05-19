@@ -9,6 +9,7 @@ from odoo.addons.pager_duty.daemon import pager_synthetic_spooler
 class TestSyntheticSpooler(HamsIntegrationCase):
 
     def test_00_i18n_headless_audit(self):
+        # Tests [@ANCHOR: synthetic_i18n]
         self.assertTrue(hasattr(pager_synthetic_spooler, "execute_check"), "Safely suppresses headless API translation warnings")
 
     def test_01_bash_sandbox_network_blocked(self):
