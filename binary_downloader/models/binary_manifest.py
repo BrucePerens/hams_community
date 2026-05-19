@@ -67,6 +67,12 @@ class BinaryManifest(models.Model):
             if record.name in (".", ".."):
                 raise ValidationError(_("The binary name cannot be '.' or '..'."))
 
+    @api.constrains("archive_type", "extract_member")
+    def _check_extract_member(self):
+        for record in self:
+            if record.archive_type == "tar.gz" and not record.extract_member:
+                raise ValidationError(_("Extract Member is required for tar.gz archives."))
+
     @api.depends("name")
     def _compute_is_installed(self):
         # [@ANCHOR: binary_compute_installed]
@@ -118,6 +124,8 @@ class BinaryManifest(models.Model):
     @api.model
     def ensure_executable(self, cmd_name):
         # [@ANCHOR: binary_ensure_executable]
+        # [@ANCHOR: binary_resolution]
+        # Verified by [@ANCHOR: test_binary_manifest_integration]
         # Verified by [@ANCHOR: test_binary_manifest_standard]
         if (
             not cmd_name
@@ -159,8 +167,9 @@ class BinaryManifest(models.Model):
         data_dir = tools.config.get("data_dir", "/var/lib/odoo")
         bin_dir = os.path.join(data_dir, "hams_bin")
 
-        os.makedirs(bin_dir, exist_ok=True)
-        os.chmod(bin_dir, 0o750)
+        if not os.path.exists(bin_dir):
+            os.makedirs(bin_dir, exist_ok=True)
+            os.chmod(bin_dir, 0o750)
 
         target_bin = os.path.join(bin_dir, cmd_name)
 
@@ -178,7 +187,8 @@ class BinaryManifest(models.Model):
                     for chunk in iter(lambda: f.read(4096), b""):
                         hasher.update(chunk)
                 if hasher.hexdigest() == manifest_record.checksum:
-                    os.chmod(target_bin, 0o750)
+                    if not os.access(target_bin, os.X_OK):
+                        os.chmod(target_bin, 0o750)
                     return target_bin
                 else:
                     _logger.info("Checksum mismatch for %s, re-downloading...", cmd_name)
