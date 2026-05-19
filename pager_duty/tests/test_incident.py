@@ -4,8 +4,7 @@ import redis
 import logging
 import datetime
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.tests.real_transaction import HamsTransactionCase
-from odoo.addons.hams_test.common import HamsIntegrationCase
+from odoo.addons.hams_test.common import HamsTransactionCase, HamsIntegrationCase
 from unittest.mock import MagicMock
 from odoo import fields, _
 

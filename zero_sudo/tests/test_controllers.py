@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.tests.real_transaction import HamsHttpCase
+from odoo.addons.hams_test.common import HamsHttpCase
 
 @tagged("post_install", "-at_install")
 class TestZeroSudoControllers(HamsHttpCase):

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import odoo.tests
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
-class TestManualLibraryUITours(odoo.tests.HttpCase):
+@tagged("post_install", "-at_install")
+class TestManualLibraryUITours(HamsHttpCase):
     def test_01_manual_toc_tour(self):
         # [@ANCHOR: test_tour_manual_toc]
         # Tests [@ANCHOR: story_manual_toc]

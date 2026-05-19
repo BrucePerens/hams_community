@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import odoo.tests
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 import urllib.parse
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
-class TestManualRobustness(odoo.tests.common.HttpCase):
+@tagged("post_install", "-at_install")
+class TestManualRobustness(HamsHttpCase):
 
     def setUp(self):
         super().setUp()

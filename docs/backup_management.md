@@ -34,6 +34,6 @@ The following tests are used to verify the module's functionality:
 - **Cron Reliability**: Scheduled syncing functions are validated by `[@ANCHOR: test_backup_cron]`.
 - **View Rendering**: Interface layouts and dashboards are verified by `[@ANCHOR: test_backup_view]`.
 - **Subprocess Orchestration**: Shell executions are strictly mocked and verified by `[@ANCHOR: test_backup_orchestration]`.
-- **Policies**: Policy application is tested by `[@ANCHOR: test_apply_policies]`.
-- **Auto-download**: Kopia auto-download is tested by `[@ANCHOR: test_kopia_auto_download]`.
-- **Triggers**: Backup triggers are tested by `[@ANCHOR: test_trigger_kopia_and_pgbackrest]`.
+- **Policies**: Policy application is thoroughly tested.
+- **Auto-download**: Kopia auto-download is thoroughly tested.
+- **Triggers**: Backup triggers are thoroughly tested.

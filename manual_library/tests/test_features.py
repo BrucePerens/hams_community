@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-import odoo.tests
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
+import odoo.http
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
-class TestManualFeatures(odoo.tests.common.HttpCase):
+@tagged("post_install", "-at_install")
+class TestManualFeatures(HamsHttpCase):
 
     def setUp(self):
         super(TestManualFeatures, self).setUp()
