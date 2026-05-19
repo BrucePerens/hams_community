@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-from odoo.tests import TransactionCase, HttpCase, tagged
+from odoo.tests import tagged
+from odoo.addons.hams_test.common import HamsTransactionCase, HamsHttpCase
 from odoo.exceptions import UserError, AccessError
 from odoo import SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
 @tagged('post_install', '-at_install')
-class TestKeyRegistry(TransactionCase):
+class TestKeyRegistry(HamsTransactionCase):
     def setUp(self):
         super().setUp()
         self.registry_model = self.env["daemon.key.registry"]
@@ -120,6 +121,7 @@ class TestKeyRegistry(TransactionCase):
                         'user_id': self.service_user.id,
                         'env_file_path': f_path,
                     })
+                    self.env.flush_all()
                 self.assertIn("Security Alert", str(cm.exception))
 
         # Cleanup
@@ -290,7 +292,7 @@ class TestKeyRegistry(TransactionCase):
 
 
 @tagged('post_install', '-at_install')
-class TestKeyRegistryTour(HttpCase):
+class TestKeyRegistryTour(HamsHttpCase):
     def test_daemon_key_manager_tour(self):
         # [@ANCHOR: test_daemon_key_manager_tour]
         # Verified by [@ANCHOR: test_daemon_key_manager_tour]

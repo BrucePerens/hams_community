@@ -8,7 +8,7 @@ import os
 import json
 
 sys.path.append(os.path.dirname(__file__))
-import cache_manager
+import cache_manager  # noqa: E402
 
 class TestCacheManager(unittest.IsolatedAsyncioTestCase):
     async def test_01_broadcast_to_redis(self):
@@ -36,7 +36,9 @@ class TestCacheManager(unittest.IsolatedAsyncioTestCase):
         """Verify that the main loop attempts to reconnect to Postgres on failure."""
 
         # We need to patch things inside cache_manager module
-        with patch("cache_manager.redis.Redis") as mock_redis_class,              patch("cache_manager.asyncpg.connect") as mock_pg_connect,              patch("cache_manager.asyncio.sleep") as mock_sleep:
+        with patch("cache_manager.redis.Redis") as mock_redis_class, \
+             patch("cache_manager.asyncpg.connect") as mock_pg_connect, \
+             patch("cache_manager.asyncio.sleep") as mock_sleep:
 
             mock_redis = AsyncMock()
             mock_redis_class.return_value = mock_redis

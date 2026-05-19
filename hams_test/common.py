@@ -1,10 +1,76 @@
 # -*- coding: utf-8 -*-
 import logging
-from odoo.tests.common import HttpCase
+from unittest.mock import MagicMock, patch
+from odoo.tests.common import HttpCase, TransactionCase
 
 _logger = logging.getLogger(__name__)
 
-class HamsIntegrationCase(HttpCase):
+
+class DiagnosticMock(MagicMock):
+    """
+    A strict mock designed to trap runaway recursion and excessive deep calling
+    often seen when Odoo registry models are incorrectly shadowed or cyclically patched.
+    """
+    def __init__(self, *args, **kwargs):
+        # ADR-0012: Prevent runaway test execution by hard-capping mock recursion.
+        self._max_depth = kwargs.pop("max_recursion_depth", 5)
+        self._current_depth = 0
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        self._current_depth += 1
+        if self._current_depth > self._max_depth:
+            self._current_depth = 0  # Reset for subsequent isolated assertions
+            raise RecursionError(
+                f"DiagnosticMock Security Trip: Recursion depth limit ({self._max_depth}) exceeded "
+                f"on mock '{self._mock_name or 'unnamed'}'. You likely have a cyclic patch or "
+                f"are mocking a core Odoo registry propagation method."
+            )
+        try:
+            return super().__call__(*args, **kwargs)
+        finally:
+            self._current_depth -= 1
+
+
+class SafePatchMixin:
+    """
+    Mixin to provide safe, runtime-only patching to avoid Odoo registry
+    early-import corruption and mock recursion traps.
+    """
+    def safe_patch(self, target, **kwargs):
+        if "new" not in kwargs and "new_callable" not in kwargs:
+            kwargs["new_callable"] = DiagnosticMock
+        patcher = patch(target, **kwargs)
+        mock_obj = patcher.start()
+        self.addCleanup(patcher.stop)
+        return mock_obj
+
+    def safe_patch_object(self, target, attribute, **kwargs):
+        if "new" not in kwargs and "new_callable" not in kwargs:
+            kwargs["new_callable"] = DiagnosticMock
+        patcher = patch.object(target, attribute, **kwargs)
+        mock_obj = patcher.start()
+        self.addCleanup(patcher.stop)
+        return mock_obj
+
+
+class HamsTransactionCase(TransactionCase, SafePatchMixin):
+    # [@ANCHOR: hams_transaction_case]
+    """
+    Base class for standard transaction tests enforcing safe patching.
+    """
+    pass
+
+
+class HamsHttpCase(HttpCase, SafePatchMixin):
+    # [@ANCHOR: hams_http_case]
+    """
+    Base class for standard HTTP/UI Tour tests enforcing safe patching.
+    """
+    pass
+
+
+class HamsIntegrationCase(HamsHttpCase):
     # [@ANCHOR: integration_daemon_testing]
     """
     Base class for heavy I/O integration tests.
@@ -19,7 +85,7 @@ class HamsIntegrationCase(HttpCase):
     @classmethod
     def tearDownClass(cls):
         env = cls.env
-        daemon_utils = env['zero_sudo.daemon.utils']
+        daemon_utils = env["zero_sudo.daemon.utils"]
         for process in cls._daemons:
             daemon_utils.stop_daemon_process(process)
         cls._daemons.clear()
@@ -32,7 +98,7 @@ class HamsIntegrationCase(HttpCase):
         Must be called within setUpClass or setUp.
         """
         env = cls.env
-        daemon_utils = env['zero_sudo.daemon.utils']
+        daemon_utils = env["zero_sudo.daemon.utils"]
         process = daemon_utils.start_daemon_process(script_path, args, env_vars)
         cls._daemons.append(process)
 

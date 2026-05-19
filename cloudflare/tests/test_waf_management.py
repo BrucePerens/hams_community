@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from unittest.mock import patch
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
+from odoo.addons.hams_test.common import HamsTransactionCase
 from odoo.exceptions import UserError
 
 
 @tagged("post_install", "-at_install")
-class TestWafManagement(RealTransactionCase):
+class TestWafManagement(HamsTransactionCase):
 
     def setUp(self):
         super().setUp()
@@ -21,23 +20,23 @@ class TestWafManagement(RealTransactionCase):
     def test_01_cf_execute_ban(self):
         # [@ANCHOR: test_cf_execute_ban]
         # Tests [@ANCHOR: cf_execute_ban]
-        with patch("odoo.addons.cloudflare.models.ip_ban.ban_ip") as mock_ban_ip:
-            mock_ban_ip.return_value = (True, "fake_rule_123")
+        mock_ban_ip = self.safe_patch("odoo.addons.cloudflare.models.ip_ban.ban_ip")
+        mock_ban_ip.return_value = (True, "fake_rule_123")
 
-            res = (
-                self.env["cloudflare.ip.ban"]
-                .with_user(self.svc_uid)
-                ._execute_ban("10.0.0.1", notes="Test Spam", website_id=self.website.id)
-            )
-            self.assertTrue(res)
+        res = (
+            self.env["cloudflare.ip.ban"]
+            .with_user(self.svc_uid)
+            ._execute_ban("10.0.0.1", notes="Test Spam", website_id=self.website.id)
+        )
+        self.assertTrue(res)
 
-            ban_record = self.env["cloudflare.ip.ban"].search(
-                [("ip_address", "=", "10.0.0.1")], limit=1
-            )
-            self.assertTrue(ban_record)
-            self.assertEqual(ban_record.state, "active")
-            self.assertEqual(ban_record.cf_rule_id, "fake_rule_123")
-            self.assertEqual(ban_record.website_id.id, self.website.id)
+        ban_record = self.env["cloudflare.ip.ban"].search(
+            [("ip_address", "=", "10.0.0.1")], limit=1
+        )
+        self.assertTrue(ban_record)
+        self.assertEqual(ban_record.state, "active")
+        self.assertEqual(ban_record.cf_rule_id, "fake_rule_123")
+        self.assertEqual(ban_record.website_id.id, self.website.id)
 
     def test_02_cf_action_lift_ban(self):
         # [@ANCHOR: test_cf_action_lift_ban]
@@ -51,15 +50,16 @@ class TestWafManagement(RealTransactionCase):
             }
         )
 
-        with patch("odoo.addons.cloudflare.models.ip_ban.unban_ip") as mock_unban_ip:
-            mock_unban_ip.return_value = (False, "Edge Offline")
-            with self.assertRaises(UserError):
-                ban_record.action_lift_ban()
-            self.assertEqual(ban_record.state, "active")
+        mock_unban_ip = self.safe_patch("odoo.addons.cloudflare.models.ip_ban.unban_ip")
 
-            mock_unban_ip.return_value = (True, "Success")
+        mock_unban_ip.return_value = (False, "Edge Offline")
+        with self.assertRaises(UserError):
             ban_record.action_lift_ban()
-            self.assertEqual(ban_record.state, "lifted")
+        self.assertEqual(ban_record.state, "active")
+
+        mock_unban_ip.return_value = (True, "Success")
+        ban_record.action_lift_ban()
+        self.assertEqual(ban_record.state, "lifted")
 
     def test_03_cf_action_pull_waf_rules(self):
         # Tests [@ANCHOR: cf_action_pull_waf_rules]
@@ -71,31 +71,31 @@ class TestWafManagement(RealTransactionCase):
             }
         )
 
-        with patch("odoo.addons.cloudflare.models.config_manager.get_zone_ruleset") as mock_get_ruleset:
-            mock_get_ruleset.return_value = {
-                "rules": [
-                    {
-                        "id": "abc",
-                        "description": "Cloudflare Rule 1",
-                        "action": "block",
-                        "expression": "ip.src eq 1.1.1.1",
-                        "enabled": True,
-                    }
-                ]
-            }
+        mock_get_ruleset = self.safe_patch("odoo.addons.cloudflare.models.config_manager.get_zone_ruleset")
+        mock_get_ruleset.return_value = {
+            "rules": [
+                {
+                    "id": "abc",
+                    "description": "Cloudflare Rule 1",
+                    "action": "block",
+                    "expression": "ip.src eq 1.1.1.1",
+                    "enabled": True,
+                }
+            ]
+        }
 
-            success, _msg = (
-                self.env["cloudflare.config.manager"]
-                .with_user(self.svc_uid)
-                .action_pull_waf_rules(website_id=self.website.id)
-            )
-            self.assertTrue(success)
+        success, _msg = (
+            self.env["cloudflare.config.manager"]
+            .with_user(self.svc_uid)
+            .action_pull_waf_rules(website_id=self.website.id)
+        )
+        self.assertTrue(success)
 
-            rules = self.env["cloudflare.waf.rule"].search(
-                [("website_id", "=", self.website.id)]
-            )
-            self.assertEqual(len(rules), 1)
-            self.assertEqual(rules[0].name, "Cloudflare Rule 1")
+        rules = self.env["cloudflare.waf.rule"].search(
+            [("website_id", "=", self.website.id)]
+        )
+        self.assertEqual(len(rules), 1)
+        self.assertEqual(rules[0].name, "Cloudflare Rule 1")
 
     def test_04_cf_action_push_waf_rules(self):
         # Tests [@ANCHOR: cf_action_push_waf_rules]
@@ -109,20 +109,20 @@ class TestWafManagement(RealTransactionCase):
             }
         )
 
-        with patch("odoo.addons.cloudflare.models.config_manager.get_zone_ruleset") as mock_get, \
-             patch("odoo.addons.cloudflare.models.config_manager.update_zone_ruleset") as mock_update, \
-             patch("odoo.addons.cloudflare.models.config_manager.create_zone_ruleset"):
+        mock_get = self.safe_patch("odoo.addons.cloudflare.models.config_manager.get_zone_ruleset")
+        mock_update = self.safe_patch("odoo.addons.cloudflare.models.config_manager.update_zone_ruleset")
+        self.safe_patch("odoo.addons.cloudflare.models.config_manager.create_zone_ruleset")
 
-            mock_get.return_value = {"id": "ruleset_777"}
-            mock_update.return_value = (True, "Updated")
+        mock_get.return_value = {"id": "ruleset_777"}
+        mock_update.return_value = (True, "Updated")
 
-            success, _msg = (
-                self.env["cloudflare.config.manager"]
-                .with_user(self.svc_uid)
-                .action_push_waf_rules(website_id=self.website.id)
-            )
-            self.assertTrue(success)
-            mock_update.assert_called_once()
+        success, _msg = (
+            self.env["cloudflare.config.manager"]
+            .with_user(self.svc_uid)
+            .action_push_waf_rules(website_id=self.website.id)
+        )
+        self.assertTrue(success)
+        mock_update.assert_called_once()
 
-            payload = mock_update.call_args[0][1]
-            self.assertEqual(payload["rules"][0]["action"], "managed_challenge")
+        payload = mock_update.call_args[0][1]
+        self.assertEqual(payload["rules"][0]["action"], "managed_challenge")

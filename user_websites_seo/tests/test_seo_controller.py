@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from odoo.tests.common import TransactionCase
+from odoo.addons.hams_test.common import HamsTransactionCase
 from odoo.http import Response
-from unittest.mock import patch
 from odoo.addons.user_websites_seo.controllers.main import UserWebsitesSEOController
 
-class TestSEOController(TransactionCase):
+class TestSEOController(HamsTransactionCase):
 
     def setUp(self):
         super().setUp()
@@ -16,8 +15,7 @@ class TestSEOController(TransactionCase):
         })
         self.controller = UserWebsitesSEOController()
 
-    @patch('odoo.addons.user_websites_seo.controllers.main.UserWebsitesController.user_blog_index')
-    def test_controller_no_ssti_elevation(self, mock_super_index):
+    def test_controller_no_ssti_elevation(self):
         # Tests [@ANCHOR: controller_user_blog_index_seo_override]
         # [@ANCHOR: test_controller_no_ssti_elevation]
         # Verified by [@ANCHOR: test_controller_no_ssti_elevation]
@@ -26,6 +24,8 @@ class TestSEOController(TransactionCase):
         the main_object without elevating privileges (no sudo/svc_uid),
         to avoid SSTI vulnerabilities.
         """
+        mock_super_index = self.safe_patch('odoo.addons.user_websites_seo.controllers.main.UserWebsitesController.user_blog_index')
+
         # Mock the response from the base controller
         mock_response = Response()
         mock_response.qcontext = {

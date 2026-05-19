@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging
-from unittest.mock import patch, MagicMock
-from odoo.tests.common import TransactionCase, tagged
+from unittest.mock import MagicMock
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsTransactionCase
 
 _logger = logging.getLogger(__name__)
 
 @tagged("post_install", "-at_install")
-class TestPurgeQueue(TransactionCase):
+class TestPurgeQueue(HamsTransactionCase):
     def setUp(self):
         super().setUp()
         self.env["cloudflare.purge.queue"].search([]).unlink()
@@ -15,12 +16,13 @@ class TestPurgeQueue(TransactionCase):
             {"cloudflare_api_token": "fake_token", "cloudflare_zone_id": "fake_zone"}
         )
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
-    @patch("time.sleep")
-    def test_01_bdd_queue_batching_and_rate_limiting(self, mock_sleep, mock_post):
+    def test_01_bdd_queue_batching_and_rate_limiting(self):
         # [@ANCHOR: test_queue_batching_and_rate_limiting]
         # Tests [@ANCHOR: ir_cron_process_cf_purge_queue]
         # Tests [@ANCHOR: cf_process_queue_logic]
+        mock_post = self.safe_patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
+        mock_sleep = self.safe_patch("time.sleep")
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_post.return_value = mock_response
@@ -39,23 +41,25 @@ class TestPurgeQueue(TransactionCase):
         cron = self.env.ref(
             "cloudflare.ir_cron_process_cf_purge_queue", raise_if_not_found=False
         )
-        with patch.object(type(cron), "_trigger") as mock_trigger:
-            QueueModel.process_queue()
 
-            self.assertEqual(
-                mock_post.call_count, 10, "MUST batch exactly 10 requests."
-            )
-            self.assertEqual(
-                mock_sleep.call_count,
-                10,
-                "MUST call time.sleep() after each chunk to drop DB locks.",
-            )
-            self.assertEqual(
-                QueueModel.search_count([]),
-                10,
-                "MUST leave 10 unprocessed records for the next trigger.",
-            )
-            mock_trigger.assert_called_once()  # MUST re-trigger the cron job
+        mock_trigger = self.safe_patch_object(type(cron), "_trigger")
+
+        QueueModel.process_queue()
+
+        self.assertEqual(
+            mock_post.call_count, 10, "MUST batch exactly 10 requests."
+        )
+        self.assertEqual(
+            mock_sleep.call_count,
+            10,
+            "MUST call time.sleep() after each chunk to drop DB locks.",
+        )
+        self.assertEqual(
+            QueueModel.search_count([]),
+            10,
+            "MUST leave 10 unprocessed records for the next trigger.",
+        )
+        mock_trigger.assert_called_once()  # MUST re-trigger the cron job
 
         cron._trigger()
 
@@ -88,10 +92,11 @@ class TestPurgeQueue(TransactionCase):
         domain_val = str(queue_item.with_user(svc_uid).website_id.domain)
         self.assertIsInstance(domain_val, str)
 
-    @patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
-    def test_04_purge_queue_tags_processing(self, mock_post):
+    def test_04_purge_queue_tags_processing(self):
         # Tests [@ANCHOR: cf_enqueue_tags_api]
         """Verify that tag purges in the queue are processed correctly."""
+        mock_post = self.safe_patch("odoo.addons.cloudflare.utils.cloudflare_api.requests.post")
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_post.return_value = mock_response

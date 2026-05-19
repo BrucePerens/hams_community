@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from unittest.mock import MagicMock, patch
-from odoo.tests.common import HttpCase, tagged
+from unittest.mock import MagicMock
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 
 @tagged("post_install", "-at_install")
-class TestRequestContext(HttpCase):
+class TestRequestContext(HamsHttpCase):
     def test_01_get_request_context(self):
         # [@ANCHOR: test_cf_get_request_context]
         # Tests [@ANCHOR: cf_get_request_context]
@@ -22,23 +23,28 @@ class TestRequestContext(HttpCase):
         mock_request.httprequest.headers = headers
         mock_request.httprequest.remote_addr = '1.1.1.1'
 
-        with patch('odoo.addons.cloudflare.models.edge_context.request', mock_request):
-            context = self.env['cloudflare.utils'].get_request_context()
+        self.safe_patch('odoo.addons.cloudflare.models.edge_context.request', return_value=mock_request)
+        # safe_patch replaces the target, so we mock the entire object
+        # Alternatively, we patch the object directly.
+        mock_obj = self.safe_patch('odoo.addons.cloudflare.models.edge_context.request')
+        mock_obj.httprequest.headers = headers
+        mock_obj.httprequest.remote_addr = '1.1.1.1'
 
-            self.assertEqual(context['ip'], '1.2.3.4')
-            self.assertEqual(context['country'], 'US')
-            self.assertEqual(context['city'], 'New York')
-            self.assertEqual(context['threat_score'], '10')
+        context = self.env['cloudflare.utils'].get_request_context()
+
+        self.assertEqual(context['ip'], '1.2.3.4')
+        self.assertEqual(context['country'], 'US')
+        self.assertEqual(context['city'], 'New York')
+        self.assertEqual(context['threat_score'], '10')
 
         # # Verified by [@ANCHOR: test_cf_get_request_context]
 
     def test_02_get_request_context_no_headers(self):
         """Verify fallback when Cloudflare headers are missing."""
-        mock_request = MagicMock()
-        mock_request.httprequest.headers = {}
-        mock_request.httprequest.remote_addr = '1.1.1.1'
+        mock_obj = self.safe_patch('odoo.addons.cloudflare.models.edge_context.request')
+        mock_obj.httprequest.headers = {}
+        mock_obj.httprequest.remote_addr = '1.1.1.1'
 
-        with patch('odoo.addons.cloudflare.models.edge_context.request', mock_request):
-            context = self.env['cloudflare.utils'].get_request_context()
-            self.assertEqual(context['ip'], '1.1.1.1')
-            self.assertIsNone(context['country'])
+        context = self.env['cloudflare.utils'].get_request_context()
+        self.assertEqual(context['ip'], '1.1.1.1')
+        self.assertIsNone(context['country'])

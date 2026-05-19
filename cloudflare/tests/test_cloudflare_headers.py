@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from odoo.tests.common import HttpCase, tagged
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 from odoo.addons.cloudflare.models.ir_http import IrHttp as CloudflareIrHttp
 from odoo.http import Response
-from unittest.mock import patch
 
 
 @tagged("post_install", "-at_install")
-class TestCloudflareHeaders(HttpCase):
+class TestCloudflareHeaders(HamsHttpCase):
     def setUp(self):
         super().setUp()
         # Create a user to test authenticated routes
@@ -53,14 +53,14 @@ class TestCloudflareHeaders(HttpCase):
         mock_request.httprequest = type("MockHttpRequest", (object,), {})()
         mock_request.httprequest.path = "/web/assets/1/dummy.js" # burn-ignore-route
 
-        with patch("odoo.addons.cloudflare.models.ir_http.request", mock_request):
-            res = DummyIrHttp._post_dispatch(mock_response)
+        self.safe_patch("odoo.addons.cloudflare.models.ir_http.request", new=mock_request)
+        res = DummyIrHttp._post_dispatch(mock_response)
 
-            self.assertEqual(
-                res.headers.get("Cloudflare-CDN-Cache-Control"),
-                "max-age=31536000",
-                "Static assets MUST be cached at the edge for 1 year.",
-            )
+        self.assertEqual(
+            res.headers.get("Cloudflare-CDN-Cache-Control"),
+            "max-age=31536000",
+            "Static assets MUST be cached at the edge for 1 year.",
+        )
 
     def test_02_dynamic_route_no_store(self):
         # Tests [@ANCHOR: cf_nocache_routes]

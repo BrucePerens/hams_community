@@ -140,6 +140,16 @@ GENERAL_ERROR_RULES = [
         re.compile(r"['\"]/tmp(?:/|['\"])"),
         "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
     ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"class\s+[A-Za-z0-9_]+\s*\(\s*(?:TransactionCase|HttpCase)\s*\)\s*:"),
+        "CRITICAL ARCHITECTURE: Tests must inherit from HamsTransactionCase, HamsHttpCase, or HamsIntegrationCase. Direct Odoo base class inheritance is forbidden.",
+    ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"(?:@patch\b|with\s+patch\b|with\s+patch\.object\b)"),
+        "CRITICAL ARCHITECTURE: Native patch decorators and context managers are forbidden. Use self.safe_patch() or self.safe_patch_object().",
+    ),
 ]
 
 ODOO_ERROR_RULES = [

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from odoo.tests import HttpCase, tagged
+from odoo.tests import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 
 @tagged("post_install", "-at_install")
-class TestSEOUI(HttpCase):
+class TestSEOUI(HamsHttpCase):
     def setUp(self):
         super().setUp()
         self.user_test = self.env["res.users"].create(

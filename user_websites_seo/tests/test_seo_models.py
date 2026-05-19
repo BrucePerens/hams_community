@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from odoo.tests.common import TransactionCase
+from odoo.addons.hams_test.common import HamsTransactionCase
 from odoo.exceptions import AccessError
 
-class TestSEOModels(TransactionCase):
+class TestSEOModels(HamsTransactionCase):
 
     @classmethod
     def setUpClass(cls):

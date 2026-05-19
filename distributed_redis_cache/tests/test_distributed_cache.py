@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
-import json
 import logging
-import unittest.mock
 import redis
-import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from odoo import tools
-from odoo.tests.common import tagged, HttpCase
-from odoo.addons.hams_test.common import HamsIntegrationCase
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase, HamsIntegrationCase
 from odoo.addons.distributed_redis_cache.models.ir_http import (
     _invalidation_queue,
     _listener_lock,
@@ -26,7 +23,7 @@ _logger = logging.getLogger(__name__)
 
 
 @tagged("standard", "post_install", "-at_install")
-class TestDistributedCacheStandard(HttpCase):
+class TestDistributedCacheStandard(HamsHttpCase):
     def test_01_redis_cache_interceptor_standard(self):
         # Tests [@ANCHOR: redis_cache_interceptor]
         """
@@ -40,64 +37,42 @@ class TestDistributedCacheStandard(HttpCase):
         with _listener_lock:
             _invalidation_queue.add(("res.users", self.env.cr.dbname))
 
-        with patch(
-            "odoo.addons.distributed_redis_cache.models.ir_http.redis_pool",
-            None,
-        ), patch(
-            "odoo.addons.base.models.ir_http.IrHttp._authenticate",
-            return_value=True,
-        ):
+        self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", new=None)
+        self.safe_patch("odoo.addons.base.models.ir_http.IrHttp._authenticate", return_value=True)
 
-            class MockRequest:
-                env = MagicMock()
+        class MockRequest:
+            env = MagicMock()
 
-            mock_req_inst = MockRequest()
+        mock_req_inst = MockRequest()
 
-            with patch(
-                "odoo.addons.distributed_redis_cache.models.ir_http.request",
-                mock_req_inst,
-            ), patch(
-                "odoo.addons.distributed_redis_cache.models.ir_http.invalidate_model_cache"
-            ) as mock_invalidate:
-                mock_req_inst.env.__contains__.return_value = True
-                mock_req_inst.env.__getitem__.return_value = self.env[
-                    "res.users"
-                ]
-                mock_req_inst.env.cr.dbname = self.env.cr.dbname
+        self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.request", new=mock_req_inst)
+        mock_invalidate = self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.invalidate_model_cache")
 
-                self.env["ir.http"]._authenticate(mock_endpoint)
-                mock_invalidate.assert_called_with(
-                    mock_req_inst.env, "res.users", local_only=True
-                )
+        mock_req_inst.env.__contains__.return_value = True
+        mock_req_inst.env.__getitem__.return_value = self.env["res.users"]
+        mock_req_inst.env.cr.dbname = self.env.cr.dbname
+
+        self.env["ir.http"]._authenticate(mock_endpoint)
+        mock_invalidate.assert_called_with(mock_req_inst.env, "res.users", local_only=True)
 
     def test_02_redis_interceptor_fails_open_standard(self):
         """
         Verify that if the Redis connection dies during polling, the middleware
         gracefully catches the exception and allows the HTTP request to proceed without crashing the worker.
         """
-        with patch(
-            "odoo.addons.distributed_redis_cache.models.ir_http.redis_pool",
-            MagicMock(),
-        ), patch(
-            "odoo.addons.distributed_redis_cache.models.ir_http.redis"
-        ) as mock_redis, patch(
-            "odoo.addons.distributed_redis_cache.models.ir_http.request",
-            MagicMock(),
-        ), patch(
-            "odoo.addons.base.models.ir_http.IrHttp._authenticate",
-            return_value=True,
-        ):
+        self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.redis_pool", new=MagicMock())
+        mock_redis = self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.redis")
+        self.safe_patch("odoo.addons.distributed_redis_cache.models.ir_http.request", new=MagicMock())
+        self.safe_patch("odoo.addons.base.models.ir_http.IrHttp._authenticate", return_value=True)
 
-            mock_redis.RedisError = redis.RedisError
-            mock_redis.Redis.side_effect = redis.RedisError(
-                "Connection reset by peer"
-            )
+        mock_redis.RedisError = redis.RedisError
+        mock_redis.Redis.side_effect = redis.RedisError("Connection reset by peer")
 
-            mock_endpoint = MagicMock()
-            mock_endpoint.routing = {"auth": "none"}
-            # The Redis interceptor MUST fail-open and never crash the WSGI worker.
-            # If an exception is raised here, the test will fail.
-            self.env["ir.http"]._authenticate(mock_endpoint)
+        mock_endpoint = MagicMock()
+        mock_endpoint.routing = {"auth": "none"}
+        # The Redis interceptor MUST fail-open and never crash the WSGI worker.
+        # If an exception is raised here, the test will fail.
+        self.env["ir.http"]._authenticate(mock_endpoint)
 
     def test_03_distributed_cache_ui(self):
         # Tests [@ANCHOR: distributed_cache_view]
@@ -123,20 +98,17 @@ class TestDistributedCacheStandard(HttpCase):
         """
         Verify that invalidate_model_cache uses SCAN instead of KEYS.
         """
-        with patch(
-            "odoo.addons.distributed_redis_cache.redis_cache.redis_pool",
-            MagicMock(),
-        ), patch(
-            "odoo.addons.distributed_redis_cache.redis_cache.redis"
-        ) as mock_redis:
-            mock_redis_client = MagicMock()
-            mock_redis.Redis.return_value = mock_redis_client
-            mock_redis_client.scan_iter.return_value = ["key1", "key2"]
+        self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", new=MagicMock())
+        mock_redis = self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis")
 
-            invalidate_model_cache(self.env, "res.partner")
+        mock_redis_client = MagicMock()
+        mock_redis.Redis.return_value = mock_redis_client
+        mock_redis_client.scan_iter.return_value = ["key1", "key2"]
 
-            mock_redis_client.scan_iter.assert_called_once()
-            mock_redis_client.delete.assert_called_once_with("key1", "key2")
+        invalidate_model_cache(self.env, "res.partner")
+
+        mock_redis_client.scan_iter.assert_called_once()
+        mock_redis_client.delete.assert_called_once_with("key1", "key2")
 
     def test_06_distributed_cache_decorator_fallback(self):
         # Tests [@ANCHOR: distributed_cache_decorator]
@@ -156,15 +128,13 @@ class TestDistributedCacheStandard(HttpCase):
         mock_obj = MockModel(self.env)
         _local_cache.clear()
 
-        # Force use_redis to True but make it fail
-        with patch(
-            "odoo.addons.distributed_redis_cache.redis_cache.redis_pool",
-            MagicMock(),
-        ), patch(
-            "odoo.addons.distributed_redis_cache.redis_cache.redis"
-        ) as mock_redis, patch.dict(
-            tools.config.options, {"test_enable": False}
-        ):
+        self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", new=MagicMock())
+        mock_redis = self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis")
+
+        old_test_enable = tools.config.options.get("test_enable")
+        tools.config.options["test_enable"] = False
+
+        try:
             mock_redis.RedisError = redis.RedisError
             mock_redis_client = MagicMock()
             mock_redis.Redis.return_value = mock_redis_client
@@ -175,6 +145,8 @@ class TestDistributedCacheStandard(HttpCase):
 
             # Verify it's in local cache now
             self.assertIn(42, list(_local_cache.values()))
+        finally:
+            tools.config.options["test_enable"] = old_test_enable
 
     def test_07_distributed_cache_key_generation(self):
         # Tests [@ANCHOR: distributed_cache_key_generation]
@@ -203,22 +175,18 @@ class TestDistributedCacheStandard(HttpCase):
         """
         Verify that notify_model_invalidation calls invalidate_model_cache and pg_notify.
         """
-        with patch(
-            "odoo.addons.distributed_redis_cache.redis_cache.invalidate_model_cache"
-        ) as mock_invalidate, patch.object(
-            self.env.cr, "execute"
-        ) as mock_execute:
-            notify_model_invalidation(self.env, "res.users")
+        mock_invalidate = self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.invalidate_model_cache")
+        mock_execute = self.safe_patch_object(self.env.cr, "execute")
 
-            mock_invalidate.assert_called_once_with(
-                self.env, "res.users", local_only=False
-            )
-            mock_execute.assert_called_once()
-            args, _ = mock_execute.call_args
-            self.assertEqual(args[0], "SELECT pg_notify(%s, %s)")
-            self.assertEqual(args[1][0], "distributed_cache_invalidation")
-            self.assertIn('"model": "res.users"', args[1][1])
-            self.assertIn(f'"dbname": "{self.env.cr.dbname}"', args[1][1])
+        notify_model_invalidation(self.env, "res.users")
+
+        mock_invalidate.assert_called_once_with(self.env, "res.users", local_only=False)
+        mock_execute.assert_called_once()
+        args, _ = mock_execute.call_args
+        self.assertEqual(args[0], "SELECT pg_notify(%s, %s)")
+        self.assertEqual(args[1][0], "distributed_cache_invalidation")
+        self.assertIn('"model": "res.users"', args[1][1])
+        self.assertIn(f'"dbname": "{self.env.cr.dbname}"', args[1][1])
 
     def test_09_multi_website_cache_keys(self):
         """Verify that cache keys are website-aware."""
@@ -233,13 +201,15 @@ class TestDistributedCacheStandard(HttpCase):
 
         _local_cache.clear()
 
-        # Bypass test_enable check AND Redis to force local cache usage
-        with patch.dict(tools.config.options, {"test_enable": False}),              patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", None):
+        old_test_enable = tools.config.options.get("test_enable")
+        tools.config.options["test_enable"] = False
+        self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", new=None)
 
+        try:
             # Website 1
             env_w1 = self.env(context=dict(self.env.context, website_id=1))
             obj_w1 = MockModel(env_w1)
-            res1 = obj_w1.cached_method("test")
+            obj_w1.cached_method("test")
 
             keys = list(_local_cache.keys())
             _logger.info("Keys after w1: %s", keys)
@@ -248,7 +218,7 @@ class TestDistributedCacheStandard(HttpCase):
             # Website 2
             env_w2 = self.env(context=dict(self.env.context, website_id=2))
             obj_w2 = MockModel(env_w2)
-            res2 = obj_w2.cached_method("test")
+            obj_w2.cached_method("test")
 
             # They should have different keys in _local_cache
             keys = list(_local_cache.keys())
@@ -259,6 +229,9 @@ class TestDistributedCacheStandard(HttpCase):
             self.assertTrue(w1_keys, "Expected key for website 1 not found in %s" % keys)
             self.assertTrue(w2_keys, "Expected key for website 2 not found in %s" % keys)
             self.assertNotEqual(w1_keys[0], w2_keys[0])
+        finally:
+            tools.config.options["test_enable"] = old_test_enable
+
 
 @tagged("integration", "post_install", "-at_install")
 class TestDistributedCacheIntegration(HamsIntegrationCase):
@@ -297,7 +270,9 @@ class TestDistributedCacheIntegration(HamsIntegrationCase):
         obj = MockModel(self.env)
         _local_cache.clear()
 
-        with patch.dict(tools.config.options, {"test_enable": False}):
+        old_test_enable = tools.config.options.get("test_enable")
+        tools.config.options["test_enable"] = False
+        try:
             obj.cached_method("init")
             cache_key = list(_local_cache.keys())[0]
             self.assertIn(cache_key, _local_cache)
@@ -305,10 +280,12 @@ class TestDistributedCacheIntegration(HamsIntegrationCase):
             # 2. Trigger invalidation via real PG NOTIFY
             notify_model_invalidation(self.env, "res.partner")
             self.assertNotIn(cache_key, _local_cache)
+        finally:
+            tools.config.options["test_enable"] = old_test_enable
 
 
 @tagged("post_install", "-at_install")
-class TestDistributedCacheTour(HttpCase):
+class TestDistributedCacheTour(HamsHttpCase):
     def test_distributed_cache_admin_tour(self):
         """Verify the cache management UI via tour."""
         self.start_tour("/odoo", "distributed_cache_admin_tour", login="admin")

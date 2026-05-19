@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from unittest.mock import patch
-import odoo.tests
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.common import HamsHttpCase
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
-class TestCloudflareUITours(odoo.tests.HttpCase):
+@tagged("post_install", "-at_install")
+class TestCloudflareUITours(HamsHttpCase):
 
     def setUp(self):
         super().setUp()
@@ -49,9 +49,11 @@ class TestCloudflareUITours(odoo.tests.HttpCase):
             "cloudflare_zone_id": "fake_zone"
         })
 
+        mock_purge = self.safe_patch("odoo.addons.cloudflare.models.purge_wizard.purge_everything")
+        mock_purge.return_value = True
+
         self.authenticate(self.admin.login, self.admin.login)
-        with patch("odoo.addons.cloudflare.models.purge_wizard.purge_everything", return_value=True):
-            self.start_tour("/odoo", "cf_purge_wizard_tour", login=self.admin.login)
+        self.start_tour("/odoo", "cf_purge_wizard_tour", login=self.admin.login)
 
     def test_04_backend_views_rendering(self):
         # [@ANCHOR: test_cf_backend_views_rendering]
