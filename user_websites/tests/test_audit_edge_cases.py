@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
-from unittest.mock import patch, MagicMock
+from odoo.addons.hams_test.tests.real_transaction import HamsTransactionCase
+from unittest.mock import MagicMock
 
 
 @odoo.tests.common.tagged("post_install", "-at_install")
-class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
+class TestAuditEdgeCases(HamsTransactionCase):
     """
     Advanced integration tests targeting edge cases discovered during
     the architectural audit of the user_websites module.
@@ -160,12 +161,12 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         self.env["res.users"]._get_user_id_by_slug("cacheuser")
 
         # 2. Verify 0 queries on hit
-        with patch.object(
+        mock_execute = self.safe_patch_object(
             self.env.cr, "execute", wraps=self.env.cr.execute
-        ) as mock_execute:
-            self.env["res.users"]._get_user_id_by_slug("cacheuser")
-            for call in mock_execute.call_args_list:
-                self.assertNotIn("res_users", call[0][0])
+        )
+        self.env["res.users"]._get_user_id_by_slug("cacheuser")
+        for call in mock_execute.call_args_list:
+            self.assertNotIn("res_users", call[0][0])
 
         # 3. Trigger Invalidation
         user.write({"website_slug": "newslug"})
@@ -197,12 +198,12 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
         self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
 
         # 2. Verify 0 queries on hit
-        with patch.object(
+        mock_execute = self.safe_patch_object(
             self.env.cr, "execute", wraps=self.env.cr.execute
-        ) as mock_execute:
-            self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
-            for call in mock_execute.call_args_list:
-                self.assertNotIn("user_websites_group", call[0][0])
+        )
+        self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
+        for call in mock_execute.call_args_list:
+            self.assertNotIn("user_websites_group", call[0][0])
 
         # 3. Trigger Invalidation
         group.write({"website_slug": "newcachegroup"})
@@ -239,88 +240,43 @@ class TestAuditEdgeCases(odoo.tests.common.TransactionCase):
 
         initial_views = page.view_count
 
-        with patch(
-            "odoo.addons.user_websites.models.website_page.redis_client"
-        ) as mock_client:
-            # Simulate scan returning a cursor of 5 (more data) and one key
-            mock_client.scan.return_value = (5, [f"views:page:{page.id}"])
+        mock_client = self.safe_patch("odoo.addons.user_websites.models.website_page.redis_client")
+        # Simulate scan returning a cursor of 5 (more data) and one key
+        mock_client.scan.return_value = (5, [f"views:page:{page.id}"])
 
-            # Simulate pipeline execution returning the view count '42' and a DEL success '1'
-            mock_pipeline = MagicMock()
-            mock_client.pipeline.return_value = mock_pipeline
-            mock_pipeline.execute.return_value = ["42", 1]
+        # Simulate pipeline execution returning the view count '42' and a DEL success '1'
+        mock_pipeline = MagicMock()
+        mock_client.pipeline.return_value = mock_pipeline
+        mock_pipeline.execute.return_value = ["42", 1]
 
-            cron = self.env.ref(
-                "user_websites.ir_cron_flush_view_counters", raise_if_not_found=False
-            )
-            if not cron:
-                self.fail("Cron record ir_cron_flush_view_counters not found.")
+        cron = self.env.ref(
+            "user_websites.ir_cron_flush_view_counters", raise_if_not_found=False
+        )
+        if not cron:
+            self.fail("Cron record ir_cron_flush_view_counters not found.")
 
-            with patch.object(type(cron), "_trigger") as mock_trigger:
-                self.env["website.page"]._flush_redis_view_counters()
+        mock_trigger = self.safe_patch_object(type(cron), "_trigger")
+        self.env["website.page"]._flush_redis_view_counters()
 
-                # Verify Postgres was updated
-                page.invalidate_recordset(["view_count"])
-                self.assertEqual(
-                    page.view_count,
-                    initial_views + 42,
-                    "PostgreSQL view_count must be incremented by the Redis value.",
-                )
-
-                # Verify pipeline operations
-                mock_pipeline.get.assert_called_with(f"views:page:{page.id}")
-                # RACE CONDITION FIX: Assert DECRBY is used instead of DELETE to prevent TOCTOU data loss
-                mock_pipeline.decrby.assert_called_with(f"views:page:{page.id}", 42)
-
-                # Verify looping via _trigger
-                mock_trigger.assert_called_once()
-                cron._trigger()
-
-    # JULES INSTRUCTION: DO NOT RE-ENABLE THIS TEST.
-    # Odoo 19 ORM restricts context annihilation and manipulation on models without chatter.
-    # Attempting to use with_context(mail_notrack=True) or self.env(context={}) during
-    # Cloudflare Purge Queue creation corrupts the internal record mapping and throws a
-    # KeyError: 'record' within the ORM _create loop.
-    # There is currently no safe way to execute this flow without side-effects in Odoo 19.
-    def test_07_bdd_ormcache_query_counting_page_urls(self):
-        self.skipTest("Disabled due to Odoo 19 ORM restrictions with context annihilation on non-chatter models during purge queue creation.")
-        """
-        BDD: Given ADR-0049 Cache Verification
-        When resolving page URLs repeatedly
-        Then it MUST execute exactly 0 SQL queries from cache, and invalidation MUST trigger targeted DB NOTIFY.
-        """
-        website_id = self.env["website"].get_current_website().id
-        page = self.env["website.page"].create(
-            {
-                "url": f"/{self.test_user.website_slug}/cache-test",
-                "name": "Cache Page",
-                "type": "qweb",
-                "owner_user_id": self.test_user.id,
-                "website_published": True,
-            }
+        # Verify Postgres was updated
+        page.invalidate_recordset(["view_count"])
+        self.assertEqual(
+            page.view_count,
+            initial_views + 42,
+            "PostgreSQL view_count must be incremented by the Redis value.",
         )
 
-        # 1. Prime the cache
-        self.env["website.page"]._get_page_id_by_url(page.url, website_id)
+        # Verify pipeline operations
+        mock_pipeline.get.assert_called_with(f"views:page:{page.id}")
+        # RACE CONDITION FIX: Assert DECRBY is used instead of DELETE to prevent TOCTOU data loss
+        mock_pipeline.decrby.assert_called_with(f"views:page:{page.id}", 42)
 
-        # 2. Verify 0 queries on hit
-        with patch.object(
-            self.env.cr, "execute", wraps=self.env.cr.execute
-        ) as mock_execute:
-            self.env["website.page"]._get_page_id_by_url(page.url, website_id)
-            for call in mock_execute.call_args_list:
-                self.assertNotIn("website_page", call[0][0])
+        # Verify looping via _trigger
+        mock_trigger.assert_called_once()
+        cron._trigger()
 
-        # 3. Trigger Invalidation (Verify the targeted NOTIFY logic doesn't crash)
-        with patch.object(self.env.cr, "execute", wraps=self.env.cr.execute) as mock_execute:
-            page.write({"website_published": False})
-
-            # The write method should have called _notify_cache_invalidation which executes pg_notify
-            # We must verify the payload was specifically targeted to the URL, not the whole registry
-            mock_execute.assert_any_call(
-                "SELECT pg_notify(%s, payload) FROM unnest(%s) AS payload",
-                ("cache_invalidation", [f"website.page:{page.url}"]),
-            )
+    def test_07_bdd_ormcache_query_counting_page_urls(self):
+        self.skipTest("Disabled due to Odoo 19 ORM restrictions with context annihilation on non-chatter models during purge queue creation.")
 
     def test_08_cron_pending_reports(self):
         # [@ANCHOR: test_cron_pending_reports]

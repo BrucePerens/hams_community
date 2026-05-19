@@ -3,15 +3,16 @@ import os
 import redis
 import logging
 import datetime
-from odoo.tests.common import TransactionCase, tagged
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import HamsTransactionCase
 from odoo.addons.hams_test.common import HamsIntegrationCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from odoo import fields, _
 
 _logger = logging.getLogger(__name__)
 
 @tagged("standard", "post_install", "-at_install")
-class TestPagerIncidentStandard(TransactionCase):
+class TestPagerIncidentStandard(HamsTransactionCase):
     def setUp(self):
         super(TestPagerIncidentStandard, self).setUp()
         self.incident_model = self.env["pager.incident"]
@@ -25,18 +26,18 @@ class TestPagerIncidentStandard(TransactionCase):
             "description": "Test breach",
         }
 
-        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, \
-             patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()):
-            mock_client = MagicMock()
-            mock_redis.Redis.return_value = mock_client
-            mock_client.get.return_value = b"1"
+        mock_redis = self.safe_patch("odoo.addons.pager_duty.models.incident.redis")
+        self.safe_patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock())
+        mock_client = MagicMock()
+        mock_redis.Redis.return_value = mock_client
+        mock_client.get.return_value = b"1"
 
-            result = self.incident_model.report_incident(vals)
+        result = self.incident_model.report_incident(vals)
 
-            self.assertFalse(
-                result, "Incident engine failed to block rate-limited request."
-            )
-            mock_client.get.assert_called_with("pager_rate_limit:test_daemon")
+        self.assertFalse(
+            result, "Incident engine failed to block rate-limited request."
+        )
+        mock_client.get.assert_called_with("pager_rate_limit:test_daemon")
 
     def test_02_zero_sudo_impersonation_and_mail_standard(self):
         # Tests [@ANCHOR: auto_resolve_incidents]
@@ -47,49 +48,49 @@ class TestPagerIncidentStandard(TransactionCase):
             "description": "Zero sudo test",
         }
 
-        with patch("odoo.addons.pager_duty.models.incident.redis") as mock_redis, \
-             patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock()):
-            mock_client = MagicMock()
-            mock_redis.Redis.return_value = mock_client
-            mock_client.get.return_value = None
+        mock_redis = self.safe_patch("odoo.addons.pager_duty.models.incident.redis")
+        self.safe_patch("odoo.addons.pager_duty.models.incident.redis_pool", MagicMock())
+        mock_client = MagicMock()
+        mock_redis.Redis.return_value = mock_client
+        mock_client.get.return_value = None
 
-            incident_id = self.incident_model.report_incident(vals)
-            self.assertTrue(incident_id, "Incident failed to create.")
+        incident_id = self.incident_model.report_incident(vals)
+        self.assertTrue(incident_id, "Incident failed to create.")
 
-            incident = self.incident_model.browse(incident_id)
-            self.assertEqual(
-                incident.create_uid.id,
-                self.service_user.id,
-                "Incident not under Zero-Sudo UID.",
-            )
+        incident = self.incident_model.browse(incident_id)
+        self.assertEqual(
+            incident.create_uid.id,
+            self.service_user.id,
+            "Incident not under Zero-Sudo UID.",
+        )
 
-            incident.message_post(body=_("Test message"))
-            self.incident_model.auto_resolve_incidents("test_daemon_2")
-            self.assertEqual(incident.status, "resolved")
+        incident.message_post(body=_("Test message"))
+        self.incident_model.auto_resolve_incidents("test_daemon_2")
+        self.assertEqual(incident.status, "resolved")
 
     def test_03_bus_notification_on_create_standard(self):
-        with patch.object(type(self.env["bus.bus"]), "_sendone") as mock_sendone:
-            incident = self.incident_model.create(
-                {"source": "manual", "severity": "low", "description": "Bus test"}
-            )
-            self.assertTrue(incident.id)
+        mock_sendone = self.safe_patch_object(type(self.env["bus.bus"]), "_sendone")
+        incident = self.incident_model.create(
+            {"source": "manual", "severity": "low", "description": "Bus test"}
+        )
+        self.assertTrue(incident.id)
 
-            self.assertTrue(
-                mock_sendone.called,
-                "Bus notification was not dispatched on incident creation.",
-            )
-            args, kwargs = mock_sendone.call_args
-            str_args = [a for a in args if isinstance(a, str)]
-            self.assertEqual(
-                str_args[0],
-                "pager_duty",
-                "Bus notification sent to incorrect channel.",
-            )
-            self.assertEqual(
-                str_args[1],
-                "update_board",
-                "Bus notification used incorrect message type.",
-            )
+        self.assertTrue(
+            mock_sendone.called,
+            "Bus notification was not dispatched on incident creation.",
+        )
+        args, kwargs = mock_sendone.call_args
+        str_args = [a for a in args if isinstance(a, str)]
+        self.assertEqual(
+            str_args[0],
+            "pager_duty",
+            "Bus notification sent to incorrect channel.",
+        )
+        self.assertEqual(
+            str_args[1],
+            "update_board",
+            "Bus notification used incorrect message type.",
+        )
 
     def test_05_mtta_mttr_calculation(self):
         # Prove MTTA/MTTR computation
@@ -118,10 +119,10 @@ class TestPagerIncidentStandard(TransactionCase):
             (fields.Datetime.now() - datetime.timedelta(minutes=20), incident.id),
         )
 
-        with patch.object(type(self.incident_model), "message_post") as mock_msg:
-            self.env.ref("pager_duty.cron_escalate_incidents")._trigger()
-            self.incident_model.action_escalate_unacknowledged()
-            mock_msg.assert_called()
+        mock_msg = self.safe_patch_object(type(self.incident_model), "message_post")
+        self.env.ref("pager_duty.cron_escalate_incidents")._trigger()
+        self.incident_model.action_escalate_unacknowledged()
+        mock_msg.assert_called()
 
         # Assert that the status flag was successfully changed to break the infinite loop
         incident.invalidate_recordset(["is_escalated"])

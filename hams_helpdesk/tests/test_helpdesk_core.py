@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
-from unittest.mock import patch
+from odoo.addons.hams_test.tests.real_transaction import HamsTransactionCase
 
 @tagged('post_install', '-at_install', 'standard')
-class TestHelpdeskCore(RealTransactionCase):
+class TestHelpdeskCore(HamsTransactionCase):
 
     def setUp(self):
         super().setUp()
@@ -37,17 +37,17 @@ class TestHelpdeskCore(RealTransactionCase):
 
         manager = self.manager_user
 
-        with patch.object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True), \
-             patch.object(type(self.env['bus.bus']), '_sendone', lambda *a, **kw: None, create=True):
+        self.safe_patch_object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True)
+        self.safe_patch_object(type(self.env['bus.bus']), '_sendone', lambda *a, **kw: None, create=True)
 
-            ticket = self.env['hams_helpdesk.ticket'].create({
-                'name': 'Test Outage Incident',
-                'description': '<p>System is down</p>',
-                'partner_id': self.portal_user.partner_id.id
-            })
+        ticket = self.env['hams_helpdesk.ticket'].create({
+            'name': 'Test Outage Incident',
+            'description': '<p>System is down</p>',
+            'partner_id': self.portal_user.partner_id.id
+        })
 
-            self.assertEqual(ticket.user_id, self.manager_user, "Ticket MUST auto-assign to the currently active on-duty manager.")
-            self.assertIn(self.portal_user.partner_id, ticket.message_partner_ids, "The reporting Customer MUST be automatically subscribed to their ticket thread for mail-backs.")
+        self.assertEqual(ticket.user_id, self.manager_user, "Ticket MUST auto-assign to the currently active on-duty manager.")
+        self.assertIn(self.portal_user.partner_id, ticket.message_partner_ids, "The reporting Customer MUST be automatically subscribed to their ticket thread for mail-backs.")
 
     def test_02_shift_handoff_wizard(self):
         """Verify the formal shift handoff transfers ownership and logs the secure history."""

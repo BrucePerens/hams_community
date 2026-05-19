@@ -1,8 +1,9 @@
-from odoo.tests.common import TransactionCase, tagged
-from unittest.mock import patch
+# -*- coding: utf-8 -*-
+from odoo.tests.common import tagged
+from odoo.addons.hams_test.tests.real_transaction import HamsTransactionCase
 
 @tagged('post_install', '-at_install', 'standard')
-class TestHelpdeskAdapter(TransactionCase):
+class TestHelpdeskAdapter(HamsTransactionCase):
 
     @classmethod
     def setUpClass(cls):
@@ -22,26 +23,26 @@ class TestHelpdeskAdapter(TransactionCase):
 
         manager = self.on_duty_user
 
-        with patch.object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True):
-            incident = self.env['pager.incident'].create({
-                'name': 'Test Adapter Incident',
-                'source': 'test_source',
-                'severity': 'high',
-                'description': 'Test description'
-            })
+        self.safe_patch_object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True)
+        incident = self.env['pager.incident'].create({
+            'name': 'Test Adapter Incident',
+            'source': 'test_source',
+            'severity': 'high',
+            'description': 'Test description'
+        })
 
-            # Verify ticket creation
-            self.assertTrue(incident.helpdesk_ticket_id, "Adapter MUST assign a helpdesk ticket ID.")
-            ticket = self.env['hams_helpdesk.ticket'].browse(incident.helpdesk_ticket_id)
-            self.assertTrue(ticket.exists(), "The actual ticket record MUST exist.")
-            self.assertEqual(ticket.user_id, self.on_duty_user, "Ticket MUST be assigned to the on-duty admin.")
+        # Verify ticket creation
+        self.assertTrue(incident.helpdesk_ticket_id, "Adapter MUST assign a helpdesk ticket ID.")
+        ticket = self.env['hams_helpdesk.ticket'].browse(incident.helpdesk_ticket_id)
+        self.assertTrue(ticket.exists(), "The actual ticket record MUST exist.")
+        self.assertEqual(ticket.user_id, self.on_duty_user, "Ticket MUST be assigned to the on-duty admin.")
 
-            # Verify calendar event creation
-            events = self.env['calendar.event'].search([
-                ('partner_ids', 'in', self.on_duty_user.partner_id.id),
-                ('name', 'ilike', incident.name)
-            ])
-            self.assertTrue(events, "A calendar event MUST be created for the incident response.")
+        # Verify calendar event creation
+        events = self.env['calendar.event'].search([
+            ('partner_ids', 'in', self.on_duty_user.partner_id.id),
+            ('name', 'ilike', incident.name)
+        ])
+        self.assertTrue(events, "A calendar event MUST be created for the incident response.")
 
     def test_02_smtp_fallback_on_missing_model(self):
         """Verify that a missing target model triggers the emergency SMTP fallback page."""
@@ -50,19 +51,19 @@ class TestHelpdeskAdapter(TransactionCase):
 
         manager = self.on_duty_user
 
-        with patch.object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True):
-            incident = self.env['pager.incident'].create({
-                'name': 'Test Fallback Incident',
-                'source': 'test_fallback',
-                'severity': 'critical',
-                'description': 'This should trigger the fallback'
-            })
+        self.safe_patch_object(type(self.env['calendar.event']), 'get_current_on_duty_admin', lambda self: manager, create=True)
+        incident = self.env['pager.incident'].create({
+            'name': 'Test Fallback Incident',
+            'source': 'test_fallback',
+            'severity': 'critical',
+            'description': 'This should trigger the fallback'
+        })
 
-            # Verify fallback occurred (ticket shouldn't exist)
-            self.assertFalse(incident.helpdesk_ticket_id, "Ticket ID should be empty since creation failed.")
+        # Verify fallback occurred (ticket shouldn't exist)
+        self.assertFalse(incident.helpdesk_ticket_id, "Ticket ID should be empty since creation failed.")
 
-            self.env.flush_all()
-            # Verify the fallback message was posted to the incident chatter, alerting the on-duty user
-            messages = self.env['mail.message'].search([('res_id', '=', incident.id), ('model', '=', 'pager.incident')])
-            fallback_found = any('EMERGENCY PAGE (Helpdesk Fallback)' in (m.body or '') for m in messages)
-            self.assertTrue(fallback_found, "The adapter MUST execute an emergency SMTP message post if the helpdesk system is unreachable.")
+        self.env.flush_all()
+        # Verify the fallback message was posted to the incident chatter, alerting the on-duty user
+        messages = self.env['mail.message'].search([('res_id', '=', incident.id), ('model', '=', 'pager.incident')])
+        fallback_found = any('EMERGENCY PAGE (Helpdesk Fallback)' in (m.body or '') for m in messages)
+        self.assertTrue(fallback_found, "The adapter MUST execute an emergency SMTP message post if the helpdesk system is unreachable.")
