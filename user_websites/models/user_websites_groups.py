@@ -6,24 +6,12 @@ This file defines the Odoo model for User Websites Groups.
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
-from ..utils import slugify
+from ..utils import slugify, RESERVED_SLUGS
 import json
 from odoo.addons.distributed_redis_cache.redis_cache import (
     distributed_cache,
     invalidate_model_cache,
 )
-
-RESERVED_SLUGS = {
-    "community",
-    "blog",
-    "website",
-    "contactus",
-    "aboutus",
-    "forum",
-    "shop",
-    "my",
-    "web",
-}
 
 
 class UserWebsitesGroup(models.Model):

@@ -14,19 +14,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 from odoo.modules.registry import Registry
-from ..utils import slugify
-
-RESERVED_SLUGS = {
-    "community",
-    "blog",
-    "website",
-    "contactus",
-    "aboutus",
-    "forum",
-    "shop",
-    "my",
-    "web",
-}
+from ..utils import slugify, RESERVED_SLUGS
 
 BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
