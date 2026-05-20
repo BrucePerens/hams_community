@@ -112,11 +112,14 @@ async def main():
                 user=DB_USER,
                 password=DB_PASS,
                 database=DB_NAME,
+                timeout=10,
             )
             await db_conn.add_listener(PG_CHANNEL, postgres_notify_handler)
             logger.info(f"Listening to PostgreSQL channel '{PG_CHANNEL}'...")
 
             while not db_conn.is_closed():
+                # Perform periodic health check
+                await db_conn.execute("SELECT 1")
                 await asyncio.sleep(60)
         except asyncio.CancelledError:
             logger.info("Daemon shutting down cleanly.")

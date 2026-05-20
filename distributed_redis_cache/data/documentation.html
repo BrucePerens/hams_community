@@ -61,8 +61,16 @@
 </ul>
 
 <div class="note">
-    <strong>Developer Tip:</strong> Use the <code>@distributed_cache()</code> decorator on your custom model methods to automatically benefit from cluster-wide caching and multi-website isolation.
+    <strong>Developer Tip:</strong> Use the <code>@distributed_cache()</code> decorator on your custom model methods to automatically benefit from cluster-wide caching and multi-website isolation. Ensure that your method arguments are JSON-serializable for optimal performance. The system handles Odoo recordsets, dates, and basic Python collections automatically.
 </div>
+
+<h3>Troubleshooting</h3>
+<p>If you notice the cache is not invalidating as expected:</p>
+<ul>
+    <li><b>Check the Cache Manager Daemon:</b> Ensure the background service is running. It is responsible for bridging database events to Redis.</li>
+    <li><b>Redis Connectivity:</b> Use the "Check Redis Status" button. If Redis is down, the system will fall back to local memory, which may cause temporary drift between servers.</li>
+    <li><b>Wait for Invalidation:</b> Invalidation signals are processed asynchronously. They usually take less than a second to propagate across the cluster.</li>
+</ul>
 
 <!-- Semantic Anchors for System Integration -->
 <div style="display:none;">
