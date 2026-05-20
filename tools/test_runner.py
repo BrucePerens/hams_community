@@ -1109,7 +1109,7 @@ def main():
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
                 _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes || true")
                 _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
-                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client python3-pip python3-pika python3-psutil python3-requests python3-cryptography python3-passlib python3-lxml")
+                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client python3-pip python3-pika python3-psutil python3-requests python3-cryptography python3-passlib python3-lxml python3-ldap3")
                 _run_sudo_cmd("DEBIAN_FRONTEND=noninteractive apt-get install -y chromium || DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser || true")
 
                 print("[*] Installing Python dependencies from requirements.txt...")
@@ -1119,8 +1119,8 @@ def main():
                 else:
                     print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
-                # Failsafe for missing packages on Jules VM system Python (including external dependency gaps)
-                _run_sudo_cmd("pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 pymysql || true")
+                # Failsafe for missing packages on Jules VM system Python
+                _run_sudo_cmd("pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 pymysql ldap3 || true")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"
@@ -1132,22 +1132,19 @@ def main():
 
                 _run_sudo_cmd("systemctl stop postgresql || true")
                 _run_sudo_cmd(f"mkdir -p {pg_data_dir} {pg_socket_dir}")
-                _run_sudo_cmd(f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}")
+                _run_sudo_cmd(f"chown -R {orig_user}:{orig_user} {pg_data_dir} {pg_socket_dir}")
                 _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
                 _run_sudo_cmd(f"chmod 2775 {pg_socket_dir}")
-
-                # Addressing unpredictable database locks and lingering process id attributes
-                _run_sudo_cmd(f"rm -f {pg_data_dir}/postmaster.pid || true")
 
                 # Check if already initialized to avoid initdb error
                 res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
                 if not res.stdout.strip():
-                    _run_sudo_cmd(f"su -s /bin/bash postgres -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
+                    _run_sudo_cmd(f"su -s /bin/bash {orig_user} -c '{pg_bin_dir}initdb -D {pg_data_dir}'")
 
-                _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop\" || true")
+                _run_sudo_cmd(f"su -s /bin/bash {orig_user} -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop\" || true")
                 _run_sudo_cmd(f"rm -f {pg_data_dir}/postmaster.pid || true")
-                _run_sudo_cmd(f"su -s /bin/bash postgres -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\"")
-                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres' || true")
+                _run_sudo_cmd(f"su -s /bin/bash {orig_user} -c \"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\"")
+                _run_sudo_cmd(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash {orig_user} -c 'PGUSER={orig_user} {pg_bin_dir}psql -h {pg_socket_dir} -d postgres' || true")
 
                 print("[*] Starting local Redis and RabbitMQ...")
                 _run_sudo_cmd("systemctl start redis-server || true")
@@ -1155,24 +1152,27 @@ def main():
 
                 def teardown_jules():
                     print("[*] Tearing down local test PostgreSQL...")
-                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 atexit.register(teardown_jules)
             elif args.already_provisioned:
                 subprocess.run(["sudo", "bash", "-c", "kill $(lsof -t -i :8069) 2>/dev/null || true"])
                 pg_data_dir = "/opt/hams/pgdata"
                 pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
                 if pg_bins:
-                    pg_bin_dir = os.dirname(sorted(pg_bins)[-1]) + "/"
+                    pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
                     subprocess.run(["sudo", "systemctl", "stop", "postgresql"])
                     subprocess.run(["sudo", "mkdir", "-p", pg_socket_dir])
-                    subprocess.run(["sudo", "chown", "-R", "postgres:postgres", pg_socket_dir])
+                    subprocess.run(["sudo", "chown", "-R", f"{orig_user}:{orig_user}", pg_socket_dir])
                     subprocess.run(["sudo", "chmod", "2775", pg_socket_dir])
                     subprocess.run(["sudo", "chmod", "700", pg_data_dir])
-                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     subprocess.run(["sudo", "rm", "-f", f"{pg_data_dir}/postmaster.pid"])
-                    subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"])
+                    subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_addresses= -c unix_socket_directories={pg_socket_dir} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start"])
                     subprocess.run(["sudo", "systemctl", "start", "redis-server"])
                     subprocess.run(["sudo", "systemctl", "start", "rabbitmq-server"])
+                    def teardown_jules():
+                        subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    atexit.register(teardown_jules)
                     def teardown_jules():
                         subprocess.run(["sudo", "su", "-s", "/bin/bash", "postgres", "-c", f"{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     atexit.register(teardown_jules)
