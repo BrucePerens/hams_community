@@ -822,22 +822,22 @@ su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -o '-c listen_a
 echo '[*] Provisioning PostgreSQL roles...'
 echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres'
 
-su -s /bin/bash redis -c 'redis-server --daemonize yes' >/dev/null 2>&1
-su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached' >/dev/null 2>&1
+su -s /bin/bash redis -c 'redis-server --daemonize yes'
+su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached'
 
 echo '[*] Synchronously waiting for Redis to accept connections...'
 timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' 2>/dev/null | grep -q PONG; do sleep 1; done"
 
 echo '[*] Synchronously waiting for RabbitMQ broker to fully initialize...'
-timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl status' >/dev/null 2>&1; do sleep 1; done"
+timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl status' ; do sleep 1; done"
 
 export PYTHONDONTWRITEBYTECODE=1
 
 sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
-su -s /bin/bash rabbitmq -c 'rabbitmqctl stop' >/dev/null 2>&1
-pkill -u redis redis-server >/dev/null 2>&1
-su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop' >/dev/null 2>&1
+su -s /bin/bash rabbitmq -c 'rabbitmqctl stop'
+pkill -u redis redis-server
+su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop'
 
 if [ -f /opt/hams/spool/filtered_test.txt ]; then
     mkdir -p "$(dirname '{real_error_log}')" 2>/dev/null || true
@@ -869,7 +869,7 @@ fi
 
 echo '[*] DEBUG: Exporting ephemeral namespace state to /opt/hams/test/debug_mnt for inspection...'
 mkdir -p /mnt/host_test_dir/debug_mnt
-cp -ra /mnt/upper/* /mnt/host_test_dir/debug_mnt/ >/dev/null 2>&1 || true
+cp -ra /mnt/upper/* /mnt/host_test_dir/debug_mnt/ || true
 
 exit $RET
 """)
