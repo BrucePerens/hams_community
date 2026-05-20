@@ -62,7 +62,7 @@ class FailureExtractor:
             os.path.expanduser(output_path)
         )
 
-        # If we are inside the RO namespace, we MUST write to the spool tmpfs
+        a If we are inside the RO namespace, we MUST write to the spool tmpfs
         if os.environ.get("HAMS_ISOLATED_NS") == "1":
             self.output_path = "/opt/hams/spool/filtered_test.txt"
         else:
@@ -823,7 +823,9 @@ echo '[*] Provisioning PostgreSQL roles...'
 echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;" | su -s /bin/bash postgres -c 'PGUSER=postgres {pg_bin_dir}psql -h {pg_socket_dir} -d postgres'
 
 su -s /bin/bash redis -c 'redis-server --daemonize yes'
+
 su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached'
+su -s /bin/bash rabbitmq -c 'rabbitmqctl start_app'
 
 echo '[*] Synchronously waiting for Redis to accept connections...'
 timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' 2>/dev/null | grep -q PONG; do sleep 1; done"
