@@ -3,7 +3,9 @@ from unittest.mock import MagicMock
 from odoo.tests.common import tagged
 from odoo.addons.hams_test.common import HamsHttpCase
 from lxml import etree
-from odoo.addons.caching.controllers.main import ServiceWorkerController
+from odoo.addons.caching.controllers.main import (
+    ServiceWorkerController,
+)
 
 
 @tagged("post_install", "-at_install")
@@ -20,17 +22,17 @@ class TestSettingsAndCache(HamsHttpCase):
         website = self.env["website"].get_current_website()
         website.caching_safe_quota_mb = 35
 
-        response_35 = self.url_open("/sw.js")
+        response_35 = self.url_open("/sw.js", headers={"X_SCAN": "1"})
         self.assertEqual(response_35.status_code, 200)
 
         # Change quota
         website.caching_safe_quota_mb = 10
-        response_10 = self.url_open("/sw.js")
+        response_10 = self.url_open("/sw.js", headers={"X_SCAN": "1"})
         self.assertEqual(response_10.status_code, 200)
 
         # We can test that it evaluates dynamically by setting it extremely low
         website.caching_safe_quota_mb = 0
-        response_0 = self.url_open("/sw.js")
+        response_0 = self.url_open("/sw.js", headers={"X_SCAN": "1"})
 
         self.assertEqual(response_0.status_code, 200)
 
@@ -60,7 +62,10 @@ class TestSettingsAndCache(HamsHttpCase):
         self.safe_patch_object(
             controller,
             "_get_fs_stats",
-            return_value=(1000.0, [10 * 1024 * 1024, 5 * 1024 * 1024]),
+            return_value=(
+                1000.0,
+                [10 * 1024 * 1024, 5 * 1024 * 1024],
+            ),
         )
         mtime, max_size = controller._get_global_static_info()
         self.assertEqual(max_size, str(10 * 1024 * 1024 + 1024))
@@ -85,7 +90,7 @@ class TestSettingsAndCache(HamsHttpCase):
         website = self.env["website"].get_current_website()
         website.caching_invalidation_version = 1
 
-        response_1 = self.url_open("/sw.js")
+        response_1 = self.url_open("/sw.js", headers={"X_SCAN": "1"})
         content_1 = response_1.text
         self.assertIn("-v1", content_1)
 
@@ -95,7 +100,7 @@ class TestSettingsAndCache(HamsHttpCase):
         )
         settings.action_force_cache_invalidation()
 
-        response_2 = self.url_open("/sw.js")
+        response_2 = self.url_open("/sw.js", headers={"X_SCAN": "1"})
         content_2 = response_2.text
         self.assertIn("-v2", content_2)
         self.assertNotIn("-v1", content_2)
@@ -107,9 +112,8 @@ class TestSettingsAndCache(HamsHttpCase):
         """
         # This test acts as the anchor verifying that the params are
         # intentionally safe
-        val = (
-            self.env["zero_sudo.security.utils"]
-            ._get_system_param("caching.safe_quota_mb")
+        val = self.env["zero_sudo.security.utils"]._get_system_param(
+            "caching.safe_quota_mb"
         )
         self.assertTrue(val is not None or val is None)
 
@@ -123,9 +127,7 @@ class TestSettingsAndCache(HamsHttpCase):
 
         mock_req = MagicMock()
         mock_req.env = (
-            self.env["res.users"]
-            .with_context(force_fs_scan=True)
-            .env
+            self.env["res.users"].with_context(force_fs_scan=True).env
         )
 
         self.safe_patch(

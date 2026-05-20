@@ -529,7 +529,7 @@ def rebuild_db(db_name):
     )
     env = dict(os.environ)
     if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-        pass  # disabled
+        env["PGHOST"] = "/opt/hams/pgsock"
     subprocess.run([createdb_cmd, db_name], check=True, env=env)
 
 
@@ -631,7 +631,7 @@ def check_and_restore_cache(db_name, mod_string):
         rebuild_db(db_name)
         env = dict(os.environ)
         if "PGHOST" not in env and os.environ.get("HAMS_ISOLATED_NS") == "1":
-            pass  # disabled
+            env["PGHOST"] = "/opt/hams/pgsock"
 
         pg_restore_cmd = shutil.which("pg_restore") or "pg_restore"
         res = subprocess.run(
@@ -1264,6 +1264,8 @@ def main():
                 "--http-interface",
                 "localhost",
             ]
+            if is_jules_vm:
+                cmd.append("--log-handler=odoo.addons.caching.controllers.main:DEBUG")
             rc_odoo = run_cmd(cmd, extractor)
             if rc_odoo != 0:
                 final_rc = rc_odoo

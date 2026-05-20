@@ -22,24 +22,26 @@ class ServiceWorkerController(http.Controller):
         Returns tuple: (latest_mtime, file_sizes).
         Cached in RAM at class level.
         """
+        # FS cache bypass for tests to allow invalidation checks.
+        force_fs_scan = (
+            request.env.context.get("force_fs_scan")
+            or request.httprequest.headers.get("X_SCAN") == "1"
+        )
+
         # Gating for Jules VM stability during Odoo initialization.
         # Prevent scanner during --init phase of tests.
         is_test = tools.config.get("test_enable")
         is_boot = tools.config.get("init") or tools.config.get(
             "stop_after_init"
         )
-        if (
-            is_test
-            and is_boot
-            and not request.env.context.get("force_fs_scan")
-        ):
+        if is_test and is_boot and not force_fs_scan:
             return (0.0, [])
 
-        if type(self)._fs_cache:
+        if type(self)._fs_cache and not force_fs_scan:
             return type(self)._fs_cache
 
         with type(self)._fs_lock:
-            if type(self)._fs_cache:
+            if type(self)._fs_cache and not force_fs_scan:
                 return type(self)._fs_cache
 
             max_mtime = 0.0
@@ -110,9 +112,7 @@ class ServiceWorkerController(http.Controller):
             # Tested by [@ANCHOR: test_caching_sudo_params]
             utils = request.env["zero_sudo.security.utils"]
             quota_mb = int(
-                utils._get_system_param(
-                    "caching.safe_quota_mb", "35"
-                )
+                utils._get_system_param("caching.safe_quota_mb", "35")
                 or 35
             )
 
@@ -179,9 +179,8 @@ class ServiceWorkerController(http.Controller):
             )
 
         # Build cache name with version.
-        cache_name = (
-            f"odoo-assets-cache-{latest_mtime}-v{in_v}"
-        )
+        cache_name = f"odoo-assets-cache-{latest_mtime}-v{in_v}"
+        _logger.debug("Serving SW with cache name: %s", cache_name)
         content = content.replace("__CACHE_NAME__", cache_name)
         content = content.replace(
             "__MAX_FILE_SIZE_BYTES__", max_file_size

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from odoo import fields, models
 
+
 class Website(models.Model):
-    _inherit = 'website'
+    _inherit = "website"
 
     caching_safe_quota_mb = fields.Integer(
         string="Safe Quota (MB)",

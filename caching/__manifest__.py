@@ -3,9 +3,18 @@
     "version": "1.0",
     "author": "Bruce Perens K6BP",
     "category": "Website",
-    "summary": "Global Service Worker for aggressive frontend asset caching",
-    "description": "Intercepts network requests to cache Odoo JS/CSS bundles and static files on the client edge. Zero-config integration for other modules.",
-    "depends": ["base", "website", "zero_sudo", "hams_test"],
+    "summary": "Global Service Worker for aggressive caching",
+    "description": (
+        "Intercepts network requests to cache Odoo JS/CSS bundles "
+        "and static files on the client edge. Zero-config."
+    ),
+    "depends": [
+        "base",
+        "website",
+        "zero_sudo",
+        "hams_test",
+        "manual_library",
+    ],
     "data": [
         "data/security_data.xml",
         "security/ir.model.access.csv",
@@ -17,7 +26,7 @@
             "name": "Caching Module Documentation",
             "path": "data/documentation.html",
             "icon": "⚡",
-            "category": "workspace"
+            "category": "workspace",
         }
     ],
     "assets": {
