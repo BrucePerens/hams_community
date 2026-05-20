@@ -62,7 +62,7 @@ class FailureExtractor:
             os.path.expanduser(output_path)
         )
 
-        a If we are inside the RO namespace, we MUST write to the spool tmpfs
+        # If we are inside the RO namespace, we MUST write to the spool tmpfs
         if os.environ.get("HAMS_ISOLATED_NS") == "1":
             self.output_path = "/opt/hams/spool/filtered_test.txt"
         else:
@@ -824,8 +824,11 @@ echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_u
 
 su -s /bin/bash redis -c 'redis-server --daemonize yes'
 
+systemctl stop rabbitmq-server 2>/dev/null || true
+rm -f /var/lib/rabbitmq/.erlang.cookie /root/.erlang.cookie /home/*/.erlang.cookie 2>/dev/null || true
 su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached'
 su -s /bin/bash rabbitmq -c 'rabbitmqctl start_app'
+chmod 400 /var/lib/rabbitmq/.erlang.cookie
 
 echo '[*] Synchronously waiting for Redis to accept connections...'
 timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' 2>/dev/null | grep -q PONG; do sleep 1; done"
