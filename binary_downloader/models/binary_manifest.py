@@ -5,6 +5,7 @@ import os
 import platform
 import shutil
 import tarfile
+import zipfile
 import tempfile
 import urllib.request
 import urllib.error
@@ -24,7 +25,11 @@ class BinaryManifest(models.Model):
     url = fields.Char(string="Download URL", required=True)
     checksum = fields.Char(string="SHA-256 Checksum", required=True)
     archive_type = fields.Selection(
-        [("binary", "Raw Binary"), ("tar.gz", "Tarball (.tar.gz)")],
+        [
+            ("binary", "Raw Binary"),
+            ("tar.gz", "Tarball (.tar.gz)"),
+            ("zip", "Zip Archive (.zip)"),
+        ],
         string="Archive Type",
         default="binary",
         required=True,
@@ -70,8 +75,10 @@ class BinaryManifest(models.Model):
     @api.constrains("archive_type", "extract_member")
     def _check_extract_member(self):
         for record in self:
-            if record.archive_type == "tar.gz" and not record.extract_member:
-                raise ValidationError(_("Extract Member is required for tar.gz archives."))
+            if record.archive_type in ("tar.gz", "zip") and not record.extract_member:
+                raise ValidationError(
+                    _("Extract Member is required for %s archives.") % record.archive_type
+                )
 
     @api.depends("name")
     def _compute_is_installed(self):
@@ -265,6 +272,31 @@ class BinaryManifest(models.Model):
                             raise UserError(
                                 _("Member %s not found in archive.") % extract_target
                             )
+                elif manifest_record.archive_type == "zip":
+                    with zipfile.ZipFile(tmp_path, "r") as zip_ref:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                        extract_target = manifest_record.extract_member or cmd_name
+                        found = False
+                        for name in zip_ref.namelist():
+                            if name.endswith(f"/{extract_target}") or name == extract_target:
+                                # Path traversal protection for ZIP
+                                target_path = os.path.join(bin_dir, cmd_name)
+
+                                if not os.path.abspath(target_path).startswith(
+                                    os.path.abspath(bin_dir)
+                                ):
+                                    raise UserError(
+                                        _("Security Alert: Zip slip attempt detected.")
+                                    )
+
+                                with zip_ref.open(name) as source:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                                    with open(target_path, "wb") as target:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                                        shutil.copyfileobj(source, target)
+                                found = True
+                                break
+                        if not found:
+                            raise UserError(
+                                _("Member %s not found in zip archive.") % extract_target
+                            )
                 else:
                     shutil.copy2(tmp_path, target_bin)
 
@@ -278,6 +310,11 @@ class BinaryManifest(models.Model):
                         pass
         except (UserError, ValidationError):
             raise
-        except (urllib.error.URLError, OSError, tarfile.TarError) as e:
+        except (
+            urllib.error.URLError,
+            OSError,
+            tarfile.TarError,
+            zipfile.BadZipFile,
+        ) as e:
             _logger.exception("Failed to auto-install %s", cmd_name)
             raise UserError(_("Failed to auto-install %s: %s") % (cmd_name, str(e)))

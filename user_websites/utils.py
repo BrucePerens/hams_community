@@ -6,6 +6,18 @@ Utility functions for the user_websites module.
 import unicodedata
 import re
 
+RESERVED_SLUGS = {
+    "community",
+    "blog",
+    "website",
+    "contactus",
+    "aboutus",
+    "forum",
+    "shop",
+    "my",
+    "web",
+}
+
 
 def slugify(s, max_length=None):
     # [@ANCHOR: utils_slugify]

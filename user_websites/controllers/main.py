@@ -16,7 +16,7 @@ from werkzeug.urls import url_encode, url_parse
 import werkzeug
 import logging
 from odoo.modules.registry import Registry
-from ..models.res_users import RESERVED_SLUGS
+from ..utils import RESERVED_SLUGS
 
 _logger = logging.getLogger(__name__)
 
@@ -462,7 +462,6 @@ class UserWebsitesController(http.Controller):
         )
         request.env.cr.execute("SELECT pg_advisory_xact_lock(%s)", (lock_hash,))
 
-        # Make sure we don't accidentally create duplicate pages if the user clicks twice
         # Make sure we don't accidentally create duplicate pages if the user clicks twice
         existing_page = request.env["website.page"].search_count(
             [("url", "=", f"/{resolved_slug}/home")]
