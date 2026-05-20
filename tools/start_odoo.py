@@ -103,8 +103,12 @@ def main():
         success &= check_path(full_path, desc)
 
     if not success:
-        print("\n[!] CRITICAL: Pre-flight failed. Aborting startup.")
-        sys.exit(1)
+        if os.environ.get("HAMS_SKIP_PREFLIGHT") == "1":
+            print("\n[!] WARNING: Pre-flight failed, but HAMS_SKIP_PREFLIGHT=1. Proceeding anyway.")
+        else:
+            print("\n[!] CRITICAL: Pre-flight failed. Aborting startup.")
+            print("    (Set HAMS_SKIP_PREFLIGHT=1 to bypass this check in development environments like Jules)")
+            sys.exit(1)
 
     print("\n[+] All systems nominal. Starting Odoo...")
 
