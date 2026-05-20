@@ -1607,6 +1607,13 @@ def scan_file(filepath, is_odoo_module=False):
                 "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
             )
 
+        # Enforce TourUtils wait macros for modal/dialog interactions
+        if re.search(r"trigger:\s*['\"`].*?(?:\.modal|\.o_dialog).*?['\"`]", content):
+            if "TourUtils.waitForElement" not in content and "TourUtils.waitForAbsence" not in content:
+                errors_found.append(
+                    "CRITICAL TOUR TIMING TRAP: Tour targets a modal or dialog but does not use 'TourUtils.waitForElement' or 'TourUtils.waitForAbsence'. You MUST use the wait macros from '@hams_test/js/tour_utils' to prevent intermittent headless browser failures caused by Owl's asynchronous rendering delays."
+                )
+
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
     if filename.endswith(".py"):

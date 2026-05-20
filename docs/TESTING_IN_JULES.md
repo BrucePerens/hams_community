@@ -71,3 +71,35 @@ IN_JULES_VM=1 python3 tools/test_runner.py -m individual -u zero_sudo --already-
 ## Note on Python Execution
 
 When running the tests under `--provision-jules` or `--already-provisioned`, the system-installed Python (`/usr/bin/python3`) is utilized rather than the local `.venv`, ensuring that global Debian/Ubuntu python packages associated with the global Odoo 19 install remain accessible.
+
+## 4. Handling Intermittent UI Tour Failures (Owl Rendering Delays)
+
+Due to resource constraints in the Jules VM and the asynchronous nature of Odoo 19's Owl UI framework, UI tours can suffer from race conditions where the tour executor attempts to click elements before they are fully rendered (especially modals and wizards).
+
+To guarantee architectural compliance and stabilize the build, you MUST utilize the centralized DOM wait macros provided by `hams_test`.
+
+**Import the Utilities:**
+```javascript
+import { TourUtils } from "@hams_test/js/tour_utils";
+```
+
+**Available Wait Macros:**
+* `TourUtils.waitForElement(trigger, description)`: Pauses the tour until the element exists and is visible.
+* `TourUtils.waitForAbsence(selector, description)`: Pauses the tour until the element is entirely removed from the DOM (e.g., waiting for an RPC loading overlay to vanish).
+
+**Usage Example:**
+```javascript
+steps: () => [
+    {
+        content: "Click open wizard",
+        trigger: 'button[name="open_wizard"]',
+        run: 'click',
+    },
+    TourUtils.waitForElement('.modal-dialog', 'Wait for Wizard Modal to mount'),
+    {
+        content: "Interact with wizard",
+        trigger: 'button[name="action_confirm"]',
+        run: 'click',
+    }
+]
+```

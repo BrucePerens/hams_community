@@ -1,0 +1,3 @@
+### TRAP: Intermittent UI Tour Failures in Headless Chrome (Owl Rendering Delays)
+**Condition:** When running UI tours in isolated environments like the Jules VM, tests may randomly fail due to Odoo 19's asynchronous Owl framework rendering elements slower than the test runner executes steps (e.g., clicking a button inside a modal before it is fully mounted).
+**Solution:** Never rely on native tour `trigger` selection for dynamically loaded components without explicit DOM waits. Import `TourUtils` from `@hams_test/js/tour_utils` and inject `TourUtils.waitForElement('.your-selector', 'Description')` or `TourUtils.waitForAbsence('.loading-spinner', 'Description')` immediately preceding the interaction step.

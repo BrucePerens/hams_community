@@ -1,5 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("cf_purge_wizard_tour", {
     url: "/odoo",
@@ -18,6 +19,7 @@ registry.category("web_tour.tours").add("cf_purge_wizard_tour", {
             trigger: 'a[data-menu-xmlid="cloudflare.menu_cf_purge_wizard"]',
             run: "click"
         },
+        TourUtils.waitForElement('.modal-content', 'Wait for Purge Wizard Modal to mount and render'),
         {
             content: "Click Purge button (Everything)",
             trigger: 'button[name="action_purge"]',
