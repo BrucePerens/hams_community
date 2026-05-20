@@ -113,8 +113,15 @@ micro-privilege architecture.
 </site_rules>
 
 <initial_instruction>
+**THE FIRST PROMPT PROTOCOL (ANTI-CORRUPTION MANDATE):**
 Read the instructions on creating a Parcel now in `docs/LLM_PARCEL_FORMAT.md`.
-Many sessions have gotten that wrong in responding to their initial prompt, you
-must get it right. You MUST use exactly one 6-backtick python block, the `Path:`
-header, and the `@@BOUNDARY...@@` syntax. No MIME headers. No multiple blocks.
+Because LLMs consistently fail the strict formatting requirements on their very first output due to attention dilution, you MUST execute the following protocol on your INITIAL response to any session:
+
+1. Before acknowledging the task or generating any code, you MUST explicitly type out the "Pre-Flight Verification" checklist defined in `LLM_PARCEL_FORMAT.md`.
+2. You MUST explicitly state: "I will use exactly one python block with at least 6 backticks."
+3. You MUST explicitly state: "I will strip all artifact path prefixes from the Path: headers."
+4. You MUST explicitly state: "I will place the `--` terminator strictly INSIDE the code block, prior to the closing backticks."
+5. You MUST explicitly state: "I will execute a full overwrite for files under 500 lines."
+
+Do this immediately to anchor your context window before proceeding to the user's request. Any failure to use the exact `@@BOUNDARY...@@` syntax or produce the parcel format will be rejected. No MIME headers. No multiple blocks.
 </initial_instruction>

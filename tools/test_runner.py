@@ -818,27 +818,48 @@ echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_u
 su -s /bin/bash redis -c 'redis-server --daemonize yes'
 
 systemctl stop rabbitmq-server 2>/dev/null || true
+pkill -u rabbitmq 2>/dev/null || true
+pkill epmd 2>/dev/null || true
+sleep 1
+
 rm -f /var/lib/rabbitmq/.erlang.cookie /root/.erlang.cookie /home/*/.erlang.cookie 2>/dev/null || true
-su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached'
+
+# Pre-seed the Erlang cookie with strict permissions and NO trailing newline
+mkdir -p /var/lib/rabbitmq 2>/dev/null || true
+echo -n 'HAMS_TEST_RABBITMQ_COOKIE_12345' > /var/lib/rabbitmq/.erlang.cookie
+chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
+chmod 400 /var/lib/rabbitmq/.erlang.cookie
+
+# Explicitly enforce HOME=/var/lib/rabbitmq so Erlang reads the correct cookie
+su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmq-server -detached'
 
 # Sync wait flag guard sequence for robust AMQP node bootstrap
-echo '[*] Waiting for RabbitmQ AMQP bootstrap...'
-timeout 120 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl await_online_nodes 1' ; do sleep 1; done"
+echo '[*] Waiting for RabbitMQ AMQP bootstrap...'
+OUT_AWAIT="/var/lib/rabbitmq/rmq_await.log"
+if ! timeout 120 bash -c "until su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl await_online_nodes 1 > \"$OUT_AWAIT\" 2>&1' ; do sleep 1; done"; then
+    echo "[!] ERROR: RabbitMQ AMQP bootstrap timed out! Output of last attempt:" >&2
+    cat "$OUT_AWAIT" >&2
+fi
 
-su -s /bin/bash rabbitmq -c 'rabbitmqctl start_app'
-chmod 400 /var/lib/rabbitmq/.erlang.cookie
+su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl start_app'
 
 echo '[*] Synchronously waiting for Redis to accept connections...'
 timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' | grep -q PONG; do sleep 1; done"
 
 echo '[*] Synchronously waiting for RabbitMQ broker to fully initialize...'
-timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl status' ; do sleep 1; done"
+OUT_STATUS="/var/lib/rabbitmq/rmq_status.log"
+if ! timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl status > \"$OUT_STATUS\" 2>&1' ; do sleep 1; done"; then
+    echo "[!] ERROR: RabbitMQ status check timed out! Output of last attempt:" >&2
+    cat "$OUT_STATUS" >&2
+fi
 
 export PYTHONDONTWRITEBYTECODE=1
 
 sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
-su -s /bin/bash rabbitmq -c 'rabbitmqctl stop'
+su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl stop'
+pkill -u rabbitmq 2>/dev/null || true
+pkill epmd 2>/dev/null || true
 pkill -u redis redis-server
 su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop'
 
@@ -1064,6 +1085,9 @@ def main():
             print("[*] Routing test execution to isolated namespace to protect environment...")
             run_in_isolated_environment(real_error_log)
             return
+
+        print("[*] Enforcing strict memory overcommit globally to prevent OOM kills...")
+        subprocess.run(["sudo", "sysctl", "-w", "vm.overcommit_memory=2"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if is_jules_vm:
             print("[*] Detected Jules VM environment. Bypassing isolated namespace...")
