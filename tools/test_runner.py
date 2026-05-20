@@ -1072,9 +1072,27 @@ def main():
                 print("[*] Provisioning local Jules environment (apt packages, services)...")
                 def _run_sudo_cmd(cmd, env=None):
                     if isinstance(cmd, str):
-                        subprocess.run(["sudo", "bash", "-c", cmd], check=True, env=env)
+                        return subprocess.run(["sudo", "bash", "-c", cmd], check=True, env=env)
                     else:
-                        subprocess.run(["sudo"] + cmd, check=True, env=env)
+                        return subprocess.run(["sudo"] + cmd, check=True, env=env)
+
+                print("[*] Addressing sibling repository path validation errors...")
+                sister_community_path = os.path.abspath(os.path.join(base_dir, "..", "hams_community"))
+                root_community_path = "/hams_community"
+
+                if not os.path.exists(sister_community_path) and not os.path.exists(root_community_path):
+                    print("[*] Sibling repository 'hams_community' not found. Provisioning...")
+                    try:
+                        _run_sudo_cmd(f"git clone https://github.com/BrucePerens/hams_community.git {sister_community_path}")
+                        _run_sudo_cmd(f"chown -R {orig_user}:{orig_user} {sister_community_path}")
+                        print(f"[+] Successfully cloned hams_community to sister workspace layout: {sister_community_path}")
+                    except Exception as clone_exc: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').exception("Sister workflow clone path failed with error loop traces: %s", clone_exc)
+                        print("[-] Permission denied or failed on sister directory block. Falling back to root directory...")
+                        _run_sudo_cmd(f"mkdir -p {root_community_path}")
+                        _run_sudo_cmd(f"git clone https://github.com/BrucePerens/hams_community.git {root_community_path}")
+                        _run_sudo_cmd(f"chown -R {orig_user}:{orig_user} {root_community_path}")
+                        print(f"[+] Successfully cloned hams_community to root directory fallback layout: {root_community_path}")
 
                 print("[*] Clearing any leaked port 8069 bindings...")
                 _run_sudo_cmd("kill $(lsof -t -i :8069) 2>/dev/null || true")
@@ -1101,7 +1119,7 @@ def main():
                 else:
                     print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
-                # Failsafe for missing packages on Jules VM system Python
+                # Failsafe for missing packages on Jules VM system Python (including external dependency gaps)
                 _run_sudo_cmd("pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 pymysql || true")
 
                 print("[*] Configuring local PostgreSQL for test paths...")
@@ -1117,6 +1135,9 @@ def main():
                 _run_sudo_cmd(f"chown -R postgres:postgres {pg_data_dir} {pg_socket_dir}")
                 _run_sudo_cmd(f"chmod 700 {pg_data_dir}")
                 _run_sudo_cmd(f"chmod 2775 {pg_socket_dir}")
+
+                # Addressing unpredictable database locks and lingering process id attributes
+                _run_sudo_cmd(f"rm -f {pg_data_dir}/postmaster.pid || true")
 
                 # Check if already initialized to avoid initdb error
                 res = subprocess.run(["sudo", "ls", "-A", pg_data_dir], capture_output=True, text=True)
@@ -1141,7 +1162,7 @@ def main():
                 pg_data_dir = "/opt/hams/pgdata"
                 pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
                 if pg_bins:
-                    pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
+                    pg_bin_dir = os.dirname(sorted(pg_bins)[-1]) + "/"
                     subprocess.run(["sudo", "systemctl", "stop", "postgresql"])
                     subprocess.run(["sudo", "mkdir", "-p", pg_socket_dir])
                     subprocess.run(["sudo", "chown", "-R", "postgres:postgres", pg_socket_dir])
@@ -1385,8 +1406,8 @@ def main():
                     p.terminate()
                 try:
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                except Exception as e: # audit-ignore-catch-all
-                    logging.getLogger('tools.test_runner').warning("Failed to kill pg: %s", e)
+                except Exception as pg_kill_exc: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').exception("Failed to kill pg process group environment blocks: %s", pg_kill_exc)
                     pass
 
         elif args.mode == "individual":
@@ -1556,8 +1577,8 @@ def main():
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                         odoo_proc.wait(timeout=2)
-                    except Exception as e: # audit-ignore-catch-all
-                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
+                    except Exception as clean_exc: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').warning("An error occurred during process cleanup loops: %s", clean_exc)
                         pass
 
                 atexit.register(cleanup_odoo)
@@ -1595,8 +1616,8 @@ def main():
                     print(f"❌ ERROR: Odoo failed to start on port {free_port}!")
                     try:
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                    except Exception as e: # audit-ignore-catch-all
-                        logging.getLogger('tools.test_runner').warning("An error occurred: %s", e)
+                    except Exception as group_kill_exc: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').warning("An error occurred trying to flush process bindings: %s", group_kill_exc)
                         pass
                     sys.exit(1)
 
@@ -1667,9 +1688,9 @@ def main():
                         check=True,
                         capture_output=True
                     )
-                except Exception as e: # audit-ignore-catch-all
-                    logging.getLogger('tools.test_runner').error("Failed to connect to PostgreSQL via psql: %s", e)
-                    print("[!] Failed to connect to PostgreSQL via psql: {}".format(e))
+                except Exception as conn_exc: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').error("Failed to connect to PostgreSQL via psql: %s", conn_exc)
+                    print("[!] Failed to connect to PostgreSQL via psql: {}".format(conn_exc))
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
 
@@ -1711,9 +1732,9 @@ def main():
                                                     ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
                                                     args_list.extend(["--url", ncvec_url])
                                                 daemons.append((daemon_name, args_list))
-                                    except Exception as e: # audit-ignore-catch-all
+                                    except Exception as read_exc: # audit-ignore-catch-all
                                         logging.getLogger('tools.test_runner').warning(
-                                            "An error occurred: %s", e
+                                            "An error occurred looking up execution endpoints: %s", read_exc
                                         )
                                         pass
                     return daemons
@@ -1756,8 +1777,8 @@ def main():
                                     counts[table] = "Not Installed"
                                 else:
                                     counts[table] = "Error"
-                            except Exception as e: # audit-ignore-catch-all
-                                logging.getLogger('tools.test_runner').warning("Table count error: %s", e)
+                            except Exception as count_exc: # audit-ignore-catch-all
+                                logging.getLogger('tools.test_runner').warning("Table count checking error occurred: %s", count_exc)
                                 counts[table] = "Error"
                     return counts
 
@@ -1811,12 +1832,12 @@ def main():
                             print(
                                 "[+] Real daemon bearer tokens provisioned successfully."
                             )
-                    except Exception as e: # audit-ignore-catch-all
-                        logging.getLogger('tools.test_runner').error("Bootstrapper error: %s", e)
-                        print(f"❌ ERROR: Failed to execute bootstrapper: {e}")
+                    except Exception as boot_exc: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').error("Bootstrapper registration error loop trace: %s", boot_exc)
+                        print(f"❌ ERROR: Failed to execute bootstrapper: {boot_exc}")
                         if extractor:
                             extractor.captured_blocks.append(
-                                ("Daemon Key Bootstrapper", [f"ERROR: {e}\n"])
+                                ("Daemon Key Bootstrapper", [f"ERROR: {boot_exc}\n"])
                             )
                             extractor.finish_and_write()
                         os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
@@ -1860,9 +1881,9 @@ def main():
                     except KeyboardInterrupt:
                         print("\n[!] Execution aborted by user.")
                         break
-                    except Exception as e: # audit-ignore-catch-all
-                        logging.getLogger('tools.test_runner').error("Error executing %s: %s", name, e)
-                        print("[!] Error executing {}: {}".format(name, e))
+                    except Exception as run_exc: # audit-ignore-catch-all
+                        logging.getLogger('tools.test_runner').error("Error executing background script processes %s: %s", name, run_exc)
+                        print("[!] Error executing {}: {}".format(name, run_exc))
                         final_rc = 1
 
                 print("\n[*] Fetching Final Database Counts...")
@@ -1879,8 +1900,8 @@ def main():
                     atexit.unregister(cleanup_odoo)
                 try:
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
-                except Exception as e: # audit-ignore-catch-all
-                    logging.getLogger('tools.test_runner').warning("Could not kill process group: %s", e)
+                except Exception as kill_exc: # audit-ignore-catch-all
+                    logging.getLogger('tools.test_runner').warning("Could not kill process group listeners: %s", kill_exc)
                     print("[!] Note: Could not kill process group.")
                 odoo_proc.wait()
 
