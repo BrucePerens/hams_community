@@ -506,14 +506,13 @@ def rebuild_db(db_name):
     dropdb_cmd = shutil.which("dropdb") or "dropdb"
     createdb_cmd = shutil.which("createdb") or "createdb"
 
+    psql_query = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{}';".format(db_name)
     subprocess.run(
         [
             psql_cmd,
             "postgres",
             "-c",
-            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{}';".format(
-                db_name
-            ),
+            psql_query,
         ],
         check=False,
         stdout=subprocess.DEVNULL,
@@ -532,6 +531,24 @@ def rebuild_db(db_name):
         pass  # disabled
     subprocess.run([createdb_cmd, db_name], check=True, env=env)
 
+
+def _get_latest_source_mtime(dirs_to_check):
+    """Flattens the MTime scanning to avoid deep nesting in the cache check."""
+    newest = 0
+    ignore_exts = (".pyc", ".pyo", ".dump", ".log", ".swp", ".pot", ".po")
+    for d in dirs_to_check:
+        for root, dirs, files in os.walk(d):
+            dirs[:] = [di for di in dirs if not di.startswith(".") and di not in ("__pycache__", "tests")]
+            for f in files:
+                if f.endswith(ignore_exts) or f.startswith(".") or f == "filtered_test.txt":
+                    continue
+                try:
+                    mtime = os.path.getmtime(os.path.join(root, f))
+                    if mtime > newest:
+                        newest = mtime
+                except OSError:
+                    pass
+    return newest
 
 def check_and_restore_cache(db_name, mod_string):
     cache_dir = "/opt/hams/test"
@@ -552,36 +569,12 @@ def check_and_restore_cache(db_name, mod_string):
         try:
             for item in os.listdir(sb):
                 item_path = os.path.join(sb, item)
-                if os.path.isdir(item_path) and os.path.isfile(
-                    os.path.join(item_path, "__manifest__.py")
-                ):
+                if os.path.isdir(item_path) and os.path.isfile(os.path.join(item_path, "__manifest__.py")):
                     dirs_to_check.append(item_path)
         except OSError:
             pass
 
-    newest_mtime = 0
-    for d in dirs_to_check:
-        for root, dirs, files in os.walk(d):
-            dirs[:] = [
-                di
-                for di in dirs
-                if not di.startswith(".") and di not in ("__pycache__", "tests")
-            ]
-
-            for f in files:
-                if (
-                    f.endswith((".pyc", ".pyo", ".dump", ".log", ".swp", ".pot", ".po"))
-                    or f.startswith(".")
-                    or f == "filtered_test.txt"
-                ):
-                    continue
-                p = os.path.join(root, f)
-                try:
-                    mtime = os.path.getmtime(p)
-                    if mtime > newest_mtime:
-                        newest_mtime = mtime
-                except OSError:
-                    pass
+    newest_mtime = _get_latest_source_mtime(dirs_to_check)
 
     # Explicitly check critical infrastructure files that dictate DB schema or provisioning state
     critical_infra_files = [
@@ -785,7 +778,7 @@ mkdir -p /mnt/upper /mnt/work /mnt/host_test_dir
 mkdir -p /opt/hams/test
 mount --bind /opt/hams/test /mnt/host_test_dir
 
-{sys.executable} -c 'import sys, os; sys.path.append("{base_dir}/tools"); import infrastructure; run_cmd = lambda cmd, **kw: os.system(" ".join(cmd) if isinstance(cmd, list) else cmd); infrastructure.apply_production_directories(run_cmd, environment="test", dest_dir="/mnt/upper"); infrastructure.write_env_files("/opt/hams/etc", dict(os.environ), run_cmd, dest_dir="/mnt/upper"); infrastructure.provision_static_files(run_cmd, dict(os.environ), environment="test", dest_dir="/mnt/upper"); infrastructure.execute_hooks("test", run_cmd, dict(os.environ), dest_dir="/mnt/upper")'
+{sys.executable} -c 'import sys, os, subprocess; sys.path.append("{base_dir}/tools"); import infrastructure; run_cmd = lambda cmd, **kw: subprocess.run(["/bin/bash", "-c", cmd] if isinstance(cmd, str) else cmd, check=True, **kw); infrastructure.apply_production_directories(run_cmd, environment="test", dest_dir="/mnt/upper"); infrastructure.write_env_files("/opt/hams/etc", dict(os.environ), run_cmd, dest_dir="/mnt/upper"); infrastructure.provision_static_files(run_cmd, dict(os.environ), environment="test", dest_dir="/mnt/upper"); infrastructure.execute_hooks("test", run_cmd, dict(os.environ), dest_dir="/mnt/upper")'
 
 for d in /mnt/upper/*; do
     if [ -d "$d" ]; then
@@ -829,13 +822,14 @@ rm -f /var/lib/rabbitmq/.erlang.cookie /root/.erlang.cookie /home/*/.erlang.cook
 su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached'
 
 # Sync wait flag guard sequence for robust AMQP node bootstrap
-timeout 120 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl await_online_nodes 1' 2>/dev/null; do sleep 1; done"
+echo '[*] Waiting for RabbitmQ AMQP bootstrap...'
+timeout 120 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl await_online_nodes 1' ; do sleep 1; done"
 
 su -s /bin/bash rabbitmq -c 'rabbitmqctl start_app'
 chmod 400 /var/lib/rabbitmq/.erlang.cookie
 
 echo '[*] Synchronously waiting for Redis to accept connections...'
-timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' 2>/dev/null | grep -q PONG; do sleep 1; done"
+timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' | grep -q PONG; do sleep 1; done"
 
 echo '[*] Synchronously waiting for RabbitMQ broker to fully initialize...'
 timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl status' ; do sleep 1; done"
@@ -1090,7 +1084,8 @@ def main():
                         subprocess.run(["sudo"] + cmd, check=True, env=env)
 
                 print("[*] Clearing any leaked port 8069 bindings...")
-                _run_sudo_cmd("kill $(lsof -t -i :8069) 2>/dev/null || true")
+                cmd_kill_odoo = "kill $(lsof -t -i :8069) 2>/dev/null || true"
+                _run_sudo_cmd(cmd_kill_odoo)
 
                 print("[*] Installing APT packages for early_prod...")
                 old_apt = copy.deepcopy(infrastructure.MANIFEST.get("apt_packages", []))
@@ -1102,20 +1097,29 @@ def main():
                 infrastructure.MANIFEST["apt_packages"] = old_apt
 
                 print("[*] Adding Odoo 19 repository and installing Odoo...")
-                _run_sudo_cmd("wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes || true")
-                _run_sudo_cmd('echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list')
-                _run_sudo_cmd("apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client python3-pip python3-pika python3-psutil python3-requests python3-cryptography python3-passlib python3-lxml python3-ldap3")
-                _run_sudo_cmd("DEBIAN_FRONTEND=noninteractive apt-get install -y chromium || DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser || true")
+                cmd_wget_key = "wget -O - https://nightly.odoo.com/odoo.key | gpg --dearmor -o /usr/share/keyrings/odoo-archive-keyring.gpg --yes || true"
+                _run_sudo_cmd(cmd_wget_key)
+
+                cmd_add_repo = 'echo "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] http://nightly.odoo.com/19.0/nightly/deb/ ./" | tee /etc/apt/sources.list.d/odoo.list'
+                _run_sudo_cmd(cmd_add_repo)
+
+                cmd_apt_install = "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y odoo python3-websocket jing postgresql-client python3-pip python3-pika python3-psutil python3-requests python3-cryptography python3-passlib python3-lxml python3-ldap3"
+                _run_sudo_cmd(cmd_apt_install)
+
+                cmd_apt_chrom = "DEBIAN_FRONTEND=noninteractive apt-get install -y chromium || DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser || true"
+                _run_sudo_cmd(cmd_apt_chrom)
 
                 print("[*] Installing Python dependencies from requirements.txt...")
                 req_file = os.path.join(base_dir, "requirements.txt")
                 if os.path.exists(req_file):
-                    _run_sudo_cmd(f"pip3 install --break-system-packages -r {req_file} || true")
+                    cmd_pip_reqs = f"pip3 install --break-system-packages -r {req_file} || true"
+                    _run_sudo_cmd(cmd_pip_reqs)
                 else:
                     print("⚠️ WARNING: requirements.txt not found, skipping Python dependency installation.")
 
                 # Failsafe for missing packages on Jules VM system Python
-                _run_sudo_cmd("pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 pymysql ldap3 || true")
+                cmd_pip_fallback = "pip3 install --break-system-packages pika asyncpg psutil requests passlib cryptography lxml pypdf2 pymysql ldap3 || true"
+                _run_sudo_cmd(cmd_pip_fallback)
 
                 print("[*] Configuring local PostgreSQL for test paths...")
                 pg_data_dir = "/opt/hams/pgdata"
@@ -1686,6 +1690,26 @@ def main():
                     os.killpg(os.getpgid(odoo_proc.pid), signal.SIGKILL)
                     sys.exit(1)
 
+                def _get_daemon_entry_point(root_dir, base_dir, filename):
+                    """Validates and extracts daemon entry points, reducing nesting depth."""
+                    if not filename.endswith(".py") or filename.startswith(("test_", "__")) or filename == "hams_config.py":
+                        return None
+                    full_path = os.path.join(root_dir, filename)
+                    try:
+                        with open(full_path, "r", encoding="utf-8") as script_file:
+                            content = script_file.read()
+                            if "__name__" in content and ('"__main__"' in content or "'__main__'" in content):
+                                rel_path = os.path.relpath(full_path, base_dir)
+                                daemon_name = os.path.basename(root_dir)
+                                args_list = [rel_path]
+                                if daemon_name == "ncvec_sync":
+                                    ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
+                                    args_list.extend(["--url", ncvec_url])
+                                return daemon_name, args_list
+                    except OSError as e:
+                        logging.getLogger('tools.test_runner').warning("File access error: %s", e)
+                    return None
+
                 def discover_test_daemons(base_dir, target_modules):
                     daemons = []
                     for mod in target_modules:
@@ -1699,36 +1723,9 @@ def main():
                             if "__pycache__" in root or "tests" in root:
                                 continue
                             for f in sorted(files):
-                                if (
-                                    f.endswith(".py")
-                                    and not f.startswith("test_")
-                                    and not f.startswith("__")
-                                    and f != "hams_config.py"
-                                ):
-                                    full_path = os.path.join(root, f)
-                                    try:
-                                        with open(
-                                            full_path, "r", encoding="utf-8"
-                                        ) as script_file:
-                                            content = script_file.read()
-                                            if "__name__" in content and (
-                                                '"__main__"' in content
-                                                or "'__main__'" in content
-                                            ):
-                                                rel_path = os.path.relpath(
-                                                    full_path, base_dir
-                                                )
-                                                daemon_name = os.path.basename(root)
-                                                args_list = [rel_path]
-                                                if daemon_name == "ncvec_sync":
-                                                    ncvec_url = "https://raw.githubusercontent.com/Ham-Radio-Prep/ncvec/master/Element_2_Technician.txt"
-                                                    args_list.extend(["--url", ncvec_url])
-                                                daemons.append((daemon_name, args_list))
-                                    except Exception as e: # audit-ignore-catch-all
-                                        logging.getLogger('tools.test_runner').warning(
-                                            "An error occurred: %s", e
-                                        )
-                                        pass
+                                entry_data = _get_daemon_entry_point(root, base_dir, f)
+                                if entry_data:
+                                    daemons.append(entry_data)
                     return daemons
 
                 d_list = discover_test_daemons(base_dir, target_modules)
