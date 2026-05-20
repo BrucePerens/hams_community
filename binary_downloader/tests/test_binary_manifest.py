@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import hashlib
+import io
 import os
 import tarfile
+import zipfile
 import stat
 from unittest.mock import MagicMock
 from odoo import tools
@@ -306,3 +308,85 @@ class TestBinaryManifest(HamsTransactionCase):
 
         with self.assertRaisesRegex(UserError, "Security Alert: Links are not allowed in the archive."):
             self.env["binary.manifest"].ensure_executable("symlinkbin")
+
+    def test_14_zip_download_and_extract(self):
+        mock_urlopen = None
+        if not INTEGRATION_MODE:
+            self.safe_patch("shutil.which", return_value=None)
+            self.safe_patch("platform.system", return_value="Linux")
+            self.safe_patch("platform.machine", return_value="x86_64")
+            mock_urlopen = self.safe_patch("urllib.request.urlopen")
+
+        if INTEGRATION_MODE:
+            return
+
+        # Create a real zip in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            zip_file.writestr("zippybin", b"zipdata")
+
+        zip_data = zip_buffer.getvalue()
+
+        self.env["binary.manifest"].create({
+            "name": "zippy",
+            "url": "http://example.com/zippy.zip",
+            "checksum": hashlib.sha256(zip_data).hexdigest(),
+            "archive_type": "zip",
+            "extract_member": "zippybin"
+        })
+
+        mock_response_get = MagicMock()
+        del mock_response_get.readinto
+        mock_response_get.read.side_effect = [zip_data, b""]
+        mock_response_get.__enter__.return_value = mock_response_get
+
+        mock_urlopen.return_value = mock_response_get
+
+        path = self.env["binary.manifest"].ensure_executable("zippy")
+        self.assertTrue(path.endswith("zippy"))
+        self.assertTrue(os.path.exists(path))
+        with open(path, "rb") as f:
+            self.assertEqual(f.read(), b"zipdata")
+
+    def test_15_zip_slip_prevention(self):
+        mock_urlopen = None
+        if not INTEGRATION_MODE:
+            self.safe_patch("shutil.which", return_value=None)
+            self.safe_patch("platform.system", return_value="Linux")
+            self.safe_patch("platform.machine", return_value="x86_64")
+            mock_urlopen = self.safe_patch("urllib.request.urlopen")
+
+        if INTEGRATION_MODE:
+            return
+
+        self.env["binary.manifest"].create({
+            "name": "zip_slip",
+            "url": "http://example.com/slip.zip",
+            "checksum": hashlib.sha256(b"data").hexdigest(),
+            "archive_type": "zip",
+            "extract_member": "slip"
+        })
+
+        mock_response_get = MagicMock()
+        del mock_response_get.readinto
+        mock_response_get.read.side_effect = [b"data", b""]
+        mock_response_get.__enter__.return_value = mock_response_get
+
+        mock_urlopen.return_value = mock_response_get
+
+        mock_zip_open = self.safe_patch("zipfile.ZipFile")
+        mock_zip = MagicMock()
+        mock_zip_open.return_value.__enter__.return_value = mock_zip
+
+        mock_zip.namelist.return_value = ["slip"]
+
+        original_abspath = os.path.abspath
+        def mock_abspath(p):
+            if isinstance(p, str) and "slip" in p:
+                return "/etc/passwd"
+            return original_abspath(p)
+
+        self.safe_patch("odoo.addons.binary_downloader.models.binary_manifest.os.path.abspath", side_effect=mock_abspath)
+
+        with self.assertRaisesRegex(UserError, "Security Alert: Zip slip attempt detected."):
+            self.env["binary.manifest"].ensure_executable("zip_slip")
