@@ -6,7 +6,7 @@ This journey describes the workflow for maintaining community standards through 
 
 1. **Encounter**: A visitor views a page and finds content that violates community guidelines.
 2. **Action**: The visitor clicks the "Report Violation" button in the footer.
-3. **Submission**: The visitor fills out the report form and submits it ([@ANCHOR: UX_REPORT_VIOLATION]). Verified by `[@ANCHOR: test_tour_violation_report]`.
+3. **Submission**: The visitor fills out the report form and submits it ([@ANCHOR: user_websites:UX_REPORT_VIOLATION]). Verified by `[@ANCHOR: test_tour_violation_report]`.
 4. **Validation**: The system performs honeypot checks to block automated spam bots.
 5. **Record Creation**: A `content.violation.report` record is created in the backend.
 

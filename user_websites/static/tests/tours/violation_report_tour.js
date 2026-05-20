@@ -1,25 +1,33 @@
-/** @odoo-module **/
 import { registry } from "@web/core/registry";
 
-// [@ANCHOR: test_tour_violation_report]
-// Tests [@ANCHOR: UX_REPORT_VIOLATION]
-// Tests [@ANCHOR: violation_report_logic]
-registry.category("web_tour.tours").add("violation_report_tour", {
+// Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
+registry.category("web_tour.tours").add("test_tour_violation_report", {
+    url: "/",
     steps: () => [
         {
-            content: "Click the report violation button",
-            trigger: '[data-bs-target="#reportViolationModal"]',
+            trigger: 'a[data-bs-target="#reportViolationModal"]',
+            content: "Open violation reporting modal",
             run: "click",
         },
         {
-            content: "Wait for modal to open and check URL field is populated",
-            trigger: '#reportViolationModal.show input[name="url"]:not(:visible), #reportViolationModal.show input[name="url"]',
-            run: () => {
-                const val = document.querySelector('#reportViolationModal input[name="url"]').value;
-                if (!val) {
-                    throw new Error("URL field is empty! The JS logic failed to inject the current URL.");
-                }
-            }
+            trigger: '.o_select_menu[name="reason"]',
+            content: "Click to open the custom Odoo 19 select dropdown menu",
+            run: "click",
+        },
+        {
+            trigger: '.o_select_menu_item:contains("Spam")',
+            content: "Select the specific menu option item",
+            run: "click",
+        },
+        {
+            trigger: 'textarea[name="description"]',
+            content: "Provide description notes using correct Odoo 19 input simulator",
+            run: "edit Unsolicited advertising links.",
+        },
+        {
+            trigger: 'button[type="submit"].btn-danger',
+            content: "Submit violation ticket",
+            run: "click",
         }
-    ],
+    ]
 });

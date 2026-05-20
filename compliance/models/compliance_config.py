@@ -18,7 +18,7 @@ class ComplianceConfig(models.AbstractModel):
         """
         Ensures documentation is installed upon registry loading.
         """
-        # Verified by [@ANCHOR: test_zero_sudo_doc_installer]
+        # Verified by [@ANCHOR: zero_sudo:test_zero_sudo_doc_installer]
         # ADR-0055: Soft-dependency documentation bootstrap.
         # We trigger this whenever the registry is loaded to ensure the manual is always present.
         self.env["ir.module.module"]._bootstrap_knowledge_docs()

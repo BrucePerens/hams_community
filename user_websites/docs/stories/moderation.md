@@ -7,7 +7,7 @@ As a **Site Visitor** or **Administrator**, I want a way to report and manage co
 ### Reporting a Violation
 - **Given** I am viewing a community member's page
 - **When** I encounter inappropriate content
-- **Then** I can click the "Report Violation" button ([@ANCHOR: UX_REPORT_VIOLATION]) and provide details about the issue. Verified by `[@ANCHOR: test_tour_violation_report]`.
+- **Then** I can click the "Report Violation" button ([@ANCHOR: user_websites:UX_REPORT_VIOLATION]) and provide details about the issue. Verified by `[@ANCHOR: test_tour_violation_report]`.
 - **And** the system records my report and notifies administrators.
 
 ### Reviewing Abuse Reports

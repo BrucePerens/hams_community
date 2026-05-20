@@ -81,7 +81,7 @@ The module is multi-website aware. When detecting custom pages at target URLs, i
 ## 6. Documentation Installation
 This module implements a **soft dependency** on documentation providers (`manual_library` or Odoo Enterprise `knowledge`).
 
-* **Mechanism:** Documentation is automatically provisioned during the final registry reload by the central engine (`_bootstrap_knowledge_docs` in `zero_sudo`). `[@ANCHOR: zero_sudo_doc_installer]`
+* **Mechanism:** Documentation is automatically provisioned during the final registry reload by the central engine (`_bootstrap_knowledge_docs` in `zero_sudo`). `[@ANCHOR: zero_sudo:zero_sudo_doc_installer]`
 * **Article Title:** "Site Owner's Guide to Regulatory Compliance"
 
 ## 7. Verification and Testing

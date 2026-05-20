@@ -59,7 +59,7 @@ class TestBackupManagement(RealTransactionCase):
         )
 
     def test_01b_sync_kopia_triggered(self):
-        # Tests [@ANCHOR: backup_sync_kopia]
+        # Tests [@ANCHOR: backup_management:backup_sync_kopia]
         # Since we offloaded to RabbitMQ, we check if a job was created and task was queued.
         self.config_kopia.action_sync_snapshots()
         job = self.env["backup.job"].search(
@@ -69,7 +69,7 @@ class TestBackupManagement(RealTransactionCase):
         self.assertEqual(job.state, "pending")
 
     def test_02_sync_pgbackrest_triggered(self):
-        # Tests [@ANCHOR: backup_sync_pgbackrest]
+        # Tests [@ANCHOR: backup_management:backup_sync_pgbackrest]
         self.config_pg.action_sync_snapshots()
         job = self.env["backup.job"].search(
             [("config_id", "=", self.config_pg.id)], order="id desc", limit=1
@@ -78,9 +78,9 @@ class TestBackupManagement(RealTransactionCase):
         self.assertEqual(job.state, "pending")
 
     def test_04_cron_trigger(self):
-        # Tests [@ANCHOR: test_backup_cron]
-        # Tests [@ANCHOR: cron_sync_all_backups]
-        # Tests [@ANCHOR: backup_pager_synergy]
+        # Tests [@ANCHOR: backup_management:test_backup_cron]
+        # Tests [@ANCHOR: backup_management:cron_sync_all_backups]
+        # Tests [@ANCHOR: backup_management:backup_pager_synergy]
         # In this environment, we just ensure it queues the sync tasks.
         self.env.ref("backup_management.cron_sync_backups")._trigger()
 
@@ -108,8 +108,8 @@ class TestBackupManagement(RealTransactionCase):
         self.assertTrue(jobs)
 
     def test_07_orchestration_trigger(self):
-        # Tests [@ANCHOR: test_backup_orchestration]
-        # Tests [@ANCHOR: backup_trigger_execution]
+        # Tests [@ANCHOR: backup_management:test_backup_orchestration]
+        # Tests [@ANCHOR: backup_management:backup_trigger_execution]
         # Validates ADR-0071 Asynchronous Bastion Pattern
         integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
@@ -141,7 +141,7 @@ class TestBackupManagement(RealTransactionCase):
         self.assertEqual(job_pg.state, "pending")
 
     def test_08_apply_policies_triggered(self):
-        # Tests [@ANCHOR: backup_apply_policies]
+        # Tests [@ANCHOR: backup_management:backup_apply_policies]
         # Tests [@ANCHOR: test_apply_policies]
         self.config_kopia.keep_daily = 7
         self.config_kopia.exclude_patterns = "*.log"
@@ -186,12 +186,12 @@ class TestBackupManagement(RealTransactionCase):
             self.env.flush_all()
 
     def test_09_board_data_rpc(self):
-        # Tests [@ANCHOR: backup_board_data]
+        # Tests [@ANCHOR: backup_management:backup_board_data]
         data = self.env["backup.config"].get_board_data()
         self.assertIsInstance(data, list)
 
     def test_10_restore_command_computation(self):
-        # Tests [@ANCHOR: backup_restore_command]
+        # Tests [@ANCHOR: backup_management:backup_restore_command]
         # Tests [@ANCHOR: test_restore_command_computation]
         snap = self.env["backup.snapshot"].create(
             {
@@ -203,7 +203,7 @@ class TestBackupManagement(RealTransactionCase):
         self.assertIn("kopia restore snap_123", snap.restore_command)
 
     def test_05_views(self):
-        # Tests [@ANCHOR: test_backup_view]
+        # Tests [@ANCHOR: backup_management:test_backup_view]
         v1 = self.env["backup.config"].get_view(view_type="list")
         self.assertIn("name", v1["arch"])
 

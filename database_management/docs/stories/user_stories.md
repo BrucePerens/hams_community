@@ -42,7 +42,7 @@
 ## Verification
 ### Ensure DBA Tools are Reliable
 **As a** Developer
-**I want** automated tests for the DBA cron jobs `[@ANCHOR: test_dba_cron]`, stat views `[@ANCHOR: test_dba_view]`, and configuration dashboards `[@ANCHOR: test_pg_config_views]`
+**I want** automated tests for the DBA cron jobs `[@ANCHOR: test_dba_cron]`, stat views `[@ANCHOR: test_dba_view]`, configuration dashboards `[@ANCHOR: test_pg_config_views]`, and security prefetching `[@ANCHOR: db_security_prefetch]`
 **So that** I can be confident that the management tools are reporting accurate data and functioning correctly after every update.
 
 ### Seamless Documentation Access

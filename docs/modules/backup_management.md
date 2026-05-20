@@ -22,7 +22,7 @@ Unified Backup Management Facility for Odoo 19, orchestrating **Kopia** and **pg
 ## Semantic Anchors for Traceability
 - `[@ANCHOR: UX_BACKUP_SYNC]`: Dashboard metadata synchronization.
 - `[@ANCHOR: security_path_validation]`: Logic for validating target paths.
-- `[@ANCHOR: backup_trigger_execution]`: Entry point for manual backup execution.
+- `[@ANCHOR: backup_management:backup_trigger_execution]`: Entry point for manual backup execution.
 - `[@ANCHOR: backup_doc_injection]`: Knowledge article bootstrap.
 
 ## Operational Notes

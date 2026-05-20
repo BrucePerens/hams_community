@@ -2,36 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Unified Backup Management Manual</title>
+    <title>Backup Management User Documentation</title>
 </head>
 <body>
-    <h1>Unified Backup Management Manual</h1>
-    <p>This module implements the <strong>Best-in-Class Hybrid Architecture</strong> for system and database backups. It orchestrates <strong>Kopia</strong> for file/system backups and <strong>pgBackRest</strong> for PostgreSQL continuous WAL archiving.</p>
-
-    <h2>1. Self-Healing Deployment</h2>
-    <p>Odoo expects the <code>kopia</code> and <code>pgbackrest</code> packages to be installed at the host OS layer. If an administrator fails to install Kopia during provisioning, the application will automatically perform a Just-In-Time (JIT) download of the static Kopia binary from GitHub, placing it safely into the Odoo datastore to guarantee operation. Documentation is automatically bootstrapped during module registration via the <code>knowledge_docs</code> facility. [@ANCHOR: backup_doc_injection]</p>
-
-    <h2>2. Configurations & Orchestration</h2>
-    <p>Navigate to <em>Backups > Configurations</em>. You can define targets, storage backend credentials (S3/B2), and retention policies for both Kopia and pgBackRest. For Kopia, the <em>Target / Stanza</em> field should be the absolute path to your repository. For pgBackRest, it should be the name of the stanza.</p>
-    <p>If using Kopia, enter your repository password in the configuration; it will be symmetrically encrypted at rest. This configuration process is detailed in the <a href="/knowledge/article/backup_config_sync">Backup Configuration Journey</a>. [@ANCHOR: journey_backup_config_sync]</p>
-    <p>You can actively trigger backups, apply retention policies (Kopia only), or manually synchronize snapshot metadata using the action buttons in the configuration header. These operations are executed asynchronously by a background worker to ensure system responsiveness.</p>
-
-    <h2>3. Synchronization</h2>
-    <p>The system automatically keeps your backup metadata up-to-date. An automated hourly cron job interrogates the underlying CLI tools (<code>kopia snapshot list</code> and <code>pgbackrest info</code>) to fetch the latest backup metadata and populate the Snapshots table. This ensures the Odoo dashboard always reflects the actual state of your storage backends. [@ANCHOR: UX_BACKUP_SYNC]</p>
-
-    <h2>4. Restoration Assistance</h2>
-    <p>Because restoration can be destructive, the system provides a controlled Restore Wizard. Navigate to any Snapshot record to trigger a restoration to a specific target path. [@ANCHOR: backup_trigger_restore]</p>
-    <p>See the <a href="/knowledge/article/manual_restore_command">Manual Restore Journey</a> for more details. [@ANCHOR: journey_manual_restore_command]</p>
-    <p>Alternatively, navigate to any Snapshot record to view and copy the exact generated restoration command for that specific point in time.</p>
-
-    <h2>5. Pager Duty Synergy & Stale Backups</h2>
-    <p>This module features native synergy with the <strong>Pager Duty</strong> SRE suite. If an underlying backup engine fails to execute, or if the system detects that a configuration hasn't produced a new successful snapshot in over 26 hours, a <strong>Critical Incident</strong> will be automatically reported to your on-call team. This prevents "silent failures" where backups stop running but no one notices until a disaster occurs. [@ANCHOR: backup_pager_synergy]</p>
-
-    <h2>6. Multi-Website Awareness</h2>
-    <p>In a multi-tenant or multi-website environment, each backup configuration can be assigned to a specific website. This ensures that administrators of one site only see and manage backups relevant to their own domain. Dashboard statistics, snapshot records, and asynchronous job logs are all automatically filtered based on your active website context. [@ANCHOR: backup_multi_website]</p>
-
-    <h2>7. Security Best Practices</h2>
-    <p>The module is designed with a <strong>Zero-Sudo</strong> architecture. All interactions with the underlying operating system are performed through dedicated service accounts with minimal necessary privileges. Additionally, all repository paths and restoration targets are strictly validated to prevent unauthorized access to sensitive system directories. Restorations are performed into isolated directories to prevent accidental data overwrites.</p>
-
+    <main>
+        <h1>Backup Management User Guide</h1>
+        <section id="backup-sync-section">
+            <h4>Automated Volume Synchronization</h4>
+            <span style="display:none;">[@ANCHOR: UX_BACKUP_SYNC]</span>
+        </section>
+    </main>
 </body>
 </html>

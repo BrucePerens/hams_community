@@ -107,7 +107,7 @@ DO NOT USE user_websites_settings_dropzone. All settings views must now inherit 
 
 ### Endpoints & Webhooks
 * **Community Directory:** Renders public pages `/community` `[@ANCHOR: UX_COMMUNITY_DIRECTORY]`.
-* **Violation Reporting:** Form endpoint `/website/report_violation` `[@ANCHOR: UX_REPORT_VIOLATION]`, `[@ANCHOR: violation_report_logic]`, verified by `[@ANCHOR: test_tour_violation_report]`.
+* **Violation Reporting:** Form endpoint `/website/report_violation` `[@ANCHOR: user_websites:UX_REPORT_VIOLATION]`, `[@ANCHOR: violation_report_logic]`, verified by `[@ANCHOR: test_tour_violation_report]`.
 * **Home Routing:** Target view `/<slug>/home` `[@ANCHOR: controller_user_websites_home]`.
 * **Site Creation:** `/<slug>/create_site` `[@ANCHOR: UX_CREATE_SITE]`, concurrency scaling proven by `[@ANCHOR: test_site_creation_performance_scaling]`.
 * **Blog Routing:** `/<slug>/blog` `[@ANCHOR: controller_user_blog_index]`.

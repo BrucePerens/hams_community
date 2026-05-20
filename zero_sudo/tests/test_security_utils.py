@@ -250,8 +250,8 @@ class TestSecurityUtils(HamsTransactionCase):
             os.environ.update(original_env)
 
     def test_09_bootstrap_knowledge_docs(self):
-        # [@ANCHOR: test_zero_sudo_doc_installer]
-        # Tests [@ANCHOR: zero_sudo_doc_installer]
+        # [@ANCHOR: zero_sudo:test_zero_sudo_doc_installer]
+        # Tests [@ANCHOR: zero_sudo:zero_sudo_doc_installer]
         # Tests [@ANCHOR: story_zero_sudo_doc_installer]
         # Tests [@ANCHOR: journey_developer_integration]
         """

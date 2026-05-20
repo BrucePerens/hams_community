@@ -1,90 +1,147 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
-from odoo.exceptions import AccessError
+from odoo.addons.hams_test.common import HamsTransactionCase
 
-@tagged("post_install", "-at_install", "multi_website")
-class TestBackupMultiWebsite(RealTransactionCase):
+
+@tagged("post_install", "-at_install")
+class TestBackupMultiWebsite(HamsTransactionCase):
     def setUp(self):
         super().setUp()
-        self.Website = self.env['website']
-        self.BackupConfig = self.env['backup.config']
+        self.website_a = self.env["website"].create(
+            {
+                "name": "Ham Radio Prep",
+                "domain": "https://hamradioprep.com",
+            }
+        )
+        self.website_b = self.env["website"].create(
+            {
+                "name": "Amateur Radio Base",
+                "domain": "https://amateurradio.com",
+            }
+        )
 
-        # Create two websites
-        self.website_1 = self.Website.create({'name': 'Website 1'})
-        self.website_2 = self.Website.create({'name': 'Website 2'})
+        self.config_all = self.env["backup.config"].create(
+            {
+                "name": "Global Backup",
+                "engine": "kopia",
+                "target_path": "/var/backups/global",
+            }
+        )
 
-        # Create a user for each website
-        # Note: In Odoo 19, users have a website_id which is used for record rules if configured
-        self.user_1 = self.env['res.users'].create({
-            'name': 'User 1',
-            'login': 'user1',
-            'email': 'user1@test.com',
-            'website_id': self.website_1.id,
-            'group_ids': [(6, 0, [self.env.ref('backup_management.group_backup_admin').id])]
-        })
-        self.user_2 = self.env['res.users'].create({
-            'name': 'User 2',
-            'login': 'user2',
-            'email': 'user2@test.com',
-            'website_id': self.website_2.id,
-            'group_ids': [(6, 0, [self.env.ref('backup_management.group_backup_admin').id])]
-        })
+        self.config_a = self.env["backup.config"].create(
+            {
+                "name": "Website A Backup",
+                "engine": "kopia",
+                "target_path": "/var/backups/a",
+                "website_id": self.website_a.id,
+            }
+        )
 
-        # Create configurations for each website
-        self.config_1 = self.BackupConfig.create({
-            'name': 'Config 1',
-            'engine': 'kopia',
-            'target_path': '/var/lib/odoo/backups/repo1',
-            'website_id': self.website_1.id
-        })
-        self.config_2 = self.BackupConfig.create({
-            'name': 'Config 2',
-            'engine': 'kopia',
-            'target_path': '/var/lib/odoo/backups/repo2',
-            'website_id': self.website_2.id
-        })
-        self.config_global = self.BackupConfig.create({
-            'name': 'Config Global',
-            'engine': 'kopia',
-            'target_path': '/var/lib/odoo/backups/global',
-            'website_id': False
-        })
+    def test_01_global_config_visibility(self):
+        """Verify that a backup config without a website_id is globally visible."""
+        # Authenticate as a user on Website A
+        self.env.user.write(
+            {"group_ids": [(4, self.env.ref("backup_management.group_backup_admin").id)]}
+        )
+        configs_a = self.env["backup.config"].with_context(
+            website_id=self.website_a.id
+        ).search([])
 
-    def test_record_rules_isolation(self):
-        # User 1 should see Config 1 and Config Global, but not Config 2
-        configs_user1 = self.BackupConfig.with_user(self.user_1).search([])
-        self.assertIn(self.config_1, configs_user1)
-        self.assertIn(self.config_global, configs_user1)
-        self.assertNotIn(self.config_2, configs_user1)
+        self.assertIn(
+            self.config_all,
+            configs_a,
+            "Global configs MUST be visible regardless of website context.",
+        )
+        self.assertIn(
+            self.config_a,
+            configs_a,
+            "Website-specific configs MUST be visible when matching context.",
+        )
 
-        # User 2 should see Config 2 and Config Global, but not Config 1
-        configs_user2 = self.BackupConfig.with_user(self.user_2).search([])
-        self.assertIn(self.config_2, configs_user2)
-        self.assertIn(self.config_global, configs_user2)
-        self.assertNotIn(self.config_1, configs_user2)
+    def test_02_isolated_config_visibility(self):
+        """Verify that a backup config linked to Website A is invisible to Website B."""
+        self.env.user.write(
+            {"group_ids": [(4, self.env.ref("backup_management.group_backup_admin").id)]}
+        )
+        configs_b = self.env["backup.config"].with_context(
+            website_id=self.website_b.id
+        ).search([])
 
-    def test_job_propagation(self):
-        # Triggering a backup from Config 1 should create a job with website_1
-        self.config_1.with_user(self.user_1).action_trigger_backup()
-        job = self.env['backup.job'].search([('config_id', '=', self.config_1.id)], limit=1)
-        self.assertEqual(job.website_id, self.website_1)
+        self.assertIn(
+            self.config_all,
+            configs_b,
+            "Global configs MUST be visible regardless of website context.",
+        )
+        self.assertNotIn(
+            self.config_a,
+            configs_b,
+            "CRITICAL TENANT LEAK: Website A configs MUST NOT be visible from Website B context.",
+        )
 
-        # User 2 should not see User 1's jobs
-        jobs_user2 = self.env['backup.job'].with_user(self.user_2).search([])
-        self.assertNotIn(job, jobs_user2)
+    def test_03_job_isolation(self):
+        """Verify that backup jobs inherit the website_id of their parent config."""
+        job_a = self.env["backup.job"].create(
+            {
+                "config_id": self.config_a.id,
+                "state": "pending",
+            }
+        )
+        self.assertEqual(
+            job_a.website_id.id,
+            self.website_a.id,
+            "Job MUST inherit website_id from Config.",
+        )
 
-    def test_snapshot_isolation(self):
-        # Snapshot for Config 1
-        snap = self.env['backup.snapshot'].create({
-            'config_id': self.config_1.id,
-            'snapshot_id': 'snap1',
-        })
+        job_global = self.env["backup.job"].create(
+            {
+                "config_id": self.config_all.id,
+                "state": "pending",
+            }
+        )
+        self.assertFalse(job_global.website_id, "Global job MUST NOT have a website_id.")
 
-        # User 1 should see it
-        snaps_user1 = self.env['backup.snapshot'].with_user(self.user_1).search([])
-        self.assertIn(snap, snaps_user1)
+    def test_04_snapshot_isolation(self):
+        """Verify that snapshots inherit the website_id of their parent config."""
+        snap_a = self.env["backup.snapshot"].create(
+            {
+                "config_id": self.config_a.id,
+                "snapshot_id": "snap_123",
+            }
+        )
+        self.assertEqual(
+            snap_a.website_id.id,
+            self.website_a.id,
+            "Snapshot MUST inherit website_id from Config.",
+        )
 
-        # User 2 should NOT see it
-        snaps_user2 = self.env['backup.snapshot'].with_user(self.user_2).search([])
-        self.assertNotIn(snap, snaps_user2)
+    def test_05_board_data_context(self):
+        """Verify the RPC board fetches correct counts based on website context."""
+        # Create jobs and snaps
+        self.env["backup.job"].create(
+            {"config_id": self.config_a.id, "state": "pending"}
+        )
+        self.env["backup.snapshot"].create(
+            {"config_id": self.config_a.id, "snapshot_id": "snap_123"}
+        )
+
+        self.env["backup.job"].create(
+            {"config_id": self.config_all.id, "state": "pending"}
+        )
+
+        data_a = self.env["backup.config"].with_context(
+            website_id=self.website_a.id
+        ).get_board_data()
+
+        # Parse output: [{'type': 'kopia', 'configs': 2, 'jobs': 2, 'snapshots': 1}]
+        self.assertEqual(data_a[0]["configs"], 2)
+        self.assertEqual(data_a[0]["jobs"], 2)
+        self.assertEqual(data_a[0]["snapshots"], 1)
+
+        data_b = self.env["backup.config"].with_context(
+            website_id=self.website_b.id
+        ).get_board_data()
+
+        # Parse output: [{'type': 'kopia', 'configs': 1, 'jobs': 1, 'snapshots': 0}]
+        self.assertEqual(data_b[0]["configs"], 1)
+        self.assertEqual(data_b[0]["jobs"], 1)
+        self.assertEqual(data_b[0]["snapshots"], 0)

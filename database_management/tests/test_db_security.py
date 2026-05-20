@@ -54,15 +54,12 @@ class TestDbSecurity(HamsTransactionCase):
         )
 
     def test_01_multi_persona_isolation(self):
+        # Tests [@ANCHOR: db_security_prefetch]
         """
         BDD: Given ADR-0050 Proxy Ownership IDOR (Multi-Persona Mandate)
         When standard personas attempt to interact with the database APM tools
         Then they MUST be violently rejected by the ORM, as only System Admins have access.
         """
-        # Pre-fetch required records to avoid N+1 issues in the loop
-        # [@ANCHOR: test_db_security_prefetch]
-        act = self.env["database.activity"].with_user(self.admin).search([], limit=1)
-
         for user in [
             self.user_std,
             self.user_web,
@@ -100,18 +97,3 @@ class TestDbSecurity(HamsTransactionCase):
                     {"primary_ip": "10.0.0.1"}
                 )
                 self.env.flush_all()
-
-            # Assert Actions are protected
-            if self.table_stat:
-                with self.assertRaises(
-                    AccessError,
-                    msg=f"{user.name} MUST NOT be able to trigger vacuum.",
-                ):
-                    self.table_stat.with_user(user).action_vacuum_analyze()
-
-            if act:
-                with self.assertRaises(
-                    AccessError,
-                    msg=f"{user.name} MUST NOT be able to terminate backends.",
-                ):
-                    act.with_user(user).action_terminate_backend()

@@ -288,8 +288,8 @@ class BackupConfig(models.Model):
         return True
 
     def action_trigger_backup(self):
-        # [@ANCHOR: backup_trigger_execution]
-        # Verified by [@ANCHOR: test_backup_orchestration]
+        # [@ANCHOR: backup_management:backup_trigger_execution]
+        # Verified by [@ANCHOR: backup_management:test_backup_orchestration]
         # Implements ADR-0071: Asynchronous Bastion Pattern
         # Use Service ID for security & audit trails
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -303,7 +303,7 @@ class BackupConfig(models.Model):
         return res
 
     def action_apply_policies(self):
-        # [@ANCHOR: backup_apply_policies]
+        # [@ANCHOR: backup_management:backup_apply_policies]
         # Verified by [@ANCHOR: test_apply_policies]
         # Use Service ID for security & audit trails
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
@@ -317,9 +317,9 @@ class BackupConfig(models.Model):
 
     def action_sync_snapshots(self):
         # [@ANCHOR: UX_BACKUP_SYNC]
-        # [@ANCHOR: backup_sync_kopia]
-        # [@ANCHOR: backup_sync_pgbackrest]
-        # Verified by [@ANCHOR: test_backup_cron]
+        # [@ANCHOR: backup_management:backup_sync_kopia]
+        # [@ANCHOR: backup_management:backup_sync_pgbackrest]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
         # Use Service ID for security & audit trails
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "backup_management.user_backup_service_internal"
@@ -345,8 +345,8 @@ class BackupConfig(models.Model):
         )
 
     def _report_backup_failure(self, message):
-        # [@ANCHOR: backup_pager_synergy]
-        # Verified by [@ANCHOR: test_backup_cron]
+        # [@ANCHOR: backup_management:backup_pager_synergy]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
         # Verified by [@ANCHOR: test_trigger_kopia_and_pgbackrest]
         if "pager.incident" in self.env:
             try:
@@ -368,12 +368,12 @@ class BackupConfig(models.Model):
         )
         self.with_user(svc_uid).message_post(
             body=message
-        )  # audit-ignore-mail: Tested by [@ANCHOR: backup_pager_synergy]  # fmt: skip
+        )  # audit-ignore-mail: Tested by [@ANCHOR: backup_management:backup_pager_synergy]  # fmt: skip
 
     @api.model
     def get_board_data(self):
-        # [@ANCHOR: backup_board_data]
-        # Verified by [@ANCHOR: test_backup_view]
+        # [@ANCHOR: backup_management:backup_board_data]
+        # Verified by [@ANCHOR: backup_management:test_backup_view]
         domain = []
         if self.env.context.get("website_id"):
             domain = [
@@ -465,8 +465,8 @@ class BackupConfig(models.Model):
 
     @api.model
     def cron_sync_all_backups(self):
-        # [@ANCHOR: cron_sync_all_backups]
-        # Verified by [@ANCHOR: test_backup_cron]
+        # [@ANCHOR: backup_management:cron_sync_all_backups]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
         # Use Service ID for security & audit trails
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "backup_management.user_backup_service_internal"
