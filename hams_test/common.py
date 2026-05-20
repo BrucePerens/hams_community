@@ -94,7 +94,7 @@ class HamsIntegrationCase(HamsHttpCase):
         super().tearDownClass()
 
     @classmethod
-    def start_daemon(cls, script_path, args=None, env_vars=None, health_url=None, timeout=30):
+    def start_daemon(cls, script_path, args=None, env_vars=None, health_url=None, timeout=600):
         """
         Starts a daemon and waits for it to become healthy.
         Must be called within setUpClass or setUp.

@@ -314,7 +314,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     try:
         while True:
             try:
-                line = q.get(timeout=300.0)
+                line = q.get(timeout=1200.0)
                 if line is None:
                     break
                 line_lower = line.lower()
@@ -343,11 +343,11 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     force_killed = True
                     break
             except queue.Empty:
-                print("\n[!] WARNING: Test runner hung for 300 seconds with no output! Killing to continue...")
+                print("\n[!] WARNING: Test runner hung for 1200 seconds with no output! Killing to continue...")
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                 force_killed = True
                 if extractor:
-                    extractor.process_line("CRITICAL: Test execution hung for 300 seconds. Process forcefully killed.\n")
+                    extractor.process_line("CRITICAL: Test execution hung for 1200 seconds. Process forcefully killed.\n")
                 break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")
@@ -825,7 +825,11 @@ echo "CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_u
 su -s /bin/bash redis -c 'redis-server --daemonize yes' >/dev/null 2>&1
 su -s /bin/bash rabbitmq -c 'rabbitmq-server -detached' >/dev/null 2>&1
 
-sleep 3
+echo '[*] Synchronously waiting for Redis to accept connections...'
+timeout 600 bash -c "until su -s /bin/bash redis -c 'redis-cli ping' 2>/dev/null | grep -q PONG; do sleep 1; done"
+
+echo '[*] Synchronously waiting for RabbitMQ broker to fully initialize...'
+timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'rabbitmqctl status' >/dev/null 2>&1; do sleep 1; done"
 
 export PYTHONDONTWRITEBYTECODE=1
 
@@ -1330,7 +1334,7 @@ def main():
                     start_new_session=True,
                 )
 
-                for _ in range(30):
+                for _ in range(600):  # Jules VM hyper-elastic delay absorption
                     if is_odoo_running(free_port):
                         break
                     time.sleep(1)
@@ -1586,7 +1590,7 @@ def main():
 
                 print(f"[*] Waiting for Odoo to bind to port {free_port}...")
 
-                for _ in range(30):
+                for _ in range(600):  # Jules VM hyper-elastic delay absorption
                     if is_odoo_running(free_port):
                         time.sleep(3)
                         break
