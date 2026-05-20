@@ -30,8 +30,13 @@ def _get_hash(*args, **kwargs):
             return {str(k): _serialize(v) for k, v in sorted(obj.items())}
         if isinstance(obj, bytes):
             return obj.hex()
-        if isinstance(obj, set):
-            return [_serialize(i) for i in sorted(list(obj))]
+        if isinstance(obj, (set, frozenset)):
+            # Sort for stability across processes
+            return [_serialize(i) for i in sorted(list(obj), key=str)]
+        if obj is None:
+            return None
+        if isinstance(obj, (bool, int, float, str)):
+            return obj
         return str(obj)
 
     serialized_args = [_serialize(a) for a in args]

@@ -170,6 +170,16 @@ class TestDistributedCacheStandard(HamsHttpCase):
         h7 = _get_hash([1, 2], {"b": 4, "c": 3})
         self.assertEqual(h6, h7)
 
+        # Test frozenset and nested structures
+        h8 = _get_hash(frozenset([3, 1, 2]))
+        h9 = _get_hash(set([1, 2, 3]))
+        self.assertEqual(h8, h9)
+
+        # Test None and bool
+        h10 = _get_hash(None, True, False)
+        h11 = _get_hash(None, True, False)
+        self.assertEqual(h10, h11)
+
     def test_08_notify_model_invalidation_logic(self):
         # Tests [@ANCHOR: notify_model_invalidation_logic]
         """
@@ -231,6 +241,23 @@ class TestDistributedCacheStandard(HamsHttpCase):
             self.assertNotEqual(w1_keys[0], w2_keys[0])
         finally:
             tools.config.options["test_enable"] = old_test_enable
+
+    def test_10_invalidate_model_cache_local_and_redis(self):
+        """Verify that invalidate_model_cache flushes both local and Redis cache."""
+        self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis_pool", new=MagicMock())
+        mock_redis = self.safe_patch("odoo.addons.distributed_redis_cache.redis_cache.redis")
+        mock_redis_client = MagicMock()
+        mock_redis.Redis.return_value = mock_redis_client
+        mock_redis_client.scan_iter.return_value = ["key1"]
+
+        dbname = self.env.cr.dbname
+        local_key = f"{dbname}:distributed_cache:res.partner:test"
+        _local_cache[local_key] = "val"
+
+        invalidate_model_cache(self.env, "res.partner")
+
+        self.assertNotIn(local_key, _local_cache)
+        mock_redis_client.delete.assert_called()
 
 
 @tagged("integration", "post_install", "-at_install")
