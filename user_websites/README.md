@@ -130,6 +130,7 @@ If your dependent module (e.g., `cloudflare`, `custom_dns`) needs to programmati
 * **`res.users.action_pardon_user_websites()`**: Restores user content after appeal.
 * **`user.websites.group._get_group_id_by_slug(slug, override_svc_uid=None)`**: Resolves a group's slug to its Group ID.
 * **`website.page._get_page_id_by_url(url, website_id, override_svc_uid=None)`**: Resolves a page URL to its Page ID.
+* **`RESERVED_SLUGS`**: A set of slugs that are reserved by the system and cannot be used by users or groups (e.g., `community`, `blog`, `my`). Available in `user_websites.utils`.
 * **`user_websites.owned.mixin`**: Inherit this in your custom models (e.g., `custom.portfolio`) to instantly inherit the Proxy Ownership security rules via `self._check_proxy_ownership_write(vals)`.
   * **Mandatory Assignment:** Standard users MUST supply either `owner_user_id` OR `user_websites_group_id` upon record creation.
   * **Mutual Exclusivity:** A record CANNOT be owned by both a user and a group simultaneously. Attempting to assign both will raise a strict `ValidationError`.
