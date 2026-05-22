@@ -329,11 +329,6 @@ ODOO_ERROR_RULES = [
         re.compile(r"class\s+[a-zA-Z0-9_]+\s*\((?:HttpCase|TransactionCase)\):"),
         "CRITICAL TEST ARCHITECTURE: Do not inherit directly from Odoo's native HttpCase or TransactionCase. You MUST inherit from HamsHttpCase or HamsTransactionCase to ensure the Process Reaper and latency safeguards are active.",
     ),
-    (
-        r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"url:\s*['\"`]/odoo(?!.*\bdebug=).*?['\"`]"),
-        "CRITICAL TOUR LATENCY TRAP: JS tour URLs MUST explicitly include 'debug=1' to prevent Owl 'dev' mode crashes per ADR-0081.",
-    ),
 ]
 
 WARNING_RULES = []

@@ -232,41 +232,6 @@ class FailureExtractor:
             print(f"📄 Failure details extracted and saved to: {self.display_path}")
         print("==========================================================\n")
 
-
-
-# Intercept --tour-debug flag before Odoo's native argparse crashes on it
-for arg in list(sys.argv):
-    if arg.startswith('--tour-debug='):
-        os.environ['HAMS_TOUR_DEBUG'] = arg.split('=', 1)[1]
-        sys.argv.remove(arg)
-
-import sys
-import os
-
-# Intercept --tour-debug flag before Odoo's native argparse crashes on it
-for arg in list(sys.argv):
-    if arg.startswith('--tour-debug='):
-        os.environ['HAMS_TOUR_DEBUG'] = arg.split('=', 1)[1]
-        sys.argv.remove(arg)
-
-import sys
-import os
-
-# Intercept --tour-debug flag before Odoo's native argparse crashes on it
-for arg in list(sys.argv):
-    if arg.startswith('--tour-debug='):
-        os.environ['HAMS_TOUR_DEBUG'] = arg.split('=', 1)[1]
-        sys.argv.remove(arg)
-
-import sys
-import os
-
-# Intercept --tour-debug flag before Odoo's native argparse crashes on it
-for arg in list(sys.argv):
-    if arg.startswith('--tour-debug='):
-        os.environ['HAMS_TOUR_DEBUG'] = arg.split('=', 1)[1]
-        sys.argv.remove(arg)
-
 def assassinate_chrome():
     """Targeted kill of headless Chrome without bringing down the Odoo Python worker."""
     print("[*] [CHROME-REAPER] Executing targeted assassination of headless Chrome...")
@@ -413,7 +378,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     env.setdefault("RMQ_PASS", "guest")
     host_tmp_dir = os.path.dirname(os.environ.get("HAMS_REAL_ERROR_LOG", "/var/tmp")) if "HAMS_REAL_ERROR_LOG" in os.environ else "/var/tmp"
     os.makedirs(host_tmp_dir, exist_ok=True)
-    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=--prof,--logfile={host_tmp_dir}/v8_hang.log")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --js-flags=\"--logfile={host_tmp_dir}/v8_hang.log --prof\"")
 
     process = subprocess.Popen(
         cmd,
@@ -825,7 +790,7 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
     os.environ["PGHOST"] = pg_sock
     host_tmp_dir = os.path.dirname(os.environ.get("HAMS_REAL_ERROR_LOG", "/var/tmp")) if "HAMS_REAL_ERROR_LOG" in os.environ else "/var/tmp"
     os.makedirs(host_tmp_dir, exist_ok=True)
-    os.environ["ODOO_TEST_CHROME_ARGS"] = f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=--prof,--logfile={host_tmp_dir}/v8_hang.log"
+    os.environ["ODOO_TEST_CHROME_ARGS"] = f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=--logfile={host_tmp_dir}/v8_hang.log,--prof"
     os.environ["HAMS_REAL_ERROR_LOG"] = real_error_log
     os.environ["HOME"] = "/var/lib/odoo"
     os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
@@ -980,7 +945,7 @@ def main():
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
     host_tmp_dir = os.path.dirname(os.environ.get("HAMS_REAL_ERROR_LOG", "/var/tmp")) if "HAMS_REAL_ERROR_LOG" in os.environ else "/var/tmp"
     os.makedirs(host_tmp_dir, exist_ok=True)
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=--prof,--logfile={host_tmp_dir}/v8_hang.log")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --js-flags=\"--logfile={host_tmp_dir}/v8_hang.log --prof\"")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
     sys_paths = os.environ.get("PYTHONPATH", "")
