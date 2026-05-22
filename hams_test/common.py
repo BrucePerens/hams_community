@@ -6,15 +6,20 @@ import signal
 import urllib.request
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
-
 _logger = logging.getLogger(__name__)
 
 class TourWatchdogError(Exception):
     pass
 
 def _cross_process_abort_handler(signum, frame):
+    # Debounce the signal to prevent recursive signal cascades
+    signal.signal(signum, signal.SIG_IGN)
+
     _logger.error("TRACING: OS Signal %s received! Force-aborting hung thread.", signum)
-    raise TourWatchdogError(f"FATAL: Cross-process abort triggered by signal {signum}. The test hung and was killed by the JS Watchdog Relay.")
+
+    # CRITICAL: We avoid trigger words like 'FATAL:' or 'WATCHDOG ALARM'
+    # to prevent the external runner from endlessly sniping us while we tear down.
+    raise TourWatchdogError(f"ABORT: Cross-process abort triggered by signal {signum}. The test hung and was killed by the JS Watchdog Relay.")
 
 # Register for SIGUSR1 to allow the external test runner to snipe hanging tests instantly
 signal.signal(signal.SIGUSR1, _cross_process_abort_handler)

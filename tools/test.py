@@ -7,6 +7,7 @@ Strictly prohibits Bash wrapper scripts and CPU polling loops.
 
 import argparse
 import atexit
+import contextlib
 import glob
 import logging
 import os
@@ -19,6 +20,31 @@ import socket
 import subprocess
 import sys
 import threading
+
+@contextlib.contextmanager
+def micro_privilege(username):
+    """
+    Temporarily drops Effective privileges to the specified user using setresuid/setresgid.
+    Restores Root privileges securely upon exiting the context block.
+    """
+    if os.geteuid() != 0:
+        yield
+        return
+
+    user_info = pwd.getpwnam(username)
+    target_uid = user_info.pw_uid
+    target_gid = user_info.pw_gid
+
+    orig_ruid, orig_euid, orig_suid = os.getresuid()
+    orig_rgid, orig_egid, orig_sgid = os.getresgid()
+
+    try:
+        os.setresgid(orig_rgid, target_gid, orig_sgid)
+        os.setresuid(orig_ruid, target_uid, orig_suid)
+        yield
+    finally:
+        os.setresuid(orig_ruid, orig_euid, orig_suid)
+        os.setresgid(orig_rgid, orig_egid, orig_sgid)
 
 # Local modules resolve natively without sys.path hacks.
 import infrastructure
@@ -320,7 +346,7 @@ def get_local_modules(base_dir, ignore_patterns):
 def get_addons_path(base_dir):
     paths = ["/usr/lib/python3/dist-packages/odoo/addons", base_dir]
     community_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_community"))
-    primary_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_private_primary"))
+    primary_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_com"))
 
     if os.path.isdir(community_dir): paths.append(community_dir)
     elif os.path.isdir("/hams_community"): paths.append("/hams_community")
@@ -543,8 +569,8 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
 
     pg_user = pwd.getpwnam("postgres")
     def preexec_pg():
-        os.setgid(pg_user.pw_gid)
-        os.setuid(pg_user.pw_uid)
+        os.setresgid(pg_user.pw_gid, pg_user.pw_gid, pg_user.pw_gid)
+        os.setresuid(pg_user.pw_uid, pg_user.pw_uid, pg_user.pw_uid)
 
     subprocess.run([f"{pg_bin_dir}initdb", "-D", pg_data], preexec_fn=preexec_pg, check=True, stdout=subprocess.DEVNULL)
     # The -w flag makes pg_ctl natively BLOCK until ready. No polling loops needed!
@@ -557,7 +583,7 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
 
     # 4. Redis Sandboxing
     redis_user = pwd.getpwnam("redis")
-    redis_proc = subprocess.Popen(["redis-server", "--daemonize", "no"], preexec_fn=lambda: (os.setgid(redis_user.pw_gid), os.setuid(redis_user.pw_uid)), stdout=subprocess.DEVNULL)
+    redis_proc = subprocess.Popen(["redis-server", "--daemonize", "no"], preexec_fn=lambda: (os.setresgid(redis_user.pw_gid, redis_user.pw_gid, redis_user.pw_gid), os.setresuid(redis_user.pw_uid, redis_user.pw_uid, redis_user.pw_uid)), stdout=subprocess.DEVNULL)
 
     # 5. RabbitMQ Sandboxing
     subprocess.run(["systemctl", "stop", "rabbitmq-server"], check=False, stderr=subprocess.DEVNULL)
@@ -573,8 +599,8 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
     os.chmod("/var/lib/rabbitmq/.erlang.cookie", 0o400)
 
     def preexec_rmq():
-        os.setgid(rmq_user.pw_gid)
-        os.setuid(rmq_user.pw_uid)
+        os.setresgid(rmq_user.pw_gid, rmq_user.pw_gid, rmq_user.pw_gid)
+        os.setresuid(rmq_user.pw_uid, rmq_user.pw_uid, rmq_user.pw_uid)
         os.environ["HOME"] = "/var/lib/rabbitmq"
 
     subprocess.run(["rabbitmq-server", "-detached"], preexec_fn=preexec_rmq, check=True, stdout=subprocess.DEVNULL)
@@ -592,8 +618,8 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
 
     odoo_user = pwd.getpwnam("odoo")
     def preexec_odoo():
-        os.setgid(odoo_user.pw_gid)
-        os.setuid(odoo_user.pw_uid)
+        os.setresgid(odoo_user.pw_gid, odoo_user.pw_gid, odoo_user.pw_gid)
+        os.setresuid(odoo_user.pw_uid, odoo_user.pw_uid, odoo_user.pw_uid)
 
     test_cmd = [sys.executable, os.path.abspath(__file__)] + sys_args
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
@@ -627,10 +653,9 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
 def provision_jules(base_dir):
     """Provisions a pre-isolated Jules VM environment"""
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
-    def run_sudo(cmd): subprocess.run(["sudo", "bash", "-c", cmd], check=True)
 
     print("[*] Clearing port 8069 bindings...")
-    run_sudo("kill $(lsof -t -i :8069) 2>/dev/null || true")
+    subprocess.run(["fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
 
     print("[*] Configuring local PostgreSQL...")
     pg_bins = glob.glob("/usr/lib/postgresql/*/bin/initdb")
@@ -640,29 +665,49 @@ def provision_jules(base_dir):
     pg_bin_dir = os.path.dirname(sorted(pg_bins)[-1]) + "/"
     pg_data, pg_socket = "/opt/hams/pgdata", "/opt/hams/pgsock"
 
-    run_sudo("systemctl stop postgresql || true")
-    run_sudo("mkdir -p {} {}".format(pg_data, pg_socket))
-    run_sudo("chown -R {}:{} {} {}".format(orig_user, orig_user, pg_data, pg_socket))
-    run_sudo("chmod 700 {}; chmod 2775 {}".format(pg_data, pg_socket))
+    subprocess.run(["systemctl", "stop", "postgresql"], check=False, stderr=subprocess.DEVNULL)
 
-    res = subprocess.run(["sudo", "ls", "-A", pg_data], capture_output=True, text=True)
-    if not res.stdout.strip():
-        run_sudo("su -s /bin/bash {} -c '{}initdb -D {}'".format(orig_user, pg_bin_dir, pg_data))
+    os.makedirs(pg_data, exist_ok=True)
+    os.makedirs(pg_socket, exist_ok=True)
 
-    run_sudo("su -s /bin/bash {} -c '{}pg_ctl -D {} -m fast stop' || true".format(orig_user, pg_bin_dir, pg_data))
-    run_sudo("rm -f {}/postmaster.pid || true".format(pg_data))
-    run_sudo("su -s /bin/bash {} -c '{}pg_ctl -D {} -o \"-c listen_addresses= -c unix_socket_directories={} -c fsync=off -c synchronous_commit=off -c full_page_writes=off\" -w start'".format(orig_user, pg_bin_dir, pg_data, pg_socket))
-    run_sudo("echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {} WITH SUPERUSER LOGIN;\" | su -s /bin/bash {} -c 'PGUSER={} {}psql -h {} -d postgres' || true".format(orig_user, orig_user, orig_user, pg_bin_dir, pg_socket))
+    user_info = pwd.getpwnam(orig_user)
+    orig_uid, orig_gid = user_info.pw_uid, user_info.pw_gid
+
+    os.chown(pg_data, orig_uid, orig_gid)
+    os.chown(pg_socket, orig_uid, orig_gid)
+
+    os.chmod(pg_data, 0o700)
+    os.chmod(pg_socket, 0o2775)
+
+    if not os.listdir(pg_data):
+        with micro_privilege(orig_user):
+            subprocess.run([f"{pg_bin_dir}initdb", "-D", pg_data], check=True)
+
+    with micro_privilege(orig_user):
+        subprocess.run([f"{pg_bin_dir}pg_ctl", "-D", pg_data, "-m", "fast", "stop"], check=False, stderr=subprocess.DEVNULL)
+
+    try:
+        os.remove(f"{pg_data}/postmaster.pid")
+    except OSError:
+        pass
+
+    with micro_privilege(orig_user):
+        subprocess.run([f"{pg_bin_dir}pg_ctl", "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "-w", "start"], check=True)
+
+        p = subprocess.Popen([f"{pg_bin_dir}psql", "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, text=True, stdout=subprocess.DEVNULL)
+        p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
+        p.wait()
 
     print("[*] Starting local Redis and RabbitMQ...")
-    run_sudo("systemctl start redis-server || true")
-    run_sudo("systemctl start rabbitmq-server || true")
+    subprocess.run(["systemctl", "start", "redis-server"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["systemctl", "start", "rabbitmq-server"], check=False, stderr=subprocess.DEVNULL)
 
     os.environ["PGHOST"] = pg_socket
     os.environ["HAMS_ISOLATED_NS"] = "1"
 
     def teardown():
-        subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", "{}pg_ctl -D {} -m fast stop".format(pg_bin_dir, pg_data)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with micro_privilege(orig_user):
+            subprocess.run([f"{pg_bin_dir}pg_ctl", "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     atexit.register(teardown)
 
 

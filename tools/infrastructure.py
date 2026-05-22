@@ -5,13 +5,116 @@ Serves as the Single Source of Truth for test_runner.py and deploy_wizard.py.
 Supports environment scoping, lifecycle hooks, and precise runtime mount states.
 """
 
+import compileall
+import contextlib
+import grp
 import logging
 import os
+import pwd
+import shutil
 import subprocess
-import sys
+import tarfile
 import urllib.request
 
 _logger = logging.getLogger(__name__)
+
+@contextlib.contextmanager
+def micro_privilege(username):
+    """
+    Temporarily drops Effective privileges to the specified user using setresuid/setresgid.
+    Restores Root privileges securely upon exiting the context block.
+    """
+    if os.geteuid() != 0:
+        yield
+        return
+
+    user_info = pwd.getpwnam(username)
+    target_uid = user_info.pw_uid
+    target_gid = user_info.pw_gid
+
+    orig_ruid, orig_euid, orig_suid = os.getresuid()
+    orig_rgid, orig_egid, orig_sgid = os.getresgid()
+
+    try:
+        os.setresgid(orig_rgid, target_gid, orig_sgid)
+        os.setresuid(orig_ruid, target_uid, orig_suid)
+        yield
+    finally:
+        os.setresuid(orig_ruid, orig_euid, orig_suid)
+        os.setresgid(orig_rgid, orig_egid, orig_sgid)
+
+
+def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
+    domain = env_vars.get('DOMAIN', 'localhost')
+    ssl_dir = os.path.join(dest_dir, path.lstrip('/'))
+    fullchain = os.path.join(ssl_dir, 'fullchain.pem')
+    privkey = os.path.join(ssl_dir, 'privkey.pem')
+    lotw = os.path.join(ssl_dir, 'lotw_root.pem')
+    if not os.path.exists(fullchain):
+        try:
+            run_cmd_func(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Failed to generate SSL certs: %s", e)
+        if os.path.exists(fullchain):
+            shutil.copy2(fullchain, lotw)
+
+
+def hook_clear_pycache(env_vars, dest_dir, path, run_cmd_func):
+    pycache = os.path.join(dest_dir, 'opt/hams/pycache'.lstrip('/'))
+    daemons = os.path.join(dest_dir, 'opt/hams/daemons'.lstrip('/'))
+    if os.path.exists(pycache):
+        for item in os.listdir(pycache):
+            item_path = os.path.join(pycache, item)
+            if os.path.isdir(item_path): shutil.rmtree(item_path, ignore_errors=True)
+            else: os.remove(item_path)
+    if os.path.isdir(daemons):
+        compileall.compile_dir(daemons, quiet=1)
+
+
+def hook_install_odoo_key(env_vars, dest_dir, path, run_cmd_func):
+    out = os.path.join(dest_dir, 'usr/share/keyrings/odoo-archive-keyring.gpg'.lstrip('/'))
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
+
+
+def hook_install_kopia_key(env_vars, dest_dir, path, run_cmd_func):
+    out = os.path.join(dest_dir, 'usr/share/keyrings/kopia-keyring.gpg'.lstrip('/'))
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
+
+
+def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
+    token = env_vars.get('CLOUDFLARE_TUNNEL_TOKEN')
+    run_cmd_func(['dpkg', '-i', path])
+    if token:
+        run_cmd_func(['cloudflared', 'service', 'install', token])
+    if os.path.exists(path):
+        os.remove(path)
+
+
+def hook_install_pypdf2(env_vars, dest_dir, path, run_cmd_func):
+    if not os.path.exists(path): path = os.path.join(dest_dir, path.lstrip('/'))
+    if os.path.exists(path):
+        with tarfile.open(path, 'r:gz') as tar: tar.extractall(os.path.join(dest_dir, 'tmp'))
+    pypdf_dir = os.path.join(dest_dir, 'tmp/PyPDF2-2.12.1'.lstrip('/'))
+    if os.path.isdir(pypdf_dir):
+        with open(os.path.join(pypdf_dir, 'setup.py'), 'w') as f:
+            f.write('from setuptools import setup, find_packages\nsetup(name="PyPDF2", version="2.12.1", packages=find_packages(), include_package_data=True, description="A pure-python PDF library")\n')
+        with open(os.path.join(pypdf_dir, 'stdeb.cfg'), 'w') as f:
+            f.write('[DEFAULT]\nX-Python3-Version: >= 3.6\n')
+        cwd = os.getcwd()
+        try:
+            os.chdir(pypdf_dir)
+            run_cmd_func(['python3', 'setup.py', '--command-packages=stdeb.command', 'bdist_deb'])
+        finally:
+            os.chdir(cwd)
+        deb = os.path.join(pypdf_dir, 'deb_dist', 'python3-pypdf2_2.12.1-1_all.deb')
+        if os.path.exists(deb):
+            run_cmd_func(['dpkg', '-i', deb])
+        shutil.rmtree(pypdf_dir, ignore_errors=True)
+    if os.path.exists(path):
+        os.remove(path)
+
 
 MANIFEST = {
     "directories": [
@@ -49,21 +152,7 @@ MANIFEST = {
             "provision_mode": "755",
             "runtime_mount": "ro",
             "environments": ["prod"],
-            "post_provision_hooks": [
-                """\
-import os, subprocess, shutil
-dest = '{DEST_DIR}'
-domain = '{DOMAIN}'
-ssl_dir = os.path.join(dest, 'opt/hams/nginx/ssl'.lstrip('/'))
-fullchain = os.path.join(ssl_dir, 'fullchain.pem')
-privkey = os.path.join(ssl_dir, 'privkey.pem')
-lotw = os.path.join(ssl_dir, 'lotw_root.pem')
-if not os.path.exists(fullchain):
-    subprocess.run(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
-    if os.path.exists(fullchain):
-        shutil.copy2(fullchain, lotw)
-"""
-            ],
+            "post_provision_hooks": [hook_generate_ssl],
         },
         {
             "path": "/deploy/ssl",
@@ -71,21 +160,7 @@ if not os.path.exists(fullchain):
             "provision_mode": "755",
             "runtime_mount": "ro",
             "environments": ["docker"],
-            "post_provision_hooks": [
-                """\
-import os, subprocess, shutil
-dest = '{DEST_DIR}'
-domain = '{DOMAIN}'
-ssl_dir = os.path.join(dest, 'deploy/ssl'.lstrip('/'))
-fullchain = os.path.join(ssl_dir, 'fullchain.pem')
-privkey = os.path.join(ssl_dir, 'privkey.pem')
-lotw = os.path.join(ssl_dir, 'lotw_root.pem')
-if not os.path.exists(fullchain):
-    subprocess.run(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
-    if os.path.exists(fullchain):
-        shutil.copy2(fullchain, lotw)
-"""
-            ],
+            "post_provision_hooks": [hook_generate_ssl],
         },
         {
             "path": "/opt/hams/odoo",
@@ -121,21 +196,7 @@ if not os.path.exists(fullchain):
             "provision_mode": "775",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
-            "post_provision_hooks": [
-                """\
-import os, shutil, compileall
-dest = '{DEST_DIR}'
-pycache = os.path.join(dest, 'opt/hams/pycache'.lstrip('/'))
-daemons = os.path.join(dest, 'opt/hams/daemons'.lstrip('/'))
-if os.path.exists(pycache):
-    for item in os.listdir(pycache):
-        item_path = os.path.join(pycache, item)
-        if os.path.isdir(item_path): shutil.rmtree(item_path, ignore_errors=True)
-        else: os.remove(item_path)
-if os.path.isdir(daemons):
-    compileall.compile_dir(daemons, quiet=1)
-"""
-            ],
+            "post_provision_hooks": [hook_clear_pycache],
         },
         {
             "path": "/opt/hams/spool",
@@ -420,16 +481,7 @@ WantedBy=multi-user.target
             "owner": "root:root",
             "mode": "644",
             "environments": ["prod"],
-            "post_provision_hooks": [
-                """\
-import os, subprocess
-dest = '{DEST_DIR}'
-path = '{PATH}'
-out = os.path.join(dest, 'usr/share/keyrings/odoo-archive-keyring.gpg'.lstrip('/'))
-os.makedirs(os.path.dirname(out), exist_ok=True)
-subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
-"""
-            ],
+            "post_provision_hooks": [hook_install_odoo_key],
         },
         {
             "path": "/tmp/kopia-keyring.key",
@@ -437,16 +489,7 @@ subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
             "owner": "root:root",
             "mode": "644",
             "environments": ["prod"],
-            "post_provision_hooks": [
-                """\
-import os, subprocess
-dest = '{DEST_DIR}'
-path = '{PATH}'
-out = os.path.join(dest, 'usr/share/keyrings/kopia-keyring.gpg'.lstrip('/'))
-os.makedirs(os.path.dirname(out), exist_ok=True)
-subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
-"""
-            ],
+            "post_provision_hooks": [hook_install_kopia_key],
         },
         {
             "path": "/tmp/cloudflared.deb",
@@ -455,18 +498,7 @@ subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
             "mode": "644",
             "environments": ["prod"],
             "condition_env": "CLOUDFLARE_TUNNEL_TOKEN",
-            "post_provision_hooks": [
-                """\
-import os, subprocess
-path = '{PATH}'
-token = '{CLOUDFLARE_TUNNEL_TOKEN}'
-subprocess.run(['dpkg', '-i', path])
-if token:
-    subprocess.run(['cloudflared', 'service', 'install', token])
-if os.path.exists(path):
-    os.remove(path)
-"""
-            ],
+            "post_provision_hooks": [hook_install_cloudflared],
         },
         {
             "path": "/tmp/PyPDF2-2.12.1.tar.gz",
@@ -474,29 +506,7 @@ if os.path.exists(path):
             "owner": "root:root",
             "mode": "644",
             "environments": ["prod", "test"],
-            "post_provision_hooks": [
-                """\
-import os, tarfile, subprocess, shutil
-dest = '{DEST_DIR}'
-path = '{PATH}'
-if not os.path.exists(path): path = os.path.join(dest, path.lstrip('/'))
-if os.path.exists(path):
-    with tarfile.open(path, 'r:gz') as tar: tar.extractall(os.path.join(dest, 'tmp'))
-pypdf_dir = os.path.join(dest, 'tmp/PyPDF2-2.12.1'.lstrip('/'))
-if os.path.isdir(pypdf_dir):
-    with open(os.path.join(pypdf_dir, 'setup.py'), 'w') as f:
-        f.write('from setuptools import setup, find_packages\\nsetup(name="PyPDF2", version="2.12.1", packages=find_packages(), include_package_data=True, description="A pure-python PDF library")\\n')
-    with open(os.path.join(pypdf_dir, 'stdeb.cfg'), 'w') as f:
-        f.write('[DEFAULT]\\nX-Python3-Version: >= 3.6\\n')
-    subprocess.run(['python3', 'setup.py', '--command-packages=stdeb.command', 'bdist_deb'], cwd=pypdf_dir)
-    deb = os.path.join(pypdf_dir, 'deb_dist', 'python3-pypdf2_2.12.1-1_all.deb')
-    if os.path.exists(deb):
-        subprocess.run(['dpkg', '-i', deb])
-    shutil.rmtree(pypdf_dir, ignore_errors=True)
-if os.path.exists(path):
-    os.remove(path)
-"""
-            ],
+            "post_provision_hooks": [hook_install_pypdf2],
         },
         {
             "src": "{REPO_ROOT}/daemons",
@@ -557,7 +567,8 @@ WorkingDirectory=/opt/hams/daemons/adif_processor
 
 Environment="ODOO_USER=logbook_api_service_internal"
 
-ExecStart=/usr/bin/env bash /opt/hams/daemons/run_daemon.sh /opt/hams/daemons/adif_processor adif_processor.py
+# Execution via Python virtual environment
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/adif_processor/adif_processor.py
 
 Restart=always
 RestartSec=10
@@ -591,13 +602,14 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/br_anatel_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/br_anatel_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 Environment="BR_MIRRORS=https://data.hamradiodata.example/br/callbook.csv,https://mirror2.example.com/br_callsigns.csv"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/br_anatel_sync br_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/br_anatel_sync/br_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -644,13 +656,14 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/de_bnetza_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/de_bnetza_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 Environment="DE_MIRRORS=https://afu.darc.de/bnetza-rufzeichenliste.csv,https://data.hamradiodata.example/de/Rufzeichenliste_AFU.csv"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/de_bnetza_sync de_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/de_bnetza_sync/de_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -698,14 +711,15 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/dx_firehose
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/dx_firehose
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="WS_PORT=8765"
 
 LimitNOFILE=65535
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/dx_firehose dx_firehose.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/dx_firehose/dx_firehose.py
 
 Restart=always
 RestartSec=10
@@ -739,14 +753,14 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/fcc_uls_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/fcc_uls_sync
 
 # Odoo JSON2-RPC Credentials
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 
-# Execution via Debian-compliant venv wrapper
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/fcc_uls_sync fcc_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/fcc_uls_sync/fcc_sync.py
 
 # Resiliency
 Restart=always
@@ -780,12 +794,13 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/ham_dx_daemon
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/ham_dx_daemon
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dx_daemon_service"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/ham_dx_daemon dx_daemon.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/ham_dx_daemon/dx_daemon.py
 
 Restart=always
 RestartSec=10
@@ -819,14 +834,14 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/ised_canada_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/ised_canada_sync
 
 # Odoo JSON2-RPC Credentials
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 
-# Execution via Debian-compliant venv wrapper
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/ised_canada_sync ised_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/ised_canada_sync/ised_sync.py
 
 # Resiliency
 Restart=always
@@ -865,8 +880,8 @@ WorkingDirectory=/opt/hams/daemons/ncvec_sync
 
 Environment="ODOO_USER=captcha_service_internal"
 
-# Execution via Debian-compliant venv wrapper
-ExecStart=/usr/bin/env bash /opt/hams/daemons/run_daemon.sh /opt/hams/daemons/ncvec_sync ncvec_sync.py --url "http://www.ncvec.org/downloads/2022-2026 Tech Pool.txt"
+# Execution via Python virtual environment
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/ncvec_sync/ncvec_sync.py --url "http://www.ncvec.org/downloads/2022-2026 Tech Pool.txt"
 
 # Resiliency
 Restart=always
@@ -901,15 +916,15 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/noaa_swpc_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 
-# Execution via Debian-compliant venv wrapper
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/noaa_swpc_sync noaa_swpc_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
 
 # Resiliency
 Restart=always
@@ -943,15 +958,15 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/noaa_swpc_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 
-# Execution via Debian-compliant venv wrapper
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/noaa_swpc_sync noaa_swpc_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
 
 # Resiliency
 Restart=always
@@ -985,13 +1000,14 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/nz_rsm_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/nz_rsm_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 Environment="NZ_MIRRORS=https://data.hamradiodata.example/nz/callbook.csv,https://mirror2.example.com/nz_callsigns.csv"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/nz_rsm_sync nz_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/nz_rsm_sync/nz_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -1038,13 +1054,14 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/uk_ofcom_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/uk_ofcom_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 Environment="UK_MIRRORS=https://data.hamradiodata.example/uk/callbook.csv,https://mirror2.example.com/uk_callsigns.csv"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/uk_ofcom_sync uk_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/uk_ofcom_sync/uk_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -1092,12 +1109,13 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/pdns_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/pdns_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dns_api_service_internal"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/pdns_sync pdns_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/pdns_sync/pdns_sync.py
 
 Restart=always
 RestartSec=10
@@ -1131,13 +1149,14 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/lotw_eqsl_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/lotw_eqsl_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/lotw_eqsl_sync lotw_eqsl_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
 
 Restart=always
 RestartSec=60
@@ -1171,12 +1190,13 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/amsat_tle_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/amsat_tle_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=satellite_sync_service_internal"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/amsat_tle_sync amsat_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/amsat_tle_sync/amsat_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -1224,12 +1244,13 @@ CapabilityBoundingSet=
 Type=simple
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/qrz_scraper
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/qrz_scraper
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=onboarding_service_internal"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/qrz_scraper qrz_scraper.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/qrz_scraper/qrz_scraper.py
 
 Restart=always
 RestartSec=10
@@ -1263,13 +1284,14 @@ CapabilityBoundingSet=
 Type=oneshot
 User=bruce
 Group=bruce
-WorkingDirectory=/home/bruce/hams_private_primary/daemons/au_acma_sync
+WorkingDirectory=/home/bruce/workspace/hams_com/daemons/au_acma_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=fcc_sync_service"
 Environment="AU_MIRRORS=https://data.hamradiodata.example/au/callbook.csv,https://mirror2.example.com/au_callsigns.csv"
 
-ExecStart=/usr/bin/env bash /home/bruce/hams_private_primary/daemons/run_daemon.sh /home/bruce/hams_private_primary/daemons/au_acma_sync au_sync.py
+# Execution via Python virtual environment
+ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/au_acma_sync/au_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -1300,7 +1322,7 @@ WantedBy=timers.target
     ],
     "addon_repos": [
         "hams_community",
-        "hams_private_primary",
+        "hams_com",
         "hams_private_secondary",
         "hams_private_tertiary",
     ],
@@ -1429,19 +1451,12 @@ def execute_hooks(environment, run_cmd_func, env_vars=None, dest_dir=""):
     if dest_dir and dest_dir.endswith("/"):
         dest_dir = dest_dir[:-1]
 
-    fmt_vars = {}
-    if env_vars:
-        fmt_vars.update(env_vars)
-    fmt_vars["DEST_DIR"] = dest_dir
+    env_vars = env_vars or {}
 
     for d in MANIFEST["directories"]:
         if environment in d["environments"] and "post_provision_hooks" in d:
             for hook in d["post_provision_hooks"]:
-                try:
-                    cmd_str = hook.format(**fmt_vars)
-                except KeyError:
-                    cmd_str = hook
-                run_cmd_func([sys.executable, "-c", cmd_str], env=env_vars)
+                hook(env_vars, dest_dir, d["path"], run_cmd_func)
 
 
 def apply_production_directories(run_cmd_func, environment="prod", dest_dir=""):
@@ -1451,17 +1466,41 @@ def apply_production_directories(run_cmd_func, environment="prod", dest_dir=""):
             if dest_dir:
                 path = os.path.join(dest_dir, path.lstrip("/"))
             owner = d["owner"]
-            mode = d["provision_mode"]
+            user, group = owner.split(":")
+            mode = int(d["provision_mode"], 8)
 
-            run_cmd_func(["mkdir", "-p", path])
-            run_cmd_func(["chown", "-R", owner, path])
-            run_cmd_func(["chmod", "-R", mode, path])
+            os.makedirs(path, mode=mode, exist_ok=True)
+
+            try:
+                uid = pwd.getpwnam(user).pw_uid
+                gid = grp.getgrnam(group).gr_gid
+                os.chown(path, uid, gid)
+                os.chmod(path, mode)
+
+                # Apply recursive permission enforcement via pure Python
+                for root, dirs, files in os.walk(path):
+                    for item in dirs + files:
+                        item_path = os.path.join(root, item)
+                        try:
+                            os.chown(item_path, uid, gid)
+                            os.chmod(item_path, mode)
+                        except OSError:
+                            pass
+            except KeyError:
+                _logger.warning("User/Group %s not found on host. Skipping chown for %s", owner, path)
 
 
 def write_env_files(base_etc_dir, env_vars, run_cmd_func, dest_dir=""):
     if dest_dir:
         base_etc_dir = os.path.join(dest_dir, base_etc_dir.lstrip("/"))
-    run_cmd_func(["mkdir", "-p", base_etc_dir])
+    os.makedirs(base_etc_dir, exist_ok=True)
+
+    try:
+        uid = pwd.getpwnam("root").pw_uid
+        gid = grp.getgrnam("root").gr_gid
+    except KeyError:
+        uid, gid = -1, -1
+
     for filename, keys in MANIFEST["env_groups"].items():
         filepath = os.path.join(base_etc_dir, filename)
         content = ""
@@ -1474,8 +1513,9 @@ def write_env_files(base_etc_dir, env_vars, run_cmd_func, dest_dir=""):
         with open(fd, "w", encoding="utf-8") as f:
             f.write(content)
 
-        run_cmd_func(["chmod", "400", filepath])
-        run_cmd_func(["chown", "root:root", filepath])
+        os.chmod(filepath, 0o400)
+        if uid != -1:
+            os.chown(filepath, uid, gid)
 
 
 def provision_apt_packages(run_cmd_func, environment="prod"):
@@ -1518,11 +1558,22 @@ def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir
                     os.path.join(item_path, "__manifest__.py")
                 ):
                     target = os.path.join(custom_addons_dir, item)
-                    run_cmd_func(["/bin/bash", "-c", f"rm -rf {target}"])
-                    run_cmd_func(["mkdir", "-p", target])
-                    run_cmd_func(["cp", "-a", f"{item_path}/.", target])
+                    shutil.rmtree(target, ignore_errors=True)
+                    os.makedirs(target, exist_ok=True)
+                    shutil.copytree(item_path, target, dirs_exist_ok=True)
 
-    run_cmd_func(["chown", "-R", "odoo:odoo", custom_addons_dir])
+    try:
+        uid = pwd.getpwnam("odoo").pw_uid
+        gid = grp.getgrnam("odoo").gr_gid
+        for root, dirs, files in os.walk(custom_addons_dir):
+            for item in [root] + dirs + files:
+                target_path = os.path.join(root, item) if item != root else root
+                try:
+                    os.chown(target_path, uid, gid)
+                except OSError:
+                    pass
+    except KeyError:
+        pass
 
 
 def provision_python_venvs(run_cmd_func, environment="prod", dest_dir=""):
@@ -1598,9 +1649,11 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
             except KeyError:
                 pass
             if os.path.exists(src):
-                if not os.path.exists(path):
-                    os.makedirs(path, exist_ok=True)
-                run_cmd_func(["cp", "-a", src, path])
+                if os.path.isdir(src):
+                    shutil.copytree(src, path, dirs_exist_ok=True)
+                else:
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    shutil.copy2(src, path)
         elif url:
             try:
                 if (
@@ -1646,28 +1699,35 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                 f.write(content)
 
         if "mode" in file_spec:
+            mode = int(file_spec["mode"], 8)
             if os.path.isdir(path):
-                run_cmd_func(["chmod", "-R", file_spec["mode"], path])
+                for root, dirs, files in os.walk(path):
+                    for item in [root] + dirs + files:
+                        target = os.path.join(root, item) if item != root else root
+                        try:
+                            os.chmod(target, mode)
+                        except OSError: pass
             else:
-                run_cmd_func(["chmod", file_spec["mode"], path])
+                os.chmod(path, mode)
         if "owner" in file_spec:
-            if os.path.isdir(path):
-                run_cmd_func(["chown", "-R", file_spec["owner"], path])
-            else:
-                run_cmd_func(["chown", file_spec["owner"], path])
+            try:
+                user, group = file_spec["owner"].split(":")
+                uid = pwd.getpwnam(user).pw_uid
+                gid = grp.getgrnam(group).gr_gid
+                if os.path.isdir(path):
+                    for root, dirs, files in os.walk(path):
+                        for item in [root] + dirs + files:
+                            target = os.path.join(root, item) if item != root else root
+                            try:
+                                os.chown(target, uid, gid)
+                            except OSError: pass
+                else:
+                    os.chown(path, uid, gid)
+            except KeyError: pass
 
         if "post_provision_hooks" in file_spec:
-            fmt_vars = {}
-            if env_vars:
-                fmt_vars.update(env_vars)
-            fmt_vars["DEST_DIR"] = dest_dir
-            fmt_vars["PATH"] = path
             for hook in file_spec["post_provision_hooks"]:
-                try:
-                    cmd_str = hook.format(**fmt_vars)
-                except KeyError:
-                    cmd_str = hook
-                run_cmd_func([sys.executable, "-c", cmd_str])
+                hook(env_vars or {}, dest_dir, path, run_cmd_func)
 
 
 def generate_odoo_override_conf(odoo_conf_path):
