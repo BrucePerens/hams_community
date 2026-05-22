@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("backup_dashboard_tour", {
     url: "/odoo",
@@ -48,18 +49,8 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             trigger: 'div[name="target_path"] input, input[id="target_path"]',
             run: "edit /var/lib/odoo/backups/tour_repo",
             content: "Enter target path",
-        },
-        {
-            trigger: ".o_form_button_save",
-            content: "Save configuration",
-            run: "click",
-        },
-        {
-            trigger: ".o_breadcrumb, .o_form_button_create",
-            content: "Verify saved",
-            run: () => {},
         }
-    ],
+    ].concat(TourUtils.safeSave()),
 });
 
 // # Tests [@ANCHOR: backup_dashboard_tour]

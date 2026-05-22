@@ -42,7 +42,6 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
         {
             trigger: 'div[name="is_service_account"] input',
             run: 'click',
-        },
-        ...TourUtils.safeSave()
-    ],
+        }
+    ].concat(TourUtils.safeSave()),
 });

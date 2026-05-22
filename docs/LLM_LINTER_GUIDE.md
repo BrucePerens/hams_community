@@ -75,7 +75,7 @@ If testing background loop functions, you MUST conditionally bypass commits usin
 
 * **Top of File Requirement:** All Python imports MUST be at the top of the file.
 The linters enforce Flake8 rule `E402`.
-* **Local Imports Banned:** Local imports (imports inside functions, methods, or classes) are completely banned.
+* **Local Imports Banned:** Local Imports (imports inside functions, methods, or classes) are completely banned.
 * **Circular Dependency Bypass:** The use of `# noqa` to bypass local import restrictions or any other linter rules is strictly forbidden.
 Refactor architecture to avoid circular dependencies instead of using inline imports.
 **EXCEPTION (The E402 Daemon Rule):** The strict ban on `# noqa` has one explicit exception.
@@ -178,11 +178,14 @@ Using a manual `run` step with `document.location.href = ...` to start the tour 
 * **Hash-Based Routing Ban:** Odoo 19 deprecated hash-based routes (e.g., `/web#...`) and forcefully redirects them to the Discuss app (`/odoo/discuss`). You MUST NOT use `/web#...` in tour URLs, `start_tour` targets, or window navigation. Use modern query parameter routing instead (e.g., `/odoo?action=...&id=...`).
 * **The /web/ Asset & Login Mandate:** While general routing has moved to `/odoo`, core static assets (`/web/assets/`), images (`/web/image`), and the authentication endpoint (`/web/login`) MUST remain under the `/web` path. You are strictly FORBIDDEN from refactoring these specific paths to `/odoo`. The Cloudflare and Caching modules rely on `/web/assets/` for edge caching. If necessary, use `# burn-ignore-route` to bypass linters for these valid exceptions.
 * **Dirty Form Crash Prevention:** Tours MUST NEVER manually click the save button (`.o_form_button_save`) and immediately end or navigate away.
-You MUST spread the `...TourUtils.safeSave()` macro into the step array to force a DOM blur and wait for the `.o_form_button_create` state.
+You MUST append the `.concat(TourUtils.safeSave())` macro to the step array to force a DOM blur and wait for the `.o_form_button_create` state.
 Tours finishing with dirty forms cause asynchronous network requests that corrupt subsequent tests.
+* **Tour Spread Operator Minifier Crash:** Using the ES6 spread operator (`...TourUtils.safeSave()`) inside tour step arrays is strictly banned. Odoo's `rjsmin` asset minifier incorrectly parses it and throws an `UncaughtSyntaxError: Unexpected token ':'` in the headless browser. You MUST use `.concat(TourUtils.safeSave())` instead.
+* **Jules VM Latency Protection:** In severely resource-constrained environments, you MUST explicitly wait for network operations to finish. Use `.concat(TourUtils.waitForRPC())` before ending tests or navigating away from complex views. Raw clicks on `.o_form_button_save` are strictly prohibited; you MUST use `.concat(TourUtils.safeSave())` to guarantee RPC resolution.
 * **Fatal Tour Assertions:** Using `console.error` for validation in a tour step is banned as it does not fail the CI test runner.
 You MUST `throw new Error("...")` to ensure the test fails.
 * **Tour Input Simulation:** You MUST NOT use `run: "text ..."` to simulate typing. The `text` action does not exist in Odoo 19's `TourStepAutomatic` and will cause a fatal `TypeError: actionHelper is not a function`. You MUST use `run: "edit ..."` instead.
+* **Autocomplete Deprecation:** Odoo 19 removed jQuery autocomplete (`.ui-menu-item`). You MUST target `.o-autocomplete--dropdown-item` or `.dropdown-item`. Furthermore, standard `edit` actions do not trigger the autocomplete dropdown reliably in headless Chrome; you MUST use `TourUtils.deterministicInput('selector', 'value')` instead of `run: "edit value"` when dealing with relational dropdowns.
 * **Technical Menu Ban:** The Technical menu (`base.menu_custom`) is strictly hidden/removed in this environment. You MUST NOT attempt to click or target `[data-menu-xmlid="base.menu_custom"]` in UI tours.
 </javascript_standards>
 

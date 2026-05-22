@@ -59,12 +59,12 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             content: "Input SEO Meta Description",
             trigger: '.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]',
             run: 'edit SEO Description',
-        },
-        ...TourUtils.safeSave('.o_form_button_save, .o_form_button_check', '.o_form_saved, .o_form_button_create'),
+        }
+    ].concat(TourUtils.safeSave('.o_form_button_save, .o_form_button_check', '.o_form_saved, .o_form_button_create')).concat([
         {
             content: "Go back to list to close the form",
             trigger: 'button[data-menu-xmlid="base.menu_users"]',
             run: 'click',
         }
-    ],
+    ]),
 });

@@ -69,7 +69,20 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
     """
     Base class for standard HTTP/UI Tour tests enforcing safe patching.
     """
-    pass
+    def start_tour(self, *args, **kwargs):
+        try:
+            super().start_tour(*args, **kwargs)
+        except Exception as e:  # audit-ignore-catch-all
+            _logger.error("\n=== TOUR FAILED OR HUNG. DUMPING COMPILED ASSETS ===")
+            try:
+                bundle = self.env['ir.qweb']._get_asset_bundle('web.assets_tests').js()
+                dump_path = '/tmp/failed_tour_bundle.js'
+                with open(dump_path, 'w') as f:
+                    f.write(bundle)
+                _logger.error(f"Dumped compiled JS bundle to {dump_path} to diagnose UncaughtSyntaxError issues.")
+            except Exception as inner_e:  # audit-ignore-catch-all
+                _logger.error(f"Could not dump bundle: {inner_e}")
+            raise e
 
 
 class HamsIntegrationCase(HamsHttpCase):

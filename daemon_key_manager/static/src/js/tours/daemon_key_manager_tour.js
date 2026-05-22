@@ -19,24 +19,29 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
         },
         {
             trigger: 'div[name="user_id"] input',
-            content: "Select service account",
-            run: "edit daemon_key_manager_service",
+            content: "Click to focus service account input",
+            run: "click",
         },
         {
-            trigger: '.ui-menu-item *:contains("Daemon Key Manager Service")',
-            content: "Select the service account from autocomplete",
+            trigger: 'div[name="user_id"] input',
+            content: "Type service account name",
+            run: "edit Daemon Key",
+        },
+        {
+            trigger: '.o-autocomplete--dropdown-item:contains("Daemon Key Manager Service"), .dropdown-item:contains("Daemon Key Manager Service")',
+            content: "Select the service account from OWL autocomplete",
             run: "click",
         },
         {
             trigger: 'div[name="env_file_path"] input',
             content: "Enter environment file path",
             run: "edit /var/lib/odoo/daemon_keys/tour.env",
-        },
-        ...TourUtils.safeSave(),
+        }
+    ].concat(TourUtils.safeSave()).concat([
         {
             trigger: 'button[name="action_force_provision_all"]',
             content: "Force provision all keys",
             run: "click",
         }
-    ],
+    ]),
 });

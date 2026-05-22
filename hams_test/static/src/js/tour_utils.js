@@ -149,6 +149,52 @@ export const TourUtils = {
     },
 
     /**
+     * Pauses the tour until the network ledger is quiet, guaranteeing no pending backend operations
+     * are mutating the DOM. Vital for severely constrained environments like the Jules VM.
+     */
+    waitForRPC: function () {
+        return {
+            content: "[MACRO] Wait for all pending RPCs to resolve (Jules VM Latency Protection)",
+            trigger: 'body',
+            run: function () {
+                return new Promise(function (resolve, reject) {
+                    let elapsed = 0;
+                    const interval = setInterval(function () {
+                        if (!window._pendingRPCs || window._pendingRPCs.size === 0) {
+                            clearInterval(interval);
+                            let overlay = document.getElementById('tour_rpc_overlay');
+                            if (overlay) overlay.remove();
+                            resolve();
+                        } else {
+                            elapsed++;
+                            let msg = "[TourUtils] Jules VM Latency Shield | Elapsed: " + elapsed + "s | Waiting for " + window._pendingRPCs.size + " pending network request(s)...";
+                            console.log(msg);
+
+                            let overlay = document.getElementById('tour_rpc_overlay');
+                            if (!overlay) {
+                                overlay = document.createElement('div');
+                                overlay.id = 'tour_rpc_overlay';
+                                overlay.style = 'position:fixed; top:10px; right:10px; z-index:999999; background:rgba(128,0,128,0.9); color:white; padding:15px; font-weight:bold; pointer-events:none; font-family:sans-serif; border-radius:5px;';
+                                document.body.appendChild(overlay);
+                            }
+                            overlay.textContent = msg;
+
+                            if (elapsed >= 120) {
+                                clearInterval(interval);
+                                const rpcList = Array.from(window._pendingRPCs).join(', ');
+                                const errorMsg = "FAILED: RPC requests failed to resolve after 120s! Stuck on: " + rpcList;
+                                console.error(errorMsg);
+                                if (overlay) overlay.remove();
+                                reject(new Error(errorMsg));
+                            }
+                        }
+                    }, 1000);
+                });
+            }
+        };
+    },
+
+    /**
      * Pauses the tour until a specific DOM element appears and is visible.
      * Useful for bridging Owl asynchronous rendering gaps and intermittent timing failures.
      */
@@ -158,16 +204,13 @@ export const TourUtils = {
             content: "[MACRO] Wait for DOM element: " + (description || trigger),
             trigger: 'body', // SAFE TRIGGER: Protects parser from SyntaxError timeouts
             run: function () {
-                return new Promise(function (resolve) {
+                return new Promise(function (resolve, reject) {
                     let elapsed = 0;
                     const isFound = function () {
                         try {
                             if (document.querySelector(trigger)) return true;
-                        } catch (e) {
-                            // SyntaxError gracefully caught
-                        }
+                        } catch (e) {}
 
-                        // Vanilla JS fallback for Odoo's native :contains jQuery selector
                         if (trigger.indexOf(':contains(') !== -1) {
                             let parts = trigger.split(':contains(');
                             let tag = parts[0] || '*';
@@ -188,13 +231,29 @@ export const TourUtils = {
                         elapsed++;
                         if (isFound()) {
                             clearInterval(interval);
+                            let overlay = document.getElementById('tour_wait_overlay');
+                            if (overlay) overlay.remove();
                             resolve();
                         } else {
-                            console.error("[TourUtils] Waiting... Script: Active UI Tour | Elapsed: " + elapsed + "s | Waiting for element: " + (description || trigger));
-                            if (elapsed >= 60) {
+                            let msg = "[TourUtils] Elapsed: " + elapsed + "s | Waiting for element: " + (description || trigger);
+                            console.log(msg); // Log instead of error to bypass silent aborts
+
+                            let overlay = document.getElementById('tour_wait_overlay');
+                            if (!overlay) {
+                                overlay = document.createElement('div');
+                                overlay.id = 'tour_wait_overlay';
+                                overlay.style = 'position:fixed; bottom:10px; right:10px; z-index:999999; background:rgba(255,0,0,0.9); color:white; padding:15px; font-weight:bold; pointer-events:none; font-family:sans-serif; border-radius:5px;';
+                                document.body.appendChild(overlay);
+                            }
+                            overlay.textContent = msg;
+
+                            // EXTENDED TIMEOUT: Reject at 120 seconds to absorb Jules VM CPU throttling
+                            if (elapsed >= 120) {
                                 clearInterval(interval);
-                                console.error("TIMEOUT: Element not found after 60s: " + (description || trigger));
-                                resolve();
+                                const errorMsg = "FAILED: Element not found after 120s: " + (description || trigger);
+                                console.error(errorMsg);
+                                if (overlay) overlay.remove();
+                                reject(new Error(errorMsg));
                             }
                         }
                     }, 1000);
@@ -213,16 +272,13 @@ export const TourUtils = {
             content: "[MACRO] Wait for DOM absence: " + (description || selector),
             trigger: 'body', // SAFE TRIGGER
             run: function () {
-                return new Promise(function (resolve) {
+                return new Promise(function (resolve, reject) {
                     let elapsed = 0;
                     const isAbsent = function () {
                         try {
                             if (document.querySelector(selector)) return false;
-                        } catch (e) {
-                            // SyntaxError gracefully caught
-                        }
+                        } catch (e) {}
 
-                        // Vanilla JS fallback for Odoo's native :contains jQuery selector
                         if (selector.indexOf(':contains(') !== -1) {
                             let parts = selector.split(':contains(');
                             let tag = parts[0] || '*';
@@ -243,13 +299,29 @@ export const TourUtils = {
                         elapsed++;
                         if (isAbsent()) {
                             clearInterval(interval);
+                            let overlay = document.getElementById('tour_absence_overlay');
+                            if (overlay) overlay.remove();
                             resolve();
                         } else {
-                            console.error("[TourUtils] Waiting... Script: Active UI Tour | Elapsed: " + elapsed + "s | Waiting for absence of: " + (description || selector));
-                            if (elapsed >= 60) {
+                            let msg = "[TourUtils] Elapsed: " + elapsed + "s | Waiting for absence of: " + (description || selector);
+                            console.log(msg); // Log instead of error
+
+                            let overlay = document.getElementById('tour_absence_overlay');
+                            if (!overlay) {
+                                overlay = document.createElement('div');
+                                overlay.id = 'tour_absence_overlay';
+                                overlay.style = 'position:fixed; bottom:10px; left:10px; z-index:999999; background:rgba(0,128,255,0.9); color:white; padding:15px; font-weight:bold; pointer-events:none; font-family:sans-serif; border-radius:5px;';
+                                document.body.appendChild(overlay);
+                            }
+                            overlay.textContent = msg;
+
+                            // EXTENDED TIMEOUT: Reject at 120 seconds to absorb Jules VM CPU throttling
+                            if (elapsed >= 120) {
                                 clearInterval(interval);
-                                console.error("TIMEOUT: Element not removed after 60s: " + (description || selector));
-                                resolve();
+                                const errorMsg = "FAILED: Element not removed after 120s: " + (description || selector);
+                                console.error(errorMsg);
+                                if (overlay) overlay.remove();
+                                reject(new Error(errorMsg));
                             }
                         }
                     }, 1000);

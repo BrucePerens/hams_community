@@ -309,17 +309,32 @@ ODOO_ERROR_RULES = [
         re.compile(r"['\"]/web/(?!login\b|signup\b|assets\b|static\b)[^'\"]*['\"]"),
         "CRITICAL ROUTING DEPRECATION: /web is deprecated and forcefully redirected to /odoo in Odoo 19, losing the query parameters! Use /odoo instead.",
     ),
-    (
-        r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"run:\s*['\"`]text\b"),
-        "CRITICAL JS TOUR ACTION: 'text' is not a valid action in Odoo 19. Use 'edit' to simulate text input.",
-    ),
-    (
-        r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"base\.menu_custom"),
-        "CRITICAL TOUR DEPRECATION: The Technical menu (base.menu_custom) is strictly hidden/removed in this environment. Do not target it in UI tours.",
-    ),
-]
+        (
+            r"tour.*\.js$|.*_tour\.js$",
+            re.compile(r"run:\s*['\"`]text\b"),
+            "CRITICAL JS TOUR ACTION: 'text' is not a valid action in Odoo 19. Use 'edit' to simulate text input.",
+        ),
+        (
+            r"tour.*\.js$|.*_tour\.js$",
+            re.compile(r"base\.menu_custom"),
+            "CRITICAL TOUR DEPRECATION: The Technical menu (base.menu_custom) is strictly hidden/removed in this environment. Do not target it in UI tours.",
+        ),
+        (
+            r"tour.*\.js$|.*_tour\.js$",
+            re.compile(r"\.\.\.TourUtils\.safeSave\("),
+            "CRITICAL JS TOUR MINIFIER CRASH: Do not use the ES6 spread operator (...) inside tour step arrays. Odoo's rjsmin minifier corrupts it and throws 'Unexpected token :'. Use .concat(TourUtils.safeSave()) instead.",
+        ),
+        (
+            r"tour.*\.js$|.*_tour\.js$",
+            re.compile(r"\.ui-menu-item\b"),
+            "CRITICAL JS TOUR DEPRECATION: jQuery autocomplete (.ui-menu-item) is removed in Odoo 19. Target '.o-autocomplete--dropdown-item' or '.dropdown-item' instead, and ensure you use TourUtils.deterministicInput() instead of 'edit' to trigger the dropdown.",
+        ),
+        (
+            r"tour.*\.js$|.*_tour\.js$",
+            re.compile(r"trigger:\s*['\"`]\.o_form_button_save['\"`]"),
+            "CRITICAL JS TOUR LATENCY: Raw triggers on the save button are banned. You MUST use '.concat(TourUtils.safeSave())' to ensure the DOM blur and RPC resolution complete safely before the test runner tears down the environment.",
+        ),
+    ]
 
 WARNING_RULES = []
 MULTILINE_WARNING_RULES = []
@@ -1613,6 +1628,12 @@ def scan_file(filepath, is_odoo_module=False):
                 errors_found.append(
                     "CRITICAL TOUR TIMING TRAP: Tour targets a modal or dialog but does not use 'TourUtils.waitForElement' or 'TourUtils.waitForAbsence'. You MUST use the wait macros from '@hams_test/js/tour_utils' to prevent intermittent headless browser failures caused by Owl's asynchronous rendering delays."
                 )
+
+        # Enforce TourUtils for overall Jules VM latency protection
+        if "TourUtils" not in content:
+            warnings_found.append(
+                "Line 1: [%AUDIT] JULES VM LATENCY: Tour does not import TourUtils. In resource-constrained environments, you should utilize TourUtils.waitForRPC(), TourUtils.safeSave(), or TourUtils.waitForElement() to prevent race conditions."
+            )
 
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content

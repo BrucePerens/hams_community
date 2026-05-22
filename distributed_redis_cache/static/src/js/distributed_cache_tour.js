@@ -1,5 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
     url: "/odoo",
@@ -27,13 +28,10 @@ registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
             trigger: '.o_notification_manager',
             content: "Wait for status notification",
         },
+        TourUtils.deterministicInput('.o_field_widget[name="model_id"] input', 'User'),
         {
-            trigger: '.o_field_widget[name="model_id"] input',
-            content: "Select a model",
-            run: "edit User",
-        },
-        {
-            trigger: '.dropdown-item:contains("User"), .ui-menu-item *:contains("User")',
+            trigger: '.dropdown-item:contains("User"), .o-autocomplete--dropdown-item:contains("User")',
+            content: "Select the model from autocomplete",
             run: "click",
         },
         {

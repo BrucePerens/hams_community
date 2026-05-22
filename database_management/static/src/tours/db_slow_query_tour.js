@@ -1,5 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("db_management_slow_query_tour", { // # Verified by [@ANCHOR: test_db_slow_query_tour]
     url: "/odoo?debug=1",
@@ -20,9 +21,7 @@ registry.category("web_tour.tours").add("db_management_slow_query_tour", { // # 
             trigger: '[data-menu-xmlid="database_management.menu_db_queries"]',
             run: 'click',
         },
-        {
-            trigger: '.o_list_table',
-            run: () => {},
-        }
+        TourUtils.waitForElement('.o_list_table', 'Wait for slow query table to render'),
+        TourUtils.waitForRPC()
     ],
 });

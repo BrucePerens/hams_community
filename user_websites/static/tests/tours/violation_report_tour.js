@@ -1,4 +1,6 @@
+/** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 // Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
 registry.category("web_tour.tours").add("test_tour_violation_report", {
@@ -28,6 +30,8 @@ registry.category("web_tour.tours").add("test_tour_violation_report", {
             trigger: 'button[type="submit"].btn-danger',
             content: "Submit violation ticket",
             run: "click",
-        }
+        },
+        TourUtils.waitForAbsence('.modal.show', 'Wait for submission modal to close'),
+        TourUtils.waitForRPC()
     ]
 });

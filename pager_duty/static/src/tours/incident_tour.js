@@ -45,7 +45,6 @@ registry.category("web_tour.tours").add("pager_duty_incident_tour", {
             trigger: '[name="description"] textarea',
             content: "Enter description",
             run: "edit This is a manual test incident.",
-        },
-        ...TourUtils.safeSave(),
-    ],
+        }
+    ].concat(TourUtils.safeSave()),
 });

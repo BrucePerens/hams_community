@@ -1,5 +1,6 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@hams_test/js/tour_utils";
 
 registry.category("web_tour.tours").add("caching_service_worker_check", {
     url: "/?debug=1",
@@ -29,9 +30,7 @@ registry.category("web_tour.tours").add("caching_service_worker_check", {
                 }
             },
         },
-        {
-            content: "Wait for SW status to be updated",
-            trigger: "body.sw-registered",
-        }
+        TourUtils.waitForElement('body.sw-registered', 'Wait for SW status to be updated'),
+        TourUtils.waitForRPC()
     ],
 });

@@ -97,3 +97,56 @@ setInterval(() => {
         }
     }
 }, 1000);
+
+// 5. Global Tour Watchdog (Hang Detector)
+window._hamsTourWatchdog = {
+    lastActivity: Date.now(),
+    lastLog: "Initialized",
+    hanging: false
+};
+
+const ogLog = console.log;
+console.log = function(...args) {
+    ogLog.apply(console, args);
+    const msg = args.map(a => typeof a === 'string' ? a : (a && a.message ? a.message : '')).join(' ');
+    // Intercept native Odoo tour progression logs
+    if (msg.toLowerCase().includes('tour') || msg.toLowerCase().includes('step') || msg.toLowerCase().includes('trigger')) {
+        window._hamsTourWatchdog.lastActivity = Date.now();
+        window._hamsTourWatchdog.lastLog = msg;
+        window._hamsTourWatchdog.hanging = false;
+
+        let hangOverlay = document.getElementById('tour_hang_overlay');
+        if (hangOverlay) hangOverlay.remove();
+    }
+};
+
+setInterval(() => {
+    const idleTime = Date.now() - window._hamsTourWatchdog.lastActivity;
+    // Trigger alarm if the tour pipeline goes completely silent for 6 seconds
+    if (idleTime > 6000 && idleTime < 60000 && !window._hamsTourWatchdog.hanging) {
+        window._hamsTourWatchdog.hanging = true;
+
+        const alarmMsg = `[WATCHDOG ALARM] Tour idle for ${Math.floor(idleTime/1000)}s! Last activity: ${window._hamsTourWatchdog.lastLog}`;
+
+        originalConsoleError.call(console, alarmMsg);
+        ogLog.call(console, alarmMsg);
+
+        let overlay = document.getElementById('tour_hang_overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'tour_hang_overlay';
+            overlay.style = 'position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:999999; background:rgba(255,165,0,0.9); color:black; padding:15px; font-weight:bold; font-size:16px; border:2px solid red; pointer-events:none; font-family:sans-serif; text-align:center;';
+            document.body.appendChild(overlay);
+        }
+        overlay.textContent = alarmMsg;
+
+        // Force the DOM skeleton dump so Python test runner captures the frozen state
+        if (!window._domDumped) {
+            let currentHash = document.location.hash || document.location.pathname;
+            let rpcList = Array.from(window._pendingRPCs).join(', ') || 'None';
+            let stateHeader = `\n========== UI STATE SUMMARY (HANG DETECTED) ==========\nURL/Hash: ${currentHash}\nPending RPCs: ${rpcList}\n======================================================\n`;
+            let skeleton = buildInteractableSkeleton(document.body).replace(/\s{2,}/g, ' ');
+            originalConsoleError.call(console, stateHeader + "\n========== INTERACTABLE DOM SKELETON ==========\n" + skeleton + "\n===============================================\n");
+        }
+    }
+}, 2000);

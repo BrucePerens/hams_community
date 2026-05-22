@@ -20,12 +20,8 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             trigger: 'div[name="name"] input',
             content: "Fill in the ticket subject",
             run: "edit Emergency Core Router Failure",
-        },
-        {
-            trigger: '.o_form_button_save',
-            content: "Save the ticket",
-            run: "click",
-        },
+        }
+    ].concat(TourUtils.safeSave()).concat([
         {
             trigger: 'button[name="action_shift_handoff"]',
             content: "Initiate the Shift Handoff procedure",
@@ -42,5 +38,5 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             content: "Confirm the handoff to transfer ownership",
             run: "click",
         }
-    ],
+    ]),
 });

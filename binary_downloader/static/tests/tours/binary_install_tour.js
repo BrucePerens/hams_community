@@ -28,8 +28,8 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             content: "Provide the exact SHA256 hash for the string '1234'",
             trigger: 'div[name="checksum"] input',
             run: 'edit 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
-        },
-        ...TourUtils.safeSave(),
+        }
+    ].concat(TourUtils.safeSave()).concat([
         {
             content: "Click Install Now using immutable name attribute",
             trigger: 'button[name="action_install"]',
@@ -40,5 +40,5 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             trigger: '.o_notification:contains("Success")',
             run: () => {},
         }
-    ],
+    ]),
 });

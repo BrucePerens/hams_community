@@ -10,7 +10,7 @@ def post_init_hook(env):
     Hook executed upon module installation.
     """
     env_svc = env["zero_sudo.security.utils"]._get_service_env(
-        "user_websites.user_user_websites_service_account"
+        "user_websites.user_websites_service_account"
     )
 
     user_group = env_svc.ref(

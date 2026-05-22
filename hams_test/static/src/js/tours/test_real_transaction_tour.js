@@ -16,7 +16,6 @@ registry.category("web_tour.tours").add("test_real_transaction_tour", {
             trigger: ".o_tour_trigger_noisy_table_name_form input",
             content: "Enter table name",
             run: "edit tour_test_table",
-        },
-        ...TourUtils.safeSave(),
-    ],
+        }
+    ].concat(TourUtils.safeSave()),
 });
