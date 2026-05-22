@@ -6,6 +6,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("pager_duty_incident_tour", {
     url: "/odoo?debug=1",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_navbar_apps_menu button',
             content: "Open apps menu",
@@ -36,11 +37,7 @@ registry.category("web_tour.tours").add("pager_duty_incident_tour", {
             content: "Open severity dropdown",
             run: "click",
         },
-        {
-            trigger: '.o_select_menu_item span:contains("High"), .o_select_menu_item:contains("High")',
-            content: "Select High severity",
-            run: "click",
-        },
+        TourUtils.clickElement('.o_select_menu_item span:contains("High"), .o_select_menu_item:contains("High")', "Select High severity"),
         {
             trigger: '[name="description"] textarea',
             content: "Enter description",

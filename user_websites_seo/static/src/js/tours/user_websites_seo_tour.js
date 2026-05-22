@@ -6,6 +6,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("user_websites_seo_tour", {
     url: "/odoo",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         TourUtils.waitForElement('.o_navbar_apps_menu button', 'Wait for Apps Menu Button'),
         {
             trigger: '.o_navbar_apps_menu button',
@@ -37,11 +38,7 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             run: "click",
         },
         TourUtils.waitForElement('td.o_data_cell:contains("SEO UI Test User")', 'Wait for user row to render'),
-        {
-            trigger: 'td.o_data_cell:contains("SEO UI Test User")',
-            content: "Open User Form Directly (Bypass fragile search logic)",
-            run: "click",
-        },
+        TourUtils.clickElement('td.o_data_cell:contains("SEO UI Test User")', "Open User Form Directly (Bypass fragile search logic)"),
         TourUtils.waitForElement('.o_form_sheet a[name="user_websites_seo_settings"]', 'Wait for form sheet and SEO tab to hydrate'),
         {
             content: "Click the SEO Metadata notebook tab injected by our module",
@@ -65,6 +62,7 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             content: "Go back to list to close the form",
             trigger: 'button[data-menu-xmlid="base.menu_users"]',
             run: 'click',
-        }
+        },
+        TourUtils.waitForRPC()
     ]),
 });

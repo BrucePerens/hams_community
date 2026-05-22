@@ -6,6 +6,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("binary_install_tour", {
     url: "/odoo?action=binary_downloader.action_binary_downloader_manifest",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_list_button_add',
             run: 'click',
@@ -17,7 +18,7 @@ registry.category("web_tour.tours").add("binary_install_tour", {
         {
             content: "Provide a valid downloadable URL pointing to the test controller",
             trigger: 'div[name="url"] input',
-            run: () => {
+            run: function () {
                 const input = document.querySelector('div[name="url"] input');
                 input.value = document.location.origin + '/test/dummy_bin';
                 input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -35,10 +36,7 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             trigger: 'button[name="action_install"]',
             run: 'click',
         },
-        {
-            content: "Wait for the success notification to ensure the RPC resolved",
-            trigger: '.o_notification:contains("Success")',
-            run: () => {},
-        }
+        TourUtils.waitForElement('.o_notification:contains("Success")', "Wait for the success notification to ensure the RPC resolved"),
+        TourUtils.waitForRPC()
     ]),
 });

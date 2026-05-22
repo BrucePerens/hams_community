@@ -281,8 +281,8 @@ ODOO_ERROR_RULES = [
     ),
     (
         r"tour.*\.js$|.*_tour\.js$",
-        re.compile(r"trigger:\s*['\"`].*?(?:a|button):contains.*?['\"`]"),
-        "FRAGILE TOUR TRIGGER: 'a:contains()' and 'button:contains()' are brittle. Use '*:contains()' or '[data-menu-xmlid=...]' instead.",
+        re.compile(r"trigger:\s*['\"`].*?:contains.*?['\"`]"),
+        "CRITICAL JS TOUR SYNTAX: Odoo 19 native triggers use querySelectorAll, which crashes instantly on jQuery's ':contains' pseudo-selector. You MUST use 'TourUtils.clickElement' or 'TourUtils.waitForElement' instead.",
     ),
     (
         r"tour.*\.js$|.*_tour\.js$",
@@ -333,6 +333,11 @@ ODOO_ERROR_RULES = [
             r"tour.*\.js$|.*_tour\.js$",
             re.compile(r"trigger:\s*['\"`]\.o_form_button_save['\"`]"),
             "CRITICAL JS TOUR LATENCY: Raw triggers on the save button are banned. You MUST use '.concat(TourUtils.safeSave())' to ensure the DOM blur and RPC resolution complete safely before the test runner tears down the environment.",
+        ),
+        (
+            r"test_.*\.py$",
+            re.compile(r"class\s+[a-zA-Z0-9_]+\s*\((?:HttpCase|TransactionCase)\):"),
+            "CRITICAL TEST ARCHITECTURE: Do not inherit directly from Odoo's native HttpCase or TransactionCase. You MUST inherit from HamsHttpCase or HamsTransactionCase to ensure the Process Reaper and latency safeguards are active.",
         ),
     ]
 
@@ -1617,17 +1622,22 @@ def scan_file(filepath, is_odoo_module=False):
 
     if is_odoo_module and filename.endswith(".js") and "web_tour.tours" in content:
         FOUND_TOURS.append(filepath)
-        if "trigger:" not in content:
+        if "trigger:" not in content and not re.search(r"TourUtils\.(waitForElement|waitForAbsence|clickAndUnload|deterministicInput|safeSave|waitForRPC)", content):
             errors_found.append(
-                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain trigger:."
+                "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain 'trigger:' or a valid 'TourUtils' macro."
             )
 
         # Enforce TourUtils wait macros for modal/dialog interactions
         if re.search(r"trigger:\s*['\"`].*?(?:\.modal|\.o_dialog).*?['\"`]", content):
             if "TourUtils.waitForElement" not in content and "TourUtils.waitForAbsence" not in content:
                 errors_found.append(
-                    "CRITICAL TOUR TIMING TRAP: Tour targets a modal or dialog but does not use 'TourUtils.waitForElement' or 'TourUtils.waitForAbsence'. You MUST use the wait macros from '@hams_test/js/tour_utils' to prevent intermittent headless browser failures caused by Owl's asynchronous rendering delays."
+                    "CRITICAL TOUR TIMING TRAP: Tour targets a modal or dialog but does not use 'TourUtils.waitForElement' or 'TourUtils.waitForAbsence'."
                 )
+
+        if "TourUtils" not in content:
+            warnings_found.append(
+                "Line 1: [%AUDIT] JULES VM LATENCY: Tour does not import TourUtils. Use TourUtils to prevent race conditions."
+            )
 
         # Enforce TourUtils for overall Jules VM latency protection
         if "TourUtils" not in content:

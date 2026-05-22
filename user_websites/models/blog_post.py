@@ -101,7 +101,7 @@ class BlogPost(models.Model):
                     if k not in allowed:
                         del vals[k]
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
+            "user_websites.user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
@@ -134,7 +134,7 @@ class BlogPost(models.Model):
                 member_map = {}
                 if group_ids:
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                        "user_websites.user_user_websites_service_account"
+                        "user_websites.user_websites_service_account"
                     )
                     groups = (
                         self.env["user.websites.group"]
@@ -188,7 +188,7 @@ class BlogPost(models.Model):
         urls_to_invalidate = self._get_blog_urls()
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
+            "user_websites.user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
@@ -213,7 +213,7 @@ class BlogPost(models.Model):
         self._invalidate_cloudflare_cache()
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
+            "user_websites.user_websites_service_account"
         )
         # ADR-0001: All service account mutations must include appropriate context
         self_svc = self.with_user(svc_uid).with_context(
@@ -238,7 +238,7 @@ class BlogPost(models.Model):
         Cron job method to send a weekly email digest.
         """
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_user_websites_service_account"
+            "user_websites.user_websites_service_account"
         )
 
         last_processed_id = int(

@@ -89,7 +89,7 @@ class UserWebsitesGroup(models.Model):
             return False
         svc_uid = override_svc_uid or self.env[
             "zero_sudo.security.utils"
-        ]._get_service_uid("user_websites.user_user_websites_service_account")
+        ]._get_service_uid("user_websites.user_websites_service_account")
         group = (
             self.env["user.websites.group"]
             .with_user(svc_uid)
@@ -130,7 +130,7 @@ class UserWebsitesGroup(models.Model):
 
             try:
                 svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "user_websites.user_user_websites_service_account"
+                    "user_websites.user_websites_service_account"
                 )
                 env_group = self.env["user.websites.group"].with_user(svc_uid)
                 env_user = self.env["res.users"].with_user(svc_uid)
@@ -191,7 +191,7 @@ class UserWebsitesGroup(models.Model):
 
         if groups_to_create_vals:
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "user_websites.user_user_websites_service_account"
+                "user_websites.user_websites_service_account"
             )
             new_odoo_groups = (
                 self.env["res.groups"].with_user(svc_uid).create(groups_to_create_vals)
@@ -246,7 +246,7 @@ class UserWebsitesGroup(models.Model):
                 )
 
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "user_websites.user_user_websites_service_account"
+                "user_websites.user_websites_service_account"
             )
             redirect_env = self.env["website.rewrite"].with_user(svc_uid)
 

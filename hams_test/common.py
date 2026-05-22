@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import psutil
 import logging
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase
@@ -69,6 +70,26 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
     """
     Base class for standard HTTP/UI Tour tests enforcing safe patching.
     """
+    def tearDown(self):
+        # RUTHLESS TEARDOWN V3: Process Tree Annihilation (Linter Compliant)
+        # Chrome is multi-process. Killing the parent orphans the child renderers.
+        if hasattr(self, 'browser') and self.browser:
+            process = getattr(self.browser, '_process', None) or getattr(self.browser, '_chrome_process', None)
+            if process:
+                pid = process.pid
+                try:
+                    parent = psutil.Process(pid)
+                    # recursively kill all child processes (renderers, network, GPU)
+                    for child in parent.children(recursive=True):
+                        child.kill()
+                    parent.kill()
+                    _logger.info(f"Reaper V3: Eradicated Chrome process tree for PID {pid}.")
+                except psutil.NoSuchProcess:
+                    pass
+                except Exception as e:  # audit-ignore-catch-all
+                    _logger.warning(f"Reaper V3: Could not terminate Chrome process tree: {e}")
+        super().tearDown()
+
     def start_tour(self, *args, **kwargs):
         try:
             super().start_tour(*args, **kwargs)
@@ -76,12 +97,27 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             _logger.error("\n=== TOUR FAILED OR HUNG. DUMPING COMPILED ASSETS ===")
             try:
                 bundle = self.env['ir.qweb']._get_asset_bundle('web.assets_tests').js()
-                dump_path = '/tmp/failed_tour_bundle.js'
+                # Bypass Jules VM permission restrictions on /tmp by targeting /var/tmp
+                dump_path = '/var/tmp/failed_tour_bundle.js'
                 with open(dump_path, 'w') as f:
                     f.write(bundle)
-                _logger.error(f"Dumped compiled JS bundle to {dump_path} to diagnose UncaughtSyntaxError issues.")
+                _logger.error(f"Dumped compiled JS bundle to {dump_path}")
+
+                # --- NEW: DOM STATE DUMPING TELEMETRY ---
+                try:
+                    # Extract the live frozen DOM from the headless browser via raw CDP websocket
+                    res = self.browser._websocket.request('Runtime.evaluate', returnByValue=True, expression='document.documentElement.outerHTML')
+                    dom_html = res.get('result', {}).get('value', '<html><body>Failed to extract DOM state from browser process.</body></html>')
+                    dom_path = '/var/tmp/failed_tour_dom.html'
+                    with open(dom_path, 'w', encoding='utf-8') as f:
+                        f.write(dom_html)
+                    _logger.error(f"Dumped frozen DOM state to {dom_path}. Inspect this file locally to see exactly what the browser rendered at the moment of the crash.")
+                except Exception as dom_e:  # audit-ignore-catch-all
+                    _logger.error(f"Telemetry Error: Could not extract DOM state from Chrome DevTools Protocol: {dom_e}")
+                with open('/var/tmp/failed_tour_exception.txt', 'w') as f:
+                    f.write(str(e))
             except Exception as inner_e:  # audit-ignore-catch-all
-                _logger.error(f"Could not dump bundle: {inner_e}")
+                _logger.error(f"Could not dump bundle to /var/tmp: {inner_e}")
             raise e
 
 

@@ -7,6 +7,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("daemon_key_manager_tour", {
     url: "/odoo?action=daemon_key_manager.action_daemon_key_registry",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_list_button_add',
             content: "Create new registry entry",
@@ -27,11 +28,7 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             content: "Type service account name",
             run: "edit Daemon Key",
         },
-        {
-            trigger: '.o-autocomplete--dropdown-item:contains("Daemon Key Manager Service"), .dropdown-item:contains("Daemon Key Manager Service")',
-            content: "Select the service account from OWL autocomplete",
-            run: "click",
-        },
+        TourUtils.clickElement('.o-autocomplete--dropdown-item:contains("Daemon Key Manager Service"), .dropdown-item:contains("Daemon Key Manager Service")', "Select the service account from OWL autocomplete"),
         {
             trigger: 'div[name="env_file_path"] input',
             content: "Enter environment file path",
@@ -42,6 +39,7 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             trigger: 'button[name="action_force_provision_all"]',
             content: "Force provision all keys",
             run: "click",
-        }
+        },
+        TourUtils.waitForRPC()
     ]),
 });

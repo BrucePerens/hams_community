@@ -6,26 +6,19 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("cf_ip_ban_tour", {
     url: "/odoo",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_navbar_apps_menu button',
             run: 'click',
         },
-        {
-            content: "Open App Switcher (if needed) or click Cloudflare Edge",
-            trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")',
-            run: "click"
-        },
+        TourUtils.clickElement('[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")', "Open App Switcher (if needed) or click Cloudflare Edge"),
         {
             content: "Open IP Bans Menu",
             trigger: 'a[data-menu-xmlid="cloudflare.menu_cf_ip_bans"]',
             run: "click"
         },
         TourUtils.waitForElement('tr.o_data_row td:contains("192.168.9.9")', 'Check if ban record exists in the list view'),
-        {
-            content: "Click on the IP Ban record to open form view",
-            trigger: 'tr.o_data_row td:contains("192.168.9.9")',
-            run: "click"
-        },
+        TourUtils.clickElement('tr.o_data_row td:contains("192.168.9.9")', "Click on the IP Ban record to open form view"),
         TourUtils.waitForElement('button[name="action_lift_ban"]', 'Verify Lift Ban button is rendered'),
         TourUtils.waitForRPC()
     ],

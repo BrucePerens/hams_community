@@ -6,6 +6,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("test_tour_violation_report", {
     url: "/",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: 'a[data-bs-target="#reportViolationModal"]',
             content: "Open violation reporting modal",
@@ -16,11 +17,7 @@ registry.category("web_tour.tours").add("test_tour_violation_report", {
             content: "Click to open the custom Odoo 19 select dropdown menu",
             run: "click",
         },
-        {
-            trigger: '.o_select_menu_item:contains("Spam")',
-            content: "Select the specific menu option item",
-            run: "click",
-        },
+        TourUtils.clickElement('.o_select_menu_item:contains("Spam")', "Select the specific menu option item"),
         {
             trigger: 'textarea[name="description"]',
             content: "Provide description notes using correct Odoo 19 input simulator",

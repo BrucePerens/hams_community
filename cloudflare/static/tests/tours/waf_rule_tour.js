@@ -6,16 +6,13 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("cf_waf_rule_tour", {
     url: "/odoo",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             content: "Open Apps Menu",
             trigger: '.o_navbar_apps_menu button',
             run: "click"
         },
-        {
-            content: "Open Cloudflare Edge Menu",
-            trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")',
-            run: "click"
-        },
+        TourUtils.clickElement('[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")', "Open Cloudflare Edge Menu"),
         {
             content: "Open WAF Rules Menu",
             trigger: '[data-menu-xmlid="cloudflare.menu_cf_waf_rules"]',

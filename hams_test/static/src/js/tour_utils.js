@@ -28,6 +28,41 @@ export const TourUtils = {
     },
 
     /**
+     * Safely clicks an element that uses the brittle `:contains(...)` selector without crashing
+     * Odoo's native 'document.querySelectorAll' trigger evaluator.
+     */
+    clickElement: function (selector, description) {
+        return {
+            content: "[MACRO] Click element safely: " + (description || selector),
+            trigger: 'body',
+            run: function () {
+                let selectors = selector.split(',').map(s => s.trim());
+                for (let s of selectors) {
+                    if (s.indexOf(':contains(') !== -1) {
+                        let parts = s.split(':contains(');
+                        let tag = parts[0] || '*';
+                        let text = parts[1].replace(/['")]/g, '');
+                        let elements = Array.prototype.slice.call(document.querySelectorAll(tag));
+                        for (let i = 0; i < elements.length; i++) {
+                            if (elements[i].textContent.indexOf(text) !== -1) {
+                                elements[i].click();
+                                return;
+                            }
+                        }
+                    } else {
+                        let el = document.querySelector(s);
+                        if (el) {
+                            el.click();
+                            return;
+                        }
+                    }
+                }
+                throw new Error("Element not found to click: " + selector);
+            }
+        };
+    },
+
+    /**
      * Silently intercepts and bypasses native blocking dialogs which would otherwise
      * permanently halt the headless browser thread. Alarms are raised upon interception.
      */
@@ -247,7 +282,6 @@ export const TourUtils = {
                             }
                             overlay.textContent = msg;
 
-                            // EXTENDED TIMEOUT: Reject at 120 seconds to absorb Jules VM CPU throttling
                             if (elapsed >= 120) {
                                 clearInterval(interval);
                                 const errorMsg = "FAILED: Element not found after 120s: " + (description || trigger);
@@ -315,7 +349,6 @@ export const TourUtils = {
                             }
                             overlay.textContent = msg;
 
-                            // EXTENDED TIMEOUT: Reject at 120 seconds to absorb Jules VM CPU throttling
                             if (elapsed >= 120) {
                                 clearInterval(interval);
                                 const errorMsg = "FAILED: Element not removed after 120s: " + (description || selector);

@@ -6,6 +6,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("backup_dashboard_tour", {
     url: "/odoo",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_navbar_apps_menu button',
             run: 'click',
@@ -40,11 +41,7 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             content: "Open engine dropdown",
             run: 'click',
         },
-        {
-            trigger: '.o_select_menu_item *:contains("Kopia")',
-            content: "Select Kopia engine value",
-            run: 'click',
-        },
+        TourUtils.clickElement('.o_select_menu_item *:contains("Kopia")', "Select Kopia engine value"),
         {
             trigger: 'div[name="target_path"] input, input[id="target_path"]',
             run: "edit /var/lib/odoo/backups/tour_repo",

@@ -28,7 +28,7 @@ def _async_unpublish_content(db_name, user_ids):
         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
         try:
             env_svc = env["zero_sudo.security.utils"]._get_service_env(
-                "user_websites.user_user_websites_service_account"
+                "user_websites.user_websites_service_account"
             )
 
             while True:
@@ -203,7 +203,7 @@ class ResUsers(models.Model):
 
             try:
                 env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                    "user_websites.user_user_websites_service_account"
+                    "user_websites.user_websites_service_account"
                 )
                 env_user = env_svc["res.users"]
                 env_group = env_svc["user.websites.group"]
@@ -273,7 +273,7 @@ class ResUsers(models.Model):
                 )
             else:
                 env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                    "user_websites.user_user_websites_service_account"
+                    "user_websites.user_websites_service_account"
                 )
                 while True:
                     pages = env_svc["website.page"].search(
@@ -317,7 +317,7 @@ class ResUsers(models.Model):
         # --- 301 Redirect Automation ---
         if "website_slug" in vals:
             env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                "user_websites.user_user_websites_service_account"
+                "user_websites.user_websites_service_account"
             )
             redirect_env = env_svc["website.rewrite"]
 
@@ -383,7 +383,7 @@ class ResUsers(models.Model):
 
         if is_test:
             env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                "user_websites.user_user_websites_service_account"
+                "user_websites.user_websites_service_account"
             )
             pages_batch = env_svc["website.page"].search([("owner_user_id", "=", user_id)], limit=10000)
             pages_data = [{"name": p.name, "url": p.url, "content": p.arch} for p in pages_batch]
@@ -411,7 +411,7 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_websites_service_account")
                         batch = env_svc["website.page"].search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"name": p.name, "url": p.url, "content": p.arch} for p in batch]
                     if not items: break
@@ -424,7 +424,7 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_websites_service_account")
                         batch = env_svc["blog.post"].search([("owner_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"name": b.name, "content": b.content, "published_date": str(b.post_date)} for b in batch]
                     if not items: break
@@ -437,7 +437,7 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_websites_service_account")
                         batch = env_svc["content.violation.report"].search([("reported_by_user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"target_url": r.target_url, "description": r.description, "status": r.state, "submitted_date": str(r.create_date)} for r in batch]
                     if not items: break
@@ -450,7 +450,7 @@ class ResUsers(models.Model):
                 while True:
                     with Registry(db_name).cursor() as cr:
                         env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
-                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_user_websites_service_account")
+                        env_svc = env["zero_sudo.security.utils"]._get_service_env("user_websites.user_websites_service_account")
                         batch = env_svc["content.violation.appeal"].search([("user_id", "=", user_id)], limit=1000, offset=offset)
                         items = [{"reason": a.reason, "status": a.state, "submitted_date": str(a.create_date)} for a in batch]
                     if not items: break
@@ -489,7 +489,7 @@ class ResUsers(models.Model):
         """
         self.ensure_one()
         env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-            "user_websites.user_user_websites_service_account"
+            "user_websites.user_websites_service_account"
         )
 
         # [@ANCHOR: gdpr_sudo_erasure]

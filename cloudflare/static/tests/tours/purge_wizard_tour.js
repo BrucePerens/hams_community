@@ -27,7 +27,13 @@ registry.category("web_tour.tours").add("cf_purge_wizard_tour", {
         },
         {
             content: "Verify notification",
-            trigger: '.o_notification_manager .o_notification:contains("successfully")',
+            trigger: 'body', // SAFE TRIGGER: Bypasses native querySelectorAll :contains crash
+            run: function () {
+                const el = document.querySelector('.o_notification_manager');
+                if (!el || !el.textContent.includes('successfully')) {
+                    throw new Error('Success notification not found.');
+                }
+            },
         }
     ],
 });

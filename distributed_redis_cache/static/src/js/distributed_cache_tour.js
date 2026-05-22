@@ -5,6 +5,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
     url: "/odoo",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_main_navbar',
             content: "Wait for navbar",
@@ -29,19 +30,13 @@ registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
             content: "Wait for status notification",
         },
         TourUtils.deterministicInput('.o_field_widget[name="model_id"] input', 'User'),
-        {
-            trigger: '.dropdown-item:contains("User"), .o-autocomplete--dropdown-item:contains("User")',
-            content: "Select the model from autocomplete",
-            run: "click",
-        },
+        TourUtils.clickElement('.dropdown-item:contains("User"), .o-autocomplete--dropdown-item:contains("User")', "Select the model from autocomplete"),
         {
             trigger: 'button[name="action_invalidate_model_cache"]',
             content: "Invalidate the cache",
             run: "click",
         },
-        {
-            trigger: '.toast-body:contains("Success"), .o_notification_manager *:contains("Success")',
-            content: "Verify success message",
-        }
+        TourUtils.waitForElement('.toast-body:contains("Success"), .o_notification_manager *:contains("Success")', "Verify success message"),
+        TourUtils.waitForRPC()
     ]
 });

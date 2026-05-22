@@ -43,7 +43,7 @@ class SEOMetadataMixin(models.AbstractModel):
                 # ADR-0001: Use with_context(mail_notrack=True)
                 # LLM_EXPERIENCE: NEVER use prefetch_fields=False during .create() or on models without chatter.
                 svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "user_websites.user_user_websites_service_account"
+                    "user_websites.user_websites_service_account"
                 )
                 res = res and super(
                     SEOMetadataMixin,

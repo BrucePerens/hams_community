@@ -5,6 +5,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verified by [@ANCHOR: test_db_bloat_tour]
     url: "/odoo?debug=1",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
         {
             trigger: '.o_navbar_apps_menu button',
             run: 'click',
@@ -26,10 +27,7 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             trigger: '.o_list_table .o_data_row .o_list_record_selector input',
             run: 'click',
         },
-        {
-            trigger: '*:contains("Vacuum Analyze Selected")',
-            run: 'click',
-        },
+        TourUtils.clickElement('*:contains("Vacuum Analyze Selected")', "Vacuum Analyze Selected"),
         TourUtils.waitForRPC()
     ],
 });
