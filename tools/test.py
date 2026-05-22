@@ -579,8 +579,7 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
 
     subprocess.run(["rabbitmq-server", "-detached"], preexec_fn=preexec_rmq, check=True, stdout=subprocess.DEVNULL)
     # Native blocking await. No polling loops needed!
-    subprocess.run(["rabbitmqctl", "await_online_nodes", "1"], preexec_fn=preexec_rmq, check=True, timeout=120, stdout=subprocess.DEVNULL)
-    subprocess.run(["rabbitmqctl", "start_app"], preexec_fn=preexec_rmq, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["rabbitmqctl", "await_startup"], preexec_fn=preexec_rmq, check=True, timeout=120, stdout=subprocess.DEVNULL)
 
     # 6. Execute Inner Odoo Test Suite
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -588,6 +587,8 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
     os.environ["PGHOST"] = pg_sock
     os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker"
     os.environ["HAMS_REAL_ERROR_LOG"] = real_error_log
+    os.environ["HOME"] = "/var/lib/odoo"
+    os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
 
     odoo_user = pwd.getpwnam("odoo")
     def preexec_odoo():
@@ -614,9 +615,9 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
         os.chown(dst, orig_uid, -1)
 
     for cf in ["db_cache_master.dump", "db_cache_master.modules", "db_cache_master.filestore.tar.gz"]:
-        src = f"/mnt/upper/opt/hams/test/{cf}"
+        src = f"/opt/hams/test/{cf}"
         dst = f"/mnt/host_test_dir/{cf}"
-        if os.path.exists(src):
+        if os.path.isfile(src):
             shutil.copy2(src, dst)
             os.chmod(dst, 0o666)
 
@@ -695,6 +696,11 @@ def main():
 
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
     os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker")
+
+    # Force system site-packages resolution for Odoo core in restricted venvs
+    sys_paths = os.environ.get("PYTHONPATH", "")
+    if "/usr/lib/python3/dist-packages" not in sys_paths:
+        os.environ["PYTHONPATH"] = f"/usr/lib/python3/dist-packages:{sys_paths}".strip(":")
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     env_path = os.path.join(base_dir, "deploy", "env")

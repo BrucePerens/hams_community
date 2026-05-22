@@ -5,9 +5,13 @@ Serves as the Single Source of Truth for test_runner.py and deploy_wizard.py.
 Supports environment scoping, lifecycle hooks, and precise runtime mount states.
 """
 
+import logging
 import os
 import subprocess
+import sys
 import urllib.request
+
+_logger = logging.getLogger(__name__)
 
 MANIFEST = {
     "directories": [
@@ -47,14 +51,18 @@ MANIFEST = {
             "environments": ["prod"],
             "post_provision_hooks": [
                 """\
-                if [ ! -f {DEST_DIR}/opt/hams/nginx/ssl/fullchain.pem ]; then
-                    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \\
-                        -keyout {DEST_DIR}/opt/hams/nginx/ssl/privkey.pem \\
-                        -out {DEST_DIR}/opt/hams/nginx/ssl/fullchain.pem \\
-                        -subj /C=US/ST=CA/L=SF/O=Hams/CN={DOMAIN} 2>/dev/null
-                    cp {DEST_DIR}/opt/hams/nginx/ssl/fullchain.pem {DEST_DIR}/opt/hams/nginx/ssl/lotw_root.pem
-                fi\
-                """
+import os, subprocess, shutil
+dest = '{DEST_DIR}'
+domain = '{DOMAIN}'
+ssl_dir = os.path.join(dest, 'opt/hams/nginx/ssl'.lstrip('/'))
+fullchain = os.path.join(ssl_dir, 'fullchain.pem')
+privkey = os.path.join(ssl_dir, 'privkey.pem')
+lotw = os.path.join(ssl_dir, 'lotw_root.pem')
+if not os.path.exists(fullchain):
+    subprocess.run(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
+    if os.path.exists(fullchain):
+        shutil.copy2(fullchain, lotw)
+"""
             ],
         },
         {
@@ -65,14 +73,18 @@ MANIFEST = {
             "environments": ["docker"],
             "post_provision_hooks": [
                 """\
-                if [ ! -f {DEST_DIR}/deploy/ssl/fullchain.pem ]; then
-                    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \\
-                        -keyout {DEST_DIR}/deploy/ssl/privkey.pem \\
-                        -out {DEST_DIR}/deploy/ssl/fullchain.pem \\
-                        -subj /C=US/ST=CA/L=SF/O=Hams/CN={DOMAIN} 2>/dev/null
-                    cp {DEST_DIR}/deploy/ssl/fullchain.pem {DEST_DIR}/deploy/ssl/lotw_root.pem
-                fi\
-                """
+import os, subprocess, shutil
+dest = '{DEST_DIR}'
+domain = '{DOMAIN}'
+ssl_dir = os.path.join(dest, 'deploy/ssl'.lstrip('/'))
+fullchain = os.path.join(ssl_dir, 'fullchain.pem')
+privkey = os.path.join(ssl_dir, 'privkey.pem')
+lotw = os.path.join(ssl_dir, 'lotw_root.pem')
+if not os.path.exists(fullchain):
+    subprocess.run(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
+    if os.path.exists(fullchain):
+        shutil.copy2(fullchain, lotw)
+"""
             ],
         },
         {
@@ -110,12 +122,19 @@ MANIFEST = {
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
             "post_provision_hooks": [
-                "rm -rf {DEST_DIR}/opt/hams/pycache/*",
                 """\
-                if [ -d {DEST_DIR}/opt/hams/daemons ]; then
-                    python3 -m compileall -q {DEST_DIR}/opt/hams/daemons 2>/dev/null || true
-                fi\
-                """,
+import os, shutil, compileall
+dest = '{DEST_DIR}'
+pycache = os.path.join(dest, 'opt/hams/pycache'.lstrip('/'))
+daemons = os.path.join(dest, 'opt/hams/daemons'.lstrip('/'))
+if os.path.exists(pycache):
+    for item in os.listdir(pycache):
+        item_path = os.path.join(pycache, item)
+        if os.path.isdir(item_path): shutil.rmtree(item_path, ignore_errors=True)
+        else: os.remove(item_path)
+if os.path.isdir(daemons):
+    compileall.compile_dir(daemons, quiet=1)
+"""
             ],
         },
         {
@@ -402,7 +421,14 @@ WantedBy=multi-user.target
             "mode": "644",
             "environments": ["prod"],
             "post_provision_hooks": [
-                "gpg --dearmor -o {DEST_DIR}/usr/share/keyrings/odoo-archive-keyring.gpg --yes {PATH}"
+                """\
+import os, subprocess
+dest = '{DEST_DIR}'
+path = '{PATH}'
+out = os.path.join(dest, 'usr/share/keyrings/odoo-archive-keyring.gpg'.lstrip('/'))
+os.makedirs(os.path.dirname(out), exist_ok=True)
+subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
+"""
             ],
         },
         {
@@ -412,7 +438,14 @@ WantedBy=multi-user.target
             "mode": "644",
             "environments": ["prod"],
             "post_provision_hooks": [
-                "gpg --dearmor -o {DEST_DIR}/usr/share/keyrings/kopia-keyring.gpg --yes {PATH}"
+                """\
+import os, subprocess
+dest = '{DEST_DIR}'
+path = '{PATH}'
+out = os.path.join(dest, 'usr/share/keyrings/kopia-keyring.gpg'.lstrip('/'))
+os.makedirs(os.path.dirname(out), exist_ok=True)
+subprocess.run(['gpg', '--dearmor', '-o', out, '--yes', path])
+"""
             ],
         },
         {
@@ -423,9 +456,16 @@ WantedBy=multi-user.target
             "environments": ["prod"],
             "condition_env": "CLOUDFLARE_TUNNEL_TOKEN",
             "post_provision_hooks": [
-                "dpkg -i {PATH} || true",
-                "cloudflared service install {CLOUDFLARE_TUNNEL_TOKEN} || true",
-                "rm -f {PATH}",
+                """\
+import os, subprocess
+path = '{PATH}'
+token = '{CLOUDFLARE_TUNNEL_TOKEN}'
+subprocess.run(['dpkg', '-i', path])
+if token:
+    subprocess.run(['cloudflared', 'service', 'install', token])
+if os.path.exists(path):
+    os.remove(path)
+"""
             ],
         },
         {
@@ -435,12 +475,27 @@ WantedBy=multi-user.target
             "mode": "644",
             "environments": ["prod", "test"],
             "post_provision_hooks": [
-                "if [ -s {PATH} ]; then tar -xzf {PATH} -C {DEST_DIR}/tmp || tar -xzf {DEST_DIR}/{PATH} -C {DEST_DIR}/tmp; fi || true",
-                "if [ -d {DEST_DIR}/tmp/PyPDF2-2.12.1 ]; then echo \"from setuptools import setup, find_packages\\nsetup(name='PyPDF2', version='2.12.1', packages=find_packages(), include_package_data=True, description='A pure-python PDF library')\" > {DEST_DIR}/tmp/PyPDF2-2.12.1/setup.py; fi",
-                "if [ -d {DEST_DIR}/tmp/PyPDF2-2.12.1 ]; then echo -e '[DEFAULT]\\nX-Python3-Version: >= 3.6' > {DEST_DIR}/tmp/PyPDF2-2.12.1/stdeb.cfg; fi",
-                "if [ -d {DEST_DIR}/tmp/PyPDF2-2.12.1 ]; then cd {DEST_DIR}/tmp/PyPDF2-2.12.1 && python3 setup.py --command-packages=stdeb.command bdist_deb; fi",
-                "if [ -f {DEST_DIR}/tmp/PyPDF2-2.12.1/deb_dist/python3-pypdf2_2.12.1-1_all.deb ]; then dpkg -i {DEST_DIR}/tmp/PyPDF2-2.12.1/deb_dist/python3-pypdf2_2.12.1-1_all.deb || true; fi",
-                "rm -rf {DEST_DIR}/tmp/PyPDF2-2.12.1 {PATH} 2>/dev/null || true",
+                """\
+import os, tarfile, subprocess, shutil
+dest = '{DEST_DIR}'
+path = '{PATH}'
+if not os.path.exists(path): path = os.path.join(dest, path.lstrip('/'))
+if os.path.exists(path):
+    with tarfile.open(path, 'r:gz') as tar: tar.extractall(os.path.join(dest, 'tmp'))
+pypdf_dir = os.path.join(dest, 'tmp/PyPDF2-2.12.1'.lstrip('/'))
+if os.path.isdir(pypdf_dir):
+    with open(os.path.join(pypdf_dir, 'setup.py'), 'w') as f:
+        f.write('from setuptools import setup, find_packages\\nsetup(name="PyPDF2", version="2.12.1", packages=find_packages(), include_package_data=True, description="A pure-python PDF library")\\n')
+    with open(os.path.join(pypdf_dir, 'stdeb.cfg'), 'w') as f:
+        f.write('[DEFAULT]\\nX-Python3-Version: >= 3.6\\n')
+    subprocess.run(['python3', 'setup.py', '--command-packages=stdeb.command', 'bdist_deb'], cwd=pypdf_dir)
+    deb = os.path.join(pypdf_dir, 'deb_dist', 'python3-pypdf2_2.12.1-1_all.deb')
+    if os.path.exists(deb):
+        subprocess.run(['dpkg', '-i', deb])
+    shutil.rmtree(pypdf_dir, ignore_errors=True)
+if os.path.exists(path):
+    os.remove(path)
+"""
             ],
         },
         {
@@ -1382,12 +1437,11 @@ def execute_hooks(environment, run_cmd_func, env_vars=None, dest_dir=""):
     for d in MANIFEST["directories"]:
         if environment in d["environments"] and "post_provision_hooks" in d:
             for hook in d["post_provision_hooks"]:
-                cmd = hook
                 try:
-                    cmd = cmd.format(**fmt_vars)
+                    cmd_str = hook.format(**fmt_vars)
                 except KeyError:
-                    pass
-                run_cmd_func(cmd, env=env_vars)
+                    cmd_str = hook
+                run_cmd_func([sys.executable, "-c", cmd_str], env=env_vars)
 
 
 def apply_production_directories(run_cmd_func, environment="prod", dest_dir=""):
@@ -1571,7 +1625,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
             try:
                 with urllib.request.urlopen(req) as response:
                     data = response.read()
-            except Exception: # Network partition fallback safety
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Network partition fallback safety hit fetching %s: %s", url, e)
                 data = b""
 
             flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -1612,7 +1667,7 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                     cmd_str = hook.format(**fmt_vars)
                 except KeyError:
                     cmd_str = hook
-                run_cmd_func(["/bin/bash", "-c", cmd_str])
+                run_cmd_func([sys.executable, "-c", cmd_str])
 
 
 def generate_odoo_override_conf(odoo_conf_path):

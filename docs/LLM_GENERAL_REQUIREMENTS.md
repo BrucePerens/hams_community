@@ -56,11 +56,14 @@ You are an expert AI developer operating under strict architectural mandates. Th
 * **Early Returns:** Validate preconditions at the top; avoid deep nesting.
 * **Meaningful Variables:** Avoid single-letter variables (`l`, `O`, `I`).
 
+### Python Over Shell (Anti-Training-Bias)
+* **Pure Python Preference:** AI models inherently default to bash/shell scripting for infrastructure tasks due to training bias. You MUST actively resist this bias. Whenever system operations, file manipulations, data extraction, or complex logic are required, you MUST use pure Python (e.g., `os`, `shutil`, `subprocess`, `urllib`) rather than generating inline shell scripts or bash wrappers. This ensures exact exception handling, cross-platform stability, and testability.
+
 ### Daemons & External Polling
 * **Standardized Entry Point:** All background daemons MUST standardize their entry point by naming the primary execution script `main.py`. Do not use module-specific or redundant names for the entry script.
 * **Ethical Crawling:** Use designated User-Agent and HEAD requests to evaluate ETags before downloading.
 * **Anti-Thundering Herd:** Use `RandomizedDelaySec` in scheduled systemd timers.
-* **Cryptographic Checksums:** Hash downloaded payloads and compare against persistent storage before execution..
+* **Cryptographic Checksums:** Hash downloaded payloads and compare against persistent storage before execution.
 
 ### Data Models & UI
 * **Bulk Operation Safety:** All creation/update methods MUST support batch processing.
