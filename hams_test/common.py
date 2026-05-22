@@ -16,8 +16,6 @@ def _timeout_handler(signum, frame):
     _logger.error("TRACING: OS Signal %s (Timeout) received! Force-aborting hung thread.", signum)
     raise TourWatchdogError(f"Test step timed out and was aborted by OS signal {signum}.")
 
-# [System Override Removed: Native Odoo ChromeBrowser lifecycle restored to prevent websocket deadlocks]
-
 class DiagnosticMock(MagicMock):
     def __init__(self, *args, **kwargs):
         max_depth = kwargs.pop("max_recursion_depth", 5)
@@ -68,64 +66,69 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     @classmethod
     def tearDownClass(cls):
-        _logger.info("Executing aggressive non-blocking tearDownClass.")
+        _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
 
-        # 1. Defuse Server Thread Join
-        if hasattr(cls, 'server_thread') and cls.server_thread:
-            cls.server_thread.daemon = True
-            cls.server_thread.join = lambda *args, **kwargs: None
-
-        # 2. Defuse Server Stop (Werkzeug)
-        if hasattr(cls, 'server') and cls.server:
-            try:
-                # Forcefully close the socket so the port is freed for the next test
-                if hasattr(cls.server, 'server') and hasattr(cls.server.server, 'socket'):
-                    cls.server.server.socket.close()
-            except Exception as e: # audit-ignore-catch-all
-                _logger.warning("Could not close underlying socket: %s", e)
-
-            # Neutralize the original stop method to prevent Werkzeug from waiting on orphaned requests
-            cls.server.stop = lambda *args, **kwargs: None
-
-        # 3. Defuse Chrome Websocket Join
-        if hasattr(cls, 'browser') and cls.browser:
-            if hasattr(cls.browser, '_websocket_thread') and cls.browser._websocket_thread:
-                cls.browser._websocket_thread.join = lambda *args, **kwargs: None
-
+        # Execute Native Teardown with Hard OS Timeout
+        original_alrm = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(30) # 30 seconds hard cap for native teardown
         try:
             super().tearDownClass()
+            _logger.info("TRACING: Successfully completed super().tearDownClass()")
         except Exception as e: # audit-ignore-catch-all
-            _logger.warning("Ignored error during super().tearDownClass(): %s", e)
+            _logger.warning("TRACING: Native teardown failed or hung: %s", e)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, original_alrm)
+
+            # Aggressive Fallback Cleanup
+            if hasattr(cls, 'browser') and cls.browser:
+                if hasattr(cls.browser, 'chrome_process'):
+                    try:
+                        cls.browser.chrome_process.kill()
+                        _logger.info("TRACING: Executed aggressive fallback kill on chrome_process.")
+                    except OSError:
+                        pass
+
+            _logger.info("TRACING: Exiting HamsHttpCase.tearDownClass")
 
     def tearDown(self):
         # Apply OS-level timeout to teardown to prevent unkillable zombies
+        _logger.info("TRACING: Entering HamsHttpCase.tearDown")
         original_alrm = signal.signal(signal.SIGALRM, _timeout_handler)
         signal.alarm(60) # 60 seconds hard cap for teardown
         try:
             super().tearDown()
+            _logger.info("TRACING: Completed super().tearDown")
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("TRACING: HamsHttpCase.tearDown caught exception: %s", e)
         finally:
             signal.alarm(0)
             signal.signal(signal.SIGALRM, original_alrm)
+            _logger.info("TRACING: Exiting HamsHttpCase.tearDown")
 
     def browser_js(self, *args, **kwargs):
+        _logger.info("TRACING: Entering browser_js wrapper. Setting 60s SIGALRM.")
         original_alrm = signal.signal(signal.SIGALRM, _timeout_handler)
-        signal.alarm(120) # 120 seconds hard cap for JS execution
+        signal.alarm(60)
         try:
             super().browser_js(*args, **kwargs)
+            _logger.info("TRACING: super().browser_js completed successfully.")
         except Exception as e: # audit-ignore-catch-all
-            _logger.warning("browser_js failed, flagging tour as failed to prevent shutdown hang: %s", e)
+            _logger.warning("TRACING: super().browser_js failed, flagging tour as failed to prevent shutdown hang: %s", e)
             self.__class__._hams_tour_failed = True
             raise
         finally:
             signal.alarm(0)
             signal.signal(signal.SIGALRM, original_alrm)
+            _logger.info("TRACING: Exiting browser_js wrapper.")
 
     def start_tour(self, *args, **kwargs):
+        _logger.info("TRACING: Entering start_tour wrapper.")
         try:
             super().start_tour(*args, **kwargs)
+            _logger.info("TRACING: super().start_tour completed successfully.")
         except Exception as e:  # audit-ignore-catch-all
+            _logger.info("TRACING: Exception caught in start_tour wrapper.")
             self.__class__._hams_tour_failed = True
             _logger.error("\n=== TOUR FAILED OR HUNG. DUMPING COMPILED ASSETS ===")
             try:

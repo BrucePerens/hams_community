@@ -234,7 +234,7 @@ class FailureExtractor:
 def run_cmd(cmd, extractor=None, cwd=None, env=None):
     """
     Executes a shell command blocking natively on IO (Queue.get with OS condition variables)
-    eliminating all busy polling loops.
+    eliminating all busy polling loops. Fully instrumented for Chrome/Tour hang analysis.
     """
     initial_errors = len(extractor.captured_blocks) if extractor else 0
     if env is None:
@@ -258,16 +258,22 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         env=env,
     )
 
+    print(f"\n[*] [DEBUG-RUNNER] Subprocess spawned: PID {process.pid}, PGID {os.getpgid(process.pid)}")
+    print(f"[*] [DEBUG-RUNNER] Executing command: {' '.join(cmd)}")
+
     force_killed = False
     q = queue.Queue()
 
     def reader():
+        print(f"[*] [DEBUG-RUNNER] IO Reader thread started for PID {process.pid}")
         try:
             for line in process.stdout:
                 q.put(line)
         except Exception as e: # audit-ignore-catch-all
             _logger.error("Reader exception: %s", e)
+            print(f"[*] [DEBUG-RUNNER] IO Reader thread exception: {e}")
         q.put(None)
+        print(f"[*] [DEBUG-RUNNER] IO Reader thread concluded for PID {process.pid}")
 
     t = threading.Thread(target=reader, daemon=True)
     t.start()
@@ -280,9 +286,21 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                 line = q.get(timeout=1.0)
                 idle_seconds = 0
                 if line is None:
+                    print("[*] [DEBUG-RUNNER] Received EOF sentinel from IO Reader thread.")
                     break
 
                 line_lower = line.lower()
+
+                # --- NEW INSTRUMENTATION BLOCK ---
+                if any(x in line_lower for x in [".browser", "console.log", "tour", "chrome", "owl is running"]):
+                    sys.stdout.write(f"\n[JS/BROWSER TRACE] ---> {line}")
+                    sys.stdout.flush()
+
+                if "error received after termination" in line_lower or "teardown" in line_lower:
+                    sys.stdout.write(f"\n[BROWSER TEARDOWN TRACE] ---> {line}")
+                    sys.stdout.flush()
+                # ---------------------------------
+
                 if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
                     continue
 
@@ -294,31 +312,45 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
 
                 # OS SIGNAL COORDINATION: Relay JS watchdog alarms directly to the Python test thread
                 if "Hit CTRL-C again or send a second signal" in line:
-                    print("\n[!] WARNING: Odoo background thread refused to terminate gracefully. Executing process group kill.\n")
+                    print(f"\n[!] WARNING: Odoo background thread refused to terminate gracefully. Executing killpg({os.getpgid(process.pid)}, SIGKILL).\n")
                     os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                     force_killed = True
                     break
             except queue.Empty:
                 idle_seconds += 1
+                if idle_seconds % 15 == 0:
+                    sys.stdout.write(f"[*] [DEBUG-RUNNER] IO Reader idle for {idle_seconds}s. Process poll: {process.poll()}\n")
+                    sys.stdout.flush()
+
                 if process.poll() is not None:
+                    sys.stdout.write(f"[*] [DEBUG-RUNNER] Process {process.pid} exited with {process.poll()}, but stdout pipe remains open. Breaking loop.\n")
+                    sys.stdout.flush()
                     # The test process died but something (like a Postgres background worker) is holding the pipe open
                     break
                 if idle_seconds >= 180:
-                    print("\n[!] WARNING: Test runner hung for 180 seconds with no output! Force killing to continue...\n")
+                    print(f"\n[!] WARNING: Test runner hung for 180 seconds with no output! Force killing PGID {os.getpgid(process.pid)}...\n")
                     try:
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-                    except OSError: pass
+                        print("[*] [DEBUG-RUNNER] killpg executed successfully for hung process.")
+                    except OSError as e:
+                        print(f"[*] [DEBUG-RUNNER] killpg failed: {e}")
                     force_killed = True
                     if extractor:
                         extractor.process_line("CRITICAL: Test execution hung for 180 seconds. Process forcefully killed.\n")
                     break
     except KeyboardInterrupt:
-        print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")
-        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        print(f"\n[!] CTRL-C detected! Forcefully terminating the test process group {os.getpgid(process.pid)}...")
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            print("[*] [DEBUG-RUNNER] killpg executed successfully on Ctrl-C.")
+        except OSError as e:
+            print(f"[*] [DEBUG-RUNNER] killpg failed on Ctrl-C: {e}")
         process.wait()
         sys.exit(1)
 
+    print(f"[*] [DEBUG-RUNNER] Waiting for process {process.pid} to cleanly terminate...")
     process.wait()
+    print(f"[*] [DEBUG-RUNNER] Process {process.pid} terminated with return code {process.returncode}.")
 
     if force_killed:
         final_errors = len(extractor.captured_blocks) if extractor else 0
