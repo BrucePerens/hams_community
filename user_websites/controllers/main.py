@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 class UserWebsitesController(http.Controller):
 
     @http.route("/website/report_violation", type="http", auth="public", methods=["POST"], website=True, csrf=True)
-    def report_violation(self, url="", reason="", description="", **post):
+    def report_violation(self, url="", reason="", description="", email="", **post):
         # [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
         # Triggered by [@ANCHOR: violation_report_logic]
         # Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
@@ -22,11 +22,17 @@ class UserWebsitesController(http.Controller):
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
         try:
-            env_svc["content.violation.report"].create({
+            create_vals = {
                 "target_url": url,
                 "description": description,
                 "state": "new",
-            })
+            }
+            if reason:
+                create_vals["reason"] = reason
+            if email:
+                create_vals["reported_by_email"] = email
+
+            env_svc["content.violation.report"].create(create_vals)
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Report creation failed: %s", e)
             return request.redirect("/?error=creation_failed")
@@ -38,11 +44,12 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        owner = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
+        owner = env_svc["res.users"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
         if not owner:
             return request.not_found()
 
-        return request.render("user_websites.blog_index", {"profile_user": owner, "main_object": owner})
+        pager = {"page_count": 0, "page": dict(), "page_previous": dict(), "page_next": dict()}
+        return request.render("user_websites.blog_index", {"profile_user": owner, "main_object": owner, "pager": pager})
 
     @http.route("/<string:website_slug>/create_site", type="http", auth="user", methods=["POST"], website=True, csrf=True)
     def create_site(self, website_slug, **kwargs):
@@ -51,10 +58,17 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
+        arch_base = f"""<t name="{user.name} Home" t-name="user_websites.home_{user.website_slug}">
+            <t t-call="website.layout">
+                <div id="wrap" class="oe_structure oe_empty"/>
+            </t>
+        </t>"""
+
         page = env_svc["website.page"].create({
             "url": f"/{user.website_slug}/home",
             "name": f"{user.name} Home",
             "type": "qweb",
+            "arch_base": arch_base,
             "website_id": request.website.id if hasattr(request, 'website') and request.website else False,
             "website_published": True,
             "owner_user_id": user.id,
@@ -64,19 +78,20 @@ class UserWebsitesController(http.Controller):
     @http.route("/user-websites/documentation", type="http", auth="user", website=True)
     def documentation(self, **kwargs):
         # Tested by [@ANCHOR: user_websites:test_documentation_route]
-        if "knowledge.article" in request.env:
-            utils = request.env["zero_sudo.security.utils"]
-            env_svc = utils._get_service_env("user_websites.user_websites_service_account")
-
-            article = env_svc["knowledge.article"].search([("name", "=", "User Websites Documentation")], limit=1)
-            if article and hasattr(article, "website_url") and article.website_url:
-                return request.redirect(article.website_url)
+        try:
+            request.env.cr.execute("SELECT website_url FROM knowledge_article WHERE name = 'User Websites Documentation' LIMIT 1")
+            res = request.env.cr.fetchone()
+            if res and res[0]:
+                return request.redirect(res[0])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Failed to redirect to documentation article: %s", e)
         return request.render("user_websites.documentation_fallback", {})
 
     @http.route("/community", type="http", auth="public", website=True)
     def community_directory(self, **kwargs):
         # Tested by [@ANCHOR: user_websites:test_tour_community_directory]
-        return request.render("user_websites.community_directory", {})
+        pager = {"page_count": 0, "page": dict(), "page_previous": dict(), "page_next": dict()}
+        return request.render("user_websites.community_directory", {"pager": pager})
 
     @http.route("/my/privacy", type="http", auth="user", website=True)
     def privacy_dashboard(self, **kwargs):
@@ -101,7 +116,7 @@ class UserWebsitesController(http.Controller):
     def privacy_erasure(self, **kwargs):
         return request.make_response(json.dumps({"success": True}), headers=[("Content-Type", "application/json")])
 
-    @http.route("/api/user-websites/pending-reports", type="http", auth="user", website=True)
+    @http.route("/api/v1/user_websites/pending_reports", type="http", auth="user", website=True)
     def pending_reports(self, **kwargs):
         if not request.env.user.has_group("user_websites.group_user_websites_administrator") and not request.env.user.has_group("base.group_system"):
             return request.make_response("Forbidden", status=403)
@@ -112,4 +127,13 @@ class UserWebsitesController(http.Controller):
         # Tested by [@ANCHOR: user_websites:test_unsubscribe_secret]
         if token == "invalid":
             return request.make_response("Forbidden", status=403)
+
+        utils = request.env["zero_sudo.security.utils"]
+        env_svc = utils._get_service_env("user_websites.user_websites_service_account")
+        try:
+            record = env_svc[model].browse(record_id)
+            if record.exists():
+                record.message_unsubscribe([partner_id])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Unsubscribe failed for %s id %s: %s", model, record_id, e)
         return request.render("user_websites.unsubscribe_success", {})

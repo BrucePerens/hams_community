@@ -112,6 +112,15 @@ class TestSettingsAndCache(RealTransactionCase):
         mock_open.return_value.__enter__.return_value = mock_file
         self.safe_patch("odoo.addons.caching.controllers.main.tools.file_open", mock_open)
 
+        class MockResponse:
+            def __init__(self, content):
+                self.content = content
+            @property
+            def response(self):
+                return [self.content.encode('utf-8')]
+
+        mock_req.make_response = MagicMock(side_effect=lambda content, headers: MockResponse(content))
+
         response_2 = controller.service_worker()
 
         content_2 = response_2.response[0].decode('utf-8') if isinstance(response_2.response, list) else response_2.response.decode('utf-8')

@@ -282,7 +282,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     if "RMQ_PASS" not in env:
         env["RMQ_PASS"] = "guest"
     if "ODOO_TEST_CHROME_ARGS" not in env:
-        env["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer"
+        env["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,NetworkService"
 
     process = subprocess.Popen(
         cmd,
@@ -851,9 +851,9 @@ fi
 
 export PYTHONDONTWRITEBYTECODE=1
 
-sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
+sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,NetworkService" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
 RET=$?
-su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl stop'
+su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl stop'/var/lib/rabbitmq rabbitmqctl stop'
 pkill -u rabbitmq 2>/dev/null || true
 pkill epmd 2>/dev/null || true
 pkill -u redis redis-server
@@ -927,7 +927,7 @@ def main():
         os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
 
         if "ODOO_TEST_CHROME_ARGS" not in os.environ:
-            os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer"
+            os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,NetworkService"
 
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         os.environ["REPO_ROOT"] = base_dir

@@ -2,9 +2,38 @@
 import psutil
 import logging
 from unittest.mock import MagicMock, patch
-from odoo.tests.common import HttpCase, TransactionCase
+from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 
 _logger = logging.getLogger(__name__)
+
+# =================================================================================
+# SYSTEM OVERRIDE: Robust WebSocket Request Handler
+# =================================================================================
+_original_ws_req = ChromeBrowser._websocket_request
+
+def _robust_ws_req(self, method, params=None, timeout=10.0, **kwargs):
+    """
+    Intercepts core Odoo CDP websocket requests to detect silent Chrome crashes
+    or broken pipes instantly, rather than hanging for the full timeout.
+    """
+    process = getattr(self, '_process', None) or getattr(self, '_chrome_process', None)
+    if process and process.poll() is not None:
+        raise RuntimeError(f"FATAL: Chrome process (PID {process.pid}) died before CDP command '{method}'.")
+
+    try:
+        return _original_ws_req(self, method, params=params, timeout=timeout, **kwargs)
+    except TimeoutError as e:
+        if process and process.poll() is not None:
+            raise RuntimeError(f"FATAL: Chrome process died during CDP command '{method}'.") from e
+        raise e
+    except Exception as e:  # audit-ignore-catch-all
+        _logger.warning("WebSocket exception in CDP command %s: %s", method, e)
+        err_name = type(e).__name__
+        if 'Connection' in err_name or 'Closed' in err_name or 'BrokenPipe' in err_name:
+            raise RuntimeError(f"FATAL: WebSocket pipe broke during CDP command '{method}'. Error: {e}") from e
+        raise e
+
+ChromeBrowser._websocket_request = _robust_ws_req
 
 
 class DiagnosticMock(MagicMock):
@@ -100,13 +129,26 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 # Bypass Jules VM permission restrictions on /tmp by targeting /var/tmp
                 dump_path = '/var/tmp/failed_tour_bundle.js'
                 with open(dump_path, 'w') as f:
-                    f.write(bundle)
+                    if isinstance(bundle, str):
+                        f.write(bundle)
+                    elif hasattr(bundle, 'decode'):
+                        f.write(bundle.decode('utf-8'))
+                    elif hasattr(bundle, 'raw'):
+                        f.write(bundle.raw.decode('utf-8'))
+                    else:
+                        f.write(str(bundle))
                 _logger.error(f"Dumped compiled JS bundle to {dump_path}")
 
                 # --- NEW: DOM STATE DUMPING TELEMETRY ---
                 try:
                     # Extract the live frozen DOM from the headless browser via raw CDP websocket
-                    res = self.browser._websocket.request('Runtime.evaluate', returnByValue=True, expression='document.documentElement.outerHTML')
+                    # ADR-0012: Enforce strict timeouts on telemetry extraction to prevent Python test runner deadlocks
+                    # Jules VM Elasticity: Scale the timeout using Odoo's throttling factor for slow environments
+                    telemetry_timeout = 10.0 * getattr(self.browser, 'throttling_factor', 1.0)
+                    if hasattr(self.browser, '_websocket_request'):
+                        res = self.browser._websocket_request('Runtime.evaluate', params={'returnByValue': True, 'expression': 'document.documentElement.outerHTML'}, timeout=telemetry_timeout)
+                    else:
+                        res = self.browser._websocket.request('Runtime.evaluate', returnByValue=True, expression='document.documentElement.outerHTML', timeout=telemetry_timeout)
                     dom_html = res.get('result', {}).get('value', '<html><body>Failed to extract DOM state from browser process.</body></html>')
                     dom_path = '/var/tmp/failed_tour_dom.html'
                     with open(dom_path, 'w', encoding='utf-8') as f:
@@ -118,6 +160,20 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                     f.write(str(e))
             except Exception as inner_e:  # audit-ignore-catch-all
                 _logger.error(f"Could not dump bundle to /var/tmp: {inner_e}")
+
+            # Kill Chrome cleanly before abandoning the process to avoid zombie storms
+            if hasattr(self, 'browser') and self.browser:
+                process = getattr(self.browser, '_process', None) or getattr(self.browser, '_chrome_process', None)
+                if process:
+                    try:
+                        parent = psutil.Process(process.pid)
+                        for child in parent.children(recursive=True):
+                            child.kill()
+                        parent.kill()
+                    except Exception as kill_e:  # audit-ignore-catch-all
+                        _logger.warning("Reaper emergency teardown failed: %s", kill_e)
+
+            _logger.error("Tour failed. Telemetry saved. Re-raising exception to proceed to next test.")
             raise e
 
 

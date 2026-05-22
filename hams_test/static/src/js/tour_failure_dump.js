@@ -2,6 +2,11 @@
 
 const originalConsoleError = console.error;
 
+// Intercept network drop completely independent of pending requests
+window.addEventListener('offline', () => {
+    console.error("FATAL: Browser detected network OFFLINE state! Backend connection lost.");
+});
+
 // 1. Maintain a ledger of unresolved network requests to diagnose backend hangs
 window._pendingRPCs = new Set();
 const originalFetch = window.fetch;
@@ -10,6 +15,11 @@ window.fetch = async function(...args) {
     window._pendingRPCs.add(url);
     try {
         return await originalFetch.apply(this, args);
+    } catch (e) {
+        if (e && e.name === 'TypeError' && e.message === 'Failed to fetch') {
+            console.error("FATAL: Fetch API network error. The backend server crashed or dropped the connection. URL: " + url);
+        }
+        throw e;
     } finally {
         window._pendingRPCs.delete(url);
     }
@@ -18,7 +28,10 @@ window.fetch = async function(...args) {
 const originalXHR = window.XMLHttpRequest.prototype.open;
 window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
     this.addEventListener('loadend', () => window._pendingRPCs.delete(url));
-    this.addEventListener('error', () => window._pendingRPCs.delete(url));
+    this.addEventListener('error', () => {
+        window._pendingRPCs.delete(url);
+        console.error("FATAL: XHR network error. The backend server crashed or dropped the connection. URL: " + url);
+    });
     this.addEventListener('abort', () => window._pendingRPCs.delete(url));
     window._pendingRPCs.add(url);
     return originalXHR.call(this, method, url, ...rest);
@@ -65,7 +78,7 @@ console.error = function (...args) {
         return '';
     }).join(' ');
 
-    if (!window._domDumped && (msg.includes('TIMEOUT') || msg.includes('FAILED:') || msg.includes('AssertionError'))) {
+    if (!window._domDumped && (msg.includes('TIMEOUT') || msg.includes('FAILED:') || msg.includes('FATAL:') || msg.includes('AssertionError'))) {
         window._domDumped = true;
         try {
             let rpcList = Array.from(window._pendingRPCs).join(', ') || 'None';
@@ -88,7 +101,7 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 // 4. Detect illegal redirects to Discuss app (Odoo 19 fallback mechanism)
-setInterval(() => {
+window._discussAlarmInterval = setInterval(() => {
     const url = document.location.pathname + document.location.hash + document.location.search;
     if (url.includes('/discuss')) {
         if (!window._discussAlarmTriggered) {
@@ -120,11 +133,13 @@ console.log = function(...args) {
     }
 };
 
-setInterval(() => {
+window._hamsTourWatchdogInterval = setInterval(() => {
     const idleTime = Date.now() - window._hamsTourWatchdog.lastActivity;
     // Trigger alarm if the tour pipeline goes completely silent for 6 seconds
-    if (idleTime > 6000 && idleTime < 60000 && !window._hamsTourWatchdog.hanging) {
+    if (idleTime > 6000 && !window._hamsTourWatchdog.hanging) {
         window._hamsTourWatchdog.hanging = true;
+        clearInterval(window._hamsTourWatchdogInterval);
+        if (window._discussAlarmInterval) clearInterval(window._discussAlarmInterval);
 
         const alarmMsg = `[WATCHDOG ALARM] Tour idle for ${Math.floor(idleTime/1000)}s! Last activity: ${window._hamsTourWatchdog.lastLog}`;
 
