@@ -5,10 +5,12 @@ Combines test execution, integration modes, and real-time failure extraction.
 Strictly prohibits Bash wrapper scripts and CPU polling loops.
 """
 
+import infrastructure
 import argparse
 import atexit
 import contextlib
 import glob
+import hashlib
 import logging
 import os
 import pwd
@@ -48,7 +50,6 @@ def micro_privilege(username):
         os.setresgid(orig_rgid, orig_egid, orig_sgid)
 
 # Local modules resolve natively without sys.path hacks.
-import infrastructure
 
 _logger = logging.getLogger(__name__)
 
@@ -345,7 +346,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     env.setdefault("REDIS_HOST", "localhost")
     env.setdefault("RMQ_USER", "guest")
     env.setdefault("RMQ_PASS", "guest")
-    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=\"--prof --logfile=/var/tmp/v8_hang.log\"")
 
     process = subprocess.Popen(
         cmd,
@@ -557,19 +558,31 @@ def rebuild_db(db_name):
     subprocess.run([createdb_cmd, db_name], check=True, env=env)
 
 
-def _get_latest_source_mtime(dirs_to_check):
-    newest = 0
+def _compute_source_hash(dirs_to_check, mod_string):
+    hasher = hashlib.sha256()
+    hasher.update(mod_string.encode('utf-8'))
     ignore_exts = (".pyc", ".pyo", ".dump", ".log", ".swp", ".pot", ".po")
-    for d in dirs_to_check:
+    for d in sorted(dirs_to_check):
         for root, dirs, files in os.walk(d):
-            dirs[:] = [di for di in dirs if not di.startswith(".") and di not in ("__pycache__", "tests")]
-            for f in files:
+            dirs[:] = sorted([di for di in dirs if not di.startswith(".") and di not in ("__pycache__", "tests")])
+            for f in sorted(files):
                 if f.endswith(ignore_exts) or f.startswith(".") or f == "filtered_test.txt": continue
                 try:
-                    mtime = os.path.getmtime(os.path.join(root, f))
-                    if mtime > newest: newest = mtime
+                    with open(os.path.join(root, f), "rb") as f_obj:
+                        for chunk in iter(lambda: f_obj.read(4096), b""):
+                            hasher.update(chunk)
                 except OSError: pass
-    return newest
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    for cf in [os.path.join(base_dir, "tools", "infrastructure.py"), os.path.join(base_dir, "tools", "test.py"), os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py")]:
+        if os.path.exists(cf):
+            try:
+                with open(cf, "rb") as f_obj:
+                    for chunk in iter(lambda: f_obj.read(4096), b""):
+                        hasher.update(chunk)
+            except OSError: pass
+
+    return hasher.hexdigest()
 
 
 def check_and_restore_cache(db_name, mod_string):
@@ -590,28 +603,19 @@ def check_and_restore_cache(db_name, mod_string):
                     dirs_to_check.append(item_path)
         except OSError: pass
 
-    newest_mtime = _get_latest_source_mtime(dirs_to_check)
-    for cf in [os.path.join(base_dir, "tools", "infrastructure.py"), os.path.join(base_dir, "tools", "test.py"), os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py")]:
-        if os.path.exists(cf):
-            try: newest_mtime = max(newest_mtime, os.path.getmtime(cf))
-            except OSError: pass
+    current_hash = _compute_source_hash(dirs_to_check, mod_string)
+    hash_file = cache_file.replace(".dump", ".hash")
 
     cache_valid = False
-    if os.path.exists(cache_file):
+    if os.path.exists(cache_file) and os.path.exists(hash_file):
         try:
             sz = os.path.getsize(cache_file)
             print(f"[*] Found existing DB cache: {sz} bytes.")
-            if sz > 5000000 and os.path.getmtime(cache_file) >= newest_mtime:
-                cache_valid = True
+            if sz > 5000000:
+                with open(hash_file, "r") as f:
+                    if f.read().strip() == current_hash:
+                        cache_valid = True
         except OSError: pass
-
-    if cache_valid:
-        mod_file = cache_file.replace(".dump", ".modules")
-        if os.path.exists(mod_file):
-            with open(mod_file, "r") as f:
-                if f.read().strip() != mod_string: cache_valid = False
-        else:
-            cache_valid = False
 
     if cache_valid:
         print(f"[*] Valid DB cache found ({cache_file}). Restoring (Parallel)...")
@@ -625,7 +629,7 @@ def check_and_restore_cache(db_name, mod_string):
                 filestore_base = "/var/lib/odoo/.local/share/Odoo/filestore"
                 os.makedirs(filestore_base, exist_ok=True)
                 subprocess.run(["tar", "-xzf", filestore_tar, "-C", filestore_base])
-            return True, cache_file
+            return True, cache_file, current_hash
         else:
             print(f"[*] WARNING: pg_restore failed:\n{res.stderr}")
 
@@ -635,10 +639,10 @@ def check_and_restore_cache(db_name, mod_string):
 
     print("[*] DB cache missing or invalid. Rebuilding...")
     rebuild_db(db_name)
-    return False, cache_file
+    return False, cache_file, current_hash
 
 
-def save_db_cache(db_name, cache_file, mod_string):
+def save_db_cache(db_name, cache_file, current_hash):
     print(f"[*] Caching newly initialized DB to {cache_file}...")
     try: os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     except Exception as e: # audit-ignore-catch-all
@@ -650,7 +654,7 @@ def save_db_cache(db_name, cache_file, mod_string):
             res = subprocess.run([shutil.which("pg_dump") or "pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env)
         if res.returncode == 0 and os.path.getsize(cache_file) > 5000000:
             print("[*] DB cached successfully.")
-            with open(cache_file.replace(".dump", ".modules"), "w") as mf: mf.write(mod_string)
+            with open(cache_file.replace(".dump", ".hash"), "w") as mf: mf.write(current_hash)
             filestore_path = f"/var/lib/odoo/.local/share/Odoo/filestore/{db_name}"
             if os.path.exists(filestore_path):
                 print("[*] Caching Filestore...")
@@ -751,7 +755,7 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     os.environ["HAMS_ISOLATED_NS"] = "1"
     os.environ["PGHOST"] = pg_sock
-    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker"
+    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=\"--prof --logfile=/var/tmp/v8_hang.log\""
     os.environ["HAMS_REAL_ERROR_LOG"] = real_error_log
     os.environ["HOME"] = "/var/lib/odoo"
     os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
@@ -780,14 +784,28 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
         shutil.copy2(prof, dst)
         os.chown(dst, orig_uid, -1)
 
-    # Rescue screenshots and headless browser logs from the ephemeral /var/tmp overlay
-    for ext_path in ["/var/tmp/odoo_tests/*/screenshots/*.png", "/var/tmp/odoo_tests/*/chrome_logs/*.txt"]:
+    # Rescue screenshots, headless browser logs, and V8 profiles from the ephemeral /var/tmp overlay
+    for ext_path in ["/var/tmp/odoo_tests/*/screenshots/*.png", "/var/tmp/odoo_tests/*/chrome_logs/*.txt", "/var/tmp/v8_hang*.log"]:
         for artifact in glob.glob(ext_path):
             dst = os.path.join(os.path.dirname(real_error_log), os.path.basename(artifact))
-            shutil.copy2(artifact, dst)
+
+            if "v8_hang" in artifact:
+                # Strip sparse null bytes (ghost blocks) caused by offset truncation
+                with open(artifact, "rb") as f_in, open(dst, "wb") as f_out:
+                    for chunk in iter(lambda: f_in.read(1048576), b""):
+                        cleaned = chunk.replace(b'\x00', b'')
+                        if cleaned:
+                            f_out.write(cleaned)
+                try:
+                    shutil.copystat(artifact, dst)
+                except OSError:
+                    pass
+            else:
+                shutil.copy2(artifact, dst)
+
             os.chown(dst, orig_uid, -1)
 
-    for cf in ["db_cache_master.dump", "db_cache_master.modules", "db_cache_master.filestore.tar.gz"]:
+    for cf in ["db_cache_master.dump", "db_cache_master.hash", "db_cache_master.filestore.tar.gz"]:
         src = f"/opt/hams/test/{cf}"
         dst = f"/mnt/host_test_dir/{cf}"
         if os.path.isfile(src):
@@ -887,7 +905,7 @@ def main():
         return
 
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --js-flags=\"--prof --logfile=/var/tmp/v8_hang.log\"")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
     sys_paths = os.environ.get("PYTHONPATH", "")
@@ -954,16 +972,16 @@ def main():
         check_linters(venv_python, base_dir, ignore_filepath, extractor, target_modules)
         final_rc = run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns, target_modules)
 
-        restored, cache_file = check_and_restore_cache(args.db, mod_string)
+        restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
             rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
             if rc_init != 0:
                 print("❌ ERROR: DB init failed!")
                 if extractor: extractor.finish_and_write()
                 sys.exit(rc_init)
-            save_db_cache(args.db, cache_file, mod_string)
+            save_db_cache(args.db, cache_file, current_hash)
 
-        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-u", mod_string, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
+        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
         rc_odoo = run_cmd(cmd, extractor)
         if rc_odoo != 0: final_rc = rc_odoo
 
@@ -972,10 +990,10 @@ def main():
         final_rc = run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns, target_modules)
         os.environ["HAMS_INTEGRATION_MODE"] = "1"
 
-        restored, cache_file = check_and_restore_cache(args.db, mod_string)
+        restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
             rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", "/__skip_init__", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
-            if rc_init == 0: save_db_cache(args.db, cache_file, mod_string)
+            if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
             else: final_rc = rc_init
 
         if final_rc == 0:
@@ -1026,7 +1044,7 @@ def main():
                             if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__"):
                                 d_procs.append(subprocess.Popen([venv_python, os.path.join(dd, f)], env=daemon_env, stdout=subprocess.DEVNULL))
 
-            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "-d", args.db, "-u", mod_string, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
+            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
             rc_odoo = run_cmd(test_cmd, extractor, env=daemon_env)
             if rc_odoo != 0: final_rc = rc_odoo
 
@@ -1036,15 +1054,15 @@ def main():
     elif args.mode == "individual":
         check_linters(venv_python, base_dir, ignore_filepath, extractor, target_modules)
         for mod in target_modules:
-            restored, cache_file = check_and_restore_cache(args.db, mod)
+            restored, cache_file, current_hash = check_and_restore_cache(args.db, mod)
             if not restored:
                 rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
-                if rc_init == 0: save_db_cache(args.db, cache_file, mod)
+                if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
                 else:
                     final_rc = 1
                     continue
 
-            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-u", mod, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
             if rc != 0: final_rc = 1
 
     sys.exit(final_rc)
