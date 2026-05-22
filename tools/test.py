@@ -245,7 +245,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     env.setdefault("REDIS_HOST", "localhost")
     env.setdefault("RMQ_USER", "guest")
     env.setdefault("RMQ_PASS", "guest")
-    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker")
 
     process = subprocess.Popen(
         cmd,
@@ -293,13 +293,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     extractor.process_line(line)
 
                 # OS SIGNAL COORDINATION: Relay JS watchdog alarms directly to the Python test thread
-                if "[WATCHDOG ALARM]" in line or "=== TOUR FAILED" in line or "FATAL:" in line:
-                    print(f"\n[!] Runner Relay: Detected Watchdog Alarm! Sending SIGUSR1 to unstick Odoo PID {process.pid}...\n")
-                    try:
-                        os.kill(process.pid, signal.SIGUSR1)
-                    except OSError:
-                        pass
-
                 if "Hit CTRL-C again or send a second signal" in line:
                     print("\n[!] WARNING: Odoo background thread refused to terminate gracefully. Executing process group kill.\n")
                     os.killpg(os.getpgid(process.pid), signal.SIGKILL)
@@ -310,12 +303,14 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                 if process.poll() is not None:
                     # The test process died but something (like a Postgres background worker) is holding the pipe open
                     break
-                if idle_seconds >= 1200:
-                    print("\n[!] WARNING: Test runner hung for 1200 seconds with no output! Killing to continue...")
-                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                if idle_seconds >= 180:
+                    print("\n[!] WARNING: Test runner hung for 180 seconds with no output! Force killing to continue...\n")
+                    try:
+                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                    except OSError: pass
                     force_killed = True
                     if extractor:
-                        extractor.process_line("CRITICAL: Test execution hung for 1200 seconds. Process forcefully killed.\n")
+                        extractor.process_line("CRITICAL: Test execution hung for 180 seconds. Process forcefully killed.\n")
                     break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process group...")
@@ -611,7 +606,7 @@ def setup_namespace_and_run_tests(real_error_log, sys_args):
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     os.environ["HAMS_ISOLATED_NS"] = "1"
     os.environ["PGHOST"] = pg_sock
-    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker"
+    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker"
     os.environ["HAMS_REAL_ERROR_LOG"] = real_error_log
     os.environ["HOME"] = "/var/lib/odoo"
     os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
@@ -740,7 +735,7 @@ def main():
         return
 
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
     sys_paths = os.environ.get("PYTHONPATH", "")
