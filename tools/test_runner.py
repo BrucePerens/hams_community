@@ -846,35 +846,32 @@ echo '[*] Synchronously waiting for RabbitMQ broker to fully initialize...'
 OUT_STATUS="/var/lib/rabbitmq/rmq_status.log"
 if ! timeout 600 bash -c "until su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl status > \"$OUT_STATUS\" 2>&1' ; do sleep 1; done"; then
     echo "[!] ERROR: RabbitMQ status check timed out! Output of last attempt:" >&2
-    cat "$OUT_STATUS" >&2
-fi
-
 export PYTHONDONTWRITEBYTECODE=1
 
-sudo -E -u odoo env PGHOST={pg_socket_dir} PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker" HAMS_REAL_ERROR_LOG='{real_error_log}' "$@"
+sudo -E -u odoo env PGHOST="{pg_socket_dir}" PYTHONDONTWRITEBYTECODE=1 HAMS_ISOLATED_NS=1 PYTHONWARNINGS="ignore::DeprecationWarning" ODOO_TEST_CHROME_ARGS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker" HAMS_REAL_ERROR_LOG="{real_error_log}" "$@"
 RET=$?
-su -s /bin/bash rabbitmq -c 'HOME=/var/lib/rabbitmq rabbitmqctl stop'/var/lib/rabbitmq rabbitmqctl stop'
+su -s /bin/bash rabbitmq -c "HOME=/var/lib/rabbitmq rabbitmqctl stop"
 pkill -u rabbitmq 2>/dev/null || true
 pkill epmd 2>/dev/null || true
 pkill -u redis redis-server
-su -s /bin/bash postgres -c '{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop'
+su -s /bin/bash postgres -c "{pg_bin_dir}pg_ctl -D {pg_data_dir} -m fast stop"
 
 if [ -f /opt/hams/spool/filtered_test.txt ]; then
-    mkdir -p "$(dirname '{real_error_log}')" 2>/dev/null || true
-    cp /opt/hams/spool/filtered_test.txt '{real_error_log}'
-    chown {orig_user} '{real_error_log}' 2>/dev/null || true
-    chmod 644 '{real_error_log}' 2>/dev/null || true
+    mkdir -p "$(dirname "{real_error_log}")" 2>/dev/null || true
+    cp /opt/hams/spool/filtered_test.txt "{real_error_log}"
+    chown "{orig_user}" "{real_error_log}" 2>/dev/null || true
+    chmod 644 "{real_error_log}" 2>/dev/null || true
 fi
 
 for prof_file in /opt/hams/spool/*.prof; do
     if [ -f "$prof_file" ]; then
-        cp "$prof_file" "$(dirname '{real_error_log}')/"
-        chown {orig_user} "$(dirname '{real_error_log}')/$(basename "$prof_file")" 2>/dev/null || true
+        cp "$prof_file" "$(dirname "{real_error_log}")/"
+        chown "{orig_user}" "$(dirname "{real_error_log}")/$(basename "$prof_file")" 2>/dev/null || true
     fi
 done
 
 if [ -f /mnt/upper/opt/hams/test/db_cache_master.dump ]; then
-    echo '[*] Committing Database Cache to Host...'
+    echo "[*] Committing Database Cache to Host..."
     cp /mnt/upper/opt/hams/test/db_cache_master.dump /mnt/host_test_dir/db_cache_master.dump
     chmod 666 /mnt/host_test_dir/db_cache_master.dump 2>/dev/null || true
     if [ -f /mnt/upper/opt/hams/test/db_cache_master.modules ]; then
@@ -887,7 +884,7 @@ if [ -f /mnt/upper/opt/hams/test/db_cache_master.dump ]; then
     fi
 fi
 
-echo '[*] DEBUG: Exporting ephemeral namespace state to /opt/hams/test/debug_mnt for inspection...'
+echo "[*] DEBUG: Exporting ephemeral namespace state to /opt/hams/test/debug_mnt for inspection..."
 mkdir -p /mnt/host_test_dir/debug_mnt
 cp -ra /mnt/upper/* /mnt/host_test_dir/debug_mnt/ || true
 
