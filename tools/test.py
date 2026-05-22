@@ -5,11 +5,11 @@ Combines test execution, integration modes, and real-time failure extraction.
 Strictly prohibits Bash wrapper scripts and CPU polling loops.
 """
 
-import os
 import argparse
 import atexit
 import glob
 import logging
+import os
 import pwd
 import queue
 import re
@@ -20,6 +20,7 @@ import subprocess
 import sys
 import threading
 
+# Local modules resolve natively without sys.path hacks.
 import infrastructure
 
 _logger = logging.getLogger(__name__)
@@ -639,18 +640,18 @@ def provision_jules(base_dir):
     pg_data, pg_socket = "/opt/hams/pgdata", "/opt/hams/pgsock"
 
     run_sudo("systemctl stop postgresql || true")
-    run_sudo(f"mkdir -p {pg_data} {pg_socket}")
-    run_sudo(f"chown -R {orig_user}:{orig_user} {pg_data} {pg_socket}")
-    run_sudo(f"chmod 700 {pg_data}; chmod 2775 {pg_socket}")
+    run_sudo("mkdir -p {} {}".format(pg_data, pg_socket))
+    run_sudo("chown -R {}:{} {} {}".format(orig_user, orig_user, pg_data, pg_socket))
+    run_sudo("chmod 700 {}; chmod 2775 {}".format(pg_data, pg_socket))
 
     res = subprocess.run(["sudo", "ls", "-A", pg_data], capture_output=True, text=True)
     if not res.stdout.strip():
-        run_sudo(f"su -s /bin/bash {orig_user} -c '{pg_bin_dir}initdb -D {pg_data}'")
+        run_sudo("su -s /bin/bash {} -c '{}initdb -D {}'".format(orig_user, pg_bin_dir, pg_data))
 
-    run_sudo(f"su -s /bin/bash {orig_user} -c \"{pg_bin_dir}pg_ctl -D {pg_data} -m fast stop\" || true")
-    run_sudo(f"rm -f {pg_data}/postmaster.pid || true")
-    run_sudo(f"su -s /bin/bash {orig_user} -c \"{pg_bin_dir}pg_ctl -D {pg_data} -o '-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off' -w start\"")
-    run_sudo(f"echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;\" | su -s /bin/bash {orig_user} -c 'PGUSER={orig_user} {pg_bin_dir}psql -h {pg_socket} -d postgres' || true")
+    run_sudo("su -s /bin/bash {} -c '{}pg_ctl -D {} -m fast stop' || true".format(orig_user, pg_bin_dir, pg_data))
+    run_sudo("rm -f {}/postmaster.pid || true".format(pg_data))
+    run_sudo("su -s /bin/bash {} -c '{}pg_ctl -D {} -o \"-c listen_addresses= -c unix_socket_directories={} -c fsync=off -c synchronous_commit=off -c full_page_writes=off\" -w start'".format(orig_user, pg_bin_dir, pg_data, pg_socket))
+    run_sudo("echo \"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {} WITH SUPERUSER LOGIN;\" | su -s /bin/bash {} -c 'PGUSER={} {}psql -h {} -d postgres' || true".format(orig_user, orig_user, orig_user, pg_bin_dir, pg_socket))
 
     print("[*] Starting local Redis and RabbitMQ...")
     run_sudo("systemctl start redis-server || true")
@@ -660,7 +661,7 @@ def provision_jules(base_dir):
     os.environ["HAMS_ISOLATED_NS"] = "1"
 
     def teardown():
-        subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", f"{pg_bin_dir}pg_ctl -D {pg_data} -m fast stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "su", "-s", "/bin/bash", orig_user, "-c", "{}pg_ctl -D {} -m fast stop".format(pg_bin_dir, pg_data)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     atexit.register(teardown)
 
 
@@ -683,8 +684,13 @@ def main():
         os.environ["HAMS_REAL_ERROR_LOG"] = real_error_log
         exec_cmd = ["unshare", "-m", sys.executable, os.path.abspath(__file__), "--internal-ns-init"] + sys.argv[1:]
 
-        # os.execvpe completely replaces the current process, passing control natively
-        os.execvpe("unshare", exec_cmd, os.environ)
+        if os.geteuid() != 0:
+            print("[*] Elevating privileges (sudo) to construct isolated mount namespace...")
+            exec_cmd = ["sudo", "-E"] + exec_cmd
+            os.execvpe("sudo", exec_cmd, os.environ)
+        else:
+            # os.execvpe completely replaces the current process, passing control natively
+            os.execvpe("unshare", exec_cmd, os.environ)
         return
 
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
@@ -791,7 +797,7 @@ def main():
                         if "http service (werkzeug) running on" in line.lower() or "modules loaded." in line.lower() or "running on" in line.lower():
                             ready_event.set()
                 except Exception as e: # audit-ignore-catch-all
-                    logging.error("Error in stream_odoo: %s", e)
+                    _logger.error("Error in stream_odoo: %s", e)
 
             threading.Thread(target=stream_odoo, daemon=True).start()
 

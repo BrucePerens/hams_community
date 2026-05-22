@@ -3,7 +3,7 @@ import psutil
 import logging
 import time
 import signal
-import threading
+import urllib.request
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 
@@ -202,31 +202,22 @@ class HamsIntegrationCase(HamsHttpCase):
         cls._daemons.append(process)
 
         if health_url:
-            # Active Vitality Watchdog: Monitor OS process while awaiting HTTP health check
-            ready_event = threading.Event()
-            error_container = []
-
-            def check_health():
-                try:
-                    daemon_utils.poll_health_check(health_url, timeout=timeout)
-                    ready_event.set()
-                except Exception as e: # audit-ignore-catch-all
-                    _logger.error("Health check thread failed: %s", e)
-                    error_container.append(e)
-
-            t = threading.Thread(target=check_health, daemon=True)
-            t.start()
-
             start_time = time.time()
-            while t.is_alive():
-                t.join(timeout=0.25)
-                # Instantly abort if the process segfaults or exits during initialization
+            is_healthy = False
+            while time.time() - start_time < timeout:
                 if process.poll() is not None:
                     raise RuntimeError(f"FATAL: Daemon process '{script_path}' crashed with exit code {process.returncode} while waiting for health check!")
-                if time.time() - start_time > timeout + 5:
-                    raise TimeoutError(f"FATAL: Daemon health check for '{script_path}' timed out after {timeout} seconds.")
+                try:
+                    req = urllib.request.Request(health_url)
+                    with urllib.request.urlopen(req, timeout=1.0) as response:
+                        if response.getcode() in (200, 204):
+                            is_healthy = True
+                            break
+                except Exception as e: # audit-ignore-catch-all
+                    _logger.info("Daemon health check not ready yet: %s", e)
+                time.sleep(0.5) # audit-ignore-sleep
 
-            if error_container:
-                raise error_container[0]
+            if not is_healthy:
+                raise TimeoutError(f"FATAL: Daemon health check for '{script_path}' timed out after {timeout} seconds.")
 
         return process
