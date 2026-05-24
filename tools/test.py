@@ -233,27 +233,6 @@ class FailureExtractor:
             print(f"📄 Failure details extracted and saved to: {self.display_path}")
         print("==========================================================\n")
 
-def assassinate_chrome():
-    """Targeted kill of headless Chrome without bringing down the Odoo Python worker."""
-    print("[*] [CHROME-REAPER] Executing targeted assassination of headless Chrome...")
-    try:
-        pids = subprocess.check_output(["pgrep", "-f", "chrome.*--headless"], text=True).split()
-        if pids:
-            print(f"[*] [CHROME-REAPER] Targeted Chrome PIDs for assassination: {', '.join(pids)}")
-        else:
-            print("[*] [CHROME-REAPER] No headless Chrome processes found.")
-            pids = []
-    except subprocess.CalledProcessError:
-        print("[*] [CHROME-REAPER] No headless Chrome processes found.")
-        pids = []
-
-    print("[*] [CHROME-REAPER] Sending SIGTERM to allow V8 profiler to flush logs...")
-    subprocess.run(["pkill", "-15", "-f", "chrome.*--headless"], check=False, stderr=subprocess.DEVNULL)
-    time.sleep(2.5)
-    subprocess.run(["pkill", "-9", "-f", "chrome.*--headless"], check=False, stderr=subprocess.DEVNULL)
-    print("[*] [CHROME-REAPER] Chrome instances purged.")
-
-
 def robust_reap(pid):
     """
     Process reaper that hunts down descendants (including those that escape
@@ -292,6 +271,13 @@ def robust_reap(pid):
         pgid = None
 
     pids_to_wait = set()
+
+    print("[*] [REAPER] Dumping open file descriptors for all targets before termination:")
+    for c_pid, cmd_str in descendants:
+        print(f"--- FDs for PID {c_pid} ({cmd_str[:50]}) ---")
+        subprocess.run(["ls", "-l", f"/proc/{c_pid}/fd"], check=False, stderr=subprocess.DEVNULL)
+    print(f"--- FDs for main PID {pid} ---")
+    subprocess.run(["ls", "-l", f"/proc/{pid}/fd"], check=False, stderr=subprocess.DEVNULL)
 
     if pgid:
         print(f"[*] [REAPER] Sending SIGTERM to Process Group {pgid} to allow log flushing")
@@ -383,7 +369,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     print(f"[*] [DEBUG-RUNNER] Executing command: {' '.join(cmd)}")
 
     force_killed = False
-    has_failed = False
     q = queue.Queue()
 
     def reader():
@@ -429,9 +414,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     force_killed = True
                     break
 
-                if "asking for screenshot" in line_lower or "traceback (most recent" in line_lower or line.startswith("FAIL: ") or line.startswith("ERROR: "):
-                    has_failed = True
-
                 if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
                     continue
 
@@ -449,8 +431,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     break
             except queue.Empty:
                 idle_seconds += 1
-                # Give common.py's 60s SIGALRM time to gracefully tear down Chrome first
-                timeout_threshold = 90 if has_failed else 180
 
                 if idle_seconds % 15 == 0:
                     sys.stdout.write(f"[*] [DEBUG-RUNNER] IO Reader idle for {idle_seconds}s. Process poll: {process.poll()}\n")
@@ -460,13 +440,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     sys.stdout.write(f"[*] [DEBUG-RUNNER] Process {process.pid} exited with {process.poll()}, but stdout pipe remains open. Breaking loop.\n")
                     sys.stdout.flush()
                     # The test process died but something (like a Postgres background worker) is holding the pipe open
-                    break
-                if idle_seconds >= timeout_threshold:
-                    print(f"\n[!] WARNING: Test runner hung for {timeout_threshold} seconds with no output! Invoking full process group reaper...\n")
-                    robust_reap(process.pid)
-                    force_killed = True
-                    if extractor:
-                        extractor.process_line(f"CRITICAL: Test execution hung for {timeout_threshold} seconds. Process forcefully killed.\n")
                     break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process...")
@@ -584,6 +557,15 @@ def _compute_source_hash(dirs_to_check, mod_string):
                         for chunk in iter(lambda: f_obj.read(4096), b""):
                             hasher.update(chunk)
                 except OSError: pass
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    for cf in [os.path.join(base_dir, "tools", "infrastructure.py"), os.path.join(base_dir, "tools", "test.py"), os.path.join(base_dir, "deploy", "bootstrap_daemon_keys.py")]:
+        if os.path.exists(cf):
+            try:
+                with open(cf, "rb") as f_obj:
+                    for chunk in iter(lambda: f_obj.read(4096), b""):
+                        hasher.update(chunk)
+            except OSError: pass
 
     return hasher.hexdigest()
 
@@ -970,7 +952,7 @@ def main():
 
         restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
-            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
             if rc_init != 0:
                 print("❌ ERROR: DB init failed!")
                 if extractor: extractor.finish_and_write()
@@ -988,7 +970,7 @@ def main():
 
         restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
-            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", "/__skip_init__", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", "/__skip_init__", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
             if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
             else: final_rc = rc_init
 
@@ -998,7 +980,7 @@ def main():
                 free_port = s.getsockname()[1]
 
             print(f"[*] Starting background Odoo on port {free_port}...")
-            odoo_proc = subprocess.Popen([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--db-filter", f"^{args.db}$", "--workers=0", "--max-cron-threads=0", "--http-port", str(free_port), "--log-level=warn"], stdout=subprocess.PIPE, text=True)
+            odoo_proc = subprocess.Popen([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "--db-filter", f"^{args.db}$", "--workers=0", "--max-cron-threads=0", "--http-port", str(free_port), "--log-level=warn"], stdout=subprocess.PIPE, text=True)
 
             ready_event = threading.Event()
             def stream_odoo():
@@ -1040,7 +1022,7 @@ def main():
                             if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__"):
                                 d_procs.append(subprocess.Popen([venv_python, os.path.join(dd, f)], env=daemon_env, stdout=subprocess.DEVNULL))
 
-            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
+            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
             rc_odoo = run_cmd(test_cmd, extractor, env=daemon_env)
             if rc_odoo != 0: final_rc = rc_odoo
 
@@ -1052,13 +1034,13 @@ def main():
         for mod in target_modules:
             restored, cache_file, current_hash = check_and_restore_cache(args.db, mod)
             if not restored:
-                rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+                rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
                 if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
                 else:
                     final_rc = 1
                     continue
 
-            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
             if rc != 0: final_rc = 1
 
     sys.exit(final_rc)
