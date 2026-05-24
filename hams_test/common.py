@@ -13,6 +13,33 @@ from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 
 _logger = logging.getLogger(__name__)
 
+class VirtualClockThread(threading.Thread):
+    """
+    A CPU-time equivalent clock that suppresses massive jumps in wall-clock time
+    caused by the VM being suspended or heavily timeshared.
+    """
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.vtime = 0.0
+        self.last_real = time.time()
+        self._lock = threading.Lock()
+
+    def run(self):
+        while True:
+            time.sleep(0.1)
+            now = time.time()
+            delta = now - self.last_real
+            self.last_real = now
+            with self._lock:
+                self.vtime += min(delta, 0.5)
+
+    def time(self):
+        with self._lock:
+            return self.vtime
+
+global_vclock = VirtualClockThread()
+global_vclock.start()
+
 # 🚨 BENIGN ERROR SCRUBBER 🚨
 original_browser_stop = ChromeBrowser.stop
 def _patched_browser_stop(self, *args, **kwargs):
@@ -217,7 +244,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                     break
                 current_exc = getattr(current_exc, '__context__', None)
 
-            if not is_watchdog and hasattr(self, 'browser'):
+            if not is_watchdog and getattr(self, 'browser', None):
                 try:
                     self.browser.take_screenshot()
                 except Exception as ss_e: # audit-ignore-catch-all
@@ -301,9 +328,9 @@ class HamsIntegrationCase(HamsHttpCase):
         cls._daemons.append(process)
 
         if health_url:
-            start_time = time.time()
+            start_vtime = global_vclock.time()
             is_healthy = False
-            while time.time() - start_time < timeout:
+            while global_vclock.time() - start_vtime < timeout:
                 if process.poll() is not None:
                     raise RuntimeError(f"FATAL: Daemon process '{script_path}' crashed with exit code {process.returncode} while waiting for health check!")
                 try:
@@ -317,6 +344,6 @@ class HamsIntegrationCase(HamsHttpCase):
                 time.sleep(0.5) # audit-ignore-sleep
 
             if not is_healthy:
-                raise TimeoutError(f"FATAL: Daemon health check for '{script_path}' timed out after {timeout} seconds.")
+                raise TimeoutError(f"FATAL: Daemon health check for '{script_path}' timed out after {timeout} virtual seconds.")
 
         return process

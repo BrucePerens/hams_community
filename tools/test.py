@@ -53,6 +53,32 @@ def micro_privilege(username):
 
 _logger = logging.getLogger(__name__)
 
+class VirtualClockThread(threading.Thread):
+    """
+    A CPU-time equivalent clock that suppresses massive jumps in wall-clock time
+    caused by the VM being suspended or heavily timeshared.
+    """
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.vtime = 0.0
+        self.last_real = time.time()
+        self._lock = threading.Lock()
+
+    def run(self):
+        while True:
+            time.sleep(0.1)
+            now = time.time()
+            delta = now - self.last_real
+            self.last_real = now
+            with self._lock:
+                self.vtime += min(delta, 0.5)
+
+    def time(self):
+        with self._lock:
+            return self.vtime
+
+global_vclock = VirtualClockThread()
+global_vclock.start()
 
 def load_ignore_file(filepath):
     patterns = []
@@ -82,6 +108,11 @@ class FailureExtractor:
         base_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY") or os.path.abspath(
             os.path.expanduser(log_dir)
         )
+        os.makedirs(base_dir, exist_ok=True)
+        try:
+            os.chmod(base_dir, 0o1777)
+        except OSError:
+            pass
         self.display_path = os.path.join(base_dir, "filtered_test.txt")
 
         if os.environ.get("HAMS_ISOLATED_NS") == "1":
@@ -233,114 +264,34 @@ class FailureExtractor:
             print(f"📄 Failure details extracted and saved to: {self.display_path}")
         print("==========================================================\n")
 
+
 def robust_reap(pid):
     """
-    Process reaper that hunts down descendants (including those that escape
-    the process group, like headless Chrome), prints what it kills, and waits
-    for confirmation of termination.
+    Process reaper that targets the process group with SIGTERM,
+    waits using the CPU-adjusted VirtualClock, and escalates to SIGKILL.
     """
     print(f"\n[*] [REAPER] Initiating robust reaper for PID {pid}...")
-
-    descendants = []
-    try:
-        output = subprocess.check_output(['ps', '-eo', 'pid,ppid,args'], text=True)
-        children_map = {}
-        for line in output.splitlines()[1:]:
-            parts = line.strip().split(maxsplit=2)
-            if len(parts) >= 3:
-                try:
-                    cpid, ppid = int(parts[0]), int(parts[1])
-                    cmd = parts[2]
-                    children_map.setdefault(ppid, []).append((cpid, cmd))
-                except ValueError:
-                    continue
-
-        def _traverse(p):
-            for c_pid, c_cmd in children_map.get(p, []):
-                descendants.append((c_pid, c_cmd))
-                _traverse(c_pid)
-
-        _traverse(pid)
-    except Exception as e: # audit-ignore-catch-all
-        _logger.warning("Failed to map process tree in robust_reap: %s", e)
-        print(f"[*] [REAPER] Warning: Could not map process tree: {e}")
-
     try:
         pgid = os.getpgid(pid)
-    except OSError:
-        pgid = None
+        print(f"[*] [REAPER] Sending SIGTERM to Process Group {pgid}")
+        os.killpg(pgid, signal.SIGTERM)
 
-    pids_to_wait = set()
-
-    print("[*] [REAPER] Dumping open file descriptors for all targets before termination:")
-    for c_pid, cmd_str in descendants:
-        print(f"--- FDs for PID {c_pid} ({cmd_str[:50]}) ---")
-        subprocess.run(["ls", "-l", f"/proc/{c_pid}/fd"], check=False, stderr=subprocess.DEVNULL)
-    print(f"--- FDs for main PID {pid} ---")
-    subprocess.run(["ls", "-l", f"/proc/{pid}/fd"], check=False, stderr=subprocess.DEVNULL)
-
-    if pgid:
-        print(f"[*] [REAPER] Sending SIGTERM to Process Group {pgid} to allow log flushing")
-        try:
-            os.killpg(pgid, signal.SIGTERM)
-        except OSError as e:
-            print(f"[*] [REAPER] Error killing PGID {pgid}: {e}")
-
-    for c_pid, cmd_str in descendants:
-        pids_to_wait.add(c_pid)
-        print(f"[*] [REAPER] Target logged for terminate: {c_pid} ({cmd_str[:100]})")
-        try:
-            os.kill(c_pid, signal.SIGTERM)
-        except OSError:
-            pass
-
-    pids_to_wait.add(pid)
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except OSError:
-        pass
-
-    time.sleep(2.5)
-
-    if pgid:
-        try: os.killpg(pgid, signal.SIGKILL)
-        except OSError: pass
-
-    for c_pid, _ in descendants:
-        try: os.kill(c_pid, signal.SIGKILL)
-        except OSError: pass
-
-    try: os.kill(pid, signal.SIGKILL)
-    except OSError: pass
-
-    print("[*] [REAPER] Waiting for processes to terminate...")
-    start_wait = time.time()
-    while pids_to_wait and (time.time() - start_wait) < 15.0:
-        still_alive = set()
-        for p in pids_to_wait:
+        start = global_vclock.time()
+        while global_vclock.time() - start < 5.0:
             try:
-                os.kill(p, 0)
-                still_alive.add(p)
+                os.kill(pid, 0)
             except OSError:
-                print(f"[*] [REAPER] Process {p} confirmed dead.")
+                print(f"[*] [REAPER] Process {pid} confirmed dead.")
+                return
+            time.sleep(0.1)
 
-        pids_to_wait = still_alive
-        if pids_to_wait:
-            time.sleep(0.5)
-
-    if pids_to_wait:
-        print(f"[*] [REAPER] WARNING: PIDs still alive after wait: {pids_to_wait}")
-        print("[*] [REAPER] Executing extreme fallback pkill for headless chrome...")
-        subprocess.run(["pkill", "-f", "chrome.*--headless"], check=False, stderr=subprocess.DEVNULL)
-    else:
-        print("[*] [REAPER] Reaper completed successfully. All targets eliminated.")
+        print(f"[*] [REAPER] Process {pid} did not exit after SIGTERM. Sending SIGKILL to Process Group {pgid}")
+        os.killpg(pgid, signal.SIGKILL)
+    except OSError as e:
+        print(f"[*] [REAPER] Error during reap: {e}")
 
 
 def run_cmd(cmd, extractor=None, cwd=None, env=None):
-    """
-    Executes a shell command blocking natively on IO (Queue.get with OS condition variables)
-    eliminating all busy polling loops. Fully instrumented for Chrome/Tour hang analysis.
-    """
     initial_errors = len(extractor.captured_blocks) if extractor else 0
     if env is None:
         env = dict(os.environ)
@@ -352,7 +303,11 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     env.setdefault("RMQ_PASS", "guest")
     host_tmp_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
     os.makedirs(host_tmp_dir, exist_ok=True)
-    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process")
+    try:
+        os.chmod(host_tmp_dir, 0o1777)
+    except OSError:
+        pass
+    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process --js-flags=\"--logfile={host_tmp_dir}/v8_hang.log --prof\"")
 
     process = subprocess.Popen(
         cmd,
@@ -385,13 +340,11 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     t = threading.Thread(target=reader, daemon=True)
     t.start()
 
-    idle_seconds = 0
     try:
         while True:
             try:
                 # Short blocking wait allows us to check if the primary process died while a child kept stdout open
                 line = q.get(timeout=1.0)
-                idle_seconds = 0
                 if line is None:
                     print("[*] [DEBUG-RUNNER] Received EOF sentinel from IO Reader thread.")
                     break
@@ -430,12 +383,6 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     force_killed = True
                     break
             except queue.Empty:
-                idle_seconds += 1
-
-                if idle_seconds % 15 == 0:
-                    sys.stdout.write(f"[*] [DEBUG-RUNNER] IO Reader idle for {idle_seconds}s. Process poll: {process.poll()}\n")
-                    sys.stdout.flush()
-
                 if process.poll() is not None:
                     sys.stdout.write(f"[*] [DEBUG-RUNNER] Process {process.pid} exited with {process.poll()}, but stdout pipe remains open. Breaking loop.\n")
                     sys.stdout.flush()
@@ -666,11 +613,6 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         os.makedirs(d, exist_ok=True)
     subprocess.run(["mount", "--bind", "/opt/hams/test", "/mnt/host_test_dir"], check=True)
 
-    host_tmp_dir = real_log_dir if real_log_dir else "/var/tmp"
-    os.makedirs(host_tmp_dir, exist_ok=True)
-    os.makedirs("/var/tmp", exist_ok=True)
-    subprocess.run(["mount", "--bind", host_tmp_dir, "/var/tmp"], check=True)
-
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
     def _safe_run(cmd, **kw): return subprocess.run(cmd, check=True, **kw)
@@ -683,6 +625,16 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         if item == "mnt": continue
         os.makedirs(f"/mnt/work/{item}", exist_ok=True)
         subprocess.run(["mount", "-t", "overlay", "overlay", "-o", f"lowerdir=/{item},upperdir=/mnt/upper/{item},workdir=/mnt/work/{item}", f"/{item}"], check=True)
+
+    # Bind mount host tmp directory AFTER overlayfs so it isn't shadowed
+    host_tmp_dir = real_log_dir if real_log_dir else "/var/tmp"
+    os.makedirs(host_tmp_dir, exist_ok=True)
+    try:
+        os.chmod(host_tmp_dir, 0o1777)
+    except OSError:
+        pass
+    os.makedirs("/var/tmp", exist_ok=True)
+    subprocess.run(["mount", "--bind", host_tmp_dir, "/var/tmp"], check=True)
 
     subprocess.run(["mount", "--bind", base_dir, base_dir], check=True)
     subprocess.run(["mount", "-o", "remount,bind,ro", base_dir], check=True)
@@ -738,8 +690,15 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         os.environ["HOME"] = "/var/lib/rabbitmq"
 
     subprocess.run(["rabbitmq-server", "-detached"], preexec_fn=preexec_rmq, check=True, stdout=subprocess.DEVNULL)
-    # Native blocking await. No polling loops needed!
-    subprocess.run(["rabbitmqctl", "await_startup"], preexec_fn=preexec_rmq, check=True, timeout=120, stdout=subprocess.DEVNULL)
+
+    # Native blocking await mapped to CPU Virtual Time
+    rmq_proc = subprocess.Popen(["rabbitmqctl", "await_startup"], preexec_fn=preexec_rmq, stdout=subprocess.DEVNULL)
+    start_vtime = global_vclock.time()
+    while rmq_proc.poll() is None:
+        if global_vclock.time() - start_vtime > 120.0:
+            rmq_proc.kill()
+            raise TimeoutError("FATAL: Daemon health check for rabbitmqctl timed out.")
+        time.sleep(0.1)
 
     # 6. Execute Inner Odoo Test Suite
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -747,6 +706,10 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     os.environ["PGHOST"] = pg_sock
     host_tmp_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
     os.makedirs(host_tmp_dir, exist_ok=True)
+    try:
+        os.chmod(host_tmp_dir, 0o1777)
+    except OSError:
+        pass
     os.environ["ODOO_TEST_CHROME_ARGS"] = f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process"
     os.environ["HAMS_REAL_LOG_DIRECTORY"] = real_log_dir
     os.environ["HOME"] = "/var/lib/odoo"
@@ -862,6 +825,11 @@ def main():
         args, _ = parser.parse_known_args()
 
         real_log_dir = os.path.abspath(os.path.expanduser(args.log_directory))
+        os.makedirs(real_log_dir, exist_ok=True)
+        try:
+            os.chmod(real_log_dir, 0o1777)
+        except OSError:
+            pass
         print("[*] Routing test execution to isolated Python namespace...")
 
         os.environ["HAMS_REAL_LOG_DIRECTORY"] = real_log_dir
@@ -879,6 +847,10 @@ def main():
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
     host_tmp_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
     os.makedirs(host_tmp_dir, exist_ok=True)
+    try:
+        os.chmod(host_tmp_dir, 0o1777)
+    except OSError:
+        pass
     os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
@@ -995,10 +967,10 @@ def main():
 
             threading.Thread(target=stream_odoo, daemon=True).start()
 
-            # Smart wait: check process vitality while waiting for the event
             is_ready = False
-            for _ in range(480):  # 120 seconds max (480 * 0.25s)
-                if ready_event.wait(timeout=0.25):
+            start_vtime = global_vclock.time()
+            while global_vclock.time() - start_vtime < 120.0:
+                if ready_event.wait(timeout=0.1):
                     is_ready = True
                     break
                 if odoo_proc.poll() is not None:
@@ -1006,7 +978,7 @@ def main():
                     break
 
             if not is_ready:
-                print(f"❌ ERROR: Odoo failed to start on port {free_port} within 120 seconds or crashed.")
+                print(f"❌ ERROR: Odoo failed to start on port {free_port} within 120 virtual seconds or crashed.")
                 robust_reap(odoo_proc.pid)
                 sys.exit(1)
 

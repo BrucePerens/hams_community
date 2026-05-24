@@ -44,7 +44,7 @@ function triggerInstantAbort(reason, details) {
     window._hamsAbortTriggered = true;
 
     // The magic string that tools/test.py is listening for on stdout
-    const msg = `\n[WATCHDOG ALARM] FATAL JS EVENT DETECTED: ${reason}\n${details || ''}\n`;
+    const msg = "\n[WATCHDOG ALARM] FATAL JS EVENT DETECTED: " + reason + "\n" + (details || '') + "\n";
     originalConsoleError.call(console, msg);
 
     // Freeze and dump the DOM state for Python to capture
@@ -53,7 +53,7 @@ function triggerInstantAbort(reason, details) {
         try {
             let rpcList = window._pendingRPCCount > 0 ? (window._pendingRPCCount + ' pending requests') : 'None';
             let currentHash = document.location.hash || document.location.pathname;
-            let stateHeader = `\n========== UI STATE SUMMARY ==========\nURL/Hash: ${currentHash}\nPending RPCs: ${rpcList}\n======================================\n`;
+            let stateHeader = "\n========== UI STATE SUMMARY ==========\nURL/Hash: " + currentHash + "\nPending RPCs: " + rpcList + "\n======================================\n";
             let skeleton = buildInteractableSkeleton(document.body).replace(/\s{2,}/g, ' ');
             originalConsoleError.call(console, stateHeader + "\n========== INTERACTABLE DOM SKELETON ==========\n" + skeleton + "\n===============================================\n");
         } catch (e) {
@@ -74,7 +74,7 @@ window.addEventListener('error', (event) => {
     }
 
     const trace = event.error ? event.error.stack : 'No stacktrace available';
-    triggerInstantAbort("Uncaught Window Error", `${event.message}\n${trace}`);
+    triggerInstantAbort("Uncaught Window Error", event.message + "\n" + trace);
 });
 
 // Catch asynchronous crashes and broken promises (RPC failures, async tour step crashes)
@@ -130,7 +130,7 @@ window.fetch = async function(...args) {
         return await originalFetch.apply(this, args);
     } catch (e) {
         if (e && e.name === 'TypeError' && e.message === 'Failed to fetch') {
-            triggerInstantAbort("Fetch API Error", `The backend server crashed or dropped the connection during RPC to: ${url}`);
+            triggerInstantAbort("Fetch API Error", "The backend server crashed or dropped the connection during RPC to: " + url);
         }
         throw e;
     } finally {
@@ -144,7 +144,7 @@ window.XMLHttpRequest.prototype.open = function(method, url, ...rest) {
     this.addEventListener('loadend', () => window._pendingRPCCount--);
     this.addEventListener('error', () => {
         window._pendingRPCCount--;
-        triggerInstantAbort("XHR Network Error", `The backend server crashed or dropped the connection during RPC to: ${url}`);
+        triggerInstantAbort("XHR Network Error", "The backend server crashed or dropped the connection during RPC to: " + url);
     });
     this.addEventListener('abort', () => window._pendingRPCCount--);
     window._pendingRPCCount++;
@@ -171,17 +171,17 @@ function buildInteractableSkeleton(node) {
     if (isImportant) {
         let attrs = [];
         ['name', 'id', 'data-menu-xmlid', 'type', 'placeholder', 'value'].forEach(a => {
-            if (node.hasAttribute(a)) attrs.push(`${a}="${node.getAttribute(a)}"`);
+            if (node.hasAttribute(a)) attrs.push(a + '="' + node.getAttribute(a) + '"');
         });
 
         if (node.classList) {
             // Strip layout/utility classes, keep semantic identifiers
             let cls = Array.from(node.classList).filter(c => c.startsWith('o_') || c === 'btn' || c.startsWith('btn-')).join(' ');
-            if (cls) attrs.push(`class="${cls}"`);
+            if (cls) attrs.push('class="' + cls + '"');
         }
         let tag = node.tagName.toLowerCase();
         let content = childrenText.length > 80 ? childrenText.substring(0, 80) + '...' : childrenText;
-        return `\n<${tag} ${attrs.join(' ')}>${content}</${tag}>`;
+        return "\n<" + tag + " " + attrs.join(' ') + ">" + content + "</" + tag + ">";
     }
     return childrenText;
 }
@@ -208,77 +208,91 @@ console.log = function(...args) {
     }
 };
 
-// Shared Worker V8 Hang Watchdog
-const sharedWorkerCode = `
-    let lastPing = Date.now();
-    let lastState = "Initializing...";
-    let lastLog = "";
-    let domGrowthStartTime = 0;
-    let lastDomSize = 0;
-
-    function triggerDumpAndKill(diag) {
-        console.error(diag);
-        fetch('/hams_test/watchdog/dump', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ params: { diagnostic: diag, log: lastLog } })
-        }).then(() => {
-            fetch('/hams_test/watchdog/kill', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ params: {} })
-            });
-        }).catch(() => {
-            fetch('/hams_test/watchdog/kill', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ params: {} })
-            });
-        });
-        lastPing = Date.now() + 60000;
-    }
-
-    self.onconnect = function(e) {
-        const port = e.ports[0];
-        port.onmessage = function(event) {
-            if (event.data.type === 'ping') {
-                lastPing = Date.now();
-                if (event.data.state) lastState = event.data.state;
-                if (event.data.log) lastLog = event.data.log;
-
-                let currentDomSize = event.data.domSize || 0;
-
-                // Check if DOM grows so large it bogs down Chrome (> 5MB string representation)
-                if (currentDomSize > 5000000) {
-                    triggerDumpAndKill("V8 TIGHT LOOP DETECTED: DOM size exceeded 5MB skeleton.\\nLast Log: " + lastLog + "\\nDOM Skeleton:\\n" + lastState.substring(0, 5000) + "\\n...[TRUNCATED]");
-                } else if (currentDomSize > lastDomSize && currentDomSize > 5000) {
-                    // Check if DOM is growing without bounds for more than 15 seconds
-                    if (domGrowthStartTime === 0) {
-                        domGrowthStartTime = Date.now();
-                    } else if (Date.now() - domGrowthStartTime > 15000) {
-                        triggerDumpAndKill("V8 TIGHT LOOP DETECTED: DOM grew without bounds for > 15 seconds.\\nLast Log: " + lastLog + "\\nDOM Skeleton:\\n" + lastState.substring(0, 5000) + "\\n...[TRUNCATED]");
-                    }
-                } else {
-                    domGrowthStartTime = 0;
-                }
-                lastDomSize = currentDomSize;
-            }
-        };
-    };
-
-    setInterval(function() {
-        // 15 seconds without a ping means the main thread is locked in a tight loop
-        if (Date.now() - lastPing > 15000) {
-            triggerDumpAndKill("V8 TIGHT LOOP DETECTED: Main thread unresponsive for 15s.\\nLast Log: " + lastLog + "\\nDOM Skeleton:\\n" + lastState.substring(0, 5000) + "\\n...[TRUNCATED]");
-        }
-    }, 5000);
-\`;
+// Shared Worker V8 Hang Watchdog using string array to avoid backtick extraction corruption
+const sharedWorkerCode = [
+    "let vtime = 0;",
+    "let lastReal = Date.now();",
+    "let lastPing = 0;",
+    "let lastState = 'Initializing...';",
+    "let lastLog = '';",
+    "let domGrowthStartTime = 0;",
+    "let lastDomSize = 0;",
+    "",
+    "function triggerDumpAndKill(diag) {",
+    "    console.error(diag);",
+    "    fetch('/hams_test/watchdog/dump', {",
+    "        method: 'POST',",
+    "        headers: {'Content-Type': 'application/json'},",
+    "        body: JSON.stringify({ params: { diagnostic: diag, log: lastLog } })",
+    "    }).then(function() {",
+    "        fetch('/hams_test/watchdog/kill', {",
+    "            method: 'POST',",
+    "            headers: {'Content-Type': 'application/json'},",
+    "            body: JSON.stringify({ params: {} })",
+    "        });",
+    "    }).catch(function() {",
+    "        fetch('/hams_test/watchdog/kill', {",
+    "            method: 'POST',",
+    "            headers: {'Content-Type': 'application/json'},",
+    "            body: JSON.stringify({ params: {} })",
+    "        });",
+    "    });",
+    "    lastPing = vtime + 60000;",
+    "}",
+    "",
+    "self.onconnect = function(e) {",
+    "    const port = e.ports[0];",
+    "    port.onmessage = function(event) {",
+    "        if (event.data.type === 'ping') {",
+    "            lastPing = vtime;",
+    "            if (event.data.state) lastState = event.data.state;",
+    "            if (event.data.log) lastLog = event.data.log;",
+    "            ",
+    "            let currentDomSize = event.data.domSize || 0;",
+    "            ",
+    "            if (currentDomSize > 5000000) {",
+    "                triggerDumpAndKill('V8 TIGHT LOOP DETECTED: DOM size exceeded 5MB skeleton.\\nLast Log: ' + lastLog + '\\nDOM Skeleton:\\n' + lastState.substring(0, 5000) + '\\n...[TRUNCATED]');",
+    "            } else if (currentDomSize > lastDomSize && currentDomSize > 5000) {",
+    "                if (domGrowthStartTime === 0) {",
+    "                    domGrowthStartTime = vtime;",
+    "                } else if (vtime - domGrowthStartTime > 15000) {",
+    "                    triggerDumpAndKill('V8 TIGHT LOOP DETECTED: DOM grew without bounds for > 15 virtual seconds.\\nLast Log: ' + lastLog + '\\nDOM Skeleton:\\n' + lastState.substring(0, 5000) + '\\n...[TRUNCATED]');",
+    "                }",
+    "            } else {",
+    "                domGrowthStartTime = 0;",
+    "            }",
+    "            lastDomSize = currentDomSize;",
+    "        }",
+    "    };",
+    "};",
+    "",
+    "setInterval(function() {",
+    "    let now = Date.now();",
+    "    let delta = now - lastReal;",
+    "    lastReal = now;",
+    "    vtime += Math.min(delta, 500);",
+    "    ",
+    "    if (vtime - lastPing > 15000) {",
+    "        triggerDumpAndKill('V8 TIGHT LOOP DETECTED: Main thread unresponsive for 15 virtual seconds.\\nLast Log: ' + lastLog + '\\nDOM Skeleton:\\n' + lastState.substring(0, 5000) + '\\n...[TRUNCATED]');",
+    "    }",
+    "}, 100);"
+].join("\n");
 
 try {
     const blob = new Blob([sharedWorkerCode], { type: 'application/javascript' });
     const workerUrl = URL.createObjectURL(blob);
     const watchdogWorker = new SharedWorker(workerUrl);
     watchdogWorker.port.start();
+
+    // Virtual clock tracker for the main thread
+    window._hamsVirtualTime = 0;
+    let _hamsLastRealTime = Date.now();
+    setInterval(() => {
+        let now = Date.now();
+        let delta = now - _hamsLastRealTime;
+        _hamsLastRealTime = now;
+        window._hamsVirtualTime += Math.min(delta, 500);
+    }, 100);
 
     window._hamsTourWatchdogInterval = setInterval(() => {
         if (window._hamsAbortTriggered) {
