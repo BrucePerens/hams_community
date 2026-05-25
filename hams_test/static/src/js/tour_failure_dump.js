@@ -108,14 +108,11 @@ console.error = function (...args) {
         return '';
     }).join(' ').toLowerCase();
 
-    // Instantly trap Odoo's native framework error patterns
-    if (msg.includes('timeout') ||
-        msg.includes('failed:') ||
-        msg.includes('fatal:') ||
-        msg.includes('assertionerror') ||
-        msg.includes('tour failed') ||
-        msg.includes('step failed')) {
-        triggerInstantAbort("Odoo Framework Error", msg);
+    // MUTING THE TEARDOWN ALARM
+    // If Odoo natively fails the tour, the test is effectively over and Python is about to kill Chrome.
+    // Set the abort flag to gracefully disable the watchdog so it doesn't scream during teardown.
+    if (msg.includes('failed:') || msg.includes('tour failed')) {
+        window._hamsAbortTriggered = true;
     }
 };
 

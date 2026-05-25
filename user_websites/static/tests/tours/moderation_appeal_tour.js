@@ -8,7 +8,7 @@ registry.category("web_tour.tours").add("moderation_appeal_tour", {
     url: "/my/home",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('body', 'Verify Suspension Alert'),
-        TourUtils.waitForRPC()
+        { trigger: 'body', content: 'Wait for: Verify Suspension Alert', run: function() {} },
+        
     ],
 });

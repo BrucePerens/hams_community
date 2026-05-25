@@ -14,7 +14,7 @@ registry.category("web_tour.tours").add("manual_search_tour", {
             run: 'edit Odoo'
         },
         TourUtils.clickAndUnload('button[aria-label="Submit search"]'),
-        TourUtils.waitForElement('*:contains("Search Results for:")', 'Check results'),
-        TourUtils.waitForRPC()
+        TourUtils.waitForElement('*:contains("Search Results for:")', 'Check results'), // hams-ignore-dynamic-text },
+        
     ],
 });

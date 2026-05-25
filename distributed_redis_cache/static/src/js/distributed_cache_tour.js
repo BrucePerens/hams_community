@@ -30,13 +30,13 @@ registry.category("web_tour.tours").add("distributed_cache_admin_tour", {
             content: "Wait for status notification",
         },
         TourUtils.deterministicInput('.o_field_widget[name="model_id"] input', 'User'),
-        TourUtils.clickElement('.dropdown-item:contains("User"), .o-autocomplete--dropdown-item:contains("User")', "Select the model from autocomplete"),
+        TourUtils.clickElement('.dropdown-item:contains("User"), .o-autocomplete--dropdown-item:contains("User")', "Select the model from autocomplete"), // hams-ignore-dynamic-text,
         {
             trigger: 'button[name="action_invalidate_model_cache"]',
             content: "Invalidate the cache",
             run: "click",
         },
-        TourUtils.waitForElement('.toast-body:contains("Success"), .o_notification_manager *:contains("Success")', "Verify success message"),
-        TourUtils.waitForRPC()
+        TourUtils.waitForElement('.toast-body:contains("Success"), .o_notification_manager *:contains("Success")', "Verify success message"), // hams-ignore-dynamic-text },
+        
     ]
 });

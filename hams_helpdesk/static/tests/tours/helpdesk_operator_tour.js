@@ -27,7 +27,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             content: "Initiate the Shift Handoff procedure",
             run: "click",
         },
-        TourUtils.waitForElement('.modal-content', 'Wait for Handoff Modal to mount and render'),
+        { trigger: '.modal-content', content: 'Wait for: Wait for Handoff Modal to mount and render', run: function() {} },
         {
             trigger: 'div[name="handoff_notes"] textarea',
             content: "Enter briefing notes for the next operator",

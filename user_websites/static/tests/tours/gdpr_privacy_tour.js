@@ -8,13 +8,13 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 // Tests [@ANCHOR: UX_GDPR_ERASURE]
 registry.category("web_tour.tours").add("gdpr_privacy_tour", {
     steps: () => [
-        TourUtils.waitForElement('h2', 'Wait for Privacy Header'),
+        { trigger: 'h2', content: 'Wait for: Wait for Privacy Header', run: function() {} },
         {
             content: "Verify Privacy Dashboard Header",
             trigger: 'body',
             run: () => {},
         },
-        TourUtils.waitForElement('form[action="/my/privacy/export"] button[type="submit"]', 'Wait for Export Button'),
+        { trigger: 'form[action="/my/privacy/export"] button[type="submit"]', content: 'Wait for: Wait for Export Button', run: function() {} },
         {
             content: "Verify Export Data Button is properly wired",
             trigger: 'form[action="/my/privacy/export"] button[type="submit"]',

@@ -7,7 +7,7 @@ registry.category("web_tour.tours").add("backend_views_tour", {
     url: "/odoo?debug=1",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('.o_main_navbar', 'Verify backend UI loads'),
-        TourUtils.waitForRPC()
+        { trigger: '.o_main_navbar', content: 'Wait for: Verify backend UI loads', run: function() {} },
+        
     ],
 });

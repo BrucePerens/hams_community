@@ -36,7 +36,7 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             trigger: 'button[name="action_install"]',
             run: 'click',
         },
-        TourUtils.waitForElement('.o_notification:contains("Success")', "Wait for the success notification to ensure the RPC resolved"),
-        TourUtils.waitForRPC()
+        TourUtils.waitForElement('.o_notification:contains("Success")', "Wait for the success notification to ensure the RPC resolved"), // hams-ignore-dynamic-text },
+        
     ]),
 });

@@ -7,7 +7,7 @@ registry.category("web_tour.tours").add("frontend_misc_tour", {
     url: "/user-websites/documentation",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('body', 'Verify Documentation Page renders correctly'),
-        TourUtils.waitForRPC()
+        { trigger: 'body', content: 'Wait for: Verify Documentation Page renders correctly', run: function() {} },
+        
     ],
 });

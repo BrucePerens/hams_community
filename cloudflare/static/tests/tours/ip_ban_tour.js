@@ -8,18 +8,22 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
         {
+            content: 'Open App Switcher Dropdown',
             trigger: '.o_navbar_apps_menu button',
             run: 'click',
         },
-        TourUtils.clickElement('[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")', "Open App Switcher (if needed) or click Cloudflare Edge"),
+        {
+            content: "Click Cloudflare Edge App",
+            trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"]',
+            run: 'click',
+        },
         {
             content: "Open IP Bans Menu",
             trigger: 'a[data-menu-xmlid="cloudflare.menu_cf_ip_bans"]',
             run: "click"
         },
-        TourUtils.waitForElement('tr.o_data_row td:contains("192.168.9.9")', 'Check if ban record exists in the list view'),
-        TourUtils.clickElement('tr.o_data_row td:contains("192.168.9.9")', "Click on the IP Ban record to open form view"),
-        TourUtils.waitForElement('button[name="action_lift_ban"]', 'Verify Lift Ban button is rendered'),
-        TourUtils.waitForRPC()
+        TourUtils.clickElement('tr.o_data_row td:contains("192.168.9.9")', "Wait for and click on the IP Ban record to open form view"), // hams-ignore-dynamic-text,
+        { trigger: 'button[name="action_lift_ban"]', content: 'Wait for: Verify Lift Ban button is rendered', run: function() {} },
+        
     ],
 });

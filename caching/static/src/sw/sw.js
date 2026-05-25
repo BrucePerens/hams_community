@@ -33,6 +33,9 @@ self.addEventListener('fetch', (event) => {
     // Only cache GET requests.
     if (request.method !== 'GET') return;
 
+    // BYPASS: Chrome only-if-cached bug which throws TypeErrors and forces Odoo retry loops
+    if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
+
     // Explicitly bypass WebSockets, secure APIs, and dynamic routes.
     if (url.protocol === 'ws:' || url.protocol === 'wss:') return;
     if (url.pathname.startsWith('/my/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/web/image/') || url.pathname.startsWith('/web/content/')) return; // burn-ignore-route
@@ -58,14 +61,31 @@ self.addEventListener('fetch', (event) => {
 
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseToCache).catch(err => {
-                            // Non-fatal, just log and continue
+                        cache.put(request, responseToCache).then(() => {
+                            // SURGICAL ODOO EVICTION:
+                            // Odoo bundles follow /web/assets/<hash>/<bundle_name>.js
+                            // If we cache a new hash, instantly delete the old hash for the same bundle to prevent gigabytes of cache bloat.
+                            const match = url.pathname.match(/\/web\/assets\/[^\/]+\/(.+)/);
+                            if (match) {
+                                const bundleFile = match[1];
+                                cache.keys().then(keys => {
+                                    keys.forEach(key => {
+                                        const keyUrl = new URL(key.url);
+                                        const keyMatch = keyUrl.pathname.match(/\/web\/assets\/[^\/]+\/(.+)/);
+                                        if (keyMatch && keyMatch[1] === bundleFile && keyUrl.pathname !== url.pathname) {
+                                            cache.delete(key);
+                                            console.log(`[Caching SW] Evicted stale Odoo bundle: ${keyUrl.pathname}`);
+                                        }
+                                    });
+                                });
+                            }
+                        }).catch(err => {
                             console.error(`[Caching SW] Failed to cache ${request.url}:`, err);
                         });
                     }).catch(err => {
-                        // Non-fatal, just log and continue
                         console.error(`[Caching SW] Failed to open cache ${CACHE_NAME}:`, err);
                     });
+
                     return networkResponse;
                 });
             })

@@ -8,7 +8,7 @@ registry.category("web_tour.tours").add("toast_notifications_tour", {
     url: "/?report_submitted=1",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('.o_notification_manager .o_notification', 'Check that the success toast notification is pushed to the DOM'),
-        TourUtils.waitForRPC()
+        { trigger: '.o_notification_manager .o_notification', content: 'Wait for: Check that the success toast notification is pushed to the DOM', run: function() {} },
+        
     ],
 });

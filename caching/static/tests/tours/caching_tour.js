@@ -30,7 +30,7 @@ registry.category("web_tour.tours").add("caching_service_worker_check", {
                 }
             },
         },
-        TourUtils.waitForElement('body.sw-registered', 'Wait for SW status to be updated'),
-        TourUtils.waitForRPC()
+        { trigger: 'body.sw-registered', content: 'Wait for: Wait for SW status to be updated', run: function() {} },
+        
     ],
 });

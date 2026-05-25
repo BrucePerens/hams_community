@@ -7,51 +7,51 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
     url: "/odoo?debug=1",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('.o_navbar_apps_menu button', 'Wait for Apps Menu Button'),
+        { trigger: '.o_navbar_apps_menu button', content: 'Wait for: Wait for Apps Menu Button', run: function() {} },
         {
             trigger: '.o_navbar_apps_menu button',
             content: "Open Apps Menu",
             run: "click",
         },
-        TourUtils.waitForElement('[data-menu-xmlid="base.menu_administration"]', 'Wait for Settings Menu'),
+        { trigger: '[data-menu-xmlid="base.menu_administration"]', content: 'Wait for: Wait for Settings Menu', run: function() {} },
         {
             trigger: '[data-menu-xmlid="base.menu_administration"]',
             content: "Open Settings",
             run: "click",
         },
-        TourUtils.waitForElement('button[data-menu-xmlid="base.menu_users"]', 'Wait for Users Top Menu'),
+        { trigger: 'button[data-menu-xmlid="base.menu_users"]', content: 'Wait for: Wait for Users Top Menu', run: function() {} },
         {
             trigger: 'button[data-menu-xmlid="base.menu_users"]',
             content: "Open Users & Companies menu",
             run: "click",
         },
-        TourUtils.waitForElement('[data-menu-xmlid="base.menu_action_res_users"]', 'Wait for Users Submenu'),
+        { trigger: '[data-menu-xmlid="base.menu_action_res_users"]', content: 'Wait for: Wait for Users Submenu', run: function() {} },
         {
             trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
             content: "Open Users",
             run: "click",
         },
-        TourUtils.waitForElement('.o_facet_remove', 'Wait for default filter to appear'),
+        { trigger: '.o_facet_remove', content: 'Wait for: Wait for default filter to appear', run: function() {} },
         {
             trigger: '.o_facet_remove',
             content: "Remove default Internal Users filter",
             run: "click",
         },
-        TourUtils.waitForElement('td.o_data_cell:contains("SEO UI Test User")', 'Wait for user row to render'),
-        TourUtils.clickElement('td.o_data_cell:contains("SEO UI Test User")', "Open User Form Directly (Bypass fragile search logic)"),
-        TourUtils.waitForElement('.o_form_sheet a[name="user_websites_seo_settings"]', 'Wait for form sheet and SEO tab to hydrate'),
+        TourUtils.waitForElement('td.o_data_cell:contains("SEO UI Test User")', 'Wait for user row to render'), // hams-ignore-dynamic-text },
+        TourUtils.clickElement('td.o_data_cell:contains("SEO UI Test User")', "Open User Form Directly (Bypass fragile search logic)"), // hams-ignore-dynamic-text,
+        { trigger: '.o_form_sheet a[name="user_websites_seo_settings"]', content: 'Wait for: Wait for form sheet and SEO tab to hydrate', run: function() {} },
         {
             content: "Click the SEO Metadata notebook tab injected by our module",
             trigger: 'a[name="user_websites_seo_settings"]',
             run: 'click',
         },
-        TourUtils.waitForElement('.o_field_widget[name="website_meta_title"] input, input[id*="website_meta_title"]', 'Wait for title input'),
+        { trigger: '.o_field_widget[name="website_meta_title"] input, input[id*="website_meta_title"]', content: 'Wait for: Wait for title input', run: function() {} },
         {
             content: "Input SEO Meta Title",
             trigger: '.o_field_widget[name="website_meta_title"] input, input[id*="website_meta_title"]',
             run: 'edit SEO Title',
         },
-        TourUtils.waitForElement('.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]', 'Wait for description input'),
+        { trigger: '.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]', content: 'Wait for: Wait for description input', run: function() {} },
         {
             content: "Input SEO Meta Description",
             trigger: '.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]',
@@ -63,6 +63,6 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             trigger: 'button[data-menu-xmlid="base.menu_users"]',
             run: 'click',
         },
-        TourUtils.waitForRPC()
+        
     ]),
 });

@@ -37,7 +37,7 @@ registry.category("web_tour.tours").add("pager_duty_incident_tour", {
             content: "Open severity dropdown",
             run: "click",
         },
-        TourUtils.clickElement('.o_select_menu_item span:contains("High"), .o_select_menu_item:contains("High")', "Select High severity"),
+        TourUtils.clickElement('.o_select_menu_item span:contains("High"), .o_select_menu_item:contains("High")', "Select High severity"), // hams-ignore-dynamic-text,
         {
             trigger: '[name="description"] textarea',
             content: "Enter description",

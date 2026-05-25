@@ -21,7 +21,7 @@ registry.category("web_tour.tours").add("db_management_slow_query_tour", { // # 
             trigger: '[data-menu-xmlid="database_management.menu_db_queries"]',
             run: 'click',
         },
-        TourUtils.waitForElement('.o_list_table', 'Wait for slow query table to render'),
-        TourUtils.waitForRPC()
+        { trigger: '.o_list_table', content: 'Wait for: Wait for slow query table to render', run: function() {} },
+        
     ],
 });

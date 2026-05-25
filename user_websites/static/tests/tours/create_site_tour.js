@@ -8,7 +8,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("create_site_tour", {
     url: "/sitetour/home",
     steps: () => [
-        TourUtils.waitForElement('button.o_tour_create_site_btn', 'Wait for Create Site Button'),
+        { trigger: 'button.o_tour_create_site_btn', content: 'Wait for: Wait for Create Site Button', run: function() {} },
         {
             content: "Click Create using namespaced fallback class",
             trigger: 'button.o_tour_create_site_btn',

@@ -59,32 +59,25 @@ else:
         _apply_cdp_hook(self)
     ChromeBrowser.__init__ = _patched_init
 
-class VirtualClockThread(threading.Thread):
+class PassiveVirtualClock:
     """
     A CPU-time equivalent clock that suppresses massive jumps in wall-clock time
-    caused by the VM being suspended or heavily timeshared.
+    caused by the VM being suspended, entirely without GIL-thrashing threads.
     """
     def __init__(self):
-        super().__init__(daemon=True)
         self.vtime = 0.0
         self.last_real = time.time()
         self._lock = threading.Lock()
 
-    def run(self):
-        while True:
-            time.sleep(0.1)  # audit-ignore-sleep
+    def time(self):
+        with self._lock:
             now = time.time()
             delta = now - self.last_real
             self.last_real = now
-            with self._lock:
-                self.vtime += min(delta, 0.5)
-
-    def time(self):
-        with self._lock:
+            self.vtime += min(delta, 0.5)
             return self.vtime
 
-global_vclock = VirtualClockThread()
-global_vclock.start()
+global_vclock = PassiveVirtualClock()
 
 # 🚨 BENIGN ERROR SCRUBBER 🚨
 if hasattr(ChromeBrowser, 'stop'):

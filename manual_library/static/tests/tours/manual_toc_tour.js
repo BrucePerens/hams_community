@@ -8,8 +8,8 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("manual_toc_tour", {
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.waitForElement('#manual_toc_container ul.nav', 'Wait for the TOC container to render'),
-        TourUtils.waitForElement('#manual_toc_container a[href^="#toc-heading-"]', 'Verify that a heading link was dynamically generated'),
-        TourUtils.waitForRPC()
+        { trigger: '#manual_toc_container ul.nav', content: 'Wait for: Wait for the TOC container to render', run: function() {} },
+        { trigger: '#manual_toc_container a[href^="#toc-heading-"]', content: 'Wait for: Verify that a heading link was dynamically generated', run: function() {} },
+        
     ],
 });

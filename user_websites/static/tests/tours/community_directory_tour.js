@@ -7,7 +7,7 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("community_directory_tour", {
     url: "/community",
     steps: () => [
-        TourUtils.waitForElement('h1', 'Wait for Directory Header'),
+        { trigger: 'h1', content: 'Wait for: Wait for Directory Header', run: function() {} },
         {
             content: "Check that the directory page renders",
             trigger: 'body',

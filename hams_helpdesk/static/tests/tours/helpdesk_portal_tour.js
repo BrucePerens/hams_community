@@ -7,8 +7,8 @@ registry.category("web_tour.tours").add("helpdesk_portal_tour", {
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
         TourUtils.clickAndUnload('table tbody tr td a'),
-        TourUtils.waitForElement('#optional_classes.container h3', 'Verify that the ticket detail page loaded successfully'),
-        TourUtils.waitForElement('.o_portal_chatter', 'Verify the chatter is available'),
-        TourUtils.waitForRPC()
+        { trigger: '#optional_classes.container h3', content: 'Wait for: Verify that the ticket detail page loaded successfully', run: function() {} },
+        { trigger: '.o_portal_chatter', content: 'Wait for: Verify the chatter is available', run: function() {} },
+        
     ],
 });

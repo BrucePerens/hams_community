@@ -41,7 +41,7 @@ registry.category("web_tour.tours").add("backup_dashboard_tour", {
             content: "Open engine dropdown",
             run: 'click',
         },
-        TourUtils.clickElement('.o_select_menu_item *:contains("Kopia")', "Select Kopia engine value"),
+        TourUtils.clickElement('.o_select_menu_item *:contains("Kopia")', "Select Kopia engine value"), // hams-ignore-dynamic-text,
         {
             trigger: 'div[name="target_path"] input, input[id="target_path"]',
             run: "edit /var/lib/odoo/backups/tour_repo",

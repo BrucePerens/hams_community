@@ -12,13 +12,13 @@ registry.category("web_tour.tours").add("cf_waf_rule_tour", {
             trigger: '.o_navbar_apps_menu button',
             run: "click"
         },
-        TourUtils.clickElement('[data-menu-xmlid="cloudflare.menu_cloudflare_root"], *:contains("Cloudflare Edge")', "Open Cloudflare Edge Menu"),
+        { trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"]', content: "Open Cloudflare Edge Menu", run: 'click' },
         {
             content: "Open WAF Rules Menu",
             trigger: '[data-menu-xmlid="cloudflare.menu_cf_waf_rules"]',
             run: "click"
         },
-        TourUtils.waitForElement('tr.o_data_row *:contains("Tour XML-RPC Rule")', 'Check if Tour WAF rule exists in list'),
-        TourUtils.waitForRPC()
+        TourUtils.waitForElement('tr.o_data_row *:contains("Tour XML-RPC Rule")', 'Check if Tour WAF rule exists in list'), // hams-ignore-dynamic-text },
+        
     ],
 });

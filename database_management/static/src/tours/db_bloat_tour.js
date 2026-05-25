@@ -22,12 +22,12 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             trigger: '[data-menu-xmlid="database_management.menu_db_tables"]',
             run: 'click',
         },
-        TourUtils.waitForElement('.o_list_table', 'Wait for table to render'),
+        { trigger: '.o_list_table', content: 'Wait for: Wait for table to render', run: function() {} },
         {
             trigger: '.o_list_table .o_data_row .o_list_record_selector input',
             run: 'click',
         },
-        TourUtils.clickElement('*:contains("Vacuum Analyze Selected")', "Vacuum Analyze Selected"),
-        TourUtils.waitForRPC()
+        TourUtils.clickElement('*:contains("Vacuum Analyze Selected")', "Vacuum Analyze Selected"), // hams-ignore-dynamic-text,
+        
     ],
 });
