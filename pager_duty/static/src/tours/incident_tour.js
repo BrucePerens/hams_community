@@ -54,6 +54,11 @@ registry.category("web_tour.tours").add("pager_duty_incident_tour", {
             trigger: '[name="description"] textarea',
             content: "Enter description",
             run: "edit This is a manual test incident.",
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave()),
 });

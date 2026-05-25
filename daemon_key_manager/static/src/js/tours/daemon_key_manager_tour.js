@@ -35,6 +35,11 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             trigger: 'div[name="env_file_path"] input',
             content: 'Enter environment file path',
             run: 'edit /var/lib/odoo/daemon_keys/test.env',
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave()).concat([
         {
@@ -46,12 +51,17 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             }
         },
         {
-            trigger: 'button[name="action_force_provision_all"]',
-            content: 'Force provision all keys',
+            content: 'Wait for the notification to physically leave the DOM after fade-out',
+            trigger: 'body:not(:has(.o_notification))',
+            run: function () {}
+        },
+        {
+            trigger: 'button[name="action_force_provision_all"]:not([disabled])',
+            content: 'Force provision all keys (ensuring button is active)',
             run: 'click',
         },
         {
-            trigger: '.o_notification_manager .o_notification',
+            trigger: '.o_notification',
             content: 'Wait for NEW RPC resolution and notification to prevent dirty form crash',
             run: function () {}
         }

@@ -72,6 +72,11 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             content: "Input SEO Meta Description",
             trigger: '.o_field_widget[name="website_meta_description"] textarea, textarea[id*="website_meta_description"]',
             run: 'edit SEO Description',
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave('.o_form_button_save, .o_form_button_check', '.o_form_saved, .o_form_button_create')).concat([
         {

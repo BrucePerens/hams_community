@@ -20,6 +20,11 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             trigger: 'div[name="name"] input',
             content: "Fill in the ticket subject",
             run: "edit Emergency Core Router Failure",
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave()).concat([
         {

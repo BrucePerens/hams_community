@@ -1592,6 +1592,18 @@ def scan_file(filepath, is_odoo_module=False):
         if re.search(r"trigger:\s*['\"`]button\[name=[^\]]+\]['\"`][^}]+run:\s*['\"`]click['\"`]\s*\}[\s\]\),;]*$", content, re.DOTALL):
             errors_found.append(f"CRITICAL JS TOUR DIRTY FORM: The tour '{filename}' appears to end immediately after clicking an action button. It MUST explicitly wait for an RPC resolution (e.g., targeting '.o_notification') in a subsequent step to prevent a dirty form crash.")
 
+    if filename.endswith(".js") and ("tour" in filename or "tours" in filepath):
+        if re.search(r"trigger:\s*['\"`]button\[name=[^\]]+\]['\"`][^}]+run:\s*['\"`]click['\"`]\s*\}[\s\]\),;]*$", content, re.DOTALL):
+            errors_found.append(f"Line 0: CRITICAL JS TOUR DIRTY FORM: The tour '{filename}' appears to end immediately after clicking an action button. It MUST explicitly wait for an RPC resolution (e.g., targeting '.o_notification') in a subsequent step to prevent a dirty form crash.")
+        if re.search(r"window\.(confirm|alert)\s*\(", content):
+            errors_found.append(f"Line 0: CRITICAL JS TOUR DIALOG: Tour '{filename}' contains an execution of window.confirm or window.alert. This will freeze the headless browser. You MUST override it (e.g., window.confirm = () => true;) in a separate step targeting 'body' before clicking the trigger.")
+        if re.search(r"trigger:\s*['\"`]\.(modal-dialog|modal-content)['\"`][^}]+run:\s*['\"`][a-zA-Z]+['\"`]", content, re.DOTALL):
+            errors_found.append(f"Line 0: CRITICAL JS TOUR MODAL: Tour '{filename}' attempts to perform an action (run: '...') directly on '.modal-dialog' or '.modal-content'. These must be used strictly as empty DOM polling steps (run: function() {{}}) to wait for the modal to render.")
+        if re.search(r"expectUnloadPage:\s*true[^}]+run:\s*(?:function|\(\)\s*=>)", content, re.DOTALL) or re.search(r"run:\s*(?:function|\(\)\s*=>)[^}]+expectUnloadPage:\s*true", content, re.DOTALL):
+            errors_found.append(f"Line 0: CRITICAL JS TOUR UNLOAD: Tour '{filename}' uses 'expectUnloadPage: true' alongside a custom JS closure for 'run'. This breaks Odoo's native unload event binding. You MUST use the native Odoo helper \"run: 'click'\" when expecting a page unload.")
+        if re.search(r"run:\s*['\"`]edit[^}]*\}\s*\]\s*\.\s*concat\(\s*TourUtils\.safeSave", content, re.DOTALL):
+            errors_found.append(f"Line 0: CRITICAL JS TOUR DOM BLUR: Tour '{filename}' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.")
+
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
     if filename.endswith(".py"):

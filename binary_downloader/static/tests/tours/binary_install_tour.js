@@ -29,6 +29,11 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             content: "Provide the exact SHA256 hash for the string '1234'",
             trigger: 'div[name="checksum"] input',
             run: 'edit 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave()).concat([
         {
