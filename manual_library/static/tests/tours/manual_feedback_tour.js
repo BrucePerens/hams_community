@@ -8,8 +8,23 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 registry.category("web_tour.tours").add("manual_feedback_tour", {
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
-        TourUtils.clickAndUnload('button[name="is_helpful"][value="1"]'),
-        TourUtils.waitForElement('.alert-success:contains("Thank you for your feedback!")', 'Check success message'), // hams-ignore-dynamic-text },
-        
+        { trigger: 'button[name="is_helpful"][value="1"]', run: 'click' },
+        {
+            trigger: '.alert-success',
+            content: 'Check success message',
+            run: function () {
+                const els = document.querySelectorAll('.alert-success');
+                let found = false;
+                for (const el of els) {
+                    if (el.textContent.includes('Thank you for your feedback!')) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    throw new Error('Success message not found');
+                }
+            }
+        },
     ],
 });

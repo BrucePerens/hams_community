@@ -76,7 +76,7 @@ def lint_file_content(filepath, content):
         elif ext == ".json":
             try:
                 json.loads(content)
-            except Exception as e:
+            except ValueError as e:
                 post_errors.append(f"[ERROR] Invalid JSON: {e}")
 
         # 5. check_burn_list
@@ -92,7 +92,7 @@ def lint_file_content(filepath, content):
                         post_errors.append(f"[ERROR] check_burn_list.py rejected:\n{err_str}")
                     for w in warns:
                         warnings.append(f"[WARN] check_burn_list.py warning: {w.replace(tmp_filepath, filepath)}")
-                except Exception as e:
+                except (ImportError, AttributeError, SyntaxError, TypeError, ValueError, KeyError, OSError) as e:
                     warnings.append(f"[WARN] Failed to execute custom linter: {e}")
 
     return post_errors, warnings
@@ -227,7 +227,7 @@ def validate_syntax_in_memory(filepath, content):
     elif ext == ".json":
         try:
             json.loads(content)
-        except Exception as e:
+        except ValueError as e:
             raise ValueError(f"JSON Syntax Error: {e}")
     elif ext == ".xml":
         try:
@@ -915,7 +915,7 @@ def extract_parcel(raw_text):
             try:
                 top_level = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], stderr=subprocess.STDOUT, text=True).strip()
                 current_repo = os.path.basename(top_level)
-            except Exception:
+            except (subprocess.CalledProcessError, OSError):
                 current_repo = os.path.basename(os.getcwd())
 
             exp_base = expected_repo.split('/')[-1].lower()
@@ -1003,7 +1003,7 @@ def extract_parcel(raw_text):
                 with open(filepath, "r", encoding="utf-8") as f:
                     original_text = f.read()
                     current_text = original_text
-            except Exception as e:
+            except OSError as e:
                 errors.append(f"Failed to read existing file {filepath}: {e}")
                 _print_summary(
                     filepath, errors, warnings, aborted=True, count=len(tasks)
@@ -1105,11 +1105,11 @@ def extract_parcel(raw_text):
                                 )
                             if new_text is None:
                                 new_text = whitespace_agnostic_replace(
-                                 current_text, search_text, replace_text, filepath
+                                    current_text, search_text, replace_text, filepath
                                 )
-                            elif filepath.endswith(".md"):
-                                new_text = fuzzy_line_replace(
-                                 current_text, search_text, replace_text, filepath
+                        elif filepath.endswith(".md"):
+                            new_text = fuzzy_line_replace(
+                                current_text, search_text, replace_text, filepath
                             )
                             if new_text is None:
                                 new_text = semantic_markdown_replace(
@@ -1117,10 +1117,10 @@ def extract_parcel(raw_text):
                                 )
                             if new_text is None:
                                 new_text = boundary_markdown_replace(
-                                     current_text, search_text, replace_text, filepath
+                                    current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
-                               new_text = fuzzy_markdown_replace(
+                                new_text = fuzzy_markdown_replace(
                                     current_text, search_text, replace_text, filepath
                                 )
                             if new_text is None:
@@ -1168,7 +1168,7 @@ def extract_parcel(raw_text):
                 if lint_warns:
                     warnings.extend(lint_warns)
 
-        except Exception as e:
+        except (ValueError, FileNotFoundError, OSError, SyntaxError, TypeError, AttributeError) as e:
             errors.append(str(e))
 
         if errors:
@@ -1228,7 +1228,7 @@ def extract_parcel(raw_text):
 
             _print_summary(filepath, errors, warnings, aborted=False, count=len(tasks))
 
-        except Exception as e:
+        except OSError as e:
             errors.append(f"Commit failed: {e}")
             _print_summary(filepath, errors, warnings, aborted=True, count=len(tasks))
             failed_files.append(filepath)
@@ -1260,7 +1260,7 @@ def extract_parcel(raw_text):
                     print(
                         f"⚠️  Failed to synchronize POT file:\n{res.stderr or res.stdout}"
                     )
-            except Exception as e:
+            except OSError as e:
                 print(f"⚠️  Failed to execute generate_pot.py: {e}")
 
 

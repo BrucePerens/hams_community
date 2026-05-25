@@ -22,8 +22,20 @@ registry.category("web_tour.tours").add("cf_ip_ban_tour", {
             trigger: 'a[data-menu-xmlid="cloudflare.menu_cf_ip_bans"]',
             run: "click"
         },
-        TourUtils.clickElement('tr.o_data_row td:contains("192.168.9.9")', "Wait for and click on the IP Ban record to open form view"), // hams-ignore-dynamic-text,
+        {
+            trigger: 'tr.o_data_row td',
+            content: "Wait for and click on the IP Ban record to open form view",
+            run: function () {
+                const items = document.querySelectorAll('tr.o_data_row td');
+                for (const item of items) {
+                    if (item.textContent.includes('192.168.9.9')) {
+                        item.click();
+                        break;
+                    }
+                }
+            }
+        },
         { trigger: 'button[name="action_lift_ban"]', content: 'Wait for: Verify Lift Ban button is rendered', run: function() {} },
-        
+
     ],
 });

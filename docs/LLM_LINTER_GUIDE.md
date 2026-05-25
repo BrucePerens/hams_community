@@ -171,7 +171,7 @@ Ensure all dynamic data injected into the DOM is sanitized.
 The Odoo test runner will fatally timeout after 20,000ms if the page does not actually unload.
 * **Tour Dropdown Selection:** Native `<select>` elements are deprecated in backend form views. Odoo 19 uses `.o_select_menu`.
 Tours must use two steps: click the dropdown, then click `.o_select_menu_item`.
-* **Tour Trigger Crash (The :contains Trap):** Using `:contains(...)` inside a `trigger:` string is strictly banned. Odoo 19 evaluates triggers natively using `document.querySelectorAll()`, which instantly throws a fatal `SyntaxError` on jQuery pseudo-selectors, crashing the test runner. You MUST use `TourUtils.clickElement(selector)` or target explicit `[data-menu-xmlid=...]` attributes.
+* **Tour Trigger Crash (The :contains Trap):** Using `:contains(...)` inside a `trigger:` string is strictly banned. Odoo 19 evaluates triggers natively using `document.querySelectorAll()`, which instantly throws a fatal `SyntaxError` on jQuery pseudo-selectors, crashing the test runner. Target elements by name, id, or structural classes instead.
 * **Native URL Initialization:** Tours MUST initialize using the native `url: "/path"` property within the tour definition.
 Using a manual `run` step with `document.location.href = ...` to start the tour is strictly banned due to race conditions.
 * **Hash-Based Routing Ban:** Odoo 19 deprecated hash-based routes (e.g., `/web#...`) and forcefully redirects them to the Discuss app (`/odoo/discuss`). You MUST NOT use `/web#...` in tour URLs, `start_tour` targets, or window navigation. Use modern query parameter routing instead (e.g., `/odoo?action=...&id=...`).

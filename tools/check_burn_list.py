@@ -282,7 +282,7 @@ ODOO_ERROR_RULES = [
     (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"trigger:\s*['\"`].*?:contains.*?['\"`]"),
-        "CRITICAL JS TOUR SYNTAX: Odoo 19 native triggers use querySelectorAll, which crashes instantly on jQuery's ':contains' pseudo-selector. You MUST use 'TourUtils.clickElement' or 'TourUtils.waitForElement' instead.",
+        "CRITICAL JS TOUR SYNTAX: Odoo 19 native triggers use querySelectorAll, which crashes instantly on jQuery's ':contains' pseudo-selector. Target elements by name, id, or structural classes instead.",
     ),
     (
         r"tour.*\.js$|.*_tour\.js$",
@@ -1593,24 +1593,6 @@ def scan_file(filepath, is_odoo_module=False):
         if "trigger:" not in content and not re.search(r"TourUtils\.(waitForElement|waitForAbsence|clickAndUnload|deterministicInput|safeSave|waitForRPC)", content):
             errors_found.append(
                 "UI TOUR MANDATE VIOLATION: Odoo UI Tours MUST contain 'trigger:' or a valid 'TourUtils' macro."
-            )
-
-        # Enforce TourUtils wait macros for modal/dialog interactions
-        if re.search(r"trigger:\s*['\"`].*?(?:\.modal|\.o_dialog).*?['\"`]", content):
-            if "TourUtils.waitForElement" not in content and "TourUtils.waitForAbsence" not in content:
-                errors_found.append(
-                    "CRITICAL TOUR TIMING TRAP: Tour targets a modal or dialog but does not use 'TourUtils.waitForElement' or 'TourUtils.waitForAbsence'."
-                )
-
-        if "TourUtils" not in content:
-            warnings_found.append(
-                "Line 1: [%AUDIT] JULES VM LATENCY: Tour does not import TourUtils. Use TourUtils to prevent race conditions."
-            )
-
-        # Enforce TourUtils for overall Jules VM latency protection
-        if "TourUtils" not in content:
-            warnings_found.append(
-                "Line 1: [%AUDIT] JULES VM LATENCY: Tour does not import TourUtils. In resource-constrained environments, you should utilize TourUtils.waitForRPC(), TourUtils.safeSave(), or TourUtils.waitForElement() to prevent race conditions."
             )
 
     if filename.startswith("test_") and filename.endswith(".py"):

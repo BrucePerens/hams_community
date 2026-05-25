@@ -37,8 +37,24 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             content: "Remove default Internal Users filter",
             run: "click",
         },
-        TourUtils.waitForElement('td.o_data_cell:contains("SEO UI Test User")', 'Wait for user row to render'), // hams-ignore-dynamic-text },
-        TourUtils.clickElement('td.o_data_cell:contains("SEO UI Test User")', "Open User Form Directly (Bypass fragile search logic)"), // hams-ignore-dynamic-text,
+        {
+            trigger: 'td.o_data_cell',
+            content: "Wait for user row to render and click",
+            run: function () {
+                const items = document.querySelectorAll('td.o_data_cell');
+                let clicked = false;
+                for (const item of items) {
+                    if (item.textContent.includes('SEO UI Test User')) {
+                        item.click();
+                        clicked = true;
+                        break;
+                    }
+                }
+                if (!clicked) {
+                    throw new Error('User row not found');
+                }
+            }
+        },
         { trigger: '.o_form_sheet a[name="user_websites_seo_settings"]', content: 'Wait for: Wait for form sheet and SEO tab to hydrate', run: function() {} },
         {
             content: "Click the SEO Metadata notebook tab injected by our module",
@@ -63,6 +79,6 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             trigger: 'button[data-menu-xmlid="base.menu_users"]',
             run: 'click',
         },
-        
+
     ]),
 });

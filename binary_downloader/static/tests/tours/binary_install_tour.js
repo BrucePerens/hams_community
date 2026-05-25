@@ -36,7 +36,22 @@ registry.category("web_tour.tours").add("binary_install_tour", {
             trigger: 'button[name="action_install"]',
             run: 'click',
         },
-        TourUtils.waitForElement('.o_notification:contains("Success")', "Wait for the success notification to ensure the RPC resolved"), // hams-ignore-dynamic-text },
-        
+        {
+            trigger: '.o_notification',
+            content: "Wait for the success notification to ensure the RPC resolved",
+            run: function () {
+                const els = document.querySelectorAll('.o_notification');
+                let found = false;
+                for (const el of els) {
+                    if (el.textContent.includes('Success')) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    throw new Error('Success notification not found');
+                }
+            }
+        },
     ]),
 });

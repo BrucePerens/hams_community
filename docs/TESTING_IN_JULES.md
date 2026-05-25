@@ -84,7 +84,6 @@ import { TourUtils } from "@hams_test/js/tour_utils";
 ```
 
 **Available Wait Macros:**
-* `TourUtils.waitForElement(trigger, description)`: Pauses the tour until the element exists and is visible.
 * `TourUtils.waitForAbsence(selector, description)`: Pauses the tour until the element is entirely removed from the DOM (e.g., waiting for an RPC loading overlay to vanish).
 
 **Usage Example:**
@@ -95,7 +94,7 @@ steps: () => [
         trigger: 'button[name="open_wizard"]',
         run: 'click',
     },
-    TourUtils.waitForElement('.modal-dialog', 'Wait for Wizard Modal to mount'),
+    { trigger: '.modal-dialog', run: function() {} }, // Native DOM polling
     {
         content: "Interact with wizard",
         trigger: 'button[name="action_confirm"]',

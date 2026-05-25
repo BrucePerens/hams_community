@@ -13,8 +13,15 @@ registry.category("web_tour.tours").add("manual_search_tour", {
             trigger: 'input[name="search"]',
             run: 'edit Odoo'
         },
-        TourUtils.clickAndUnload('button[aria-label="Submit search"]'),
-        TourUtils.waitForElement('*:contains("Search Results for:")', 'Check results'), // hams-ignore-dynamic-text },
-        
+        { trigger: 'button[aria-label="Submit search"]', run: 'click' },
+        {
+            trigger: '#wrap',
+            content: 'Check results',
+            run: function () {
+                if (!document.body.textContent.includes("Search Results for:")) {
+                    throw new Error('Search results missing');
+                }
+            }
+        },
     ],
 });

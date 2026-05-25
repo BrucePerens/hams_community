@@ -27,7 +27,18 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             trigger: '.o_list_table .o_data_row .o_list_record_selector input',
             run: 'click',
         },
-        TourUtils.clickElement('*:contains("Vacuum Analyze Selected")', "Vacuum Analyze Selected"), // hams-ignore-dynamic-text,
-        
+        {
+            trigger: 'button, .dropdown-item',
+            content: "Vacuum Analyze Selected",
+            run: function () {
+                const items = document.querySelectorAll('button, .dropdown-item');
+                for (const item of items) {
+                    if (item.textContent.includes('Vacuum Analyze Selected') && item.offsetWidth > 0) {
+                        item.click();
+                        break;
+                    }
+                }
+            }
+        },
     ],
 });

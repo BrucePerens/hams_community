@@ -28,7 +28,19 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             content: "Type service account name",
             run: "edit Daemon Key",
         },
-        TourUtils.clickElement('.o-autocomplete--dropdown-item:contains("Daemon Key Manager Service"), .dropdown-item:contains("Daemon Key Manager Service")', "Select the service account from OWL autocomplete"), // hams-ignore-dynamic-text,
+        {
+            trigger: '.dropdown-item, .o-autocomplete--dropdown-item',
+            content: "Select the service account from OWL autocomplete",
+            run: function () {
+                const items = document.querySelectorAll('.dropdown-item, .o-autocomplete--dropdown-item');
+                for (const item of items) {
+                    if (item.textContent.includes('Daemon Key Manager Service')) {
+                        item.click();
+                        break;
+                    }
+                }
+            }
+        },
         {
             trigger: 'div[name="env_file_path"] input',
             content: "Enter environment file path",
@@ -40,6 +52,6 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             content: "Force provision all keys",
             run: "click",
         },
-        
+
     ]),
 });

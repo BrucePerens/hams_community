@@ -18,7 +18,22 @@ registry.category("web_tour.tours").add("cf_waf_rule_tour", {
             trigger: '[data-menu-xmlid="cloudflare.menu_cf_waf_rules"]',
             run: "click"
         },
-        TourUtils.waitForElement('tr.o_data_row *:contains("Tour XML-RPC Rule")', 'Check if Tour WAF rule exists in list'), // hams-ignore-dynamic-text },
-        
+        {
+            trigger: 'tr.o_data_row',
+            content: 'Check if Tour WAF rule exists in list',
+            run: function () {
+                const rows = document.querySelectorAll('tr.o_data_row');
+                let found = false;
+                for (const row of rows) {
+                    if (row.textContent.includes('Tour XML-RPC Rule')) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    throw new Error("Tour XML-RPC Rule not found");
+                }
+            }
+        },
     ],
 });

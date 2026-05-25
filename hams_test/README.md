@@ -88,11 +88,8 @@ When developing tours in Odoo 19, you **MUST** navigate several strict environme
 
 ### Robustness Macros (`TourUtils`)
 To combat Owl's asynchronous rendering delays and other race conditions, import `TourUtils` from `@hams_test/js/tour_utils`. It provides several safety macros you can spread into your tour steps:
-* `TourUtils.waitForElement(trigger, description)`: Pauses the tour until the specified element is fully mounted and visible in the DOM. Essential for testing dynamically loaded modals and wizards.
 * `TourUtils.waitForAbsence(selector, description)`: Pauses the tour until the specified element (e.g., a loading overlay or an old modal) is entirely removed from the DOM.
 * `TourUtils.safeSave(saveTrigger, waitTrigger)`: Safely executes a form save by enforcing a DOM blur before clicking the save button and waiting for the RPC resolution.
-* `TourUtils.deterministicInput(trigger, value)`: Safely injects text values, bypassing the standard Odoo `edit` helper which can cause validation races due to simulated keystrokes.
-* `TourUtils.selectDropdown(dropdownTrigger, itemText)`: Handles the two-step click sequence required for interacting with the new `.o_select_menu` element in Odoo 19.
 
 ---
 
