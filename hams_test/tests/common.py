@@ -319,21 +319,12 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             self.__class__._hams_tour_failed = True
             _logger.error("\n=== TOUR FAILED OR HUNG. DUMPING COMPILED ASSETS ===")
             try:
-                bundle = self.env['ir.qweb']._get_asset_bundle('web.assets_tests').js()
                 dump_path = '/var/tmp/failed_tour_bundle.js'
 
                 prefix = f"/*\n{watchdog_shared.global_captured_stack}\n*/\n\n" if watchdog_shared.global_captured_stack else "/* No V8 CDP stack trace available (Thread did not hang; failed via standard JS Error or Assertion). */\n\n"
 
                 with open(dump_path, 'w') as f:
                     f.write(prefix)
-                    if isinstance(bundle, str):
-                        f.write(bundle)
-                    elif hasattr(bundle, 'decode'):
-                        f.write(bundle.decode('utf-8'))
-                    elif hasattr(bundle, 'raw'):
-                        f.write(bundle.raw.decode('utf-8'))
-                    else:
-                        f.write(str(bundle))
                 _logger.error("Dumped compiled JS bundle to %s", dump_path)
             except Exception as inner_e:  # audit-ignore-catch-all
                 _logger.warning("TRACING: Ignored Exception dumping bundle to /var/tmp: %s", repr(inner_e))

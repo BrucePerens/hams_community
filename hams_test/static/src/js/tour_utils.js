@@ -2,7 +2,7 @@
 
 /**
  * Centralized macros for Odoo UI Tours to guarantee architectural compliance.
- * Stripped of legacy jQuery and MutationObserver polyfills, and redundant wait macros.
+ * Refactored to eliminate MutationObserver layout thrashing and recursive fetch wrappers.
  */
 export const TourUtils = {
     safeSave: function (saveButtonTrigger, waitTrigger) {
@@ -27,13 +27,16 @@ export const TourUtils = {
             content: "[MACRO] Bypass native blocking dialogs",
             trigger: 'body',
             run: function () {
-                window.alert = function (msg) {
-                    console.warn("[ALARM] Native window.alert intercepted and bypassed! Message: " + msg);
-                };
-                window.confirm = function (msg) {
-                    console.warn("[ALARM] Native window.confirm intercepted and bypassed! Message: " + msg);
-                    return true;
-                };
+                if (!window.__dialogsBypassed) {
+                    window.alert = function (msg) {
+                        console.warn("[ALARM] Native window.alert intercepted! Message: " + msg);
+                    };
+                    window.confirm = function (msg) {
+                        console.warn("[ALARM] Native window.confirm intercepted! Message: " + msg);
+                        return true;
+                    };
+                    window.__dialogsBypassed = true;
+                }
             }
         };
     },
@@ -43,14 +46,20 @@ export const TourUtils = {
             content: "[MACRO] Mock external requests for " + urlPattern,
             trigger: 'body',
             run: function () {
-                const originalFetch = window.fetch;
-                window.fetch = async function (...args) {
-                    const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : '');
-                    if (url.includes(urlPattern)) {
-                        return new Response(JSON.stringify(mockResponse), { status: 200 });
-                    }
-                    return originalFetch.apply(this, args);
-                };
+                if (!window.__originalFetch) {
+                    window.__originalFetch = window.fetch;
+                    window.__mockResponses = {};
+                    window.fetch = async function (...args) {
+                        const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : '');
+                        for (const [pattern, response] of Object.entries(window.__mockResponses)) {
+                            if (url.includes(pattern)) {
+                                return new Response(JSON.stringify(response), { status: 200 });
+                            }
+                        }
+                        return window.__originalFetch.apply(this, args);
+                    };
+                }
+                window.__mockResponses[urlPattern] = mockResponse;
             }
         };
     },
@@ -59,8 +68,17 @@ export const TourUtils = {
         description = description || "";
         return {
             content: "[MACRO] Wait for DOM absence: " + (description || selector),
-            trigger: 'body:not(:has(' + selector + '))',
-            run: function () {}
+            trigger: 'body',
+            run: function () {
+                return new Promise((resolve) => {
+                    const interval = setInterval(() => {
+                        if (!document.querySelector(selector)) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 250);
+                });
+            }
         };
     }
 };

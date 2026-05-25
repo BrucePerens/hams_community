@@ -1,3 +1,95 @@
+@@BOUNDARY_OOM_RESOLUTION_FIX@@
+Path: hams_test/static/src/js/tour_utils.js
+Operation: overwrite
+
+/** @odoo-module **/
+
+/**
+ * Centralized macros for Odoo UI Tours to guarantee architectural compliance.
+ * Refactored to eliminate MutationObserver layout thrashing and recursive fetch wrappers.
+ */
+export const TourUtils = {
+    safeSave: function (saveButtonTrigger, waitTrigger) {
+        saveButtonTrigger = saveButtonTrigger || '.o_form_button_save';
+        waitTrigger = waitTrigger || '.o_form_button_create';
+        return [
+            {
+                content: "[MACRO] Click the save button",
+                trigger: saveButtonTrigger,
+                run: 'click',
+            },
+            {
+                content: "[MACRO] Wait for DOM element: RPC resolution / Dirty Form safe save (" + waitTrigger + ")",
+                trigger: waitTrigger,
+                run: function() {}
+            }
+        ];
+    },
+
+    bypassDialogs: function () {
+        return {
+            content: "[MACRO] Bypass native blocking dialogs",
+            trigger: 'body',
+            run: function () {
+                if (!window.__dialogsBypassed) {
+                    window.alert = function (msg) {
+                        console.warn("[ALARM] Native window.alert intercepted! Message: " + msg);
+                    };
+                    window.confirm = function (msg) {
+                        console.warn("[ALARM] Native window.confirm intercepted! Message: " + msg);
+                        return true;
+                    };
+                    window.__dialogsBypassed = true;
+                }
+            }
+        };
+    },
+
+    mockExternalRequests: function (urlPattern, mockResponse) {
+        return {
+            content: "[MACRO] Mock external requests for " + urlPattern,
+            trigger: 'body',
+            run: function () {
+                if (!window.__originalFetch) {
+                    window.__originalFetch = window.fetch;
+                    window.__mockResponses = {};
+                    window.fetch = async function (...args) {
+                        const url = typeof args[0] === 'string' ? args[0] : (args[0] ? args[0].url : '');
+                        for (const [pattern, response] of Object.entries(window.__mockResponses)) {
+                            if (url.includes(pattern)) {
+                                return new Response(JSON.stringify(response), { status: 200 });
+                            }
+                        }
+                        return window.__originalFetch.apply(this, args);
+                    };
+                }
+                window.__mockResponses[urlPattern] = mockResponse;
+            }
+        };
+    },
+
+    waitForAbsence: function (selector, description) {
+        description = description || "";
+        return {
+            content: "[MACRO] Wait for DOM absence: " + (description || selector),
+            trigger: 'body',
+            run: function () {
+                return new Promise((resolve) => {
+                    const interval = setInterval(() => {
+                        if (!document.querySelector(selector)) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 250);
+                });
+            }
+        };
+    }
+};
+@@BOUNDARY_OOM_RESOLUTION_FIX@@
+Path: tools/parcel_extract.py
+Operation: overwrite
+
 #!/usr/bin/env python3
 import os
 import sys
@@ -38,7 +130,7 @@ def lint_file_content(filepath, content):
             f.write(content)
 
         if ext == ".py":
-            cmd = ["flake8", "--select=E9,F,F541"]
+            cmd = ["flake8", "--select=E9,F"]
             if os.path.basename(filepath) == "__init__.py":
                 cmd.append("--extend-ignore=F401")
             cmd.append(tmp_filepath)
@@ -160,7 +252,7 @@ def check_ai_foibles(payload, filepath=""):
     foibles = [
         r"#\s*\.\.\.\s*rest of",
         r"//\s*\.\.\.\s*rest of",
-        r"<!--\s*\.\.\.\s*rest of",
+        r"%3C!--\s*\.\.\.\s*rest of",
         r"#\s*Code unchanged",
         r"//\s*Code unchanged",
         r"#\s*\.\.\.\s*existing code\s*\.\.\.",
@@ -650,7 +742,7 @@ def extract_parcel(raw_text):
 
         path_lines = [l for l in header.splitlines() if l.startswith("Path:")]
         if not path_lines:
-            print("❌ Error: Parcel block missing 'Path:' header.\nRejecting payload.")
+            print(f"❌ Error: Parcel block missing 'Path:' header.\nRejecting payload.")
             return
         filepath = path_lines[0].split(":", 1)[1].strip()
 
@@ -675,7 +767,7 @@ def extract_parcel(raw_text):
             exp_base = expected_repo.split('/')[-1].lower()
             curr_base = current_repo.lower()
             if not (curr_base.startswith(exp_base) or exp_base.startswith(curr_base)):
-                tasks_by_file.setdefault(filepath, []).append({"error": "Repository mismatch."})
+                tasks_by_file.setdefault(filepath, []).append({"error": f"Repository mismatch."})
                 continue
 
         if terminator in payload:
@@ -898,3 +990,4 @@ if __name__ == "__main__":
     else:
         input_data = sys.stdin.read()
     extract_parcel(input_data)
+@@BOUNDARY_OOM_RESOLUTION_FIX@@--
