@@ -307,7 +307,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         os.chmod(host_tmp_dir, 0o1777)
     except OSError:
         pass
-    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process --js-flags=\"--logfile={host_tmp_dir}/v8_hang.log --prof\"")
 
     process = subprocess.Popen(
         cmd,
@@ -477,12 +477,7 @@ def run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns, target_m
 def rebuild_db(db_name):
     print(f"[*] Dropping and Rebuilding Database Schema ({db_name})...")
     env = dict(os.environ)
-    pg_bins = glob.glob("/usr/lib/postgresql/*/bin/")
-    pg_bin_dir = sorted(pg_bins)[-1] if pg_bins else ""
-
-    psql_cmd = f"{pg_bin_dir}psql" if pg_bin_dir else (shutil.which("psql") or "psql")
-    dropdb_cmd = f"{pg_bin_dir}dropdb" if pg_bin_dir else (shutil.which("dropdb") or "dropdb")
-    createdb_cmd = f"{pg_bin_dir}createdb" if pg_bin_dir else (shutil.which("createdb") or "createdb")
+    psql_cmd, dropdb_cmd, createdb_cmd = shutil.which("psql") or "psql", shutil.which("dropdb") or "dropdb", shutil.which("createdb") or "createdb"
 
     subprocess.run([psql_cmd, "postgres", "-c", f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}';"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     subprocess.run([dropdb_cmd, "--if-exists", "--force", db_name], check=False, stderr=subprocess.DEVNULL, env=env)
@@ -551,9 +546,7 @@ def check_and_restore_cache(db_name, mod_string):
     if cache_valid:
         print(f"[*] Valid DB cache found ({cache_file}). Restoring (Parallel)...")
         rebuild_db(db_name)
-        pg_bins = glob.glob("/usr/lib/postgresql/*/bin/pg_restore")
-        pg_restore_cmd = sorted(pg_bins)[-1] if pg_bins else (shutil.which("pg_restore") or "pg_restore")
-        res = subprocess.run([pg_restore_cmd, "-d", db_name, "-O", "-x", "-j", "4", cache_file], capture_output=True, text=True)
+        res = subprocess.run([shutil.which("pg_restore") or "pg_restore", "-d", db_name, "-O", "-x", "-j", "4", cache_file], capture_output=True, text=True)
         if res.returncode == 0:
             print("[*] DB restored from cache.")
             filestore_tar = cache_file.replace(".dump", ".filestore.tar.gz")
@@ -583,10 +576,8 @@ def save_db_cache(db_name, cache_file, current_hash):
 
     env = dict(os.environ)
     try:
-        pg_bins = glob.glob("/usr/lib/postgresql/*/bin/pg_dump")
-        pg_dump_cmd = sorted(pg_bins)[-1] if pg_bins else (shutil.which("pg_dump") or "pg_dump")
         with open(cache_file, "wb") as f:
-            res = subprocess.run([pg_dump_cmd, "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env)
+            res = subprocess.run([shutil.which("pg_dump") or "pg_dump", "-Fc", "-Z", "1", db_name], stdout=f, stderr=subprocess.PIPE, env=env)
         if res.returncode == 0 and os.path.getsize(cache_file) > 5000000:
             print("[*] DB cached successfully.")
             with open(cache_file.replace(".dump", ".hash"), "w") as mf: mf.write(current_hash)
@@ -599,8 +590,6 @@ def save_db_cache(db_name, cache_file, current_hash):
             except OSError: pass
     except Exception as e: # audit-ignore-catch-all
         _logger.error("Failed to execute pg_dump: %s", e)
-        try: os.remove(cache_file)
-        except OSError: pass
 
 
 def setup_namespace_and_run_tests(real_log_dir, sys_args):
@@ -745,14 +734,12 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         shutil.copy2(prof, dst)
         os.chown(dst, orig_uid, -1)
 
-    dump_src = "/opt/hams/test/db_cache_master.dump"
-    if os.path.isfile(dump_src) and os.path.getsize(dump_src) > 5000000:
-        for cf in ["db_cache_master.dump", "db_cache_master.hash", "db_cache_master.filestore.tar.gz"]:
-            src = f"/opt/hams/test/{cf}"
-            dst = f"/mnt/host_test_dir/{cf}"
-            if os.path.isfile(src):
-                shutil.copy2(src, dst)
-                os.chmod(dst, 0o666)
+    for cf in ["db_cache_master.dump", "db_cache_master.hash", "db_cache_master.filestore.tar.gz"]:
+        src = f"/opt/hams/test/{cf}"
+        dst = f"/mnt/host_test_dir/{cf}"
+        if os.path.isfile(src):
+            shutil.copy2(src, dst)
+            os.chmod(dst, 0o666)
 
     sys.exit(ret)
 
