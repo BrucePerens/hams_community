@@ -43,26 +43,13 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
         }
     ].concat(TourUtils.safeSave()).concat([
         {
-            content: 'Dismiss old notifications to avoid race conditions',
-            trigger: 'body',
-            run: function () {
-                const closers = document.querySelectorAll('.o_notification_close');
-                closers.forEach(c => c.click());
-            }
-        },
-        {
-            content: 'Wait for the notification to physically leave the DOM after fade-out',
-            trigger: 'body:not(:has(.o_notification))',
-            run: function () {}
-        },
-        {
             trigger: 'button[name="action_force_provision_all"]:not([disabled])',
             content: 'Force provision all keys (ensuring button is active)',
             run: 'click',
         },
         {
-            trigger: '.o_notification',
-            content: 'Wait for NEW RPC resolution and notification to prevent dirty form crash',
+            trigger: '.o_field_widget[name="last_rotated"]:not(.o_field_empty):not(:visible)',
+            content: 'Wait for the object button RPC to resolve and reload the form with the new rotation date',
             run: function () {}
         }
     ]),

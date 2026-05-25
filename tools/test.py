@@ -348,17 +348,13 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     print("[*] [DEBUG-RUNNER] Received EOF sentinel from IO Reader thread.")
                     break
 
+                sys.stdout.write(line)
+                sys.stdout.flush()
+
+                if extractor:
+                    extractor.process_line(line)
+
                 line_lower = line.lower()
-
-                # --- NEW INSTRUMENTATION BLOCK ---
-                if any(x in line_lower for x in [".browser", "console.log", "tour", "chrome", "owl is running"]):
-                    sys.stdout.write(f"\n[JS/BROWSER TRACE] ---> {line}")
-                    sys.stdout.flush()
-
-                if "error received after termination" in line_lower or "teardown" in line_lower:
-                    sys.stdout.write(f"\n[BROWSER TEARDOWN TRACE] ---> {line}")
-                    sys.stdout.flush()
-                # ---------------------------------
 
                 if "[watchdog alarm]" in line_lower:
                     print("\n[!] FATAL JS WATCHDOG ALARM DETECTED in JS! Allowing Odoo framework to process the dump and continue...\n")

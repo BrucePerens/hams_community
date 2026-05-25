@@ -39,6 +39,11 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             run: "edit I have verified the power supply. Awaiting NOC confirmation.",
         },
         {
+            trigger: '.modal-body',
+            content: 'Click away to force DOM blur and commit text input',
+            run: 'click',
+        },
+        {
             trigger: '.modal-footer button[name="action_confirm_handoff"]',
             content: "Confirm the handoff to transfer ownership",
             run: "click",

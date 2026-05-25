@@ -672,21 +672,11 @@ initdb: hint: You can change this by editing pg_hba.conf or using the option -A,
 ==========================================================
 [*] Running Manifest Dependency Graph Linter...
 [*] Running AST Burn List Linter...
- 📄 backup_management/static/src/tests/tours/backup_dashboard.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'backup_dashboard.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
- 📄 binary_downloader/static/tests/tours/binary_install_tour.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'binary_install_tour.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
- 📄 pager_duty/static/src/tours/incident_tour.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'incident_tour.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
- 📄 user_websites_seo/static/src/js/tours/user_websites_seo_tour.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'user_websites_seo_tour.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
- 📄 hams_test/static/src/js/tours/test_real_transaction_tour.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'test_real_transaction_tour.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
- 📄 hams_helpdesk/static/tests/tours/helpdesk_operator_tour.js
-  ❌ ERROR: Line 0: CRITICAL JS TOUR DOM BLUR: Tour 'helpdesk_operator_tour.js' calls TourUtils.safeSave() immediately after an 'edit' step. You MUST inject a neutral 'click away' step (e.g., trigger: '.o_form_sheet', run: 'click') before saving to ensure DOM blur events fire and prevent dirty form race conditions.
+ 📄 cloudflare/static/tests/tours/purge_wizard_tour.js
+  ❌ ERROR: Line 0: CRITICAL JS TOUR RPC RESOLUTION: Tour 'purge_wizard_tour.js' clicks an action button and immediately waits for '.o_notification'. Backend methods returning 'True' (form reloads) DO NOT spawn notifications. Wait for a verifiable DOM state change (e.g., '.o_field_widget[name="..."]:not(.o_field_empty)') instead.
 
 Scan Complete: Checked 380 files.
-Total Errors: 6 | Total Warnings (Audits): 0
+Total Errors: 1 | Total Warnings (Audits): 0
 
 
 🛑 Halting due to burn list violations.

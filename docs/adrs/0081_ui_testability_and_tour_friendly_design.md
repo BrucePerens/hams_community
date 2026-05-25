@@ -33,12 +33,14 @@ Native JavaScript dialogs (`window.confirm`, `window.alert`) halt the browser's 
 
 ### 5. Native Auto-Save and RPC Resolution (The "Dirty Form" Rule)
 Native Odoo form buttons (e.g., `type="object"`) automatically and asynchronously save the form before invoking their backend methods. If a tour navigates away or terminates before this background save resolves, Odoo will halt the test with a "dirty form view" error.
-* Tours MUST explicitly wait for a verifiable DOM state change confirming the RPC has resolved after clicking an action button. This must be done by explicitly targeting `.o_notification`, or another guaranteed post-save DOM mutation before ending the tour.
+* **RPC Returning True (Form Reloads):** Backend methods that return `True` silently reload the form view and **DO NOT** spawn notifications. Tours MUST NOT wait for `.o_notification` in these cases. Instead, they MUST explicitly wait for a verifiable DOM state change (e.g., a field transitioning from empty to populated: `.o_field_widget[name="last_rotated"]:not(.o_field_empty)`).
+* **RPC with Actions:** If the backend explicitly returns a notification or action, tours must safely poll for that action before proceeding.
 
 ### 6. Action Button State Governance (The "Unsaved Record" Trap)
 Relying on Odoo's native auto-save mechanism when clicking an action button on a newly created, dirty form introduces severe race conditions where partial text input is submitted to the backend because the DOM `blur` event hasn't fired.
 * Native Odoo object buttons (`type="object"`) that execute backend Python methods MUST be hidden on new, unsaved records using `invisible="not id"` (or merged into existing visibility domains, e.g., `invisible="is_installed or not id"`).
-* Tours MUST include a neutral "click away" step (e.g., targeting `.o_form_sheet`) after text entry to force the DOM to commit the record state, followed by an explicit click of the `.o_form_button_save` save button before interacting with the RPC actions.
+* **The Neutral Click-Away:** Tours MUST include a neutral "click away" step after text entry to force the DOM to commit the record state, prior to interacting with save or action buttons.
+* **Modal Safety:** When clicking away inside a modal dialog, you MUST target safe internal elements like `.modal-body`. Attempting to trigger a click on structural wrappers like `.modal-dialog` or `.modal-content` will trip test runner fragility checks; these wrappers can only be used for passive DOM polling (`run: function() {}`).
 
 ### 7. Language and Translation Determinism
 Odoo's headless browser tests can crash with "no translation language is detected" if the environment's `Accept-Language` headers are ambiguous, especially before translation dictionaries are fully populated.

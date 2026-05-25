@@ -42,6 +42,11 @@ registry.category("web_tour.tours").add("zero_sudo_tour", {
         {
             trigger: 'div[name="is_service_account"] input',
             run: 'click',
+        },
+        {
+            trigger: '.o_form_sheet',
+            content: 'Click away to trigger DOM blur and commit the record state',
+            run: 'click',
         }
     ].concat(TourUtils.safeSave()),
 });
