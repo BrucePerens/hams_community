@@ -1588,6 +1588,10 @@ def scan_file(filepath, is_odoo_module=False):
         except Exception as e:
             errors_found.append(f"CRITICAL XML AST ERROR: {e}")
 
+    if filename.endswith(".js") and ("tour" in filename or "tours" in filepath):
+        if re.search(r"trigger:\s*['\"`]button\[name=[^\]]+\]['\"`][^}]+run:\s*['\"`]click['\"`]\s*\}[\s\]\),;]*$", content, re.DOTALL):
+            errors_found.append(f"CRITICAL JS TOUR DIRTY FORM: The tour '{filename}' appears to end immediately after clicking an action button. It MUST explicitly wait for an RPC resolution (e.g., targeting '.o_notification') in a subsequent step to prevent a dirty form crash.")
+
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
     if filename.endswith(".py"):
