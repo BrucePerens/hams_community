@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import MagicMock
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.common import HamsHttpCase
+from odoo.addons.hams_test.tests.common import HamsHttpCase
 
 @tagged("post_install", "-at_install")
 class TestRequestContext(HamsHttpCase):

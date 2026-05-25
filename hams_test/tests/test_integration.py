@@ -3,7 +3,7 @@ import os
 import socket
 import urllib.request
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.common import HamsIntegrationCase
+from odoo.addons.hams_test.tests.common import HamsIntegrationCase
 
 @tagged('post_install', '-at_install', 'integration')
 class TestIntegrationFacility(HamsIntegrationCase):

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from odoo import tools
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.common import HamsHttpCase, HamsIntegrationCase
+from odoo.addons.hams_test.tests.common import HamsHttpCase, HamsIntegrationCase
 from odoo.addons.distributed_redis_cache.models.ir_http import (
     _invalidation_queue,
     _listener_lock,

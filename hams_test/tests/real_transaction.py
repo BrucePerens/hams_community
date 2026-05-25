@@ -7,7 +7,7 @@ from odoo.modules.registry import Registry
 import psycopg2
 from psycopg2 import sql
 from odoo.tools import mute_logger, _
-from odoo.addons.hams_test.common import SafePatchMixin
+from odoo.addons.hams_test.tests.common import SafePatchMixin
 
 _logger = logging.getLogger(__name__)
 

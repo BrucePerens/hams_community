@@ -2,7 +2,7 @@
 import logging
 from unittest.mock import MagicMock
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.common import HamsTransactionCase
+from odoo.addons.hams_test.tests.common import HamsTransactionCase
 
 _logger = logging.getLogger(__name__)
 

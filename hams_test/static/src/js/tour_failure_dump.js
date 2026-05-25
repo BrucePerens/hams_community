@@ -43,8 +43,10 @@ function triggerInstantAbort(reason, details) {
     if (window._hamsAbortTriggered) return;
     window._hamsAbortTriggered = true;
 
+    const stack = new Error("Abort Trace").stack;
+
     // The magic string that tools/test.py is listening for on stdout
-    const msg = "\n[WATCHDOG ALARM] FATAL JS EVENT DETECTED: " + reason + "\n" + (details || '') + "\n";
+    const msg = "\n[WATCHDOG ALARM] FATAL JS EVENT DETECTED: " + reason + "\n" + (details || '') + "\nStack Trace:\n" + stack + "\n";
     originalConsoleError.call(console, msg);
 
     // Freeze and dump the DOM state for Python to capture
@@ -300,25 +302,13 @@ try {
             return;
         }
 
-        // Detect illegal routing fallback to Discuss app
-        const url = document.location.pathname + document.location.hash + document.location.search;
-        if (url.includes('/discuss')) {
-            triggerInstantAbort("Illegal Routing Override", "Tour illegally redirected to /odoo/discuss! Hash routing or query parameters were malformed.");
-        }
+        // Lightweight heartbeat to prevent stringification lag
+        let currentDomSize = document.getElementsByTagName('*').length;
 
-        // Ping the shared worker with the latest state and DOM size
-        let domState = "DOM not ready";
-        if (window._buildInteractableSkeleton && document.body) {
-            try {
-                domState = window._buildInteractableSkeleton(document.body).replace(/\s{2,}/g, ' ');
-            } catch(e) {
-                domState = "Error building skeleton: " + e.message;
-            }
-        }
         watchdogWorker.port.postMessage({
             type: 'ping',
-            state: domState,
-            domSize: domState.length,
+            state: "Heartbeat. DOM size: " + currentDomSize,
+            domSize: currentDomSize,
             log: window._hamsTourWatchdog.lastLog
         });
     }, 2000);

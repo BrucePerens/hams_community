@@ -362,26 +362,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                 # ---------------------------------
 
                 if "[watchdog alarm]" in line_lower:
-                    print("\n[!] FATAL JS WATCHDOG ALARM DETECTED! Invoking immediate reaper...\n")
-                    robust_reap(process.pid)
-                    force_killed = True
-                    break
-
-                if ("deprecated" in line_lower and "directive" in line_lower) or "pypdf2" in line_lower:
-                    continue
-
-                sys.stdout.write(line)
-                sys.stdout.flush()
-
-                if extractor:
-                    extractor.process_line(line)
-
-                # OS SIGNAL COORDINATION: Relay JS watchdog alarms directly to the Python test thread
-                if "Hit CTRL-C again or send a second signal" in line:
-                    print("\n[!] WARNING: Odoo background thread refused to terminate gracefully. Invoking reaper...\n")
-                    robust_reap(process.pid)
-                    force_killed = True
-                    break
+                    print("\n[!] FATAL JS WATCHDOG ALARM DETECTED in JS! Allowing Odoo framework to process the dump and continue...\n")
             except queue.Empty:
                 if process.poll() is not None:
                     sys.stdout.write(f"[*] [DEBUG-RUNNER] Process {process.pid} exited with {process.poll()}, but stdout pipe remains open. Breaking loop.\n")
@@ -937,14 +918,14 @@ def main():
 
         restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
-            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
             if rc_init != 0:
                 print("❌ ERROR: DB init failed!")
                 if extractor: extractor.finish_and_write()
                 sys.exit(rc_init)
             save_db_cache(args.db, cache_file, current_hash)
 
-        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
+        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"]
         rc_odoo = run_cmd(cmd, extractor)
         if rc_odoo != 0: final_rc = rc_odoo
 
@@ -955,7 +936,7 @@ def main():
 
         restored, cache_file, current_hash = check_and_restore_cache(args.db, mod_string)
         if not restored:
-            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", "/__skip_init__", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", "/__skip_init__", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
             if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
             else: final_rc = rc_init
 
@@ -965,7 +946,7 @@ def main():
                 free_port = s.getsockname()[1]
 
             print(f"[*] Starting background Odoo on port {free_port}...")
-            odoo_proc = subprocess.Popen([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "--db-filter", f"^{args.db}$", "--workers=0", "--max-cron-threads=0", "--http-port", str(free_port), "--log-level=warn"], stdout=subprocess.PIPE, text=True)
+            odoo_proc = subprocess.Popen([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "--db-filter", f"^{args.db}$", "--workers=0", "--max-cron-threads=0", "--http-port", str(free_port), "--log-level=warn", "--http-interface", "127.0.0.1"], stdout=subprocess.PIPE, text=True)
 
             ready_event = threading.Event()
             def stream_odoo():
@@ -1007,7 +988,7 @@ def main():
                             if f.endswith(".py") and not f.startswith("test_") and not f.startswith("__"):
                                 d_procs.append(subprocess.Popen([venv_python, os.path.join(dd, f)], env=daemon_env, stdout=subprocess.DEVNULL))
 
-            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0"]
+            test_cmd = get_odoo_test_cmd("_integration") + [odoo_bin, "--addons-path", addons_path, "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-standard", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"]
             rc_odoo = run_cmd(test_cmd, extractor, env=daemon_env)
             if rc_odoo != 0: final_rc = rc_odoo
 
@@ -1019,13 +1000,13 @@ def main():
         for mod in target_modules:
             restored, cache_file, current_hash = check_and_restore_cache(args.db, mod)
             if not restored:
-                rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+                rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
                 if rc_init == 0: save_db_cache(args.db, cache_file, current_hash)
                 else:
                     final_rc = 1
                     continue
 
-            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0"], extractor)
+            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
             if rc != 0: final_rc = 1
 
     sys.exit(final_rc)

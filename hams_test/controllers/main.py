@@ -4,7 +4,7 @@ import os
 import re
 import time
 import json
-import hams_test.common as hams_common
+from .. import watchdog_shared
 from odoo import http
 
 _logger = logging.getLogger(__name__)
@@ -14,17 +14,17 @@ class HamsTestWatchdog(http.Controller):
     def dump_diagnostic(self, diagnostic=None, log=None, **kwargs):
         _logger.error("🚨 [WATCHDOG] Shared Worker dumping V8 loop diagnostic! 🚨")
 
-        if hams_common.global_active_browser and hasattr(hams_common.global_active_browser, '_websocket'):
+        if watchdog_shared.global_active_browser and hasattr(watchdog_shared.global_active_browser, '_websocket'):
             try:
-                ws = hams_common.global_active_browser._websocket
+                ws = watchdog_shared.global_active_browser._websocket
                 ws.send(json.dumps({"id": 88881, "method": "Debugger.enable"}))
                 ws.send(json.dumps({"id": 88882, "method": "Debugger.pause"}))
 
                 # Wait up to 1.5 seconds for the background thread to intercept it
                 for _ in range(15):
-                    if hams_common.global_captured_stack:
+                    if watchdog_shared.global_captured_stack:
                         break
-                    time.sleep(0.1)
+                    time.sleep(0.1)  # audit-ignore-sleep
             except Exception as e: # audit-ignore-catch-all
                 _logger.error("Failed to inject CDP pause: %s", e)
 

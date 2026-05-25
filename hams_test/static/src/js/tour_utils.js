@@ -3,13 +3,9 @@
 /**
  * Centralized macros for Odoo UI Tours to guarantee architectural compliance.
  * Rewritten for Odoo 19 to strictly use native MutationObserver triggers,
- * eliminating 100% CPU lockups caused by overlapping setInterval polling.
+ * safely polyfilling jQuery's :contains pseudo-selector with visibility checks.
  */
 export const TourUtils = {
-    /**
-     * Executes the mandated safe-save sequence for forms with `type="object"` buttons.
-     * Clicks save, and natively defers to Odoo's engine to wait for the resolution.
-     */
     safeSave: function (saveButtonTrigger, waitTrigger) {
         saveButtonTrigger = saveButtonTrigger || '.o_form_button_save';
         waitTrigger = waitTrigger || '.o_form_button_create';
@@ -23,32 +19,114 @@ export const TourUtils = {
         ];
     },
 
-    clickElement: function (selector, description) {
-        if (selector.includes(':contains')) {
+    waitForElement: function (selector, description) {
+        description = description || "";
+        if (!selector.includes(':contains')) {
             return {
-                content: "[MACRO] Click element safely: " + (description || selector),
-                trigger: 'body',
-                run: function () {
-                    let parts = selector.split(':contains(');
-                    let tag = parts[0] || '*';
-                    let text = parts[1].replace(/['")]/g, '');
-                    let elements = Array.prototype.slice.call(document.querySelectorAll(tag));
-                    for (let i = 0; i < elements.length; i++) {
-                        if (elements[i].textContent.includes(text)) {
-                            elements[i].click();
-                            return;
-                        }
-                    }
-                    console.error("Element not found to click: " + selector);
-                }
+                content: "[MACRO] Wait for DOM element: " + (description || selector),
+                trigger: selector,
+                run: function() {}
             };
-        } else {
+        }
+
+        return {
+            content: "[MACRO] Wait for dynamic text element: " + (description || selector),
+            trigger: 'body',
+            run: function () {
+                let parts = selector.split(':contains(');
+                let tag = parts[0] || 'a, button, span, div, p, h1, h2, h3, h4, h5, h6, li, label, .dropdown-item, .o_app';
+                let text = parts[1].replace(/['")]/g, '');
+
+                return new Promise((resolve) => {
+                    const check = () => {
+                        let elements = document.querySelectorAll(tag);
+                        for (let i = 0; i < elements.length; i++) {
+                            let el = elements[i];
+                            if (el.offsetWidth > 0 && el.offsetHeight > 0 && el.textContent.includes(text)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    if (check()) {
+                        resolve();
+                        return;
+                    }
+
+                    const observer = new MutationObserver((mutations, obs) => {
+                        let shouldCheck = false;
+                        for (const m of mutations) {
+                            if (m.type === 'characterData' || m.type === 'childList') {
+                                shouldCheck = true;
+                                break;
+                            }
+                        }
+
+                        if (shouldCheck && check()) {
+                            obs.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+                });
+            }
+        };
+    },
+
+    clickElement: function (selector, description) {
+        if (!selector.includes(':contains')) {
             return {
                 content: "[MACRO] Click element: " + (description || selector),
                 trigger: selector,
                 run: 'click',
             };
         }
+
+        return {
+            content: "[MACRO] Click element safely: " + (description || selector),
+            trigger: 'body',
+            run: function () {
+                let parts = selector.split(':contains(');
+                let tag = parts[0] || 'a, button, span, div, p, h1, h2, h3, h4, h5, h6, li, label, .dropdown-item, .o_app';
+                let text = parts[1].replace(/['")]/g, '');
+
+                return new Promise((resolve) => {
+                    const checkAndClick = () => {
+                        let elements = document.querySelectorAll(tag);
+                        for (let i = 0; i < elements.length; i++) {
+                            let el = elements[i];
+                            if (el.offsetWidth > 0 && el.offsetHeight > 0 && el.textContent.includes(text)) {
+                                el.click();
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    if (checkAndClick()) {
+                        resolve();
+                        return;
+                    }
+
+                    const observer = new MutationObserver((mutations, obs) => {
+                        let shouldCheck = false;
+                        for (const m of mutations) {
+                            if (m.type === 'characterData' || m.type === 'childList') {
+                                shouldCheck = true;
+                                break;
+                            }
+                        }
+
+                        if (shouldCheck && checkAndClick()) {
+                            obs.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+                });
+            }
+        };
     },
 
     bypassDialogs: function () {
@@ -85,34 +163,64 @@ export const TourUtils = {
     },
 
     deterministicInput: function (trigger, value) {
-        if (trigger.includes(':contains')) {
-            return {
-                content: "[MACRO] Deterministic input for " + trigger,
-                trigger: 'body',
-                run: function () {
-                    let parts = trigger.split(':contains(');
-                    let tag = parts[0] || '*';
-                    let text = parts[1].replace(/['")]/g, '');
-                    let elements = Array.prototype.slice.call(document.querySelectorAll(tag));
-                    for (let i = 0; i < elements.length; i++) {
-                        if (elements[i].textContent.includes(text)) {
-                            let el = elements[i];
-                            el.value = value;
-                            el.dispatchEvent(new Event('input', { bubbles: true }));
-                            el.dispatchEvent(new Event('change', { bubbles: true }));
-                            return;
-                        }
-                    }
-                    console.error("Element not found for input: " + trigger);
-                }
-            };
-        } else {
+        if (!trigger.includes(':contains')) {
             return {
                 content: "[MACRO] Deterministic input for " + trigger,
                 trigger: trigger,
                 run: "edit " + value,
             };
         }
+
+        return {
+            content: "[MACRO] Deterministic input for " + trigger,
+            trigger: 'body',
+            run: function () {
+                let parts = trigger.split(':contains(');
+                let tag = parts[0] || 'input, textarea, select';
+                let text = parts[1].replace(/['")]/g, '');
+
+                return new Promise((resolve) => {
+                    const checkAndInput = () => {
+                        let elements = document.querySelectorAll(tag);
+                        for (let i = 0; i < elements.length; i++) {
+                            let el = elements[i];
+                            // Inputs often don't have textContent, so we check associated labels or placeholders
+                            let hasText = el.textContent.includes(text) ||
+                                          (el.placeholder && el.placeholder.includes(text)) ||
+                                          (el.labels && Array.from(el.labels).some(l => l.textContent.includes(text)));
+                            if (el.offsetWidth > 0 && el.offsetHeight > 0 && hasText) {
+                                el.value = value;
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.dispatchEvent(new Event('change', { bubbles: true }));
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    if (checkAndInput()) {
+                        resolve();
+                        return;
+                    }
+
+                    const observer = new MutationObserver((mutations, obs) => {
+                        let shouldCheck = false;
+                        for (const m of mutations) {
+                            if (m.type === 'characterData' || m.type === 'childList') {
+                                shouldCheck = true;
+                                break;
+                            }
+                        }
+
+                        if (shouldCheck && checkAndInput()) {
+                            obs.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+                });
+            }
+        };
     },
 
     clickAndUnload: function (trigger) {
@@ -120,60 +228,19 @@ export const TourUtils = {
             content: "[MACRO] Click and expect page unload: " + trigger,
             trigger: trigger,
             run: 'click',
-            expectUnloadPage: true,
         };
     },
 
     selectDropdown: function (dropdownTrigger, itemText) {
         return [
-            {
-                content: "[MACRO] Open select menu: " + dropdownTrigger,
-                trigger: dropdownTrigger,
-                run: 'click',
-            },
-            {
-                content: "[MACRO] Select menu item: " + itemText,
-                trigger: 'body',
-                run: function () {
-                    const items = document.querySelectorAll('.o_select_menu_item');
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].textContent.includes(itemText)) {
-                            items[i].click();
-                            return;
-                        }
-                    }
-                    console.error("Could not find dropdown item: " + itemText);
-                }
-            }
+            this.clickElement(dropdownTrigger, "Open select menu"),
+            this.clickElement(`.o_select_menu_item:contains("${itemText}")`, "Select menu item")
         ];
     },
 
     waitForRPC: function () {
         return {
-            content: "[MACRO] Wait for all pending RPCs to resolve (Jules VM Latency Protection)",
-            trigger: 'body',
-            run: function () {
-                // Native Odoo tour runner natively checks and waits for active RPC calls
-                // between steps. No manual polling interval is required.
-            }
-        };
-    },
-
-    waitForElement: function (trigger, description) {
-        description = description || "";
-
-        if (!trigger.includes(':contains')) {
-            // NATIVE PATH: Let Odoo's MutationObserver inherently wait for the element
-            return {
-                content: "[MACRO] Wait for DOM element: " + (description || trigger),
-                trigger: trigger,
-                run: function() {} // Empty run satisfies Odoo's requirement but performs no action
-            };
-        }
-
-        // FALLBACK PATH: Synchronous check for legacy :contains.
-        return {
-            content: "[MACRO] Wait for DOM element (fallback): " + (description || trigger),
+            content: "[MACRO] Wait for all pending RPCs to resolve",
             trigger: 'body',
             run: function () {}
         };
@@ -185,7 +252,50 @@ export const TourUtils = {
             content: "[MACRO] Wait for DOM absence: " + (description || selector),
             trigger: 'body',
             run: function () {
-                // Safely stripped of setInterval to prevent 100% CPU lockups.
+                return new Promise((resolve) => {
+                    const check = () => {
+                        let parts = selector.split(':contains(');
+                        let tag = parts[0] || 'a, button, span, div, p, h1, h2, h3, h4, h5, h6, li, label';
+                        let elements = document.querySelectorAll(tag);
+                        if (selector.includes(':contains')) {
+                            let text = parts[1].replace(/['")]/g, '');
+                            let found = false;
+                            for (let i = 0; i < elements.length; i++) {
+                                let el = elements[i];
+                                if (el.offsetWidth > 0 && el.offsetHeight > 0 && el.textContent.includes(text)) {
+                                    found = true;
+                                }
+                            }
+                            if (!found) return true;
+                        } else {
+                            // Standard selector check for absence
+                            let visibleElements = Array.from(document.querySelectorAll(selector)).filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+                            if (visibleElements.length === 0) return true;
+                        }
+                        return false;
+                    };
+
+                    if (check()) {
+                        resolve();
+                        return;
+                    }
+
+                    const observer = new MutationObserver((mutations, obs) => {
+                        let shouldCheck = false;
+                        for (const m of mutations) {
+                            if (m.type === 'characterData' || m.type === 'childList') {
+                                shouldCheck = true;
+                                break;
+                            }
+                        }
+
+                        if (shouldCheck && check()) {
+                            obs.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+                });
             }
         };
     }

@@ -11,47 +11,53 @@ import threading
 import json
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
+from .. import watchdog_shared
 
 _logger = logging.getLogger(__name__)
 
-global_active_browser = None
-global_captured_stack = None
+def _apply_cdp_hook(browser_instance):
+    if not browser_instance:
+        return
+    watchdog_shared.global_captured_stack = None
+    watchdog_shared.global_active_browser = browser_instance
+    if hasattr(browser_instance, '_websocket') and browser_instance._websocket:
+        if not hasattr(browser_instance._websocket.recv, '_is_hams_patched'):
+            original_recv = browser_instance._websocket.recv
+            def _intercepted_recv(*r_args, **r_kwargs):
+                msg = original_recv(*r_args, **r_kwargs)
+                if isinstance(msg, str) and 'Debugger.paused' in msg:
+                    try:
+                        data = json.loads(msg)
+                        frames = data.get('params', {}).get('callFrames', [])
+                        stack_lines = ["🚨 V8 HUNG THREAD STACK TRACE 🚨"]
+                        for f in frames:
+                            func = f.get('functionName', '') or '(anonymous)'
+                            url = f.get('url', '') or 'unknown'
+                            loc = f.get('location', {})
+                            line = loc.get('lineNumber', 0) + 1
+                            col = loc.get('columnNumber', 0) + 1
+                            stack_lines.append(f"    at {func} ({url}:{line}:{col})")
+                        watchdog_shared.global_captured_stack = "\n".join(stack_lines)
+                        _logger.error("Successfully captured V8 stack trace via CDP!")
+                    except Exception as e: # audit-ignore-catch-all
+                        _logger.error("Failed to parse Debugger.paused event: %s", e)
+                return msg
+            _intercepted_recv._is_hams_patched = True
+            browser_instance._websocket.recv = _intercepted_recv
 
-original_browser_start = ChromeBrowser.start
-def _patched_start(self, *args, **kwargs):
-    global global_active_browser, global_captured_stack
-    global_captured_stack = None
-    global_active_browser = self
-
-    res = original_browser_start(self, *args, **kwargs)
-
-    if hasattr(self, '_websocket') and self._websocket:
-        original_recv = self._websocket.recv
-        def _intercepted_recv(*r_args, **r_kwargs):
-            msg = original_recv(*r_args, **r_kwargs)
-            if isinstance(msg, str) and 'Debugger.paused' in msg:
-                global global_captured_stack
-                try:
-                    data = json.loads(msg)
-                    frames = data.get('params', {}).get('callFrames', [])
-                    stack_lines = ["🚨 V8 HUNG THREAD STACK TRACE 🚨"]
-                    for f in frames:
-                        func = f.get('functionName', '') or '(anonymous)'
-                        url = f.get('url', '') or 'unknown'
-                        loc = f.get('location', {})
-                        line = loc.get('lineNumber', 0) + 1
-                        col = loc.get('columnNumber', 0) + 1
-                        stack_lines.append(f"    at {func} ({url}:{line}:{col})")
-                    global_captured_stack = "\n".join(stack_lines)
-                    _logger.error("Successfully captured V8 stack trace via CDP!")
-                except Exception as e: # audit-ignore-catch-all
-                    _logger.error("Failed to parse Debugger.paused event: %s", e)
-            return msg
-        self._websocket.recv = _intercepted_recv
-
-    return res
-
-ChromeBrowser.start = _patched_start
+if hasattr(ChromeBrowser, 'start'):
+    original_browser_start = ChromeBrowser.start
+    def _patched_start(self, *args, **kwargs):
+        res = original_browser_start(self, *args, **kwargs)
+        _apply_cdp_hook(self)
+        return res
+    ChromeBrowser.start = _patched_start
+else:
+    original_browser_init = ChromeBrowser.__init__
+    def _patched_init(self, *args, **kwargs):
+        original_browser_init(self, *args, **kwargs)
+        _apply_cdp_hook(self)
+    ChromeBrowser.__init__ = _patched_init
 
 class VirtualClockThread(threading.Thread):
     """
@@ -66,7 +72,7 @@ class VirtualClockThread(threading.Thread):
 
     def run(self):
         while True:
-            time.sleep(0.1)
+            time.sleep(0.1)  # audit-ignore-sleep
             now = time.time()
             delta = now - self.last_real
             self.last_real = now
@@ -81,61 +87,62 @@ global_vclock = VirtualClockThread()
 global_vclock.start()
 
 # 🚨 BENIGN ERROR SCRUBBER 🚨
-original_browser_stop = ChromeBrowser.stop
-def _patched_browser_stop(self, *args, **kwargs):
-    for attr in ['_errors', '_browser_errors', 'errors']:
-        if hasattr(self, attr):
-            error_list = getattr(self, attr)
-            if isinstance(error_list, list):
-                filtered = []
-                for e in error_list:
-                    msg = str(e).lower()
-                    if "owl is running in 'dev' mode" in msg or "resizeobserver" in msg:
-                        continue
-                    filtered.append(e)
-                setattr(self, attr, filtered)
-    return original_browser_stop(self, *args, **kwargs)
-ChromeBrowser.stop = _patched_browser_stop
+if hasattr(ChromeBrowser, 'stop'):
+    original_browser_stop = ChromeBrowser.stop
+    def _patched_browser_stop(self, *args, **kwargs):
+        for attr in ['_errors', '_browser_errors', 'errors']:
+            if hasattr(self, attr):
+                error_list = getattr(self, attr)
+                if isinstance(error_list, list):
+                    filtered = []
+                    for e in error_list:
+                        msg = str(e).lower()
+                        if "owl is running in 'dev' mode" in msg or "resizeobserver" in msg:
+                            continue
+                        filtered.append(e)
+                    setattr(self, attr, filtered)
+        return original_browser_stop(self, *args, **kwargs)
+    ChromeBrowser.stop = _patched_browser_stop
 
 # 🚨 NATIVE SCREENSHOT RESCUE 🚨
-original_take_screenshot = ChromeBrowser.take_screenshot
-def _patched_take_screenshot(self, *args, **kwargs):
-    try:
-        path = original_take_screenshot(self, *args, **kwargs)
-        if hasattr(path, 'result'):
-            path = path.result(timeout=20.0)
+if hasattr(ChromeBrowser, 'take_screenshot'):
+    original_take_screenshot = ChromeBrowser.take_screenshot
+    def _patched_take_screenshot(self, *args, **kwargs):
+        try:
+            path = original_take_screenshot(self, *args, **kwargs)
+            if hasattr(path, 'result'):
+                path = path.result(timeout=20.0)
 
-        _logger.error("TRACING: Screenshot generated by Chrome at %s", path)
+            _logger.error("TRACING: Screenshot generated by Chrome at %s", path)
 
-        host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY")
-        if path and os.path.exists(path) and host_tmp:
-            os.makedirs(host_tmp, exist_ok=True)
+            host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY")
+            if path and os.path.exists(path) and host_tmp:
+                os.makedirs(host_tmp, exist_ok=True)
 
-            orig_user = os.environ.get("SUDO_USER", "odoo")
-            orig_uid, orig_gid = -1, -1
-            try:
-                user_info = pwd.getpwnam(orig_user)
-                orig_uid = user_info.pw_uid
-                orig_gid = user_info.pw_gid
-                if not os.path.exists(host_tmp):
-                    os.chown(host_tmp, orig_uid, orig_gid)
-            except Exception as user_e: # audit-ignore-catch-all
-                _logger.warning("TRACING: Could not resolve SUDO_USER info for chown: %s", repr(user_e))
+                orig_user = os.environ.get("SUDO_USER", "odoo")
+                orig_uid, orig_gid = -1, -1
+                try:
+                    user_info = pwd.getpwnam(orig_user)
+                    orig_uid = user_info.pw_uid
+                    orig_gid = user_info.pw_gid
+                    if not os.path.exists(host_tmp):
+                        os.chown(host_tmp, orig_uid, orig_gid)
+                except Exception as user_e: # audit-ignore-catch-all
+                    _logger.warning("TRACING: Could not resolve SUDO_USER info for chown: %s", repr(user_e))
 
-            dst = os.path.join(host_tmp, os.path.basename(path))
-            shutil.copy2(path, dst)
-            try:
-                if orig_uid != -1:
-                    os.chown(dst, orig_uid, orig_gid)
-            except Exception as chown_e: # audit-ignore-catch-all
-                _logger.warning("TRACING: Could not chown screenshot file: %s", repr(chown_e))
+                dst = os.path.join(host_tmp, os.path.basename(path))
+                shutil.copy2(path, dst)
+                try:
+                    if orig_uid != -1:
+                        os.chown(dst, orig_uid, orig_gid)
+                except Exception as chown_e: # audit-ignore-catch-all
+                    _logger.warning("TRACING: Could not chown screenshot file: %s", repr(chown_e))
 
-            _logger.error("TRACING: Successfully moved screenshot to host partition: %s", dst)
-    except Exception as ss_e: # audit-ignore-catch-all
-        _logger.warning("TRACING: Native screenshot failed: %s", repr(ss_e))
-
-ChromeBrowser.take_screenshot = _patched_take_screenshot
-
+                _logger.error("TRACING: Successfully moved screenshot to host partition: %s", dst)
+            return path
+        except Exception as ss_e: # audit-ignore-catch-all
+            _logger.warning("TRACING: Native screenshot failed: %s", repr(ss_e))
+    ChromeBrowser.take_screenshot = _patched_take_screenshot
 
 class DiagnosticMock(MagicMock):
     def __init__(self, *args, **kwargs):
@@ -156,7 +163,6 @@ class DiagnosticMock(MagicMock):
         finally:
             self._current_depth -= 1
 
-
 class SafePatchMixin:
     def safe_patch(self, target, *args, **kwargs):
         if not args and "new" not in kwargs and "new_callable" not in kwargs:
@@ -174,11 +180,9 @@ class SafePatchMixin:
         self.addCleanup(patcher.stop)
         return mock_obj
 
-
 class HamsTransactionCase(TransactionCase, SafePatchMixin):
     # [@ANCHOR: hams_transaction_case]
     pass
-
 
 class HamsHttpCase(HttpCase, SafePatchMixin):
     # [@ANCHOR: hams_http_case]
@@ -257,7 +261,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 if hasattr(self.browser, '_websocket_thread') and self.browser._websocket_thread:
                     self.browser._websocket_thread.join = lambda *args, **kwargs: None
 
-            # Clean up the V8 profiler log directly on the host mount if the test succeeded
             if not getattr(self.__class__, '_hams_tour_failed', False):
                 host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
                 for log_file in glob.glob(os.path.join(host_tmp, "v8_hang*.log")):
@@ -270,6 +273,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     def browser_js(self, *args, **kwargs):
         _logger.info("TRACING: Entering browser_js wrapper.")
+        _apply_cdp_hook(getattr(self, 'browser', None))
         try:
             super().browser_js(*args, **kwargs)
             _logger.info("TRACING: super().browser_js completed successfully.")
@@ -286,7 +290,8 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
             if not is_watchdog and getattr(self, 'browser', None):
                 try:
-                    self.browser.take_screenshot()
+                    if hasattr(self.browser, 'take_screenshot'):
+                        self.browser.take_screenshot()
                 except Exception as ss_e: # audit-ignore-catch-all
                     _logger.warning("TRACING: Ignored Exception taking fallback screenshot: %s", repr(ss_e))
 
@@ -298,10 +303,9 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             _logger.info("TRACING: Exiting browser_js wrapper.")
 
     def start_tour(self, *args, **kwargs):
+        _apply_cdp_hook(getattr(self, 'browser', None))
         args_list = list(args)
 
-        # 🚨 DYNAMIC DEBUG OVERRIDE 🚨
-        # Reads HAMS_TOUR_DEBUG set by the test runner to override tour URL debug flags.
         tour_debug = os.environ.get("HAMS_TOUR_DEBUG")
         if tour_debug and args_list and isinstance(args_list[0], str):
             url_path = args_list[0]
@@ -325,8 +329,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 bundle = self.env['ir.qweb']._get_asset_bundle('web.assets_tests').js()
                 dump_path = '/var/tmp/failed_tour_bundle.js'
 
-                global global_captured_stack
-                prefix = f"/*\n{global_captured_stack}\n*/\n\n" if global_captured_stack else "/* No JS stack trace available. */\n\n"
+                prefix = f"/*\n{watchdog_shared.global_captured_stack}\n*/\n\n" if watchdog_shared.global_captured_stack else "/* No V8 CDP stack trace available (Thread did not hang; failed via standard JS Error or Assertion). */\n\n"
 
                 with open(dump_path, 'w') as f:
                     f.write(prefix)
@@ -346,7 +349,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 raise e from None
             else:
                 raise e from None
-
 
 class HamsIntegrationCase(HamsHttpCase):
     # [@ANCHOR: integration_daemon_testing]

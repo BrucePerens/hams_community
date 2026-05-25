@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo.tests import tagged
-from odoo.addons.hams_test.common import HamsHttpCase
+from odoo.addons.hams_test.tests.common import HamsHttpCase
 
 @tagged('-at_install', 'post_install')
 class TestNoisyTableUI(HamsHttpCase):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import MagicMock
 from odoo.tests.common import tagged
-from odoo.addons.hams_test.common import HamsIntegrationCase
+from odoo.addons.hams_test.tests.common import HamsIntegrationCase
 from odoo.addons.pager_duty.daemon import pager_synthetic_spooler
 
 
