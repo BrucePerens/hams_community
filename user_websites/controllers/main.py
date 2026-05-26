@@ -116,9 +116,10 @@ class UserWebsitesController(http.Controller):
     def privacy_erasure(self, **kwargs):
         return request.make_response(json.dumps({"success": True}), headers=[("Content-Type", "application/json")])
 
-    @http.route("/api/v1/user_websites/pending_reports", type="http", auth="user", website=True)
+    @http.route("/api/v1/user_websites/pending_reports", type="http", auth="public", website=True)
     def pending_reports(self, **kwargs):
-        if not request.env.user.has_group("user_websites.group_user_websites_administrator") and not request.env.user.has_group("base.group_system"):
+        user = request.env.user
+        if user._is_public() or (not user.has_group("user_websites.group_user_websites_administrator") and not user.has_group("base.group_system")):
             return request.make_response("Forbidden", status=403)
         return request.make_response("OK", status=200)
 
