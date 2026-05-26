@@ -38,21 +38,23 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
             run: "click",
         },
         {
-            trigger: 'td.o_data_cell',
-            content: "Wait for user row to render and click",
+            content: "Wait for the specific user row to load from RPC (Deferred to Virtual CPU Clock)",
+            trigger: 'body',
             run: function () {
-                const items = document.querySelectorAll('td.o_data_cell');
-                let clicked = false;
-                for (const item of items) {
-                    if (item.textContent.includes('SEO UI Test User')) {
-                        item.click();
-                        clicked = true;
-                        break;
-                    }
-                }
-                if (!clicked) {
-                    throw new Error('User row not found');
-                }
+                return new Promise((resolve) => {
+                    // Unbounded loop: defer timeout authority to Python VirtualClock
+                    const interval = setInterval(() => {
+                        const items = document.querySelectorAll('td.o_data_cell');
+                        for (const item of items) {
+                            if (item.textContent.includes('SEO UI Test User')) {
+                                clearInterval(interval);
+                                item.click();
+                                resolve();
+                                return;
+                            }
+                        }
+                    }, 250);
+                });
             }
         },
         { trigger: '.o_form_sheet a[name="user_websites_seo_settings"]', content: 'Wait for: Wait for form sheet and SEO tab to hydrate', run: function() {} },

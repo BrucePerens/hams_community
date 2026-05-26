@@ -19,6 +19,11 @@ registry.category("web_tour.tours").add("cf_waf_rule_tour", {
             run: "click"
         },
         {
+            content: "Wait for WAF Rules list to render",
+            trigger: 'th[data-name="action"]',
+            run: function () {}
+        },
+        {
             trigger: 'tr.o_data_row',
             content: 'Check if Tour WAF rule exists in list',
             run: function () {

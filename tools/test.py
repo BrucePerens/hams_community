@@ -802,13 +802,7 @@ def main():
         final_rc = run_daemon_tests(venv_python, base_dir, extractor, ignore_patterns, target_modules)
 
         rebuild_db(args.db)
-        rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "-d", args.db, "-i", mod_string, "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
-        if rc_init != 0:
-            print("❌ ERROR: DB init failed!")
-            if extractor: extractor.finish_and_write()
-            sys.exit(rc_init)
-
-        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"]
+        cmd = get_odoo_test_cmd() + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod_string, "--test-enable", "--test-tags", test_tags + ",-integration", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"]
         rc_odoo = run_cmd(cmd, extractor)
         if rc_odoo != 0: final_rc = rc_odoo
 
@@ -880,12 +874,7 @@ def main():
         check_linters(venv_python, base_dir, ignore_filepath, extractor, target_modules)
         for mod in target_modules:
             rebuild_db(args.db)
-            rc_init = run_cmd([venv_python, odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
-            if rc_init != 0:
-                final_rc = 1
-                continue
-
-            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
+            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [odoo_bin, "--addons-path", addons_path, "--dev=all", "-d", args.db, "-i", mod, "--test-enable", "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0", "--max-cron-threads=0", "--http-interface", "127.0.0.1"], extractor)
             if rc != 0: final_rc = 1
 
     sys.exit(final_rc)
