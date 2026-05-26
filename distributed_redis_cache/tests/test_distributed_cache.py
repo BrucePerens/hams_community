@@ -1,6 +1,10 @@
 import os
 import odoo.tests
+from odoo import _
 from hams_test.tests.common import HamsHttpCase
+
+# Tests [@ANCHOR: redis_connection_pool]
+# Tests [@ANCHOR: distributed_cache_key_generation]
 
 @odoo.tests.tagged('post_install', '-at_install')
 class TestDistributedCacheTour(HamsHttpCase):
@@ -22,8 +26,8 @@ class TestDistributedCacheTour(HamsHttpCase):
                     "type": "ir.actions.client",
                     "tag": "display_notification",
                     "params": {
-                        "title": "Success",
-                        "message": "Redis is connected",
+                        "title": _("Success"),
+                        "message": _("Redis is connected"),
                         "type": "success",
                         "sticky": False
                     },
@@ -34,8 +38,8 @@ class TestDistributedCacheTour(HamsHttpCase):
                     "type": "ir.actions.client",
                     "tag": "display_notification",
                     "params": {
-                        "title": "Success",
-                        "message": "Cache invalidated successfully",
+                        "title": _("Success"),
+                        "message": _("Cache invalidated successfully"),
                         "type": "success",
                         "sticky": False
                     },
