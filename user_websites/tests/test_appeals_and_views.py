@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+import logging
 import odoo.tests
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
+
+_logger = logging.getLogger(__name__)
 
 
 @odoo.tests.common.tagged("post_install", "-at_install")
-class TestAppealsAndViews(odoo.tests.common.HttpCase):
+class TestAppealsAndViews(RealTransactionCase):
 
     def setUp(self):
         super(TestAppealsAndViews, self).setUp()
@@ -38,6 +42,30 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
                 "owner_user_id": self.user_public.id,
             }
         )
+        # Enforce commit to ensure test data is visible to separate HTTP worker threads
+        self.env.cr.commit()
+
+    def tearDown(self):
+        # Pre-fetch outside the loop to avoid N+1 DB LOCK
+        visitors = self.env["website.visitor"].search([]) if "website.visitor" in self.env else None
+        tracks = self.env["website.track"].search([]) if "website.track" in self.env else None
+
+        # Explicit resilient cleanup to prevent website_visitor/website_track pollution
+        for attempt in range(5):
+            try:
+                with self.env.cr.savepoint():
+                    if visitors and visitors.exists(): visitors.unlink()
+                    if tracks and tracks.exists(): tracks.unlink()
+                    if getattr(self, 'page', False) and self.page.exists():
+                        self.page.unlink()
+                    if getattr(self, 'user_public', False) and self.user_public.exists():
+                        self.user_public.unlink()
+                break
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Resilient cleanup encountered exception: %s", e)
+
+        self.env.cr.commit()
+        super(TestAppealsAndViews, self).tearDown()
 
     def test_01_privacy_friendly_view_counter(self):
         # Tests [@ANCHOR: test_privacy_friendly_view_counter]
@@ -47,20 +75,23 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
         # Public user visits the page
         self.url_open(f"/{self.user_public.website_slug}/home")
 
+        # Sync snapshot to see the Werkzeug thread's executed updates
+        self.env.cr.commit()
+
         # Flush the redis buffer to postgres
         self.env["website.page"]._flush_redis_view_counters()
 
-        # Reload record to check updated count
-        self.page.invalidate_recordset()
-        self.assertEqual(
-            self.page.view_count, 1, "View count should increment by 1 on access."
-        )
+        # Raw SQL to aggressively verify the hit registered across ORM caches
+        self.env.cr.execute("SELECT view_count FROM website_page WHERE id = %s", [self.page.id])
+        count = self.env.cr.fetchone()[0]
+        self.assertEqual(count, 1, "View count should increment by 1 on access.")
 
     def test_02_submit_and_approve_appeal(self):
         # Tests [@ANCHOR: UX_SUBMIT_APPEAL]
         """Verify a suspended user can appeal, and an admin can approve to pardon."""
         # Manually suspend the user
         self.user_public.is_suspended_from_websites = True
+        self.env.cr.commit()
 
         self.authenticate(self.user_public.login, self.user_public.login)
 
@@ -73,6 +104,9 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
             },
             method="POST",
         )
+
+        # Sync snapshot to see the Werkzeug thread's created appeal
+        self.env.cr.commit()
 
         appeal = self.env["content.violation.appeal"].search(
             [("user_id", "=", self.user_public.id)]

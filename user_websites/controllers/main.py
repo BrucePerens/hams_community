@@ -6,8 +6,22 @@ import logging
 import hmac
 import hashlib
 import odoo
+import os
+import redis
 
 _logger = logging.getLogger(__name__)
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
+redis_pool = redis.ConnectionPool(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=0,
+    decode_responses=True,
+    socket_timeout=1.0,
+    socket_connect_timeout=1.0,
+)
+redis_client = redis.Redis(connection_pool=redis_pool)
 
 
 class UserWebsitesController(http.Controller):
@@ -123,7 +137,15 @@ class UserWebsitesController(http.Controller):
 
         # Check if the page actually exists; if it does, let core ir.http route handle it
         domain = [("url", "=", f"/{website_slug}/home"), ("website_published", "=", True)]
-        if env_svc["website.page"].search_count(domain, limit=1):
+        page = env_svc["website.page"].search(domain, limit=1)
+        if page:
+            # Manually increment the view counter if bypassed by core routing
+            try:
+                if not request.env.user._is_admin():
+                    db_name = request.env.cr.dbname
+                    redis_client.incr(f"views:{db_name}:page:{page.id}")
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Redis view counter increment failed in controller: %s", e)
             return request.env['ir.http']._serve_fallback()
 
         is_owner = False
@@ -165,7 +187,7 @@ class UserWebsitesController(http.Controller):
         entity_name = profile_user.name if profile_user else profile_group.name
 
         arch_base = f"""<t name="{entity_name} Home" t-name="user_websites.home_{website_slug}">
-            <t t-call="website.layout">
+            <t t-call="user_websites.template_default_home">
                 <div id="wrap" class="oe_structure oe_empty"/>
             </t>
         </t>"""
@@ -223,12 +245,11 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
         try:
-            # First try manual_library model logic without raw SQL to avoid transaction aborts
             if 'manual.article' in request.env:
                 article = env_svc['manual.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
                 if article and hasattr(article, 'website_url') and article.website_url:
                     return request.redirect(article.website_url)
-            elif 'knowledge.article' in request.env:
+            if 'knowledge.article' in request.env:
                 article = env_svc['knowledge.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
                 if article and hasattr(article, 'website_url') and article.website_url:
                     return request.redirect(article.website_url)

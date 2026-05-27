@@ -2,12 +2,13 @@
 import unittest
 import logging
 import odoo.tests
+from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
 from odoo.addons.user_websites.hooks import post_init_hook
 
 _logger = logging.getLogger(__name__)
 
 @odoo.tests.common.tagged("post_install", "-at_install")
-class TestDocumentation(odoo.tests.common.HttpCase):
+class TestDocumentation(RealTransactionCase):
 
     def setUp(self):
         super(TestDocumentation, self).setUp()
@@ -21,6 +22,21 @@ class TestDocumentation(odoo.tests.common.HttpCase):
                 "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
             }
         )
+        self.env.cr.commit()
+
+    def tearDown(self):
+        # Resilient manual cleanup
+        for attempt in range(5):
+            try:
+                with self.env.cr.savepoint():
+                    if getattr(self, 'regular_user', False) and self.regular_user.exists():
+                        self.regular_user.unlink()
+                break
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Resilient cleanup encountered exception: %s", e)
+
+        self.env.cr.commit()
+        super(TestDocumentation, self).tearDown()
 
     def test_01_documentation_hook_file_read(self):
         # Tests [@ANCHOR: documentation_bootstrap]
@@ -36,6 +52,7 @@ class TestDocumentation(odoo.tests.common.HttpCase):
 
         # Trigger the hook directly to ensure it runs in this transaction
         post_init_hook(self.env)
+        self.env.cr.commit()
 
         article = self.env["knowledge.article"].search(
             [("name", "=", "User Websites Documentation")], limit=1
@@ -66,6 +83,9 @@ class TestDocumentation(odoo.tests.common.HttpCase):
         """
         self.authenticate(self.regular_user.login, self.regular_user.login)
         response = self.url_open("/user-websites/documentation")
+
+        # Sync cursor state
+        self.env.cr.commit()
 
         if "knowledge.article" in self.env:
             article = self.env["knowledge.article"].search(

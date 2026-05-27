@@ -2,6 +2,7 @@
 import os
 import logging
 from odoo.exceptions import UserError
+from odoo import _
 
 _logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def validate_backup_path(path):
 
     if any(abs_path == f or abs_path.startswith(f + "/") for f in forbidden):
         raise UserError(
-            "Access to the path %s is prohibited for security reasons." % path
+            _("Access to the path %s is prohibited for security reasons.") % path
         )
 
     # Ensure it's not trying to overwrite Odoo core or sensitive data
@@ -62,12 +63,12 @@ def validate_backup_path(path):
         ]
         if any(abs_path == f or abs_path.startswith(f + "/") for f in blocked_odoo):
             raise UserError(
-                "Access to internal Odoo data directory %s is prohibited." % path
+                _("Access to internal Odoo data directory %s is prohibited.") % path
             )
 
     # Prevent command injection via flags if path is used in CLI
     if path.startswith("-"):
-        raise UserError("Invalid path: path cannot start with a hyphen.")
+        raise UserError(_("Invalid path: path cannot start with a hyphen."))
 
     # Block shell metacharacters
     metacharacters = [
@@ -91,8 +92,8 @@ def validate_backup_path(path):
         "\\",
     ]
     if any(char in path for char in metacharacters):
-        raise UserError("Invalid path: path contains illegal characters.")
+        raise UserError(_("Invalid path: path contains illegal characters."))
 
     # Block recursive directory traversal and other suspicious patterns
     if ".." in path.split(os.path.sep):
-        raise UserError("Invalid path: directory traversal is not allowed.")
+        raise UserError(_("Invalid path: directory traversal is not allowed."))

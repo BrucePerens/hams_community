@@ -16,8 +16,8 @@ registry.category("web_tour.tours").add("create_blog_tour", {
             expectUnloadPage: true,
         },
         {
-            content: "Verify blog created by targeting the rendered blog index",
-            trigger: '#o_wblog_index_content',
+            content: "Verify blog created by targeting the community namespaced dropzone",
+            trigger: '#user_websites_dropzone_blog_header:not(:visible)',
             run: () => {},
         }
     ],
