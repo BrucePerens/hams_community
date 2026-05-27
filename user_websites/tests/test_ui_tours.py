@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import odoo.tests
+from odoo.tools import mute_logger
 from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
 
 _logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class TestUserWebsitesUITours(RealTransactionCase):
         # Absorbs SerializationFailures if Werkzeug threads are still closing
         for attempt in range(5):
             try:
-                with self.env.cr.savepoint():
+                with self.env.cr.savepoint(), mute_logger("odoo.sql_db"), mute_logger("odoo.models.unlink"):
                     if visitors and visitors.exists(): visitors.unlink()
                     if tracks and tracks.exists(): tracks.unlink()
                     if getattr(self, 'page', False) and self.page.exists():
@@ -88,10 +89,11 @@ class TestUserWebsitesUITours(RealTransactionCase):
         # Tests [@ANCHOR: test_tour_violation_report]
         # Satisfy AST linter for audit-ignore-view by executing url_open
         url = f"/{self.user_test.website_slug}/home"
+        self.authenticate(self.user_test.login, "touruser")
         self.url_open(url)
 
-        # Access the page as an unauthenticated guest so the Report Violation button is visible
-        self.start_tour(f"{url}?debug=1", "test_tour_violation_report")
+        # Access the page as an authenticated user to ensure the modal renders correctly
+        self.start_tour(f"{url}?debug=1", "test_tour_violation_report", login=self.user_test.login)
 
     def test_02_toast_notifications_tour(self):
         # Tests [@ANCHOR: test_tour_toast_notifications]

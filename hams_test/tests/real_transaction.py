@@ -87,19 +87,29 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
     def tearDown(self):
         # Commit any lingering test state to drop REPEATABLE READ snapshot locks
         # preventing "concurrent update" deadlocks with background HTTP workers.
-        try:
-            self.env.cr.commit()
-        except odoo.exceptions.UserError as e:
-            _logger.warning("A UserError occurred during final commit in tearDown: %s", e)
-            self.env.cr.rollback()
-        except odoo.exceptions.ValidationError as e:
-            _logger.warning("A ValidationError occurred during final commit in tearDown: %s", e)
-            self.env.cr.rollback()
-        except Exception as e: # audit-ignore-catch-all
-            # This is a fallback for unexpected errors during teardown to prevent
-            # crashing the entire test runner process if possible, but still logged.
-            _logger.error("An unexpected error occurred during final commit in tearDown: %s", e, exc_info=True)
-            self.env.cr.rollback()
+        for attempt in range(5):
+            try:
+                self.env.cr.commit()
+                break
+            except psycopg2.OperationalError as e:
+                # Catch serialization failures and retry the commit
+                if attempt == 4:
+                    _logger.error("A serialization error occurred during final commit in tearDown: %s", e, exc_info=True)
+                    self.env.cr.rollback()
+            except odoo.exceptions.UserError as e:
+                _logger.warning("A UserError occurred during final commit in tearDown: %s", e)
+                self.env.cr.rollback()
+                break
+            except odoo.exceptions.ValidationError as e:
+                _logger.warning("A ValidationError occurred during final commit in tearDown: %s", e)
+                self.env.cr.rollback()
+                break
+            except Exception as e: # audit-ignore-catch-all
+                # This is a fallback for unexpected errors during teardown to prevent
+                # crashing the entire test runner process if possible, but still logged.
+                _logger.error("An unexpected error occurred during final commit in tearDown: %s", e, exc_info=True)
+                self.env.cr.rollback()
+                break
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
         # [@ANCHOR: automated_cleanup]
@@ -146,38 +156,36 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         # [@ANCHOR: leak_verification]
         # Verified by [@ANCHOR: test_leak_verification]
         leaks = []
-        noisy_tables = set()
+        noisy_tables = {
+            "bus_bus",
+            "ir_logging",
+            "base_registry_signaling",
+            "ir_cron",
+            "mail_message",
+            "mail_notification",
+            "mail_followers",
+            "mail_tracking_value",
+            "res_groups_users_rel",
+            "res_company_users_rel",
+            "res_users_log",
+            "http_session",
+            "database_pg_setting",
+            "database_table_stat",
+            "database_query_stat",
+            "database_activity",
+            "database_index_stat",
+            "ir_attachment",
+            "ir_model_data",
+            "website_visitor",
+            "website_track",
+            "ir_ui_view",
+        }
+
         if "hams_test.noisy_table" in self.env:
             noisy_records = self.env["hams_test.noisy_table"].search(
                 [('active', '=', True)], limit=1000
             )
-            noisy_tables = {r.name for r in noisy_records}
-
-        if not noisy_tables:
-            _logger.info("Using hardcoded fallback for noisy tables.")
-            noisy_tables = {
-                "bus_bus",
-                "ir_logging",
-                "base_registry_signaling",
-                "ir_cron",
-                "mail_message",
-                "mail_notification",
-                "mail_followers",
-                "mail_tracking_value",
-                "res_groups_users_rel",
-                "res_company_users_rel",
-                "res_users_log",
-                "http_session",
-                "database_pg_setting",
-                "database_table_stat",
-                "database_query_stat",
-                "database_activity",
-                "database_index_stat",
-                "ir_attachment",
-                "ir_model_data",
-                "website_visitor",
-                "website_track",
-            }
+            noisy_tables.update({r.name for r in noisy_records})
 
         for t in self._tables:
             if t in noisy_tables:

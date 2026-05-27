@@ -9,7 +9,7 @@ registry.category("web_tour.tours").add("test_tour_violation_report", {
         { trigger: 'body', content: 'Initialize Tour' },
         TourUtils.bypassDialogs(),
         {
-            trigger: 'a[data-bs-target="#reportViolationModal"]',
+            trigger: 'button[data-bs-target="#reportViolationModal"]',
             content: "Open violation reporting modal",
             run: "click",
         },
