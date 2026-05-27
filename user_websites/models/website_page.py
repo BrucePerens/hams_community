@@ -240,7 +240,13 @@ class WebsitePage(models.Model):
             ],
             limit=1,
         )
-        return page.id if page else False
+        if page:
+            if page.owner_user_id and getattr(page.owner_user_id, 'is_suspended_from_websites', False):
+                return False
+            if page.user_websites_group_id and getattr(page.user_websites_group_id, 'is_suspended_from_websites', False):
+                return False
+            return page.id
+        return False
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -254,11 +260,12 @@ class WebsitePage(models.Model):
             )
         ):
             for vals in vals_list:
-                if vals.get("arch"):
-                    sanitized_arch, modified = self._sanitize_user_arch(vals["arch"])
-                    vals["arch"] = sanitized_arch
-                    if modified:
-                        self._trigger_malicious_arch_violation(vals)
+                for arch_field in ['arch', 'arch_base', 'arch_db']:
+                    if vals.get(arch_field):
+                        sanitized_arch, modified = self._sanitize_user_arch(vals[arch_field])
+                        vals[arch_field] = sanitized_arch
+                        if modified:
+                            self._trigger_malicious_arch_violation(vals)
 
         # 1. Enforce Mixin Security
         self._check_proxy_ownership_create(vals_list)
@@ -274,6 +281,8 @@ class WebsitePage(models.Model):
                 "name",
                 "url",
                 "arch",
+                "arch_base",
+                "arch_db",
                 "is_published",
                 "website_published",
                 "type",
@@ -282,6 +291,13 @@ class WebsitePage(models.Model):
                 "key",
                 "website_id",
                 "view_count",
+                "mode",
+                "active",
+                "theme_template_id",
+                "header_overlay",
+                "header_color",
+                "header_visible",
+                "footer_visible"
             }
             for vals in vals_list:
                 for k in list(vals.keys()):
@@ -446,6 +462,8 @@ class WebsitePage(models.Model):
                 "name",
                 "url",
                 "arch",
+                "arch_base",
+                "arch_db",
                 "is_published",
                 "website_published",
                 "type",
@@ -454,22 +472,31 @@ class WebsitePage(models.Model):
                 "key",
                 "website_id",
                 "view_count",
+                "mode",
+                "active",
+                "theme_template_id",
+                "header_overlay",
+                "header_color",
+                "header_visible",
+                "footer_visible"
             }
             for k in list(vals.keys()):
                 if k not in allowed:
                     del vals[k]
 
-        if "arch" in vals and not (
+        if not (
             self.env.su
             or self.env.user.has_group("base.group_system")
             or self.env.user.has_group(
                 "user_websites.group_user_websites_administrator"
             )
         ):
-            sanitized_arch, modified = self._sanitize_user_arch(vals["arch"])
-            vals["arch"] = sanitized_arch
-            if modified:
-                self._trigger_malicious_arch_violation(vals, records=self)
+            for arch_field in ['arch', 'arch_base', 'arch_db']:
+                if arch_field in vals:
+                    sanitized_arch, modified = self._sanitize_user_arch(vals[arch_field])
+                    vals[arch_field] = sanitized_arch
+                    if modified:
+                        self._trigger_malicious_arch_violation(vals, records=self)
 
         # Identify URLs to invalidate before mutating
         pages_to_invalidate = [p.url for p in self if p.url]

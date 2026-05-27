@@ -17,12 +17,13 @@ class UserWebsitesController(http.Controller):
         # [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
         # Triggered by [@ANCHOR: violation_report_logic]
         # Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
-        if not url or not description:
-            return request.redirect("/?error=missing_fields")
 
         # Extract referrer if it's missing in POST
         if not url and 'Referer' in request.httprequest.headers:
             url = request.httprequest.headers.get('Referer')
+
+        if not url or not description:
+            return request.redirect("/?error=missing_fields")
 
         # Enforce max length on description
         if len(description) > 5000:
@@ -38,8 +39,6 @@ class UserWebsitesController(http.Controller):
                 "description": description,
                 "state": "new",
             }
-            if reason:
-                create_vals["reason"] = reason
             if email:
                 create_vals["reported_by_email"] = email
 
@@ -61,23 +60,34 @@ class UserWebsitesController(http.Controller):
         if not profile_user and not profile_group:
             return request.not_found()
 
+        if profile_user and getattr(profile_user, 'is_suspended_from_websites', False):
+            return request.not_found()
+        if profile_group and getattr(profile_group, 'is_suspended_from_websites', False):
+            return request.not_found()
+
         main_object = profile_user or profile_group
 
         domain = [("owner_user_id", "=", profile_user.id)] if profile_user else [("user_websites_group_id", "=", profile_group.id)]
         blogs = env_svc["blog.blog"].search(domain, limit=100)
+        posts = env_svc["blog.post"].search(domain, limit=100)
 
-        # Fallback to placeholder if no blog exists
-        if not blogs:
+        is_owner = False
+        if profile_user and profile_user.id == request.env.user.id:
+            is_owner = True
+        elif profile_group and request.env.user.id in profile_group.member_ids.ids:
+            is_owner = True
+
+        # Fallback to placeholder if no blog AND no posts exists
+        if not blogs and not posts:
             values = {
                 "profile_user": profile_user,
                 "profile_group": profile_group,
                 "main_object": main_object,
                 "resolved_slug": website_slug,
                 "page_type": "blog",
+                "is_owner": is_owner,
             }
             return request.render("user_websites.placeholder_page", values)
-
-        posts = env_svc["blog.post"].search(domain, limit=100)
 
         pager = {"page_count": 0, "page": dict(), "page_previous": dict(), "page_next": dict()}
         values = {
@@ -90,6 +100,7 @@ class UserWebsitesController(http.Controller):
             "blog_url": f"/{website_slug}/blog",
             "resolved_slug": website_slug,
             "page_type": "blog",
+            "is_owner": is_owner,
         }
         return request.render("user_websites.blog_index", values)
 
@@ -105,10 +116,21 @@ class UserWebsitesController(http.Controller):
         if not profile_user and not profile_group:
             return request.not_found()
 
+        if profile_user and getattr(profile_user, 'is_suspended_from_websites', False):
+            return request.not_found()
+        if profile_group and getattr(profile_group, 'is_suspended_from_websites', False):
+            return request.not_found()
+
         # Check if the page actually exists; if it does, let core ir.http route handle it
         domain = [("url", "=", f"/{website_slug}/home"), ("website_published", "=", True)]
         if env_svc["website.page"].search_count(domain, limit=1):
             return request.env['ir.http']._serve_fallback()
+
+        is_owner = False
+        if profile_user and profile_user.id == request.env.user.id:
+            is_owner = True
+        elif profile_group and request.env.user.id in profile_group.member_ids.ids:
+            is_owner = True
 
         main_object = profile_user or profile_group
         values = {
@@ -117,6 +139,7 @@ class UserWebsitesController(http.Controller):
             "main_object": main_object,
             "resolved_slug": website_slug,
             "page_type": "home",
+            "is_owner": is_owner,
         }
         return request.render("user_websites.placeholder_page", values)
 
@@ -128,21 +151,39 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        arch_base = f"""<t name="{user.name} Home" t-name="user_websites.home_{user.website_slug}">
+        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
+        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+
+        if not profile_user and not profile_group:
+            return request.not_found()
+
+        if profile_user and profile_user.id != user.id:
+            return request.not_found()
+        if profile_group and user.id not in profile_group.member_ids.ids:
+            return request.not_found()
+
+        entity_name = profile_user.name if profile_user else profile_group.name
+
+        arch_base = f"""<t name="{entity_name} Home" t-name="user_websites.home_{website_slug}">
             <t t-call="website.layout">
                 <div id="wrap" class="oe_structure oe_empty"/>
             </t>
         </t>"""
 
-        page = env_svc["website.page"].create({
-            "url": f"/{user.website_slug}/home",
-            "name": f"{user.name} Home",
+        create_vals = {
+            "url": f"/{website_slug}/home",
+            "name": f"{entity_name} Home",
             "type": "qweb",
             "arch_base": arch_base,
             "website_id": request.website.id if hasattr(request, 'website') and request.website else False,
             "website_published": True,
-            "owner_user_id": user.id,
-        })
+        }
+        if profile_user:
+            create_vals["owner_user_id"] = profile_user.id
+        elif profile_group:
+            create_vals["user_websites_group_id"] = profile_group.id
+
+        page = env_svc["website.page"].create(create_vals)
         return request.redirect(page.url)
 
     @http.route("/<string:website_slug>/create_blog", type="http", auth="user", methods=["POST"], website=True, csrf=True)
@@ -151,12 +192,30 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        env_svc["blog.blog"].create({
-            "name": f"{user.name}'s Blog",
-            "owner_user_id": user.id,
+        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
+        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+
+        if not profile_user and not profile_group:
+            return request.not_found()
+
+        if profile_user and profile_user.id != user.id:
+            return request.not_found()
+        if profile_group and user.id not in profile_group.member_ids.ids:
+            return request.not_found()
+
+        entity_name = profile_user.name if profile_user else profile_group.name
+
+        create_vals = {
+            "name": f"{entity_name}'s Blog",
             "website_id": request.website.id if hasattr(request, 'website') and request.website else False,
-        })
-        return request.redirect(f"/{user.website_slug}/blog")
+        }
+        if profile_user:
+            create_vals["owner_user_id"] = profile_user.id
+        elif profile_group:
+            create_vals["user_websites_group_id"] = profile_group.id
+
+        env_svc["blog.blog"].create(create_vals)
+        return request.redirect(f"/{website_slug}/blog")
 
     @http.route("/user-websites/documentation", type="http", auth="user", website=True)
     def documentation(self, **kwargs):
@@ -264,8 +323,8 @@ class UserWebsitesController(http.Controller):
             if hasattr(record, '_verify_unsubscribe_token'):
                 is_valid = record._verify_unsubscribe_token(partner_id, token)
             else:
-                secret = utils._get_system_param('database.secret') or 'default_secret'
-                msg = f"{record_id}-{partner_id}-{timestamp}"
+                secret = utils._get_crypto_secret()
+                msg = f"{model}-{record_id}-{partner_id}-{timestamp}"
                 expected = hmac.new(secret.encode('utf-8'), msg.encode('utf-8'), hashlib.sha256).hexdigest()
                 if odoo.tools.consteq(token, expected):
                     is_valid = True

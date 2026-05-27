@@ -104,25 +104,19 @@ class TestUserWebsitesControllers(RealTransactionCase):
         """
         Tests [@ANCHOR: api_pending_reports]
         Action: A standard user and an unauthenticated user attempt to access the admin API.
-        Expected: HTTP 403 Forbidden or 404 Not Found (Werkzeug natively obfuscates routes).
+        Expected: HTTP 200 OK (to avoid UI crash) with an error payload.
         """
         # 1. Test as Standard Authenticated User
         self.authenticate(self.attacker.login, self.password)
         res_user = self.url_open("/api/v1/user_websites/pending_reports")
-        self.assertIn(
-            res_user.status_code,
-            [403, 404],
-            "CRITICAL: Standard user gained access to restricted administrator API!",
-        )
+        self.assertEqual(res_user.status_code, 200, "API should return 200 to prevent JS fetch crash")
+        self.assertEqual(res_user.json().get("error"), "Forbidden", "API should return Forbidden in JSON payload")
 
         # 2. Test as Unauthenticated Public Guest
         self.authenticate(None, None)
         res_public = self.url_open("/api/v1/user_websites/pending_reports")
-        self.assertIn(
-            res_public.status_code,
-            [403, 404],
-            "CRITICAL: Unauthenticated guest gained access to restricted administrator API!",
-        )
+        self.assertEqual(res_public.status_code, 200, "API should return 200 to prevent JS fetch crash")
+        self.assertEqual(res_public.json().get("error"), "Forbidden", "API should return Forbidden in JSON payload")
 
     def test_03_community_directory_rendering(self):
         """
