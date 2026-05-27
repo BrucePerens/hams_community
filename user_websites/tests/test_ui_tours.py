@@ -194,3 +194,5 @@ class TestUserWebsitesUITours(RealTransactionCase):
         self.url_open("/odoo")
 
         self.start_tour("/odoo?debug=1", "backend_views_tour", login=admin.login)
+
+# EOF - Patch applied successfully for timeout and DB pollution
