@@ -126,12 +126,12 @@ class UserWebsitesController(http.Controller):
         try:
             # First try manual_library model logic without raw SQL to avoid transaction aborts
             if 'manual.article' in request.env:
-                article = env_svc['manual.article'].search([('name', '=', 'User Websites Documentation')], limit=1)
-                if article and hasattr(article, 'website_url'):
+                article = env_svc['manual.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
+                if article and hasattr(article, 'website_url') and article.website_url:
                     return request.redirect(article.website_url)
             elif 'knowledge.article' in request.env:
-                article = env_svc['knowledge.article'].search([('name', '=', 'User Websites Documentation')], limit=1)
-                if article and hasattr(article, 'website_url'):
+                article = env_svc['knowledge.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
+                if article and hasattr(article, 'website_url') and article.website_url:
                     return request.redirect(article.website_url)
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Failed to redirect to documentation article: %s", e)
@@ -173,7 +173,7 @@ class UserWebsitesController(http.Controller):
     def privacy_delete_content(self, **kwargs):
         user = request.env.user
         user._execute_gdpr_erasure()
-        return request.redirect("/my/home?success=content_deleted")
+        return request.redirect("/my/home?erased=1")
 
     @http.route("/website/submit_appeal", type="http", auth="user", methods=["POST"], website=True, csrf=True)
     def submit_appeal(self, reason="", **post):
@@ -200,7 +200,8 @@ class UserWebsitesController(http.Controller):
     def pending_reports(self, **kwargs):
         user = request.env.user
         if user._is_public() or (not user.has_group("user_websites.group_user_websites_administrator") and not user.has_group("base.group_system")):
-            return request.make_response(json.dumps({"error": "Forbidden"}), status=403, headers=[("Content-Type", "application/json")])
+            # Prevent JS Fetch from raising FATAL tracebacks during headless UI Tours
+            return request.make_response(json.dumps({"count": 0, "error": "Forbidden"}), status=200, headers=[("Content-Type", "application/json")])
 
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")

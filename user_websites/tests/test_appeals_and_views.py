@@ -40,6 +40,7 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
         )
 
     def test_01_privacy_friendly_view_counter(self):
+        # Tests [@ANCHOR: test_privacy_friendly_view_counter]
         """Verify the view counter increments cleanly on page load."""
         self.assertEqual(self.page.view_count, 0)
 

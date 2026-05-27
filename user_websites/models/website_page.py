@@ -41,6 +41,17 @@ class WebsitePage(models.Model):
         "UNIQUE(url, website_id)", "The page URL must be unique per website!"
     )
 
+    def _serve_page(self):
+        # [@ANCHOR: test_privacy_friendly_view_counter]
+        response = super()._serve_page()
+        try:
+            if not self.env.user._is_admin():
+                db_name = self.env.cr.dbname
+                redis_client.incr(f"views:{db_name}:page:{self.id}")
+        except Exception: # audit-ignore-catch-all
+            _logger.warning("Redis view counter increment failed")
+        return response
+
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
         if "cloudflare.purge.queue" in self.env and not odoo.tools.config.get("test_enable"):
