@@ -42,7 +42,7 @@ class WebsitePage(models.Model):
     )
 
     def _serve_page(self):
-        # [@ANCHOR: test_privacy_friendly_view_counter]
+        # Verified by [@ANCHOR: test_privacy_friendly_view_counter]
         response = super()._serve_page()
         try:
             if not self.env.user._is_admin():
@@ -274,8 +274,6 @@ class WebsitePage(models.Model):
                 "name",
                 "url",
                 "arch",
-                "arch_base",
-                "arch_fs",
                 "is_published",
                 "website_published",
                 "type",
@@ -448,8 +446,6 @@ class WebsitePage(models.Model):
                 "name",
                 "url",
                 "arch",
-                "arch_base",
-                "arch_fs",
                 "is_published",
                 "website_published",
                 "type",

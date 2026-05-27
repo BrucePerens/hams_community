@@ -65,6 +65,18 @@ class UserWebsitesController(http.Controller):
 
         domain = [("owner_user_id", "=", profile_user.id)] if profile_user else [("user_websites_group_id", "=", profile_group.id)]
         blogs = env_svc["blog.blog"].search(domain, limit=100)
+
+        # Fallback to placeholder if no blog exists
+        if not blogs:
+            values = {
+                "profile_user": profile_user,
+                "profile_group": profile_group,
+                "main_object": main_object,
+                "resolved_slug": website_slug,
+                "page_type": "blog",
+            }
+            return request.render("user_websites.placeholder_page", values)
+
         posts = env_svc["blog.post"].search(domain, limit=100)
 
         pager = {"page_count": 0, "page": dict(), "page_previous": dict(), "page_next": dict()}
@@ -80,6 +92,34 @@ class UserWebsitesController(http.Controller):
             "page_type": "blog",
         }
         return request.render("user_websites.blog_index", values)
+
+    @http.route(["/<string:website_slug>/home"], type="http", auth="public", website=True)
+    def user_home_fallback(self, website_slug, **kwargs):
+        """Fallback router for missing /home pages to serve the placeholder layout."""
+        utils = request.env["zero_sudo.security.utils"]
+        env_svc = utils._get_service_env("user_websites.user_websites_service_account")
+
+        profile_user = env_svc["res.users"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
+        profile_group = env_svc["user.websites.group"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
+
+        if not profile_user and not profile_group:
+            return request.not_found()
+
+        # Check if the page actually exists; if it does, let core ir.http route handle it
+        domain = [("url", "=", f"/{website_slug}/home"), ("website_published", "=", True)]
+        if env_svc["website.page"].search_count(domain, limit=1):
+            return request.env['ir.http']._serve_fallback()
+
+        main_object = profile_user or profile_group
+        values = {
+            "profile_user": profile_user,
+            "profile_group": profile_group,
+            "main_object": main_object,
+            "resolved_slug": website_slug,
+            "page_type": "home",
+        }
+        return request.render("user_websites.placeholder_page", values)
+
 
     @http.route("/<string:website_slug>/create_site", type="http", auth="user", methods=["POST"], website=True, csrf=True)
     def create_site(self, website_slug, **kwargs):

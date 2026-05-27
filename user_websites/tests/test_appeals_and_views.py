@@ -47,6 +47,9 @@ class TestAppealsAndViews(odoo.tests.common.HttpCase):
         # Public user visits the page
         self.url_open(f"/{self.user_public.website_slug}/home")
 
+        # Flush the redis buffer to postgres
+        self.env["website.page"]._flush_redis_view_counters()
+
         # Reload record to check updated count
         self.page.invalidate_recordset()
         self.assertEqual(
