@@ -156,7 +156,14 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         # [@ANCHOR: leak_verification]
         # Verified by [@ANCHOR: test_leak_verification]
         leaks = []
-        noisy_tables = {
+        noisy_tables = set()
+        if "hams_test.noisy_table" in self.env:
+            noisy_records = self.env["hams_test.noisy_table"].search(
+                [('active', '=', True)], limit=1000
+            )
+            noisy_tables = {r.name for r in noisy_records}
+
+        fallback_tables = {
             "bus_bus",
             "ir_logging",
             "base_registry_signaling",
@@ -180,12 +187,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
             "website_track",
             "ir_ui_view",
         }
-
-        if "hams_test.noisy_table" in self.env:
-            noisy_records = self.env["hams_test.noisy_table"].search(
-                [('active', '=', True)], limit=1000
-            )
-            noisy_tables.update({r.name for r in noisy_records})
+        noisy_tables.update(fallback_tables)
 
         for t in self._tables:
             if t in noisy_tables:
