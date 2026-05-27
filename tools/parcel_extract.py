@@ -577,9 +577,13 @@ def parse_search_replace_blocks(payload):
             state = "REPLACE"
         elif stripped_no_space.startswith("::::REPLACE"):
             if state != "REPLACE": raise ValueError("Malformed search block: ':::: REPLACE' found without preceding '===='.")
+            search_str = "\n".join(_strip_empty_bounding_lines(current_search)) + "\n"
+            replace_str = "\n".join(current_replace) + "\n"
+            if search_str == replace_str:
+                raise ValueError("UI Data Loss Prevention: Search and replace blocks are identical. This indicates elided contents, usually due to a failure to URL-encode \"<\" and \">\".")
             blocks.append({
-                "search": "\n".join(_strip_empty_bounding_lines(current_search)) + "\n",
-                "replace": "\n".join(current_replace) + "\n",
+                "search": search_str,
+                "replace": replace_str,
             })
             state = "TEXT"
         else:
@@ -680,6 +684,11 @@ def extract_parcel(raw_text):
 
         if terminator in payload:
             payload = payload.split(terminator)[0]
+
+        if filepath.endswith((".xml", ".html")):
+            if "<" in payload or ">" in payload:
+                tasks_by_file.setdefault(filepath, []).append({"error": "UI Data Loss Prevention: Raw '<' or '>' detected in XML/HTML payload. You MUST URL-encode all angle brackets (<, >) in the Parcel output to prevent the UI from stripping tags."})
+                continue
 
         payload = urllib.parse.unquote(payload)
         if filepath.endswith((".py", ".sh", ".conf", ".yaml", ".json", ".xml", ".csv", ".md")):
@@ -811,6 +820,10 @@ def extract_parcel(raw_text):
             if file_mutated:
                 if filepath.endswith((".py", ".xml", ".md", ".js", ".html")):
                     current_text = re.sub(r"[ \t]+$", "", current_text, flags=re.MULTILINE)
+
+                if original_text is not None and current_text == original_text:
+                    raise ValueError("UI Data Loss Prevention: The generated file is exactly identical to the original file. This indicates elided contents, usually due to a failure to URL-encode \"<\" and \">\".")
+
                 validate_syntax_in_memory(filepath, current_text)
                 lint_errs, lint_warns = lint_file_content(filepath, current_text)
                 if lint_errs: errors.extend(lint_errs)

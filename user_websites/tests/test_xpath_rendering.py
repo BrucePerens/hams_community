@@ -77,12 +77,17 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
 
     def test_05_portal_templates(self):
         # [@ANCHOR: test_dropzone_templates]
+        # [@ANCHOR: test_xpath_rendering_appeal]
+        # [@ANCHOR: test_xpath_rendering_portal_docs]
         # Tests [@ANCHOR: dropzone_templates]
+        # Tests [@ANCHOR: xpath_rendering_appeal]
+        # Tests [@ANCHOR: xpath_rendering_portal_docs]
         self.authenticate(self.portal_user.login, self.portal_user.login)
         response = self.url_open("/my/home")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Privacy", response.content)
         self.assertIn(b"Data", response.content)
+        self.assertIn(b'id="user_websites_dropzone_templates"', response.content)
 
     def test_06_layout_templates(self):
         # [@ANCHOR: test_dropzone_layout]
@@ -101,8 +106,10 @@ class TestXPathRendering(odoo.tests.common.HttpCase):
     def test_07_navbar_rendering(self):
         # [@ANCHOR: test_dropzone_navbar]
         # [@ANCHOR: test_xpath_rendering_navbar]
+        # [@ANCHOR: test_xpath_rendering_navbar_head]
         # Tests [@ANCHOR: dropzone_navbar]
         # Tests [@ANCHOR: xpath_rendering_navbar]
+        # Tests [@ANCHOR: xpath_rendering_navbar_head]
         # [@ANCHOR: test_dropzone_home_header]
         # [@ANCHOR: test_dropzone_home_footer]
         # [@ANCHOR: test_dropzone_navbar_actions]
