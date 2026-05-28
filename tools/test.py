@@ -267,25 +267,28 @@ class FailureExtractor:
 def robust_reap(pid):
     """
     Process reaper that targets the process group with SIGTERM,
-    waits using the CPU-adjusted VirtualClock, and escalates to SIGKILL.
+    waits using a 30-second poll-and-half-second-sleep, and escalates to SIGKILL.
     """
     print(f"\n[*] [REAPER] Initiating robust reaper for PID {pid}...")
     try:
+        subprocess.run(["pkill", "-TERM", "-f", "chrome"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         pgid = os.getpgid(pid)
         print(f"[*] [REAPER] Sending SIGTERM to Process Group {pgid}")
         os.killpg(pgid, signal.SIGTERM)
 
-        start = global_vclock.time()
-        while global_vclock.time() - start < 5.0:
+        start_time = time.time()
+        while time.time() - start_time < 30.0:
             try:
                 os.kill(pid, 0)
             except OSError:
                 print(f"[*] [REAPER] Process {pid} confirmed dead.")
                 return
-            time.sleep(0.1)
+            time.sleep(0.5)
 
         print(f"[*] [REAPER] Process {pid} did not exit after SIGTERM. Sending SIGKILL to Process Group {pgid}")
         os.killpg(pgid, signal.SIGKILL)
+        subprocess.run(["pkill", "-KILL", "-f", "chrome"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
         print(f"[*] [REAPER] Error during reap: {e}")
 
@@ -324,6 +327,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
 
     force_killed = False
     q = queue.Queue()
+    last_output_time = time.time()
 
     def reader():
         print(f"[*] [DEBUG-RUNNER] IO Reader thread started for PID {process.pid}")
@@ -348,6 +352,8 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     print("[*] [DEBUG-RUNNER] Received EOF sentinel from IO Reader thread.")
                     break
 
+                last_output_time = time.time()
+
                 if "@t-esc" in line and "deprecated" in line.lower():
                     continue
 
@@ -366,6 +372,12 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     sys.stdout.write(f"[*] [DEBUG-RUNNER] Process {process.pid} exited with {process.poll()}, but stdout pipe remains open. Breaking loop.\n")
                     sys.stdout.flush()
                     # The test process died but something (like a Postgres background worker) is holding the pipe open
+                    break
+
+                if time.time() - last_output_time > 60.0:
+                    print("\n[!] TEST TIMEOUT: No output received for 60 seconds. Tour or test likely hung. Terminating...\n")
+                    robust_reap(process.pid)
+                    force_killed = True
                     break
     except KeyboardInterrupt:
         print("\n[!] CTRL-C detected! Forcefully terminating the test process...")
