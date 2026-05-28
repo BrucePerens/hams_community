@@ -1002,6 +1002,8 @@ def main():
         ]
 
         if is_jules:
+            os.environ["HOME"] = "/var/lib/odoo"
+            os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
             cmd = ["sudo", "-E", "-u", "odoo"] + cmd
 
         rc_odoo = run_cmd(cmd, extractor)
@@ -1024,6 +1026,8 @@ def main():
             ]
 
             if is_jules:
+                os.environ["HOME"] = "/var/lib/odoo"
+                os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
                 cmd = ["sudo", "-E", "-u", "odoo"] + cmd
 
             rc = run_cmd(cmd, extractor)
