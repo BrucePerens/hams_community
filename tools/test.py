@@ -499,6 +499,19 @@ def rebuild_db(db_name):
     print(f"[*] Dropping and Rebuilding Database Schema ({db_name})...")
     env = dict(os.environ)
 
+    print("[*] Flushing persistent daemons (Redis / RabbitMQ)...")
+    subprocess.run(["redis-cli", "flushall"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+    is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
+    if is_jules:
+        try:
+            subprocess.run(["sudo", "rabbitmqctl", "stop_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "rabbitmqctl", "reset"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "rabbitmqctl", "start_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "systemctl", "stop", "dx.firehose.service", "adif.processor.service", "qrz.scraper.service"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Daemon flush exception: %s", e)
+
     try:
         psql_cmd = get_pg_bin("psql")
         dropdb_cmd = get_pg_bin("dropdb")
