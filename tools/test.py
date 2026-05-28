@@ -309,7 +309,8 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         os.chmod(host_tmp_dir, 0o1777)
     except OSError:
         pass
-    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider --user-data-dir={host_tmp_dir}")
+    env.setdefault("DBUS_SESSION_BUS_ADDRESS", "/dev/null")
 
     process = subprocess.Popen(
         cmd,
@@ -607,7 +608,18 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     wait_for_socket(f"{pg_sock}/.s.PGSQL.5432", "PostgreSQL")
 
     p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, text=True, stdout=subprocess.DEVNULL)
-    p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
+    sql_create_roles = f"""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'odoo') THEN
+            CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo';
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{orig_user}') THEN
+            CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;
+        END IF;
+    END $$;
+    """
+    p.communicate(sql_create_roles)
     p.wait()
 
     # 4. Redis Sandboxing
@@ -707,23 +719,28 @@ def provision_jules(base_dir, already_provisioned=False):
         return
 
     env_vars = dict(os.environ)
+    env_vars["DEBIAN_FRONTEND"] = "noninteractive"
+
     def run_sys(cmd, **kw):
         print(f"[*] Running: {' '.join(cmd)}")
+        if "env" not in kw:
+            kw["env"] = env_vars
         return subprocess.run(cmd, check=True, **kw)
 
     if not already_provisioned:
         print("[*] Provisioning APT Sources and Packages...")
         try:
+            apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
             # APT Packages MUST run before static files to ensure python3-setuptools exists for PyPDF2 setup.py
-            run_sys(["apt-get", "update"])
-            run_sys(["apt-get", "install", "-y", "python3-setuptools", "python3-stdeb", "dh-python", "python3-all", "fakeroot", "curl", "gnupg", "lsb-release", "python3-pip"])
+            run_sys(["apt-get", "update"] + apt_opts)
+            run_sys(["apt-get", "install", "-y"] + apt_opts + ["python3-setuptools", "python3-stdeb", "dh-python", "python3-all", "fakeroot", "curl", "gnupg", "lsb-release", "python3-pip"])
 
             run_sys(["bash", "-c", "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor --yes -o /usr/share/keyrings/postgresql-keyring.gpg"])
             run_sys(["bash", "-c", "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list"])
 
             infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
             infrastructure.provision_apt_packages(run_sys, environment="early_prod")
-            run_sys(["apt-get", "install", "-y", "odoo"])
+            run_sys(["apt-get", "install", "-y"] + apt_opts + ["odoo"])
 
             req_file = os.path.join(base_dir, "requirements.txt")
             if os.path.exists(req_file):
@@ -740,7 +757,8 @@ def provision_jules(base_dir, already_provisioned=False):
                 for d in [
                     "/var/lib/odoo/daemon_keys", "/opt/hams/etc/keys", "/opt/hams/spool",
                     "/opt/hams/spool/ncvec", "/opt/hams/spool/adif_queue", "/opt/hams/cache",
-                    "/opt/hams/pycache", "/opt/hams/failed_input", "/opt/hams/downloads"
+                    "/opt/hams/pycache", "/opt/hams/failed_input", "/opt/hams/downloads",
+                    "/var/lib/odoo/backups"
                 ]:
                     os.makedirs(d, exist_ok=True)
                     try:
@@ -803,7 +821,18 @@ def provision_jules(base_dir, already_provisioned=False):
     custom_env = dict(os.environ)
     custom_env["PGUSER"] = orig_user
     p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_orig_user, env=custom_env, text=True, stdout=subprocess.DEVNULL)
-    p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
+    sql_create_roles = f"""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'odoo') THEN
+            CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo';
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{orig_user}') THEN
+            CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;
+        END IF;
+    END $$;
+    """
+    p.communicate(sql_create_roles)
     p.wait()
 
     print("[*] Starting local Redis and RabbitMQ...")
@@ -858,7 +887,8 @@ def main():
         os.chmod(host_tmp_dir, 0o1777)
     except OSError:
         pass
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker --user-data-dir={host_tmp_dir} --single-process")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider --user-data-dir={host_tmp_dir}")
+    os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "/dev/null")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
     sys_paths = os.environ.get("PYTHONPATH", "")

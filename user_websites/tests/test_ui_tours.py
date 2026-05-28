@@ -83,7 +83,7 @@ class TestUserWebsitesUITours(RealTransactionCase):
                 break
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Resilient cleanup encountered exception (Attempt %s/5): %s", attempt + 1, e)
-                time.sleep(0.5)
+                time.sleep(0.5) # audit-ignore-sleep
 
         self.env.cr.commit()
         super().tearDown()
