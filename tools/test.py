@@ -685,7 +685,7 @@ def provision_jules(base_dir, already_provisioned=False):
 
     if os.geteuid() != 0:
         print("[*] Elevating privileges (sudo) to provision Jules environment...")
-        exec_cmd = ["sudo", "-E", sys.executable, os.path.abspath(__file__), "--internal-jules-provision"]
+        exec_cmd = ["sudo", "-H", "-E", sys.executable, os.path.abspath(__file__), "--internal-jules-provision"]
         if already_provisioned:
             exec_cmd.append("--already-provisioned")
         subprocess.run(exec_cmd, check=True)
@@ -846,7 +846,7 @@ def main():
 
         if os.geteuid() != 0:
             print("[*] Elevating privileges (sudo) to construct isolated mount namespace...")
-            exec_cmd = ["sudo", "-E"] + exec_cmd
+            exec_cmd = ["sudo", "-H", "-E"] + exec_cmd
             os.execvpe("sudo", exec_cmd, os.environ)
         else:
             # os.execvpe completely replaces the current process, passing control natively
@@ -926,13 +926,11 @@ def main():
             cmd.extend(["-m", "cProfile", "-o", f"/opt/hams/spool/odoo_test{suffix}.prof"])
         return cmd
 
-    extractor = FailureExtractor(args.log_directory)
-    print(f"==========================================================\n 🧪 ODOO TEST RUNNER [{args.mode.upper()} MODE]\n==========================================================")
-
     if is_jules:
         if args.provision_jules and not args.module:
             print("[*] Provisioning Jules VM without running global tests to prevent timeouts. Use -u to test specific modules.")
             provision_jules(base_dir, already_provisioned=False)
+            print("[*] Provisioning sequence completed successfully.")
             sys.exit(0)
         elif args.provision_jules:
             provision_jules(base_dir, already_provisioned=False)
@@ -944,6 +942,9 @@ def main():
             else:
                 print("[*] Jules VM detected without provisioning flags. Auto-provisioning...")
                 provision_jules(base_dir, already_provisioned=False)
+
+    extractor = FailureExtractor(args.log_directory)
+    print(f"==========================================================\n 🧪 ODOO TEST RUNNER [{args.mode.upper()} MODE]\n==========================================================")
 
     check_linters(venv_python, base_dir, ignore_filepath, extractor, target_modules)
 

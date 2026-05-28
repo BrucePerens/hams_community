@@ -275,9 +275,6 @@ class TestAuditEdgeCases(HamsTransactionCase):
         mock_trigger.assert_called_once()
         cron._trigger()
 
-    def test_07_bdd_ormcache_query_counting_page_urls(self):
-        self.skipTest("Disabled due to Odoo 19 ORM restrictions with context annihilation on non-chatter models during purge queue creation.")
-
     def test_08_cron_pending_reports(self):
         # [@ANCHOR: test_cron_pending_reports]
         # Tests [@ANCHOR: ir_cron_notify_pending_reports]

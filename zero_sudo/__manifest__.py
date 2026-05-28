@@ -2,6 +2,7 @@
 {
     "name": "Zero-Sudo Security Core",
     "summary": "Foundational security utilities, service account patterns, and web isolation.",
+    "description": "Zero-Sudo Security Core foundational module.",
     "author": "Bruce Perens K6BP",
     "category": "Security",
     "version": "1.0",

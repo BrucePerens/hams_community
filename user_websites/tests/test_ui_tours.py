@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
 import odoo.tests
 from odoo.tools import mute_logger
 from odoo.addons.hams_test.tests.real_transaction import RealTransactionCase
@@ -64,23 +65,25 @@ class TestUserWebsitesUITours(RealTransactionCase):
                 with self.env.cr.savepoint(), mute_logger("odoo.sql_db"), mute_logger("odoo.models.unlink"):
                     if visitors and visitors.exists(): visitors.unlink()
                     if tracks and tracks.exists(): tracks.unlink()
+
+                    # Delete child records (pages, blogs) FIRST to prevent massive ORM
+                    # cascade updates (like setting write_uid = NULL) when deleting users.
                     if getattr(self, 'page', False) and self.page.exists():
                         self.page.unlink()
-                    if getattr(self, 'user_test', False) and self.user_test.exists():
-                        self.user_test.unlink()
-
-                    # Clean up any records dynamically created during headless tours
-                    if dynamic_users.exists():
-                        dynamic_users.unlink()
-
                     if dynamic_pages.exists():
                         dynamic_pages.unlink()
-
                     if dynamic_blogs.exists():
                         dynamic_blogs.unlink()
+
+                    # Clean up users last
+                    if getattr(self, 'user_test', False) and self.user_test.exists():
+                        self.user_test.unlink()
+                    if dynamic_users.exists():
+                        dynamic_users.unlink()
                 break
             except Exception as e: # audit-ignore-catch-all
-                _logger.warning("Resilient cleanup encountered exception: %s", e)
+                _logger.warning("Resilient cleanup encountered exception (Attempt %s/5): %s", attempt + 1, e)
+                time.sleep(0.5)
 
         self.env.cr.commit()
         super().tearDown()
@@ -176,5 +179,3 @@ class TestUserWebsitesUITours(RealTransactionCase):
         self.url_open("/user-websites/documentation")
 
         self.start_tour("/user-websites/documentation?debug=1", "frontend_misc_tour", login=self.user_test.login)
-
-# EOF - Patch applied successfully for timeout and DB pollution

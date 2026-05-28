@@ -116,7 +116,9 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         # Verified by [@ANCHOR: test_automated_cleanup]
         for attempt in range(5): # Increased to 5 passes for deep hierarchies
             pending_deletes = False
-            for model_name, ids in list(self._tracked_records.items()):
+            # Reverse the iteration order so child records (created later) are unlinked first,
+            # preventing ORM foreign key cascades from triggering concurrent updates on parent deletion.
+            for model_name, ids in reversed(list(self._tracked_records.items())):
                 if model_name in self.env and ids:
                     try:
                         with self.env.cr.savepoint(), mute_logger(
