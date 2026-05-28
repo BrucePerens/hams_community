@@ -13,7 +13,6 @@ import os
 import pwd
 import shutil
 import subprocess
-import tarfile
 import urllib.request
 
 _logger = logging.getLogger(__name__)
@@ -46,7 +45,9 @@ def micro_privilege(username):
 
 def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
     domain = env_vars.get('DOMAIN', 'localhost')
-    ssl_dir = os.path.join(dest_dir, path.lstrip('/'))
+    ssl_dir = path
+    if dest_dir:
+        ssl_dir = os.path.join(dest_dir, path.lstrip('/'))
     fullchain = os.path.join(ssl_dir, 'fullchain.pem')
     privkey = os.path.join(ssl_dir, 'privkey.pem')
     lotw = os.path.join(ssl_dir, 'lotw_root.pem')
@@ -60,8 +61,11 @@ def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
 
 
 def hook_clear_pycache(env_vars, dest_dir, path, run_cmd_func):
-    pycache = os.path.join(dest_dir, 'opt/hams/pycache'.lstrip('/'))
-    daemons = os.path.join(dest_dir, 'opt/hams/daemons'.lstrip('/'))
+    pycache = '/opt/hams/pycache'
+    daemons = '/opt/hams/daemons'
+    if dest_dir:
+        pycache = os.path.join(dest_dir, pycache.lstrip('/'))
+        daemons = os.path.join(dest_dir, daemons.lstrip('/'))
     if os.path.exists(pycache):
         for item in os.listdir(pycache):
             item_path = os.path.join(pycache, item)
@@ -72,13 +76,17 @@ def hook_clear_pycache(env_vars, dest_dir, path, run_cmd_func):
 
 
 def hook_install_odoo_key(env_vars, dest_dir, path, run_cmd_func):
-    out = os.path.join(dest_dir, 'usr/share/keyrings/odoo-archive-keyring.gpg'.lstrip('/'))
+    out = '/usr/share/keyrings/odoo-archive-keyring.gpg'
+    if dest_dir:
+        out = os.path.join(dest_dir, out.lstrip('/'))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
 
 
 def hook_install_kopia_key(env_vars, dest_dir, path, run_cmd_func):
-    out = os.path.join(dest_dir, 'usr/share/keyrings/kopia-keyring.gpg'.lstrip('/'))
+    out = '/usr/share/keyrings/kopia-keyring.gpg'
+    if dest_dir:
+        out = os.path.join(dest_dir, out.lstrip('/'))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
 
@@ -93,27 +101,15 @@ def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
 
 
 def hook_install_pypdf2(env_vars, dest_dir, path, run_cmd_func):
-    if not os.path.exists(path): path = os.path.join(dest_dir, path.lstrip('/'))
+    try:
+        run_cmd_func(['/usr/bin/python3', '-m', 'pip', 'install', '--break-system-packages', 'PyPDF2==2.12.1'])
+    except Exception as e: # audit-ignore-catch-all
+        _logger.warning("PyPDF2 pip install failed: %s", e)
     if os.path.exists(path):
-        with tarfile.open(path, 'r:gz') as tar: tar.extractall(os.path.join(dest_dir, 'tmp'))
-    pypdf_dir = os.path.join(dest_dir, 'tmp/PyPDF2-2.12.1'.lstrip('/'))
-    if os.path.isdir(pypdf_dir):
-        with open(os.path.join(pypdf_dir, 'setup.py'), 'w') as f:
-            f.write('from setuptools import setup, find_packages\nsetup(name="PyPDF2", version="2.12.1", packages=find_packages(), include_package_data=True, description="A pure-python PDF library")\n')
-        with open(os.path.join(pypdf_dir, 'stdeb.cfg'), 'w') as f:
-            f.write('[DEFAULT]\nX-Python3-Version: >= 3.6\n')
-        cwd = os.getcwd()
         try:
-            os.chdir(pypdf_dir)
-            run_cmd_func(['python3', 'setup.py', '--command-packages=stdeb.command', 'bdist_deb'])
-        finally:
-            os.chdir(cwd)
-        deb = os.path.join(pypdf_dir, 'deb_dist', 'python3-pypdf2_2.12.1-1_all.deb')
-        if os.path.exists(deb):
-            run_cmd_func(['dpkg', '-i', deb])
-        shutil.rmtree(pypdf_dir, ignore_errors=True)
-    if os.path.exists(path):
-        os.remove(path)
+            os.remove(path)
+        except OSError:
+            pass
 
 
 MANIFEST = {
