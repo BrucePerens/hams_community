@@ -750,7 +750,9 @@ def provision_jules(base_dir, already_provisioned=False):
             req_file = os.path.join(base_dir, "requirements.txt")
             if os.path.exists(req_file):
                 try:
-                    run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "--ignore-installed", "-r", req_file])
+                    pip_env = dict(env_vars)
+                    pip_env["PIP_ROOT_USER_ACTION"] = "ignore"
+                    run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "--ignore-installed", "-r", req_file], env=pip_env)
                 except subprocess.CalledProcessError as e:
                     print(f"[*] WARNING: pip install encountered an error: {e}. Continuing to ensure database provisioning completes.")
 
@@ -768,7 +770,7 @@ def provision_jules(base_dir, already_provisioned=False):
                     os.makedirs(d, exist_ok=True)
                     try:
                         os.chown(d, odoo_uid, odoo_gid)
-                        os.chmod(d, 0o775)
+                        os.chmod(d, 0o750)
                     except OSError:
                         pass
             except KeyError:
@@ -999,6 +1001,9 @@ def main():
             "--max-cron-threads=0", "--http-interface", "127.0.0.1", "--http-port", "8069"
         ]
 
+        if is_jules:
+            cmd = ["sudo", "-E", "-u", "odoo"] + cmd
+
         rc_odoo = run_cmd(cmd, extractor)
         if rc_odoo != 0:
             final_rc = rc_odoo
@@ -1011,12 +1016,17 @@ def main():
 
         for mod in target_modules:
             rebuild_db(args.db)
-            rc = run_cmd(get_odoo_test_cmd(f"_{mod}") + [
+            cmd = get_odoo_test_cmd(f"_{mod}") + [
                 odoo_bin, "--load=base,web,hams_test", "--addons-path", addons_path,
                 "--dev=all", "-d", args.db, "-i", mod, "--test-enable",
                 "--test-tags", f"/{mod}", "--stop-after-init", "--workers=0",
                 "--max-cron-threads=0", "--http-interface", "127.0.0.1", "--http-port", "8069"
-            ], extractor)
+            ]
+
+            if is_jules:
+                cmd = ["sudo", "-E", "-u", "odoo"] + cmd
+
+            rc = run_cmd(cmd, extractor)
             if rc != 0: final_rc = 1
 
     sys.exit(final_rc)

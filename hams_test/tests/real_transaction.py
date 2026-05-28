@@ -85,31 +85,14 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         self.addCleanup(setattr, odoo.models.BaseModel, "create", _original_create)
 
     def tearDown(self):
-        # Commit any lingering test state to drop REPEATABLE READ snapshot locks
-        # preventing "concurrent update" deadlocks with background HTTP workers.
-        for attempt in range(5):
-            try:
-                self.env.cr.commit()
-                break
-            except psycopg2.OperationalError as e:
-                # Catch serialization failures and retry the commit
-                if attempt == 4:
-                    _logger.error("A serialization error occurred during final commit in tearDown: %s", e, exc_info=True)
-                    self.env.cr.rollback()
-            except odoo.exceptions.UserError as e:
-                _logger.warning("A UserError occurred during final commit in tearDown: %s", e)
-                self.env.cr.rollback()
-                break
-            except odoo.exceptions.ValidationError as e:
-                _logger.warning("A ValidationError occurred during final commit in tearDown: %s", e)
-                self.env.cr.rollback()
-                break
-            except Exception as e: # audit-ignore-catch-all
-                # This is a fallback for unexpected errors during teardown to prevent
-                # crashing the entire test runner process if possible, but still logged.
-                _logger.error("An unexpected error occurred during final commit in tearDown: %s", e, exc_info=True)
-                self.env.cr.rollback()
-                break
+        # Rollback any lingering, uncommitted test state to drop REPEATABLE READ
+        # snapshot locks and abort pending dirty-form submissions.
+        # This prevents "concurrent update" deadlocks when background HTTP workers
+        # race against the automated teardown.
+        try:
+            self.env.cr.rollback()
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Ignored error during initial teardown rollback: %s", e)
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
         # [@ANCHOR: automated_cleanup]
