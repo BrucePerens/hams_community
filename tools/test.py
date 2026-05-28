@@ -581,9 +581,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     wait_for_socket(f"{pg_sock}/.s.PGSQL.5432", "PostgreSQL")
 
-    custom_env = dict(os.environ)
-    custom_env["PGUSER"] = "postgres"
-    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, env=custom_env, text=True, stdout=subprocess.DEVNULL)
+    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, text=True, stdout=subprocess.DEVNULL)
     p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
     p.wait()
 
@@ -709,6 +707,26 @@ def provision_jules(base_dir, already_provisioned=False):
                     run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "--ignore-installed", "-r", req_file])
                 except subprocess.CalledProcessError as e:
                     print(f"[*] WARNING: pip install encountered an error: {e}. Continuing to ensure database provisioning completes.")
+
+            print("[*] Preparing testing directories with production paths...")
+            try:
+                odoo_pwnam = pwd.getpwnam("odoo")
+                odoo_uid, odoo_gid = odoo_pwnam.pw_uid, odoo_pwnam.pw_gid
+
+                for d in [
+                    "/var/lib/odoo/daemon_keys", "/opt/hams/etc/keys", "/opt/hams/spool",
+                    "/opt/hams/spool/ncvec", "/opt/hams/spool/adif_queue", "/opt/hams/cache",
+                    "/opt/hams/pycache", "/opt/hams/failed_input", "/opt/hams/downloads"
+                ]:
+                    os.makedirs(d, exist_ok=True)
+                    try:
+                        os.chown(d, odoo_uid, odoo_gid)
+                        os.chmod(d, 0o775)
+                    except OSError:
+                        pass
+            except KeyError:
+                print("[*] WARNING: 'odoo' user not found during directory preparation.")
+
         except subprocess.CalledProcessError as e:
             print(f"❌ ERROR: Failed to provision system packages: {e}")
             sys.exit(1)
@@ -734,24 +752,6 @@ def provision_jules(base_dir, already_provisioned=False):
 
     user_info = pwd.getpwnam(orig_user)
     orig_uid, orig_gid = user_info.pw_uid, user_info.pw_gid
-
-    print("[*] Preparing testing directories with production paths...")
-    for d in [
-        "/var/lib/odoo/daemon_keys",
-        "/opt/hams/spool",
-        "/opt/hams/spool/ncvec",
-        "/opt/hams/spool/adif_queue",
-        "/opt/hams/cache",
-        "/opt/hams/pycache",
-        "/opt/hams/failed_input",
-        "/opt/hams/downloads"
-    ]:
-        os.makedirs(d, exist_ok=True)
-        try:
-            os.chown(d, orig_uid, orig_gid)
-            os.chmod(d, 0o775)
-        except OSError:
-            pass
 
     def preexec_orig_user():
         os.setresgid(orig_gid, orig_gid, orig_gid)
@@ -794,6 +794,8 @@ def provision_jules(base_dir, already_provisioned=False):
 
 
 def main():
+    os.environ.setdefault("HAMS_KEYS_DIR", "/opt/hams/etc/keys")
+
     if os.environ.get("HAMS_ISOLATED_NS") != "1" and not os.environ.get("IN_JULES_VM") and not os.environ.get("JULES_SESSION_ID"):
         if "--internal-ns-init" in sys.argv:
             # Phase 2: Execute completely within Python (No bash script interpolation)
@@ -903,7 +905,11 @@ def main():
     print(f"==========================================================\n 🧪 ODOO TEST RUNNER [{args.mode.upper()} MODE]\n==========================================================")
 
     if is_jules:
-        if args.provision_jules:
+        if args.provision_jules and not args.module:
+            print("[*] Provisioning Jules VM without running global tests to prevent timeouts. Use -u to test specific modules.")
+            provision_jules(base_dir, already_provisioned=False)
+            sys.exit(0)
+        elif args.provision_jules:
             provision_jules(base_dir, already_provisioned=False)
         elif args.already_provisioned:
             provision_jules(base_dir, already_provisioned=True)
