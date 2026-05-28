@@ -658,17 +658,11 @@ def provision_jules(base_dir, already_provisioned=False):
     """Provisions a pre-isolated Jules VM environment"""
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
 
-    if already_provisioned:
-        print("[*] Skipping full Jules provisioning; verifying local PostgreSQL...")
-        pg_socket = "/opt/hams/pgsock"
-        wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
-        os.environ["PGHOST"] = pg_socket
-        os.environ["HAMS_ISOLATED_NS"] = "1"
-        return
-
     if os.geteuid() != 0:
         print("[*] Elevating privileges (sudo) to provision Jules environment...")
         exec_cmd = ["sudo", "-E", sys.executable, os.path.abspath(__file__), "--internal-jules-provision"]
+        if already_provisioned:
+            exec_cmd.append("--already-provisioned")
         subprocess.run(exec_cmd, check=True)
         pg_socket = "/opt/hams/pgsock"
         wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
@@ -680,28 +674,35 @@ def provision_jules(base_dir, already_provisioned=False):
                 pg_ctl_cmd = get_pg_bin("pg_ctl")
                 subprocess.run([pg_ctl_cmd, "-D", "/opt/hams/pgdata", "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception as e: # audit-ignore-catch-all
-                _logger.error("Reader exception: %s", e)
+                _logger.warning("Teardown exception: %s", e)
         atexit.register(teardown)
         return
 
-    print("[*] Provisioning APT Sources and Packages...")
     env_vars = dict(os.environ)
     def run_sys(cmd, **kw):
         print(f"[*] Running: {' '.join(cmd)}")
         return subprocess.run(cmd, check=True, **kw)
 
-    try:
-        # APT Packages MUST run before static files to ensure python3-setuptools exists for PyPDF2 setup.py
-        infrastructure.provision_apt_packages(run_sys, environment="early_prod")
-        infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
-        run_sys(["apt-get", "install", "-y", "odoo"])
+    if not already_provisioned:
+        print("[*] Provisioning APT Sources and Packages...")
+        try:
+            # APT Packages MUST run before static files to ensure python3-setuptools exists for PyPDF2 setup.py
+            run_sys(["apt-get", "update"])
+            run_sys(["apt-get", "install", "-y", "python3-setuptools", "python3-stdeb", "dh-python", "python3-all", "fakeroot", "curl", "gnupg", "lsb-release"])
 
-        req_file = os.path.join(base_dir, "requirements.txt")
-        if os.path.exists(req_file):
-            run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "-r", req_file])
-    except subprocess.CalledProcessError as e:
-        print(f"❌ ERROR: Failed to provision system packages: {e}")
-        sys.exit(1)
+            run_sys(["bash", "-c", "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor --yes -o /usr/share/keyrings/postgresql-keyring.gpg"])
+            run_sys(["bash", "-c", "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list"])
+
+            infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
+            infrastructure.provision_apt_packages(run_sys, environment="early_prod")
+            run_sys(["apt-get", "install", "-y", "odoo"])
+
+            req_file = os.path.join(base_dir, "requirements.txt")
+            if os.path.exists(req_file):
+                run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "-r", req_file])
+        except subprocess.CalledProcessError as e:
+            print(f"❌ ERROR: Failed to provision system packages: {e}")
+            sys.exit(1)
 
     print("[*] Clearing port 8069 bindings...")
     subprocess.run(["fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
@@ -840,7 +841,7 @@ def main():
     is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
 
     if args.internal_jules_provision:
-        provision_jules(base_dir, already_provisioned=False)
+        provision_jules(base_dir, already_provisioned=args.already_provisioned)
         sys.exit(0)
 
     venv_python = "/usr/bin/python3" if is_jules else os.path.join(base_dir, ".venv", "bin", "python")
@@ -877,8 +878,7 @@ def main():
         elif args.already_provisioned:
             provision_jules(base_dir, already_provisioned=True)
         else:
-            # Auto-detection for missing PostgreSQL on standard runs
-            if os.path.exists("/opt/hams/pgsock/.s.PGSQL.5432"):
+            if os.path.exists("/opt/hams/pgdata/PG_VERSION") or shutil.which("psql"):
                 provision_jules(base_dir, already_provisioned=True)
             else:
                 print("[*] Jules VM detected without provisioning flags. Auto-provisioning...")
