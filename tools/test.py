@@ -658,6 +658,24 @@ def provision_jules(base_dir):
     """Provisions a pre-isolated Jules VM environment"""
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
 
+    print("[*] Provisioning APT Sources and Packages...")
+    env_vars = dict(os.environ)
+    def run_sys(cmd, **kw):
+        print(f"[*] Running: {' '.join(cmd)}")
+        return subprocess.run(cmd, check=True, **kw)
+
+    try:
+        infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
+        infrastructure.provision_apt_packages(run_sys, environment="early_prod")
+        run_sys(["apt-get", "install", "-y", "odoo"])
+
+        req_file = os.path.join(base_dir, "requirements.txt")
+        if os.path.exists(req_file):
+            run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "-r", req_file])
+    except subprocess.CalledProcessError as e:
+        print(f"❌ ERROR: Failed to provision system packages: {e}")
+        sys.exit(1)
+
     print("[*] Clearing port 8069 bindings...")
     subprocess.run(["fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
 
