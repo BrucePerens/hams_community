@@ -540,7 +540,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         os.makedirs(f"/mnt/work/{item}", exist_ok=True)
         subprocess.run(["mount", "-t", "overlay", "overlay", "-o", f"lowerdir=/{item},upperdir=/mnt/upper/{item},workdir=/mnt/work/{item}", f"/{item}"], check=True)
 
-    # Bind mount host tmp directory AFTER overlayfs so it isn't shadowed
+    # Bind mount host tmp directory AFTER overlayfs so it isnt shadowed
     host_tmp_dir = real_log_dir if real_log_dir else "/var/tmp"
     os.makedirs(host_tmp_dir, exist_ok=True)
     try:
@@ -581,7 +581,9 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     wait_for_socket(f"{pg_sock}/.s.PGSQL.5432", "PostgreSQL")
 
-    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, text=True, stdout=subprocess.DEVNULL)
+    custom_env = dict(os.environ)
+    custom_env["PGUSER"] = "postgres"
+    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, env=custom_env, text=True, stdout=subprocess.DEVNULL)
     p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
     p.wait()
 
@@ -756,7 +758,9 @@ def provision_jules(base_dir, already_provisioned=False):
     subprocess.run([pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], preexec_fn=preexec_orig_user, check=True)
     wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
 
-    p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_orig_user, text=True, stdout=subprocess.DEVNULL)
+    custom_env = dict(os.environ)
+    custom_env["PGUSER"] = orig_user
+    p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_orig_user, env=custom_env, text=True, stdout=subprocess.DEVNULL)
     p.communicate(f"CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; CREATE ROLE {orig_user} WITH SUPERUSER LOGIN;")
     p.wait()
 
