@@ -373,15 +373,15 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         process.wait()
         sys.exit(1)
 
-    print(f"[*] [DEBUG-RUNNER] Waiting for process {process.pid} to cleanly terminate...")
-    process.wait()
-    print(f"[*] [DEBUG-RUNNER] Process {process.pid} terminated with return code {process.returncode}.")
+        print(f"[*] [DEBUG-RUNNER] Waiting for process {process.pid} to cleanly terminate...")
+        process.wait()
+        print(f"[*] [DEBUG-RUNNER] Process {process.pid} terminated with return code {process.returncode}.")
 
-    if force_killed:
-        final_errors = len(extractor.captured_blocks) if extractor else 0
-        return 1 if final_errors > initial_errors else 0
+        if force_killed:
+            final_errors = len(extractor.captured_blocks) if extractor else 0
+            return 1 if final_errors > initial_errors else 0
 
-    return process.returncode
+        return process.returncode
 
 
 def get_local_modules(base_dir, ignore_patterns):
@@ -654,9 +654,35 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     sys.exit(ret)
 
 
-def provision_jules(base_dir):
+def provision_jules(base_dir, already_provisioned=False):
     """Provisions a pre-isolated Jules VM environment"""
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
+
+    if already_provisioned:
+        print("[*] Skipping full Jules provisioning; verifying local PostgreSQL...")
+        pg_socket = "/opt/hams/pgsock"
+        wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
+        os.environ["PGHOST"] = pg_socket
+        os.environ["HAMS_ISOLATED_NS"] = "1"
+        return
+
+    if os.geteuid() != 0:
+        print("[*] Elevating privileges (sudo) to provision Jules environment...")
+        exec_cmd = ["sudo", "-E", sys.executable, os.path.abspath(__file__), "--internal-jules-provision"]
+        subprocess.run(exec_cmd, check=True)
+        pg_socket = "/opt/hams/pgsock"
+        wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
+        os.environ["PGHOST"] = pg_socket
+        os.environ["HAMS_ISOLATED_NS"] = "1"
+
+        def teardown():
+            try:
+                pg_ctl_cmd = get_pg_bin("pg_ctl")
+                subprocess.run([pg_ctl_cmd, "-D", "/opt/hams/pgdata", "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception as e: # audit-ignore-catch-all
+                _logger.error("Reader exception: %s", e)
+        atexit.register(teardown)
+        return
 
     print("[*] Provisioning APT Sources and Packages...")
     env_vars = dict(os.environ)
@@ -734,10 +760,7 @@ def provision_jules(base_dir):
     os.environ["PGHOST"] = pg_socket
     os.environ["HAMS_ISOLATED_NS"] = "1"
 
-    def teardown():
-        with micro_privilege(orig_user):
-            subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    atexit.register(teardown)
+    # Note: teardown is registered by the parent process, so the root subprocess can exit safely.
 
 
 def main():
@@ -812,9 +835,14 @@ def main():
     parser.add_argument("--provision-jules", action="store_true")
     parser.add_argument("--already-provisioned", action="store_true")
     parser.add_argument("--profile", action="store_true")
+    parser.add_argument("--internal-jules-provision", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
+
+    if args.internal_jules_provision:
+        provision_jules(base_dir, already_provisioned=False)
+        sys.exit(0)
 
     venv_python = "/usr/bin/python3" if is_jules else os.path.join(base_dir, ".venv", "bin", "python")
     odoo_bin = "/usr/bin/odoo"
@@ -847,7 +875,7 @@ def main():
     check_linters(venv_python, base_dir, ignore_filepath, extractor, target_modules)
 
     if is_jules and (args.provision_jules or args.already_provisioned):
-        provision_jules(base_dir)
+        provision_jules(base_dir, already_provisioned=args.already_provisioned)
 
     final_rc = 0
 
