@@ -30,12 +30,11 @@
     "license": "AGPL-3",
     "installable": True,
     "auto_install": False,
-}
-
-"""
+    "description": """
 Semantic Anchors mapping:
 [@ANCHOR: documentation_bootstrap]
 [@ANCHOR: documentation_injection]
 Verified by [@ANCHOR: test_documentation_bootstrap]
 Verified by [@ANCHOR: test_documentation_injection]
-"""
+""",
+}

@@ -25,7 +25,6 @@ This module enables:
         "distributed_redis_cache",
         "cloudflare",
         "hams_test",
-        "manual_library",
     ],
     "external_dependencies": {
         "python": ["redis"],

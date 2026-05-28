@@ -692,7 +692,6 @@ def provision_jules(base_dir, already_provisioned=False):
         pg_socket = "/opt/hams/pgsock"
         wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
         os.environ["PGHOST"] = pg_socket
-        os.environ["HAMS_ISOLATED_NS"] = "1"
 
         def teardown():
             try:
@@ -815,7 +814,6 @@ def provision_jules(base_dir, already_provisioned=False):
     wait_for_port(5672, "RabbitMQ")
 
     os.environ["PGHOST"] = pg_socket
-    os.environ["HAMS_ISOLATED_NS"] = "1"
 
 
 def main():
