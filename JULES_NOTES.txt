@@ -1,1 +1,2 @@
-This will will be updated with any notes for working Jules sessions.
+Remove old test from JULES_ISSUES.md, the text in that file must be entirely
+from this session.
