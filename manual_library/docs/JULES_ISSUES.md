@@ -1,28 +1,26 @@
-# Jules VM Testing Issues - manual_library
+# Jules VM Issues - manual_library
 
-## Test Execution Failure
+## Provisioning Issues
+No issues encountered during provisioning.
 
-**Date:** 2026-05-28
-**Command:** `IN_JULES_VM=1 python3 tools/test.py -u manual_library --already-provisioned`
+## Test Issues
+Standard tests for `manual_library` module failed with 3 issues detected.
 
-### Issue: Circular Dependency / Recursion Error
-The test runner failed during the database initialization phase with a recursion error in module dependencies.
+### 1. ORM Logic Deletion Restriction Error
+`TestManualORMLogic.test_04_parent_deletion_restriction` failed with a `psycopg2.errors.RestrictViolation`.
+- **Traceback**:
+  ```
+  File "/app/manual_library/tests/test_orm_logic.py", line 78, in test_04_parent_deletion_restriction
+    self.article_a.unlink()
+  ...
+  psycopg2.errors.RestrictViolation: update or delete on table "knowledge_article" violates RESTRICT setting of foreign key constraint "knowledge_article_parent_id_fkey" on table "knowledge_article"
+  DETAIL:  Key (id)=(89) is referenced from table "knowledge_article".
+  ```
 
-**Error Log Snippet:**
-```
-2026-05-28 18:39:51,964 22316 ERROR hams_test odoo.registry: Failed to load registry
-2026-05-28 18:39:51,965 22316 CRITICAL hams_test odoo.service.server: Failed to initialize database `hams_test`.
-Traceback (most recent call last):
-...
-  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_module.py", line 379, in _state_update
-    raise UserError(_('Recursion error in modules dependencies!'))
-odoo.exceptions.UserError: Recursion error in modules dependencies!
-```
+### 2. UI Tour Failure (TOC Tour)
+`TestManualLibraryUITours.test_01_manual_toc_tour` failed or hung.
+- **Log**: `TOUR FAILED OR HUNG. DUMPING COMPILED ASSETS`
 
-### Analysis
-The `manual_library` module depends on both `zero_sudo` and `hams_test`.
-A check of the manifests reveals a circular dependency between the prerequisite modules:
-- `hams_test` depends on `zero_sudo`
-- `zero_sudo` depends on `hams_test`
-
-This circularity prevents the Odoo registry from loading when attempting to run tests for `manual_library`.
+### 3. General Test Error
+The test run finished with: `0 failed, 1 error(s) of 32 tests when loading database 'hams_test'`.
+This seems related to the first error mentioned above.
