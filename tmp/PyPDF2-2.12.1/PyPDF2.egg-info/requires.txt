@@ -1,0 +1,29 @@
+
+[:python_version < "3.10"]
+typing_extensions>=3.10.0.0
+
+[:python_version < "3.7"]
+dataclasses
+
+[crypto]
+PyCryptodome
+
+[dev]
+black
+flit
+pip-tools
+pre-commit<2.18.0
+pytest-cov
+wheel
+
+[docs]
+myst_parser
+sphinx
+sphinx_rtd_theme
+
+[full]
+Pillow
+PyCryptodome
+
+[image]
+Pillow
