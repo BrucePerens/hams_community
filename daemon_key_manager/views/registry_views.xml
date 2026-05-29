@@ -9,6 +9,7 @@
             <list string="Daemon Key Registry">
                 <field name="name"/>
                 <field name="user_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
                 <field name="env_file_path"/>
                 <field name="last_rotated"/>
             </list>
@@ -30,6 +31,7 @@
                         <group>
                             <field name="name"/>
                             <field name="user_id" domain="[('is_service_account', '=', True)]"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                         <group>
                             <field name="env_file_path"/>
