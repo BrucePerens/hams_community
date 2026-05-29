@@ -417,12 +417,24 @@ def get_local_modules(base_dir, ignore_patterns):
 
 def get_addons_path(base_dir):
     paths = ["/usr/lib/python3/dist-packages/odoo/addons", base_dir]
+
+    parent_dir = os.path.abspath(os.path.join(base_dir, ".."))
+    try:
+        for item in os.listdir(parent_dir):
+            item_path = os.path.join(parent_dir, item)
+            if os.path.isdir(item_path):
+                if item.startswith("hams_community") or item.startswith("hams_com"):
+                    if item_path not in paths:
+                        paths.append(item_path)
+    except OSError:
+        pass
+
     community_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_community"))
     primary_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_com"))
 
-    if os.path.isdir(community_dir): paths.append(community_dir)
-    elif os.path.isdir("/hams_community"): paths.append("/hams_community")
-    if os.path.isdir(primary_dir): paths.append(primary_dir)
+    if os.path.isdir(community_dir) and community_dir not in paths: paths.append(community_dir)
+    if os.path.isdir("/hams_community") and "/hams_community" not in paths: paths.append("/hams_community")
+    if os.path.isdir(primary_dir) and primary_dir not in paths: paths.append(primary_dir)
 
     return ",".join(paths)
 
@@ -586,9 +598,23 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     subprocess.run(["mount", "--bind", base_dir, base_dir], check=True)
     subprocess.run(["mount", "-o", "remount,bind,ro", base_dir], check=True)
 
-    for extra_dir in [os.path.join(base_dir, "..", "hams_community"), "/hams_community"]:
+    extra_mounts = []
+    parent_dir = os.path.abspath(os.path.join(base_dir, ".."))
+    try:
+        for item in os.listdir(parent_dir):
+            if item.startswith("hams_community") or item.startswith("hams_com"):
+                extra_mounts.append(os.path.join(parent_dir, item))
+    except OSError:
+        pass
+    extra_mounts.extend([os.path.join(base_dir, "..", "hams_community"), "/hams_community"])
+
+    mounted_dirs = set()
+    for extra_dir in extra_mounts:
         if os.path.isdir(extra_dir):
             real_dir = os.path.realpath(extra_dir)
+            if real_dir in mounted_dirs:
+                continue
+            mounted_dirs.add(real_dir)
             subprocess.run(["mount", "--bind", real_dir, real_dir], check=True)
             subprocess.run(["mount", "-o", "remount,bind,ro", real_dir], check=True)
 
