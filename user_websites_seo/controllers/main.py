@@ -42,7 +42,7 @@ class UserWebsitesSEOController(UserWebsitesController):
         )
 
         # Intercept and modify the rendering dictionary before it hits the templating engine
-        if response and hasattr(response, "qcontext"):
+        if isinstance(response, http.Response) and hasattr(response, "qcontext"):
             user = response.qcontext.get("profile_user")
             group = response.qcontext.get("profile_group")
 

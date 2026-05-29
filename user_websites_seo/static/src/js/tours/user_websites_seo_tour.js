@@ -82,14 +82,19 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
         }
     ].concat(TourUtils.safeSave('.o_form_button_save, .o_form_button_check', '.o_form_saved, .o_form_button_create')).concat([
         {
+            content: "Wait for save to complete before closing",
+            trigger: '.o_form_saved, .o_form_button_create',
+            run: function() {}
+        },
+        {
             content: "Go back to list to close the form",
-            trigger: 'button[data-menu-xmlid="base.menu_users"]',
+            trigger: '.breadcrumb-item:not(.active) a, button[data-menu-xmlid="base.menu_users"]',
             run: 'click',
         },
         {
             content: "Wait for list view to load",
-            trigger: '.o_list_table',
+            trigger: '.o_list_renderer, .o_list_table, .o_kanban_view, .o_view_controller',
             run: function() {}
-        },
+        }
     ]),
 });

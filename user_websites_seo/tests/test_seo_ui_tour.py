@@ -36,4 +36,6 @@ class TestSEOUI(HamsHttpCase):
     def test_01_seo_widget_tour(self):
         """Execute the SEO Optimization UI Tour as the admin user."""
         # The admin user logs in to the backend to configure the portal user's SEO data
+        # [@ANCHOR: test_seo_widget_tour]
+        # Verified by [@ANCHOR: test_seo_widget_tour]
         self.start_tour("/odoo?debug=1", "user_websites_seo_tour", login="admin")
