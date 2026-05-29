@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import logging
 from odoo import models, api
 from odoo.http import request
+
+_logger = logging.getLogger(__name__)
 
 
 class CloudflareUtils(models.AbstractModel):
@@ -16,15 +19,15 @@ class CloudflareUtils(models.AbstractModel):
             # Accessing request._get_current_object() will raise RuntimeError if not bound.
             # Odoo's request is a Werkzeug LocalProxy.
             if request:
-                if hasattr(request, "_get_current_object"):
+                if type(request).__name__ == 'LocalProxy':
                     request_obj = request._get_current_object()
                 else:
                     request_obj = request
-
-                if hasattr(request_obj, "website") and request_obj.website:
-                    return request_obj.website.id
+                website = getattr(request_obj, "website", False)
+                if website:
+                    return website.id
         except RuntimeError:
-            pass
+            _logger.debug("Request not bound, falling back to default website.")
         return self.env["website"].get_current_website().id
 
     @api.model
@@ -38,15 +41,17 @@ class CloudflareUtils(models.AbstractModel):
             if not request:
                 return {}
             # Check if request is bound to a current thread/context
-            if hasattr(request, "_get_current_object"):
+            if type(request).__name__ == 'LocalProxy':
                 request_obj = request._get_current_object()
             else:
                 request_obj = request
 
-            if not hasattr(request_obj, "httprequest"):
+            httprequest = getattr(request_obj, "httprequest", False)
+            if not httprequest:
                 return {}
-            headers = request_obj.httprequest.headers
+            headers = httprequest.headers
         except RuntimeError:
+            _logger.debug("Request not bound during context extraction.")
             return {}
 
         return {

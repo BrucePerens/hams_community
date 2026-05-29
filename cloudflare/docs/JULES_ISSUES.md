@@ -1,8 +1,8 @@
 # JULES_ISSUES - cloudflare module
 
 ## AI Hallucination & Laziness Repairs
-- **Request Binding Checks**: Repaired several instances where `hasattr(request, "httprequest")` was used on an unbound Werkzeug `LocalProxy`, which can raise a `RuntimeError`. Implemented `request._get_current_object()` with proper exception handling to safely check if the request is bound before accessing attributes.
-- **Unit Test Fixes**: Fixed `TestRequestContext` which was failing due to improper patching of the `request` proxy. Mocking a `LocalProxy` without providing a `new` object or `spec` caused `unittest.mock` to attempt to access the underlying object, triggering `RuntimeError: object is not bound`.
+- [DONE] **Request Binding Checks**: Several instances where `hasattr(request, ...)` is used on potentially unbound Werkzeug `LocalProxy`. Fixed by using `type(request).__name__ == 'LocalProxy'` to check for proxy before calling `_get_current_object()`, and `getattr(obj, 'attr', False)` on the real object.
+- [DONE] **Empty Exception Handlers**: `except RuntimeError: pass` in `models/edge_context.py`. Fixed by adding `_logger.debug()` calls.
 
 ## Proposed Linter Rules
 - **Rule**: Forbid `hasattr(request, ...)` if `request` is a `LocalProxy` from `werkzeug.local` or `odoo.http`.

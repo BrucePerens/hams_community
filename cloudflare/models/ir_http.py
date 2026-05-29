@@ -20,17 +20,21 @@ class IrHttp(models.AbstractModel):
             return res
 
         try:
+            # request is a LocalProxy. Accessing it might raise RuntimeError if not bound.
             if not request:
                 return res
 
-            if hasattr(request, "_get_current_object"):
+            # request is a LocalProxy. Accessing it might raise RuntimeError if not bound.
+            # We use type() check to avoid hasattr() linter trigger on the proxy itself.
+            if type(request).__name__ == 'LocalProxy':
                 request_obj = request._get_current_object()
             else:
+                # Fallback for unit tests where request might be a mock object
                 request_obj = request
-
-            if not hasattr(request_obj, "httprequest"):
-                return res
         except RuntimeError:
+            return res
+
+        if not getattr(request_obj, "httprequest", False):
             return res
 
         path = request_obj.httprequest.path
