@@ -318,7 +318,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
     except OSError:
         pass
     env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus --user-data-dir={host_tmp_dir}")
-    env.setdefault("DBUS_SESSION_BUS_ADDRESS", "/dev/null")
+    env.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     process = subprocess.Popen(
         cmd,
