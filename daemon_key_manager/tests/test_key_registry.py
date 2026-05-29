@@ -203,7 +203,7 @@ class TestKeyRegistry(HamsTransactionCase):
 
         # Call the actual trigger to fulfill the test anchor requirement
         # # Tests [@ANCHOR: cron_rotation_trigger]
-        self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo
+        self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").with_user(self.manager_user.id)._trigger()
 
         registry.unlink()
 

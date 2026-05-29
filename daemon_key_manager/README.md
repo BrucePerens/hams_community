@@ -22,7 +22,7 @@ def setup_daemon_credentials(env):
 ## 🛡️ Security Architecture
 
 ### Zero-Sudo Compliance
-The module operates under the `user_daemon_key_manager_service` account. It uses `.sudo()` only for the strictly necessary administrative tasks of API key allocation and revocation, which are restricted operations in Odoo that normally require administrative privileges. This specific module is granted an exemption to use `.sudo()` for these operations to maintain the security of the broader system while enabling automated service account management.
+The module operates strictly under the `user_daemon_key_manager_service` account using the **Service Account Pattern**. All administrative operations—including API key allocation, revocation, and filesystem writes—execute with the minimum privilege required via explicit model access (ACLs) and `with_user()` context elevation. No `.sudo()` calls are utilized in the core logic, ensuring absolute compliance with the Zero-Sudo Architecture.
 
 ### OS-Level Sandboxing
 * **Strict Permissions:** `.env` files are created with `0600` (read/write only for the Odoo server process user).
