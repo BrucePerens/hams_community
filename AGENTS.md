@@ -95,7 +95,7 @@ there. Use the --already-provisioned flag when running tests.
 Testing is required before producing a PR. All tests must pass before the PR is
 produced.
 
-All tests must run in a fully provisioned environment without relying on mocks for daemons, Redis, RabbitMQ, or databases. The distinction between "standard" and "integration" tests has been removed; all tests are comprehensive.
+All daemon tests must run in a fully provisioned environment without relying on mocks for daemons, Redis, RabbitMQ, or databases. The distinction between "standard" and "integration" tests has been removed; all daemon tests are comprehensive. Non-daemon tests may continue to utilize standard mocking techniques where appropriate to prevent transaction deadlocks and network hangs.
 
 * **Completion:** Upon completion of a task, produce a PR. Don't wait for the
 user to authorize you to finish, go straight to the PR, and if the user then

@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import subprocess
+import sys
 import time
 import urllib.request
 from odoo import models, api, _
@@ -17,13 +18,21 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
     @api.model
     def start_daemon_process(self, script_path, args=None, env_vars=None):
         """Starts a python daemon script as a subprocess."""
-        cmd = ['python3', script_path] + (args or [])
+        python_exec = os.environ.get("VENV_PYTHON", sys.executable)
+        cmd = [python_exec, script_path] + (args or [])
         env = os.environ.copy()
+
+        sys_paths = "/usr/lib/python3/dist-packages"
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] = f"{sys_paths}:{env['PYTHONPATH']}"
+        else:
+            env["PYTHONPATH"] = sys_paths
+
         if env_vars:
             env.update(env_vars)
 
         _logger.info("Starting daemon: %s", " ".join(cmd))
-        process = subprocess.Popen(cmd, env=env)
+        process = subprocess.Popen(cmd, env=env, start_new_session=True)
         return process
 
     @api.model
@@ -32,11 +41,11 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
         if process and process.poll() is None:
             _logger.info("Stopping daemon PID %s", process.pid)
             try:
-                os.kill(process.pid, signal.SIGTERM)
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 _logger.warning("Daemon PID %s did not terminate, forcing SIGKILL", process.pid)
-                os.kill(process.pid, signal.SIGKILL)
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
 
     @api.model
     def poll_health_check(self, url, timeout=30, interval=1):

@@ -18,8 +18,7 @@ class TestRealCacheManager(RealTransactionCase):
     def tearDown(self):
         if self.daemon_proc:
             try:
-                self.daemon_proc.terminate()
-                self.daemon_proc.wait(timeout=2.0)
+                self.env["zero_sudo.daemon.utils"].stop_daemon_process(self.daemon_proc)
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Daemon termination ignored: %s", repr(e))
         super().tearDown()
