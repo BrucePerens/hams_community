@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import logging
 from odoo.tests import tagged
-from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
+from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 
 _logger = logging.getLogger(__name__)
 
 
 @tagged("post_install", "-at_install")
-class TestSEOUI(RealTransactionCase):
+class TestSEOUI(HamsHttpCase):
     def setUp(self):
         super().setUp()
         self.user_test = self.env["res.users"].create(
@@ -30,23 +30,10 @@ class TestSEOUI(RealTransactionCase):
                 ],
             }
         )
-        # Enforce commit to ensure test data is visible to separate HTTP worker threads
-        self.env.cr.commit()
-
-    def tearDown(self):
-        # Explicit resilient cleanup to prevent database pollution
-        for attempt in range(5):
-            try:
-                with self.env.cr.savepoint():
-                    if getattr(self, 'user_test', False) and self.user_test.exists():
-                        self.user_test.unlink()
-                break
-            except Exception as e: # audit-ignore-catch-all
-                _logger.warning("Resilient cleanup encountered exception: %s", e)
-
-        self.env.cr.commit()
-        super().tearDown()
+        # We do NOT call self.env.cr.commit() here.
+        # HamsHttpCase safely handles the transaction and automatically rolls it back after the test.
 
     def test_01_seo_widget_tour(self):
-        """Execute the SEO Optimization UI Tour as the portal user."""
-        self.start_tour("/blog?debug=1", "user_websites_seo_tour", login="seouitest")
+        """Execute the SEO Optimization UI Tour as the admin user."""
+        # The admin user logs in to the backend to configure the portal user's SEO data
+        self.start_tour("/odoo?debug=1", "user_websites_seo_tour", login="admin")

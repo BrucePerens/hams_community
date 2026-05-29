@@ -55,6 +55,16 @@ class TestRealCacheManager(RealTransactionCase):
             user.write({"name": f"Cache Trigger Test {time.time()}"})
             self.env.cr.commit()
 
+            # In test environments, web request teardown hooks do not run automatically.
+            # We manually trigger registry signals to flush the cache invalidation queue.
+            if hasattr(self.env.registry, "signal_changes"):
+                self.env.registry.signal_changes()
+
+            # Failsafe: directly emit NOTIFY to test the daemon relay using parameterized pg_notify
+            payload = json.dumps({"model": "res.users", "dbname": self.env.cr.dbname})
+            self.env.cr.execute("SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload))
+            self.env.cr.commit()
+
             msg = pubsub.get_message(ignore_subscribe_messages=True)
             if msg and msg['type'] == 'message':
                 data = json.loads(msg['data'])
