@@ -52,7 +52,7 @@ In containerized/orchestrated environments:
 * **`daemon_name`**: A unique string identifier for the external service.
 * **`user_xml_id`**: The XML ID of the service account record (e.g., `pager_duty.user_pager_service_internal`). This account must have `is_service_account` set to `True`.
 * **`env_file_path`**: The absolute path where the `.env` file should be written. It must reside within `/var/lib/odoo/daemon_keys/`.
-* **Behavior**: This method is idempotent. If a daemon with the same name exists, its service account and path are updated. It immediately triggers the generation of the first API key and writes the file [@ANCHOR: register_daemon_logic] [@ANCHOR: register_daemon_idempotency].
+* **Behavior**: This method is idempotent. If a daemon with the same name exists, its service account and path are updated. It immediately triggers the generation of the first API key and writes the file. It also ensures the registry is associated with the service account's company [@ANCHOR: register_daemon_logic] [@ANCHOR: register_daemon_idempotency].
 
 #### `action_force_provision_all()` [@ANCHOR: action_force_provision_all_api]
 * **Use Case**: Used during system bootstrapping (e.g., via systemd or Kubernetes init containers) to ensure all keys are present on disk before daemons start. Also used for emergency rotation of all keys.

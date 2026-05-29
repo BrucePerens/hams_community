@@ -27,6 +27,12 @@ class DaemonKeyRegistry(models.Model):
         Must start with /var/lib/odoo/daemon_keys/.
         """,
     )
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        required=True,
+        default=lambda self: self.env.company,
+    )
     last_rotated = fields.Datetime(string="Last Rotated", readonly=True)
 
     _name_uniq = models.Constraint("UNIQUE(name)", "The daemon name must be unique!")
@@ -88,14 +94,23 @@ class DaemonKeyRegistry(models.Model):
         )
         self = self.with_user(svc_uid)
 
-        daemon_svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            user_xml_id
-        )
-        user = self.env["res.users"].browse(daemon_svc_uid)
+        # We use sudo() for user lookup to bypass multi-company isolation during registration.
+        if "." in user_xml_id:
+            daemon_svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                user_xml_id
+            )
+            user = self.env["res.users"].sudo().browse(daemon_svc_uid) # burn-ignore-sudo
+        else:
+            # If not an XML ID, look up by login. Targeted sudo() for registration bypass.
+            user = self.env["res.users"].sudo().search([("login", "=", user_xml_id)], limit=1) # burn-ignore-sudo
+            if not user:
+                raise UserError(_("Service account with login '%s' not found.") % user_xml_id)
 
         # [@ANCHOR: register_daemon_logic]
-        registry = self.env["daemon.key.registry"].search(
-            [("name", "=", daemon_name)], limit=1
+        # Multi-company awareness: search across companies for existing daemon name.
+        # This allows updating a daemon's settings regardless of current company context.
+        registry = self.env["daemon.key.registry"].sudo().search( # burn-ignore-sudo
+            [("name", "=", daemon_name), ("company_id", "=", user.company_id.id)], limit=1
         )
         if not registry:
             registry = self.env["daemon.key.registry"].create(
@@ -103,11 +118,18 @@ class DaemonKeyRegistry(models.Model):
                     "name": daemon_name,
                     "user_id": user.id,
                     "env_file_path": env_file_path,
+                    "company_id": user.company_id.id,
                 }
             )
         else:
             # [@ANCHOR: register_daemon_idempotency]
-            registry.write({"user_id": user.id, "env_file_path": env_file_path})
+            registry.write(
+                {
+                    "user_id": user.id,
+                    "env_file_path": env_file_path,
+                    "company_id": user.company_id.id,
+                }
+            )
 
         registry._rotate_key_and_write_file()
         return True
