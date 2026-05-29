@@ -73,12 +73,6 @@ class TestManualORMLogic(HamsTransactionCase):
         Verify that parent articles cannot be deleted if they have children,
         due to the ondelete='restrict' configuration.
         """
-        # We use a custom catch-all and manual check because Odoo's _assertRaises
-        # wrapper in some versions might fail when passed a tuple of non-Odoo exceptions.
-        # Alternatively, we can use a try-except block.
-        try:
+        with self.assertRaises((ForeignKeyViolation, RestrictViolation)):
             with self.env.cr.savepoint():
                 self.article_a.unlink()
-            self.fail("ORM must prevent deletion of parent articles with children.")
-        except (ForeignKeyViolation, RestrictViolation):
-            pass

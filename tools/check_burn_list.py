@@ -91,6 +91,11 @@ def parse_odoo_xml(content):
 
 GENERAL_ERROR_RULES = [
     (
+        r"hooks\.py$",
+        re.compile(r"\bin\s+[a-zA-Z0-9_]+\._fields\b"),
+        "CRITICAL ANTI-DEFENSIVE PATTERN: Do not check for field existence in hooks. Assume schema is correct and fail fast.",
+    ),
+    (
         r"\.(py|js|xml)$",
         re.compile(r"(?i)#\s*(TODO|FIXME|\.\.\.|insert logic|implement later)"),
         "CRITICAL AI LAZINESS: Placeholders, TODOs, and elisions (...) are strictly forbidden. You must write complete, functional code.",
@@ -153,6 +158,11 @@ GENERAL_ERROR_RULES = [
 ]
 
 ODOO_ERROR_RULES = [
+    (
+        r"\.py$",
+        re.compile(r"\bhasattr\s*\(\s*(?:request|self\.env\.registry|self\.env\[)"),
+        "CRITICAL AI LAZINESS: Defensive 'hasattr' checks mask missing architectural components or unbound proxies. Fail fast instead.",
+    ),
     (
         r"\.py$",
         re.compile(r"['\"]groups_id['\"]\s*:"),
@@ -738,6 +748,14 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                                 self.add_error(node.lineno, "CRITICAL AI LAZINESS: Hardcoded ID lookup ('id', 'in', [int, ...]). Use self.env.ref() or immutable string keys.")
             self.generic_visit(node)
 
+        def visit_ExceptHandler(self, node):
+            if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+                self.add_error(
+                    getattr(node, 'lineno', 1),
+                    "CRITICAL AI LAZINESS: Empty exception handlers using 'pass' are forbidden. Log the error or handle it."
+                )
+            self.generic_visit(node)
+
         def visit_Try(self, node):
             for handler in node.handlers:
                 if (
@@ -1145,6 +1163,13 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, bool):
                     if (func_name == "assertTrue" and node.args[0].value is True) or (func_name == "assertFalse" and node.args[0].value is False):
                         self.add_error(node.lineno, f"CRITICAL AI LAZINESS: Hollow assertion {func_name}({node.args[0].value}) is banned. Assert against actual variables.")
+                if node.args and isinstance(node.args[0], ast.BoolOp) and isinstance(node.args[0].op, ast.And):
+                    self.add_error(node.lineno, f"CRITICAL TEST ANTI-PATTERN: {func_name} with multiple conditions (and). Split into individual assertions for precise diagnostics.")
+            elif func_name == "Markup":
+                if node.args:
+                    arg0 = node.args[0]
+                    if isinstance(arg0, ast.JoinedStr) or (isinstance(arg0, ast.Call) and getattr(arg0.func, "attr", "") == "format") or (isinstance(arg0, ast.BinOp) and isinstance(arg0.op, ast.Mod)):
+                        self.add_error(node.lineno, "CRITICAL XSS VULNERABILITY: Do not interpolate variables directly into Markup(). Use odoo.tools.html_escape on user inputs first or use standard QWeb rendering.")
             elif func_name == "assertEqual" and len(node.args) == 2:
                 arg1, arg2 = node.args[0], node.args[1]
                 if type(arg1) == type(arg2):
