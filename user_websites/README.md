@@ -25,18 +25,33 @@ This Odoo 19 module lets users build their own personal or group websites and bl
 
 ## ⚙️ Configuration
 
-Go to **Settings > General Settings > User Websites** to configure the app.
-* **Global Page Limit:** Set the default maximum number of pages a user is allowed to build.
-* **Administrators:** Pick the users who are allowed to review abuse reports and manage group websites.
+To set up the module, go to **Settings > General Settings > User Websites**.
+* **Global Page Limit:** Choose the maximum number of pages each user can create. This helps keep your server running smoothly.
+* **Company Abuse Email:** Enter the email address where you want to receive notifications about reported content.
+* **Administrators:** Assign users who will have the power to review reports and manage group sites.
 
-## 🏗️ How It Works Under the Hood
+## 📖 User Guide
 
-We used a few neat tricks to make this secure and fast:
+### For Individual Users
+1. **Setting up your site:** Go to your profile settings and choose a "Website Slug" (this will be your URL, like `yourname`).
+2. **Creating content:** Visit `/<your-slug>/home` to start building your personal homepage, or `/<your-slug>/blog` to start blogging.
+3. **Privacy:** You can choose whether to appear in the public **Community Directory** from your privacy settings.
 
-* **Just-In-Time Creation:** We don't waste database space creating empty blogs for users who never use them. The system only creates the website records the exact moment the user visits their URL for the first time.
-* **One Big Blog:** Instead of creating a thousand separate blog containers, everyone shares a single Odoo `blog.blog` record named "Community Blog". We just filter the posts so users only see their own stuff.
-* **Proxy Ownership:** Odoo normally only lets admins build web pages. We get around this securely. When a user creates a page, the system briefly logs in as a background Service Account to save the HTML to the database, but tags the user as the real "owner" so only they can edit it later.
-* **Security Shield:** The module includes an automated sanitization engine that intercepts and neutralizes XSS and SSTI attempts. If a user tries to inject malicious code, the system strips it, notifies administrators, and issues a strike.
+### For Group Managers
+1. **Creating a Group Site:** An administrator can create a "User Website Group" and assign a slug to it.
+2. **Adding Members:** Anyone added to the linked Odoo group will have full editing rights for that group's website and blog.
+
+### Moderation & Safety
+* **Reporting:** Every page includes a "Report Violation" button. Anyone can use this to flag inappropriate content.
+* **Strikes:** Admins review reports. If a violation is confirmed, a "Strike" is issued.
+* **Suspension:** If a user receives 3 strikes, their personal website and blog are automatically taken offline.
+
+## 🏗️ Technical Overview
+
+* **Just-In-Time Provisioning:** Websites and blogs are only created when a user first attempts to access them, saving database resources.
+* **Shared Infrastructure:** All users share a single blog backend, but content is strictly isolated so users only manage their own posts.
+* **Proxy Ownership:** A secure "Proxy Ownership" pattern allows standard users to manage their own web pages without requiring full administrator privileges.
+* **Automated Security:** A built-in sanitization engine automatically blocks and reports attempts to inject malicious code (XSS/SSTI) into page designs.
 
 ---
 

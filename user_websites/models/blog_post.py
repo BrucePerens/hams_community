@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-from odoo import models, fields, api, _
+from odoo import models, fields, api, _, tools
 from odoo.exceptions import AccessError
 import time
 import hashlib
@@ -298,7 +298,7 @@ class BlogPost(models.Model):
             post_ids = [int(pid) for pid in digest.post_ids_string.split(",") if pid]
             posts = self.env["blog.post"].with_user(svc_uid).browse(post_ids)
             post_links_html = "".join(
-                f"<li><a href='{base_url}{p.website_url}'>{p.name}</a></li>"
+                f"<li><a href='{base_url}{tools.html_escape(p.website_url)}'>{tools.html_escape(p.name)}</a></li>"
                 for p in posts
             )
 
