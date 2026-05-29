@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
-from odoo import fields, _
+from odoo import fields
 
 import shutil
 import os
@@ -95,14 +95,16 @@ class TestBackupManagement(RealTransactionCase):
             }
         )
 
-        # Physically invoke message_post to satisfy AST linter for audit-ignore-mail
-        self.config_kopia.message_post(body=_("AST bypass"))
-
+        # We verify that a failure message is posted when backups are stale.
+        # This replaces the "AST bypass" shortcut with a meaningful assertion.
         mock_msg = self.safe_patch_object(type(self.env["backup.config"]), "message_post")
-        # We must be careful because cron_sync_all_backups calls action_sync_snapshots
-        # which now queues a job.
+
         self.env["backup.config"].cron_sync_all_backups()
-        mock_msg.assert_called()
+
+        # Verify that an alert was posted for the stale backup
+        alert_calls = [call for call in mock_msg.call_args_list if "Stale Backup Alert" in str(call)]
+        self.assertTrue(alert_calls, "A stale backup alert should have been posted via message_post")
+        # audit-ignore-mail: Tested by [@ANCHOR: backup_management:backup_pager_synergy]
 
         jobs = self.env["backup.job"].search([("config_id", "=", self.config_kopia.id)])
         self.assertTrue(jobs)
@@ -159,16 +161,11 @@ class TestBackupManagement(RealTransactionCase):
         self.assertTrue(job.exists())
         self.assertEqual(job.state, "pending")
 
-    def test_08d_kopia_auto_download(self):
-        # Tests [@ANCHOR: test_kopia_auto_download]
-        mock_get_exe = self.safe_patch_object(type(self.config_kopia), "_get_executable", return_value="/bin/kopia")
-
-        # Physically invoke message_post to satisfy AST linter for audit-ignore-mail
-        self.config_kopia.message_post(body=_("AST bypass"))
-
-        exe_path = self.config_kopia._get_executable("kopia")
-        mock_get_exe.assert_called_once_with("kopia")
-        self.assertEqual(exe_path, "/bin/kopia")
+    def test_08d_executable_missing(self):
+        # Verified that it fails fast if executable is missing
+        with self.safe_patch_object(shutil, "which", return_value=None):
+            with self.assertRaisesRegex(UserError, "is missing from the system path"):
+                self.config_kopia._get_executable("kopia")
 
     def test_08e_security_path_validation(self):
         # Tests path validation added for security

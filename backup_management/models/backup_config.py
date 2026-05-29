@@ -78,6 +78,13 @@ class BackupConfig(models.Model):
     )
     last_drill_time = fields.Datetime(string="Last Successful Drill", readonly=True)
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        required=True,
+        default=lambda self: self.env.company,
+    )
+
     snapshot_ids = fields.One2many("backup.snapshot", "config_id", string="Snapshots")
 
     _name_uniq = models.Constraint(
@@ -121,9 +128,9 @@ class BackupConfig(models.Model):
                 return f.decrypt(value.encode("utf-8")).decode("utf-8")
             else:
                 return f.encrypt(value.encode("utf-8")).decode("utf-8")
-        except ValueError as e:
-            logging.getLogger(__name__).warning("Encryption/Decryption error: %s", e)
-            return "***ERROR***" if decrypt else False
+        except Exception as e:  # audit-ignore-catch-all: Final barrier for encryption failure
+            logging.getLogger(__name__).error("Encryption/Decryption error: %s", e)
+            raise UserError(_("Security Error: Failed to process encrypted credentials."))
 
     @api.depends("kopia_password_crypt")
     def _compute_kopia_password(self):
@@ -170,42 +177,22 @@ class BackupConfig(models.Model):
     def _get_executable(self, engine):
         """
         Retrieves the path to the backup engine binary.
-        If Kopia is missing, it attempts to download it via binary_downloader.
+        Ensures the binary is available on the system.
         """
         cmd_path = shutil.which(engine)
         if cmd_path:
             return cmd_path
 
-        if engine == "pgbackrest":
-            raise UserError(
-                _(
-                    "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
-                )
+        # Odoo 19 FAIL FAST Mandate: No inline auto-downloads.
+        # Required binaries must be provisioned by the environment or administrator.
+        raise UserError(
+            _(
+                "The backup engine binary '%s' is missing from the system path. "
+                "Please ensure it is installed via your package manager or "
+                "provisioned via the Binary Downloader module before attempting this operation."
             )
-
-        if engine == "kopia":
-            msg_body = _(
-                "Kopia binary not found. Deferring to central generalized downloader..."
-            )
-            # Use Service ID for security & audit trails
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "backup_management.user_backup_service_internal"
-            )
-            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
-
-            # Binary manifestation is centralized in binary_downloader
-            bin_path = (
-                self.env["binary.manifest"]
-                .with_user(svc_uid)
-                .with_context(active_test=False)
-                .ensure_executable("kopia")
-            )
-
-            msg_body = _("Kopia successfully installed to %s") % bin_path
-            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
-            return bin_path
-
-        raise UserError(_("Unknown engine: %s") % engine)
+            % engine
+        )
 
     def _publish_to_worker(self, engine, payload_extra=None):
         """
@@ -374,18 +361,31 @@ class BackupConfig(models.Model):
     def get_board_data(self):
         # [@ANCHOR: backup_management:backup_board_data]
         # Verified by [@ANCHOR: backup_management:test_backup_view]
-        domain = []
+        domain = [("company_id", "in", self.env.companies.ids)]
         if self.env.context.get("website_id"):
-            domain = [
-                "|",
-                ("website_id", "=", False),
-                ("website_id", "=", self.env.context.get("website_id")),
-            ]
+            domain.extend(
+                [
+                    "|",
+                    ("website_id", "=", False),
+                    ("website_id", "=", self.env.context.get("website_id")),
+                ]
+            )
         configs = self.search_read(domain, ["name", "engine", "target_path"])
         now = fields.Datetime.now()
 
+        snap_domain = [("company_id", "in", self.env.companies.ids)]
+        if self.env.context.get("website_id"):
+            snap_domain.extend(
+                [
+                    "|",
+                    ("website_id", "=", False),
+                    ("website_id", "=", self.env.context.get("website_id")),
+                ]
+            )
+
         latest_snaps = self.env["backup.latest.snapshot.view"].search_read(
-            [], ["config_id", "snapshot_id", "start_time", "size_bytes", "status"]
+            snap_domain,
+            ["config_id", "snapshot_id", "start_time", "size_bytes", "status"],
         )
         snap_map = {s["config_id"][0]: s for s in latest_snaps if s.get("config_id")}
 

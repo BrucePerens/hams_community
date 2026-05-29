@@ -67,10 +67,10 @@ def validate_backup_path(path):
             )
 
     # Prevent command injection via flags if path is used in CLI
-    if path.startswith("-"):
+    if path.strip().startswith("-"):
         raise UserError(_("Invalid path: path cannot start with a hyphen."))
 
-    # Block shell metacharacters
+    # Block shell metacharacters and potentially dangerous patterns
     metacharacters = [
         ";",
         "&",
@@ -90,6 +90,8 @@ def validate_backup_path(path):
         "\n",
         "\r",
         "\\",
+        "'",
+        '"',
     ]
     if any(char in path for char in metacharacters):
         raise UserError(_("Invalid path: path contains illegal characters."))

@@ -9,7 +9,16 @@
         <h1>Backup Management User Guide</h1>
         <section id="backup-sync-section">
             <h4>Automated Volume Synchronization</h4>
+            <p>The system automatically synchronizes backup volumes for both Kopia and pgBackRest engines. This ensures that the local database is aware of all available snapshots and their statuses.</p>
             <span style="display:none;">[@ANCHOR: UX_BACKUP_SYNC]</span>
+        </section>
+        <section id="backup-security-section">
+            <h4>Security and Multi-Tenancy</h4>
+            <p>All backup operations are performed with minimum privilege using dedicated service accounts. Multi-website and multi-company environments are fully supported, ensuring data isolation between different tenants.</p>
+        </section>
+        <section id="backup-restore-section">
+            <h4>Restore Operations</h4>
+            <p>Administrators can trigger restores of specific snapshots via the Restore Wizard. The system validates target paths to prevent unauthorized access or accidental overwrites of critical system files.</p>
         </section>
     </main>
 </body>
