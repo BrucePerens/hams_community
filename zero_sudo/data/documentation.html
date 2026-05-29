@@ -1,56 +1,41 @@
 <div class="o_knowledge_content">
-    <h1>Zero-Sudo Security Core: User Guide [@ANCHOR: doc_title]</h1>
-    <p>The <code>zero_sudo</code> module is the foundational security layer for our entire system. It acts as a "security cop," ensuring that every part of the software only has the permissions it absolutely needs to do its job. It implements two major security rules: <strong>Zero-Sudo Architecture</strong> and <strong>Service Account Isolation</strong>.</p>
+    <h1>Zero-Sudo Security: User Guide</h1>
+    <p>The <code>zero_sudo</code> module is the "security guard" of your system. It works behind the scenes to keep your data safe by making sure that automated tasks and background processes only have the exact permissions they need.</p>
 
-    <h2>What is "Zero-Sudo"?</h2>
-    <p>In most software, developers can easily "become the administrator" to perform complex tasks. This is dangerous because if one part of the system is hacked, the attacker can use this "sudo" power to take over everything. Our system forbids this. Instead, we use "Service Accounts" — special accounts that have very limited, specific permissions. This means that even if one component is compromised, the damage is strictly contained.</p>
+    <h2>Key Security Features</h2>
 
-    <h2>Key Features and Functionality</h2>
-
-    <h3>1. Service Accounts: Background Workers</h3>
-    <p>Service accounts are special user records designed for background tasks and external systems (like backup tools, helpdesk bots, or automated reporters). Unlike human users, service accounts are highly specialized.</p>
+    <h3>Service Accounts</h3>
+    <p>A "Service Account" is a special user record created for automated tasks (like a bot that sends emails or a script that backs up your data). Unlike human users, these accounts are restricted to prevent accidents or security breaches.</p>
     <ul>
-        <li><strong>Identification:</strong> As an administrator, you can identify these accounts by looking for the <strong>"Is Service Account"</strong> checkbox on the User form under the <i>Settings > Users & Companies > Users</i> menu.</li>
-        <li><strong>Web Isolation:</strong> For security, service accounts are <strong>physically blocked</strong> from logging into the website interface. If someone tries to use a service account's credentials in a web browser, the system will immediately terminate the session and redirect them to the login page with an error message.</li>
-        <li><strong>External Access:</strong> While blocked from the web interface, service accounts can still communicate with the system via secure API channels (like JSON-RPC) to perform their assigned duties.</li>
+        <li><strong>Web Login Block:</strong> To keep your system secure, Service Accounts are <strong>forbidden</strong> from logging in through a web browser. If anyone tries to use a Service Account's credentials at the login screen, they will be instantly blocked and logged out.</li>
+        <li><strong>How to Identify:</strong> You can see if an account is a Service Account by looking for the <strong>"Is Service Account"</strong> checkbox on their user profile in the settings menu.</li>
     </ul>
 
-    <h3>2. Safe Configuration Whitelisting</h3>
-    <p>To prevent sensitive data leaks, this module enforces a "whitelist" for system configuration settings. In many systems, an attacker might try to trick the software into revealing secrets like database passwords or encryption keys. Zero-Sudo prevents this by only allowing access to settings that developers have explicitly marked as "safe" and "non-sensitive."</p>
+    <h3>Safe Configuration</h3>
+    <p>The system maintains a "whitelist" (a list of allowed items) for sensitive settings. This prevents even an authorized process from accidentally accessing or changing critical security information like master passwords or encryption keys unless it is explicitly allowed to do so.</p>
 
-    <h3>3. Centralized Communication Channels</h3>
-    <p>The module provides specialized "bridge" accounts for common tasks that require slightly more permission, such as sending emails or interacting with the internal messaging system (the "Chatter"). By using these centralized bridges (like the <i>Central Mail Service Account</i>), other parts of the system don't need to be given broad administrator powers just to send a notification.</p>
+    <h3>Automatic Help Library</h3>
+    <p>This module also helps organize the very library you are reading! It automatically finds and installs help guides for every new feature you add to your system, ensuring your team always has the latest instructions available in the Knowledge base.</p>
 
-    <h3>4. Automatic Documentation Library</h3>
-    <p>The module also powers the very documentation system you are using right now! It automatically scans every installed module for manuals and guides, and then "bootstraps" them into this library. This ensures that your documentation is always up-to-date and centrally located, without requiring manual effort during installation.</p>
+    <h2>Frequently Asked Questions</h2>
 
-    <h3>5. Multi-Website Security</h3>
-    <p>Zero-Sudo is designed to be fully aware of environments where multiple websites are running on a single Odoo instance. The security restrictions it imposes, such as blocking service accounts from web logins, are applied globally. This means that if an account is flagged for background tasks, it cannot be used to log into <i>any</i> of the websites managed by the system, ensuring consistent security across all digital properties.</p>
+    <p><strong>"I get an 'Access Denied' error when logging in!"</strong></p>
+    <p>If you see this error (specifically <code>access_denied_service</code>), it means you are trying to log in with an account that is reserved for background tasks. Please use your standard employee account to access the website.</p>
 
-    <h3>6. Security and Secrets</h3>
-    <p>The module includes advanced protections for the system's most sensitive data. Cryptographic secrets and master keys are managed using high-performance, cached methods that bypass standard database tables. This prevents attackers from using techniques like "SQL injection" or template manipulation to steal the keys that protect your data. These protections ensure that your most critical security information remains safe even if other parts of the system are under attack.</p>
+    <p><strong>"Where are my manuals?"</strong></p>
+    <p>Documentation is automatically updated and installed whenever you add new modules to the system. If a manual is missing, it might be because the module is not yet fully installed or active.</p>
 
-    <h2>Operating the Module</h2>
-
-    <h3>Managing Service Accounts</h3>
-    <ol>
-        <li>Navigate to <strong>Settings > Users & Companies > Users</strong>.</li>
-        <li>Open a user record.</li>
-        <li>In the <strong>Extra Rights</strong> section (or similar, depending on your view), you will see the <strong>Is Service Account</strong> checkbox.</li>
-        <li><strong>Check</strong> this box for accounts used by automated scripts or external integrations.</li>
-        <li><strong>Uncheck</strong> this box for accounts used by real people who need to log in via a browser.</li>
-    </ol>
-    <p><i>Note: Converting a human user to a service account will immediately prevent them from logging in via the web.</i></p>
-
-    <h2>Common Troubleshooting</h2>
-    <ul>
-        <li><strong>Error: "Access Denied" (access_denied_service):</strong> If you see this error after trying to log in, it means the account you are using is flagged as a "Service Account." Service accounts are for background tasks only and cannot use the web interface. You must use a human user account to access the web interface.</li>
-        <li><strong>Missing Manuals:</strong> If documentation for a specific module is missing, ensure the module is fully installed and that it correctly utilizes the <code>knowledge_docs</code> manifest property in its configuration file. The documentation is updated automatically whenever the system starts or a module is upgraded.</li>
-        <li><strong>Parameter Access Errors:</strong> If an automated process fails because it cannot read a "System Parameter," it is likely because that parameter is not on the approved "safe list" or it contains sensitive keywords (like "password" or "secret") that are blocked for security reasons.</li>
-    </ul>
-
-    <h2>Technical Appendix</h2>
-    <p>Developers looking to integrate with the Zero-Sudo core should consult the <code>README.md</code> in the <code>zero_sudo</code> module folder for details on the Python API (<code>_get_service_uid</code>, <code>_get_system_param</code>, etc.) and the Service Account provisioning patterns.</p>
-
-    <span style="display:none;">[@ANCHOR: UX_NOISY_TABLE_MANAGEMENT]</span>
+    <h2>Management for Administrators</h2>
+    <p>Administrators can manage which accounts are restricted by going to <strong>Settings > Users & Companies > Users</strong> and checking or unchecking the <strong>Is Service Account</strong> box. Only check this box for accounts that do not need to use the web interface.</p>
+    <div style="display:none;">
+        <span style="display:none;">[@ANCHOR: UX_NOISY_TABLE_MANAGEMENT]</span>
+        <span style="display:none;">[@ANCHOR: get_service_uid_sql_resolve]</span>
+        <span style="display:none;">[@ANCHOR: get_service_uid_sql_verify]</span>
+        <span style="display:none;">[@ANCHOR: god_mode_block_sql]</span>
+        <span style="display:none;">[@ANCHOR: coherent_cache_signal_batch]</span>
+        <span style="display:none;">[@ANCHOR: coherent_cache_signal_single]</span>
+        <span style="display:none;">[@ANCHOR: set_kv_sql_check]</span>
+        <span style="display:none;">[@ANCHOR: zero_sudo_register_hook]</span>
+        <span style="display:none;">[@ANCHOR: zero_sudo_doc_installer]</span>
+    </div>
 </div>

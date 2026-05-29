@@ -11,8 +11,10 @@ class Module(models.Model):
 
     @api.model
     def _register_hook(self):
+        # [@ANCHOR: zero_sudo:zero_sudo_register_hook]
+        # Verified by [@ANCHOR: zero_sudo:test_zero_sudo_register_hook]
         super()._register_hook()
-        if not hasattr(self.env.registry, '_zero_sudo_docs_checked'):
+        if not getattr(self.env.registry, '_zero_sudo_docs_checked', False):
             self.env.registry._zero_sudo_docs_checked = True
             self._bootstrap_knowledge_docs()
 
@@ -20,6 +22,10 @@ class Module(models.Model):
     def _bootstrap_knowledge_docs(self):
         # [@ANCHOR: zero_sudo:zero_sudo_doc_installer]
         # Verified by [@ANCHOR: zero_sudo:test_zero_sudo_doc_installer]
+        if getattr(self.env.registry, '_zero_sudo_docs_checked', False):
+            return
+        self.env.registry._zero_sudo_docs_checked = True
+
         article_model_name = None
         if 'knowledge.article' in self.env:
             article_model_name = 'knowledge.article'

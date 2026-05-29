@@ -51,8 +51,8 @@ class TestKeyRegistry(HamsTransactionCase):
             try:
                 if os.path.exists(path):
                     os.remove(path)
-            except OSError:
-                pass
+            except OSError as e:
+                _logger.warning("Cleanup error for %s: %s", path, e)
 
     def test_security_constraints(self):
         """Test that only service accounts and valid paths can be used."""
@@ -132,15 +132,15 @@ class TestKeyRegistry(HamsTransactionCase):
         try:
             if os.path.exists(path):
                 os.remove(path)
-        except OSError:
-            pass
+        except OSError as e:
+            _logger.warning("Cleanup error: %s", e)
 
     def _silent_rmdir(self, path):
         try:
             if os.path.exists(path):
                 os.rmdir(path)
-        except OSError:
-            pass
+        except OSError as e:
+            _logger.warning("Cleanup error: %s", e)
 
     def test_register_daemon_api(self):
         """Test the register_daemon API."""
@@ -203,7 +203,7 @@ class TestKeyRegistry(HamsTransactionCase):
 
         # Call the actual trigger to fulfill the test anchor requirement
         # # Tests [@ANCHOR: cron_rotation_trigger]
-        self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo
+        self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").with_user(self.manager_user.id)._trigger()
 
         registry.unlink()
 
