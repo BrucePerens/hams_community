@@ -95,12 +95,7 @@ there. Use the --already-provisioned flag when running tests.
 Testing is required before producing a PR. All tests must pass before the PR is
 produced.
 
-Always perform normal tests. Perform integration tests if any of the normal
-tests for the code that has been modified, or code that uses the modified code
-includes mocks for things that are tested without mocks in the integration tests.
-
-Perform integration tests for code that interacts with any daemon, redis,
-or rabbitmq; and code that is used by code that interacts with those things.
+All tests must run in a fully provisioned environment without relying on mocks for daemons, Redis, RabbitMQ, or databases. The distinction between "standard" and "integration" tests has been removed; all tests are comprehensive.
 
 * **Completion:** Upon completion of a task, produce a PR. Don't wait for the
 user to authorize you to finish, go straight to the PR, and if the user then

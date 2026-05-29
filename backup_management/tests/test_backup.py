@@ -111,7 +111,6 @@ class TestBackupManagement(RealTransactionCase):
         # Tests [@ANCHOR: backup_management:test_backup_orchestration]
         # Tests [@ANCHOR: backup_management:backup_trigger_execution]
         # Validates ADR-0071 Asynchronous Bastion Pattern
-        integration_mode = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
 
         # Tests are as much like production as possible, so RabbitMQ is used.
         res_kopia = self.config_kopia.action_trigger_backup()
@@ -120,13 +119,9 @@ class TestBackupManagement(RealTransactionCase):
         self.assertEqual(res_kopia.get("res_model"), "backup.job")
         self.assertEqual(res_pg.get("res_model"), "backup.job")
 
-        if integration_mode:
-            # In integration mode, physically commit the transaction.
-            # This triggers the `env.cr.postcommit` hook and pushes the message to RabbitMQ.
-            self.env.cr.commit()
-        else:
-            # In standard environments without physical commits, trigger the hook manually to test Odoo's internal routing
-            self.env.cr.postcommit.run()
+        # Physically commit the transaction.
+        # This triggers the `env.cr.postcommit` hook and pushes the message to RabbitMQ.
+        self.env.cr.commit()
 
         job_kopia = self.env["backup.job"].search(
             [("config_id", "=", self.config_kopia.id)], limit=1

@@ -11,9 +11,7 @@ from odoo.tests.common import tagged
 from odoo.addons.zero_sudo.tests.common import HamsTransactionCase
 from odoo.exceptions import UserError, ValidationError
 
-INTEGRATION_MODE = os.environ.get("HAMS_INTEGRATION_MODE") == "1"
-
-@tagged("post_install", "-at_install", "integration" if INTEGRATION_MODE else "standard")
+@tagged("post_install", "-at_install", "standard")
 class TestBinaryManifest(HamsTransactionCase):
 
     def tearDown(self):
@@ -39,14 +37,10 @@ class TestBinaryManifest(HamsTransactionCase):
                     pass
         self.service_user = self.env.ref("binary_downloader.user_binary_downloader_service")
 
-        if INTEGRATION_MODE:
-            # Leverage the Dummy UI Tour HTTP controller to physically simulate the download process
-            base_url = os.environ.get("ODOO_URL", "http://odoo:8069")
-            url = f"{base_url}/test/dummy_bin"
-            chksum = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
-        else:
-            url = "http://example.com/testbin"
-            chksum = hashlib.sha256(b"chunk").hexdigest()
+        # Leverage the Dummy UI Tour HTTP controller to physically simulate the download process
+        base_url = os.environ.get("ODOO_URL", "http://odoo:8069")
+        url = f"{base_url}/test/dummy_bin"
+        chksum = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
 
         self.manifest = self.env["binary.manifest"].create(
             {
@@ -61,69 +55,33 @@ class TestBinaryManifest(HamsTransactionCase):
         # [@ANCHOR: test_binary_manifest_standard]
         # Tests [@ANCHOR: binary_ensure_executable]
         # Tests [@ANCHOR: binary_resolution]
-        mock_which = None
-        if not INTEGRATION_MODE:
-            mock_which = self.safe_patch("shutil.which")
 
         data_dir = tools.config.get("data_dir", "/var/lib/odoo")
-        if INTEGRATION_MODE:
-            target_bin = os.path.join(data_dir, "hams_bin", "testbin")
-            if not os.path.exists(os.path.dirname(target_bin)):
-                os.makedirs(os.path.dirname(target_bin))
-            with open(target_bin, "wb") as f:
-                f.write(b"1234")
-            os.chmod(target_bin, stat.S_IRWXU)
-
-        if mock_which:
-            mock_which.return_value = "/usr/bin/testbin"
+        target_bin = os.path.join(data_dir, "hams_bin", "testbin")
+        if not os.path.exists(os.path.dirname(target_bin)):
+            os.makedirs(os.path.dirname(target_bin))
+        with open(target_bin, "wb") as f:
+            f.write(b"1234")
+        os.chmod(target_bin, stat.S_IRWXU)
 
         path = self.env["binary.manifest"].ensure_executable("testbin")
-
-        if INTEGRATION_MODE:
-            self.assertEqual(path, os.path.join(data_dir, "hams_bin", "testbin"))
-        else:
-            self.assertEqual(path, "/usr/bin/testbin")
-            mock_which.assert_called_once_with("testbin")
+        self.assertEqual(path, os.path.join(data_dir, "hams_bin", "testbin"))
 
     def test_02_missing_manifest(self):
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("shutil.which", return_value=None)
         with self.assertRaises(UserError, msg="Must raise error on missing manifest"):
             self.env["binary.manifest"].ensure_executable("missingbin")
 
     def test_03_unsupported_platform(self):
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Windows")
-        if INTEGRATION_MODE:
-            return # Cannot physically spoof kernel architecture
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Windows")
         with self.assertRaises(UserError, msg="Must block non-Linux platforms"):
             self.env["binary.manifest"].ensure_executable("testbin")
 
     def test_04_successful_download_and_checksum(self):
-        mock_urlopen = None
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Linux")
-            self.safe_patch("platform.machine", return_value="x86_64")
-            mock_urlopen = self.safe_patch("urllib.request.urlopen")
-
-        if INTEGRATION_MODE:
-            path = self.env["binary.manifest"].ensure_executable("testbin")
-            self.assertTrue(path.endswith("testbin"))
-            self.assertTrue(os.path.exists(path))
-            return
-
-        mock_response_get = MagicMock()
-        del mock_response_get.readinto
-        mock_response_get.read.side_effect = [b"chunk", b""]
-        mock_response_get.__enter__.return_value = mock_response_get
-
-        mock_urlopen.return_value = mock_response_get
-
         path = self.env["binary.manifest"].ensure_executable("testbin")
         self.assertTrue(path.endswith("testbin"))
-        self.assertTrue(mock_urlopen.called)
+        self.assertTrue(os.path.exists(path))
 
     def test_05_views_render(self):
         # [@ANCHOR: test_binary_manifest_views]
@@ -134,43 +92,23 @@ class TestBinaryManifest(HamsTransactionCase):
 
     def test_06_is_installed_compute(self):
         # Tests [@ANCHOR: binary_compute_installed]
-        mock_which = None
-        if not INTEGRATION_MODE:
-            mock_which = self.safe_patch("shutil.which")
-
         data_dir = tools.config.get("data_dir", "/var/lib/odoo")
-        if INTEGRATION_MODE:
-            target_bin = os.path.join(data_dir, "hams_bin", "testbin")
-            if not os.path.exists(os.path.dirname(target_bin)):
-                os.makedirs(os.path.dirname(target_bin))
-            with open(target_bin, "wb") as f:
-                f.write(b"1234")
-            os.chmod(target_bin, stat.S_IRWXU)
-            self.manifest.invalidate_recordset(['is_installed'])
-            self.assertTrue(self.manifest.is_installed)
-            return
-
-        mock_which.return_value = "/usr/bin/testbin"
+        target_bin = os.path.join(data_dir, "hams_bin", "testbin")
+        if not os.path.exists(os.path.dirname(target_bin)):
+            os.makedirs(os.path.dirname(target_bin))
+        with open(target_bin, "wb") as f:
+            f.write(b"1234")
+        os.chmod(target_bin, stat.S_IRWXU)
+        self.manifest.invalidate_recordset(['is_installed'])
         self.assertTrue(self.manifest.is_installed)
 
+        os.remove(target_bin)
         self.manifest.invalidate_recordset(['is_installed'])
-        mock_which.return_value = None
         self.assertFalse(self.manifest.is_installed)
 
     def test_07_action_install(self):
         # Tests [@ANCHOR: binary_action_install]
-        mock_ensure = None
-        if not INTEGRATION_MODE:
-            mock_ensure = self.safe_patch("odoo.addons.binary_downloader.models.binary_manifest.BinaryManifest.ensure_executable")
-
-        if INTEGRATION_MODE:
-            result = self.manifest.action_install()
-            self.assertEqual(result["type"], "ir.actions.client")
-            self.assertEqual(result["tag"], "display_notification")
-            return
-
         result = self.manifest.action_install()
-        mock_ensure.assert_called_once_with("testbin")
         self.assertEqual(result["type"], "ir.actions.client")
         self.assertEqual(result["tag"], "display_notification")
 
@@ -188,8 +126,6 @@ class TestBinaryManifest(HamsTransactionCase):
             self.env.flush_all()
 
     def test_11_url_validation(self):
-        if INTEGRATION_MODE:
-            return
         with self.assertRaises(ValidationError):
             self.env["binary.manifest"].create({
                 "name": "badurl",
@@ -214,15 +150,10 @@ class TestBinaryManifest(HamsTransactionCase):
             self.manifest.with_user(restricted_user).action_install()
 
     def test_10_tar_slip_prevention(self):
-        mock_urlopen = None
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Linux")
-            self.safe_patch("platform.machine", return_value="x86_64")
-            mock_urlopen = self.safe_patch("urllib.request.urlopen")
-
-        if INTEGRATION_MODE:
-            return
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Linux")
+        self.safe_patch("platform.machine", return_value="x86_64")
+        mock_urlopen = self.safe_patch("urllib.request.urlopen")
 
         self.env["binary.manifest"].create({
             "name": "slippy",
@@ -236,7 +167,6 @@ class TestBinaryManifest(HamsTransactionCase):
         del mock_response_get.readinto
         mock_response_get.read.side_effect = [b"data", b""]
         mock_response_get.__enter__.return_value = mock_response_get
-
         mock_urlopen.return_value = mock_response_get
 
         has_filter = hasattr(tarfile, 'data_filter')
@@ -270,15 +200,10 @@ class TestBinaryManifest(HamsTransactionCase):
                 tarfile.data_filter = old_filter
 
     def test_13_symlink_prevention(self):
-        mock_urlopen = None
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Linux")
-            self.safe_patch("platform.machine", return_value="x86_64")
-            mock_urlopen = self.safe_patch("urllib.request.urlopen")
-
-        if INTEGRATION_MODE:
-            return
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Linux")
+        self.safe_patch("platform.machine", return_value="x86_64")
+        mock_urlopen = self.safe_patch("urllib.request.urlopen")
 
         self.env["binary.manifest"].create({
             "name": "symlinkbin",
@@ -292,7 +217,6 @@ class TestBinaryManifest(HamsTransactionCase):
         del mock_response_get.readinto
         mock_response_get.read.side_effect = [b"data", b""]
         mock_response_get.__enter__.return_value = mock_response_get
-
         mock_urlopen.return_value = mock_response_get
 
         mock_tar_open = self.safe_patch("tarfile.open")
@@ -310,15 +234,10 @@ class TestBinaryManifest(HamsTransactionCase):
             self.env["binary.manifest"].ensure_executable("symlinkbin")
 
     def test_14_zip_download_and_extract(self):
-        mock_urlopen = None
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Linux")
-            self.safe_patch("platform.machine", return_value="x86_64")
-            mock_urlopen = self.safe_patch("urllib.request.urlopen")
-
-        if INTEGRATION_MODE:
-            return
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Linux")
+        self.safe_patch("platform.machine", return_value="x86_64")
+        mock_urlopen = self.safe_patch("urllib.request.urlopen")
 
         # Create a real zip in memory
         zip_buffer = io.BytesIO()
@@ -339,7 +258,6 @@ class TestBinaryManifest(HamsTransactionCase):
         del mock_response_get.readinto
         mock_response_get.read.side_effect = [zip_data, b""]
         mock_response_get.__enter__.return_value = mock_response_get
-
         mock_urlopen.return_value = mock_response_get
 
         path = self.env["binary.manifest"].ensure_executable("zippy")
@@ -349,15 +267,10 @@ class TestBinaryManifest(HamsTransactionCase):
             self.assertEqual(f.read(), b"zipdata")
 
     def test_15_zip_slip_prevention(self):
-        mock_urlopen = None
-        if not INTEGRATION_MODE:
-            self.safe_patch("shutil.which", return_value=None)
-            self.safe_patch("platform.system", return_value="Linux")
-            self.safe_patch("platform.machine", return_value="x86_64")
-            mock_urlopen = self.safe_patch("urllib.request.urlopen")
-
-        if INTEGRATION_MODE:
-            return
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Linux")
+        self.safe_patch("platform.machine", return_value="x86_64")
+        mock_urlopen = self.safe_patch("urllib.request.urlopen")
 
         self.env["binary.manifest"].create({
             "name": "zip_slip",
@@ -371,7 +284,6 @@ class TestBinaryManifest(HamsTransactionCase):
         del mock_response_get.readinto
         mock_response_get.read.side_effect = [b"data", b""]
         mock_response_get.__enter__.return_value = mock_response_get
-
         mock_urlopen.return_value = mock_response_get
 
         mock_zip_open = self.safe_patch("zipfile.ZipFile")

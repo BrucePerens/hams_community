@@ -1,6 +1,6 @@
 # Testing in the Jules VM Environment
 
-When working within the Jules VM on Ubuntu 24.04, the standard `test_runner.py` Linux Mount Namespace isolations (`unshare`) are restricted due to permission limitations of the environment.
+When working within the Jules VM on Ubuntu 24.04, the standard `test.py` Linux Mount Namespace isolations (`unshare`) are restricted due to permission limitations of the environment.
 
 Instead, the test runner detects the Jules VM automatically via the `IN_JULES_VM` or `JULES_SESSION_ID` environment variables. When detected, the runner bypasses namespace isolations and executes directly.
 
@@ -19,7 +19,7 @@ mkdir -p ~/tmp
 To bootstrap the local Ubuntu environment with Odoo 19, PostgreSQL, Redis, RabbitMQ, and the required Python dependencies, run the test runner with the `--provision-jules` flag:
 
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py --provision-jules
+IN_JULES_VM=1 python3 tools/test.py --provision-jules
 ```
 
 This command will:
@@ -34,7 +34,7 @@ This command will:
 Once the Jules environment is successfully provisioned, you do not need to reinstall dependencies. Simply use the `--already-provisioned` flag:
 
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py --already-provisioned
+IN_JULES_VM=1 python3 tools/test.py --already-provisioned
 ```
 
 This skips the APT operations and starts testing immediately, seamlessly connecting to the local database cluster at `/opt/hams/pgsock`.
@@ -42,7 +42,7 @@ This skips the APT operations and starts testing immediately, seamlessly connect
 You can append standard test runner arguments alongside this flag:
 
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py -m integration --already-provisioned
+IN_JULES_VM=1 python3 tools/test.py -m integration --already-provisioned
 ```
 
 ## 3. Targeting Specific Modules (-u flag)
@@ -55,17 +55,17 @@ This flag works globally across **all** execution modes (`standard`, `integratio
 
 Run the standard test suite but ONLY for the `user_websites` module:
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py -u user_websites --already-provisioned
+IN_JULES_VM=1 python3 tools/test.py -u user_websites --already-provisioned
 ```
 
 Run integration tests specifically for `pager_duty`:
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py -m integration -u pager_duty --already-provisioned
+IN_JULES_VM=1 python3 tools/test.py -m integration -u pager_duty --already-provisioned
 ```
 
 Run the highly isolated individual test mode for `zero_sudo`:
 ```bash
-IN_JULES_VM=1 python3 tools/test_runner.py -m individual -u zero_sudo --already-provisioned
+IN_JULES_VM=1 python3 tools/test.py -m individual -u zero_sudo --already-provisioned
 ```
 
 ## Note on Python Execution

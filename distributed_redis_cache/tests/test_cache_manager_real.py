@@ -42,6 +42,7 @@ class TestRealCacheManager(RealTransactionCase):
         while time.time() - start_time < 60.0:
             # Repeatedly trigger since we don't know exactly when daemon connects
             user.write({"name": f"Cache Trigger Test {time.time()}"})
+            self.env.cr.commit()
 
             msg = pubsub.get_message(ignore_subscribe_messages=True)
             if msg and msg['type'] == 'message':

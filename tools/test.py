@@ -951,7 +951,7 @@ def main():
     os.environ.setdefault("REDIS_HOST", "localhost")
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-m", "--mode", choices=["standard", "integration", "individual", "xml", "downloads"], default="standard")
+    parser.add_argument("-m", "--mode", choices=["standard", "individual", "xml", "downloads"], default="standard")
     parser.add_argument("-d", "--db", default="zero_sudo")
     parser.add_argument("-u", "--module")
     parser.add_argument("-l", "--log-directory", default="~/tmp")
@@ -1018,7 +1018,7 @@ def main():
 
     final_rc = 0
 
-    if args.mode in ("standard", "integration"):
+    if args.mode == "standard":
         rebuild_db(args.db)
 
         # Inject environment variables for daemons spawned securely by tests

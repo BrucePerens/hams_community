@@ -9,6 +9,7 @@ import time
 import urllib.request
 import threading
 import json
+import unittest
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 from . import watchdog_shared
@@ -48,15 +49,42 @@ def _apply_cdp_hook(browser_instance):
 if hasattr(ChromeBrowser, 'start'):
     original_browser_start = ChromeBrowser.start
     def _patched_start(self, *args, **kwargs):
-        res = original_browser_start(self, *args, **kwargs)
-        _apply_cdp_hook(self)
-        return res
+        for attempt in range(4):
+            try:
+                res = original_browser_start(self, *args, **kwargs)
+                _apply_cdp_hook(self)
+                return res
+            except (Exception, unittest.SkipTest) as e:
+                if attempt == 3:
+                    raise
+                _logger.warning("TRACING: Chrome start failed on attempt %d (%s). Retrying...", attempt + 1, e)
+                if hasattr(self, 'chrome_process') and self.chrome_process:
+                    try:
+                        self.chrome_process.terminate()
+                        self.chrome_process.wait(timeout=1.0)
+                    except OSError:
+                        pass
+                time.sleep(1.0) # audit-ignore-sleep
     ChromeBrowser.start = _patched_start
 else:
     original_browser_init = ChromeBrowser.__init__
     def _patched_init(self, *args, **kwargs):
-        original_browser_init(self, *args, **kwargs)
-        _apply_cdp_hook(self)
+        for attempt in range(4):
+            try:
+                original_browser_init(self, *args, **kwargs)
+                _apply_cdp_hook(self)
+                break
+            except (Exception, unittest.SkipTest) as e:
+                if attempt == 3:
+                    raise
+                _logger.warning("TRACING: Chrome init failed on attempt %d (%s). Retrying...", attempt + 1, e)
+                if hasattr(self, 'chrome_process') and self.chrome_process:
+                    try:
+                        self.chrome_process.terminate()
+                        self.chrome_process.wait(timeout=1.0)
+                    except OSError:
+                        pass
+                time.sleep(1.0) # audit-ignore-sleep
     ChromeBrowser.__init__ = _patched_init
 
 _original_time = time.time

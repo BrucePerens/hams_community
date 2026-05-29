@@ -132,7 +132,7 @@ class BinaryManifest(models.Model):
     def ensure_executable(self, cmd_name):
         # [@ANCHOR: binary_ensure_executable]
         # [@ANCHOR: binary_resolution]
-        # Verified by [@ANCHOR: test_binary_manifest_integration]
+        # Verified by [@ANCHOR: test_binary_manifest_standard]
         # Verified by [@ANCHOR: test_binary_manifest_standard]
         if (
             not cmd_name
