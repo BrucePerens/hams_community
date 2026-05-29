@@ -83,7 +83,7 @@ registry.category("web_tour.tours").add("user_websites_seo_tour", {
     ].concat(TourUtils.safeSave('.o_form_button_save, .o_form_button_check', '.o_form_saved, .o_form_button_create')).concat([
         {
             content: "Go back to list to close the form",
-            trigger: 'button[data-menu-xmlid="base.menu_users"]',
+            trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
             run: 'click',
         },
         {
