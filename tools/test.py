@@ -773,8 +773,7 @@ def provision_jules(base_dir, already_provisioned=False):
             run_sys(["bash", "-c", "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list"])
 
             run_sys(["apt-get", "update"] + apt_opts)
-            run_sys(["apt-get", "install", "-y"] + apt_opts + ["postgresql-common"])
-            run_sys(["apt-get", "install", "-y"] + apt_opts + ["postgresql-client"])
+            run_sys(["apt-get", "install", "-y"] + apt_opts + ["postgresql-common", "postgresql-client", "postgresql"])
 
             infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
             infrastructure.provision_apt_packages(run_sys, environment="early_prod")
@@ -1005,7 +1004,8 @@ def main():
         elif args.already_provisioned:
             provision_jules(base_dir, already_provisioned=True)
         else:
-            if os.path.exists("/opt/hams/pgdata/PG_VERSION") or shutil.which("psql"):
+            has_initdb = bool(glob.glob("/usr/lib/postgresql/*/bin/initdb") or shutil.which("initdb") or os.path.exists("/usr/bin/initdb"))
+            if os.path.exists("/opt/hams/pgdata/PG_VERSION") or (shutil.which("psql") and has_initdb):
                 provision_jules(base_dir, already_provisioned=True)
             else:
                 print("[*] Jules VM detected without provisioning flags. Auto-provisioning...")

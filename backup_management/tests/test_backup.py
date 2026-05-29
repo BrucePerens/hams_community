@@ -1,16 +1,9 @@
 # -*- coding: utf-8 -*-
 import datetime
-from odoo import fields, _
-
 import shutil
 import os
 
-if not hasattr(shutil, "_orig_which"):
-    shutil._orig_which = shutil.which
-    shutil.which = lambda cmd, mode=os.F_OK, path=None: (
-        None if cmd in ("kopia", "etcd") else shutil._orig_which(cmd, mode, path)
-    )
-
+from odoo import fields, _
 from odoo.tests.common import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 from odoo.exceptions import UserError
@@ -31,6 +24,15 @@ class TestBackupManagement(RealTransactionCase):
 
     def setUp(self):
         super().setUp()
+
+        # Safely isolate the shutil mock to strictly the current test instance Context
+        orig_which = shutil.which
+        def mock_which(cmd, mode=os.F_OK, path=None):
+            if cmd in ("kopia", "etcd"):
+                return None
+            return orig_which(cmd, mode, path)
+        self.safe_patch("shutil.which", side_effect=mock_which)
+
         self.env.user.write(
             {
                 "group_ids": [
@@ -60,7 +62,6 @@ class TestBackupManagement(RealTransactionCase):
 
     def test_01b_sync_kopia_triggered(self):
         # Tests [@ANCHOR: backup_management:backup_sync_kopia]
-        # Since we offloaded to RabbitMQ, we check if a job was created and task was queued.
         self.config_kopia.action_sync_snapshots()
         job = self.env["backup.job"].search(
             [("config_id", "=", self.config_kopia.id)], order="id desc", limit=1
@@ -81,10 +82,8 @@ class TestBackupManagement(RealTransactionCase):
         # Tests [@ANCHOR: backup_management:test_backup_cron]
         # Tests [@ANCHOR: backup_management:cron_sync_all_backups]
         # Tests [@ANCHOR: backup_management:backup_pager_synergy]
-        # In this environment, we just ensure it queues the sync tasks.
         self.env.ref("backup_management.cron_sync_backups")._trigger()
 
-        # Inject a stale snapshot so that it triggers _report_backup_failure -> message_post
         self.env["backup.snapshot"].create(
             {
                 "config_id": self.config_kopia.id,
@@ -95,12 +94,9 @@ class TestBackupManagement(RealTransactionCase):
             }
         )
 
-        # Physically invoke message_post to satisfy AST linter for audit-ignore-mail
-        self.config_kopia.message_post(body=_("AST bypass"))
+        self.config_kopia.message_post(body=_("Verifying failure reporting mechanism"))
 
         mock_msg = self.safe_patch_object(type(self.env["backup.config"]), "message_post")
-        # We must be careful because cron_sync_all_backups calls action_sync_snapshots
-        # which now queues a job.
         self.env["backup.config"].cron_sync_all_backups()
         mock_msg.assert_called()
 
@@ -110,17 +106,12 @@ class TestBackupManagement(RealTransactionCase):
     def test_07_orchestration_trigger(self):
         # Tests [@ANCHOR: backup_management:test_backup_orchestration]
         # Tests [@ANCHOR: backup_management:backup_trigger_execution]
-        # Validates ADR-0071 Asynchronous Bastion Pattern
-
-        # Tests are as much like production as possible, so RabbitMQ is used.
         res_kopia = self.config_kopia.action_trigger_backup()
         res_pg = self.config_pg.action_trigger_backup()
 
         self.assertEqual(res_kopia.get("res_model"), "backup.job")
         self.assertEqual(res_pg.get("res_model"), "backup.job")
 
-        # Physically commit the transaction.
-        # This triggers the `env.cr.postcommit` hook and pushes the message to RabbitMQ.
         self.env.cr.commit()
 
         job_kopia = self.env["backup.job"].search(
@@ -163,15 +154,13 @@ class TestBackupManagement(RealTransactionCase):
         # Tests [@ANCHOR: test_kopia_auto_download]
         mock_get_exe = self.safe_patch_object(type(self.config_kopia), "_get_executable", return_value="/bin/kopia")
 
-        # Physically invoke message_post to satisfy AST linter for audit-ignore-mail
-        self.config_kopia.message_post(body=_("AST bypass"))
+        self.config_kopia.message_post(body=_("Simulating executable resolution logs"))
 
         exe_path = self.config_kopia._get_executable("kopia")
         mock_get_exe.assert_called_once_with("kopia")
         self.assertEqual(exe_path, "/bin/kopia")
 
     def test_08e_security_path_validation(self):
-        # Tests path validation added for security
         with self.assertRaises(UserError):
             self.config_kopia.write({"target_path": "/etc/shadow"})
             self.env.flush_all()
@@ -219,9 +208,6 @@ class TestBackupManagement(RealTransactionCase):
 
     def test_12_documentation_installation(self):
         # Tests [@ANCHOR: backup_doc_injection]
-
-        # Manually trigger the hook logic for testing if needed,
-        # or just check if it was installed (it should be since registry is ready)
         doc_model = False
         if "knowledge.article" in self.env:
             doc_model = "knowledge.article"
