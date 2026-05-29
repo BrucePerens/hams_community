@@ -182,9 +182,10 @@ class TestBackupSecurity(RealTransactionCase):
 
     def tearDown(self):
         # Explicit cleanup to avoid zero_sudo teardown issues with res.users/res.partner cleanup order
-        if hasattr(self, "user_no_group") and self.user_no_group.exists():
-            partner = self.user_no_group.partner_id
-            self.user_no_group.unlink()
+        user_no_group = getattr(self, "user_no_group", self.env["res.users"])
+        if user_no_group.exists():
+            partner = user_no_group.partner_id
+            user_no_group.unlink()
             if partner.exists():
                 partner.unlink()
         super().tearDown()

@@ -7,9 +7,48 @@
 <body>
     <main>
         <h1>Backup Management User Guide</h1>
-        <section id="backup-sync-section">
-            <h4>Automated Volume Synchronization</h4>
-            <span style="display:none;">[@ANCHOR: UX_BACKUP_SYNC]</span>
+
+        <section id="introduction">
+            <h2>Introduction</h2>
+            <p>The Backup Management module allows you to configure, monitor, and manage automated backups for your system. It supports both file-level backups (Kopia) and database backups (pgBackRest).</p>
+        </section>
+
+        <section id="backup-configs">
+            <h2>Backup Configurations</h2>
+            <p>A Backup Configuration defines where and how your data is backed up. To create one, go to <strong>Backup Management > Configurations</strong>.</p>
+            <ul>
+                <li><strong>Engine:</strong> Choose between Kopia (files) or pgBackRest (database).</li>
+                <li><strong>Target / Stanza:</strong> The path to your backup repository or the name of your pgBackRest stanza.</li>
+                <li><strong>Website:</strong> Link the configuration to a specific website for multi-tenant isolation.</li>
+                <li><strong>Storage Type:</strong> (Kopia only) Choose Local, AWS S3, or Backblaze B2.</li>
+                <li><strong>Retention Policies:</strong> Set how many daily, weekly, and monthly backups to keep.</li>
+            </ul>
+        </section>
+
+        <section id="monitoring">
+            <h2>Monitoring Backups</h2>
+            <p>The <strong>Backup Dashboard</strong> provides a real-time overview of all backup configurations. It shows the latest snapshot, its size, and status. If a backup is older than 26 hours, it will be marked as stale.</p>
+            <span style="display:none;">[@ANCHOR: backup_management:backup_board_data]</span>
+        </section>
+
+        <section id="operations">
+            <h2>Manual Operations</h2>
+            <p>While backups are automated via scheduled tasks, you can manually trigger operations from the configuration form:</p>
+            <ul>
+                <li><strong>Trigger Backup:</strong> Starts a new backup immediately.</li>
+                <li><strong>Sync Snapshots:</strong> Refreshes the list of snapshots from the backup repository. <span style="display:none;">[@ANCHOR: UX_BACKUP_SYNC]</span></li>
+                <li><strong>Apply Policies:</strong> Forces the retention policies to be applied (deleting old snapshots).</li>
+            </ul>
+        </section>
+
+        <section id="restoring">
+            <h2>Restoring Data</h2>
+            <p>To restore data, navigate to the <strong>Snapshots</strong> tab of a configuration, select a snapshot, and click the <strong>Restore</strong> button. You will be asked to provide a target path where the data should be restored.</p>
+        </section>
+
+        <section id="security">
+            <h2>Security & Safety</h2>
+            <p>The system prevents access to sensitive system directories (like /etc or /root) to ensure that backup operations cannot compromise the server. All passwords and keys are encrypted.</p>
         </section>
     </main>
 </body>
