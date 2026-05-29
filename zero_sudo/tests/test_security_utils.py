@@ -251,9 +251,11 @@ class TestSecurityUtils(HamsTransactionCase):
 
     def test_09_bootstrap_knowledge_docs(self):
         # [@ANCHOR: zero_sudo:test_zero_sudo_doc_installer]
+        # [@ANCHOR: zero_sudo:test_zero_sudo_register_hook]
         # [@ANCHOR: test_documentation_bootstrap]
         # [@ANCHOR: test_documentation_injection]
         # Tests [@ANCHOR: zero_sudo:zero_sudo_doc_installer]
+        # Tests [@ANCHOR: zero_sudo:zero_sudo_register_hook]
         # Tests [@ANCHOR: story_zero_sudo_doc_installer]
         # Tests [@ANCHOR: journey_developer_integration]
         # Tests [@ANCHOR: documentation_bootstrap]

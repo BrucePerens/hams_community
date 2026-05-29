@@ -27,4 +27,8 @@ def visit_ExceptHandler(self, node):
 ## Security Audit
 - **Zero-Sudo Compliance:** Verified. No `.sudo()` calls found. Service account `user_binary_downloader_service` is correctly used with `.with_user()`.
 - **Path Traversal:** Protections against Tar Slip and Zip Slip are verified by tests.
-- **Multi-Tenant Awareness:** Binaries are stored in a shared system directory (`hams_bin`), but their orchestration and access are governed by Odoo's standard security model, ensuring isolation at the service level.
+- **Multi-Tenant Awareness:** Binaries are stored in a shared system directory (`hams_bin`), but their orchestration and access are governed by Odoo's security groups, ensuring isolation at the service level.
+
+## External Module Issues
+- **Anchor Violation in `zero_sudo`:** `verify_anchors.py` reports `Test Logic Target 'zero_sudo:test_zero_sudo_register_hook' has no inverse implementation link`. This is in the `zero_sudo` module and was left for that module's session to resolve.
+- **Global Regression Failure in `manual_library`:** `test_04_parent_deletion_restriction` fails due to a `TypeError` in Odoo's `issubclass` check within `assertRaises`. This appears to be an existing issue in the codebase and is not related to `binary_downloader`.
