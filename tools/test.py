@@ -540,10 +540,13 @@ def rebuild_db(db_name):
     is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
     if is_jules:
         try:
-            subprocess.run(["sudo", "rabbitmqctl", "stop_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["sudo", "rabbitmqctl", "reset"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["sudo", "rabbitmqctl", "start_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["sudo", "systemctl", "stop", "dx.firehose.service", "adif.processor.service", "qrz.scraper.service"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["rabbitmqctl", "stop_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["rabbitmqctl", "reset"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["rabbitmqctl", "start_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["systemctl", "stop", "dx.firehose.service", "adif.processor.service", "qrz.scraper.service"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-f", "dx_firehose.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-f", "adif_processor.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pkill", "-f", "qrz_scraper.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Daemon flush exception: %s", e)
 
@@ -890,8 +893,26 @@ def provision_jules(base_dir, already_provisioned=False):
     subprocess.run(["systemctl", "start", "redis-server"], check=False, stderr=subprocess.DEVNULL)
     subprocess.run(["systemctl", "start", "rabbitmq-server"], check=False, stderr=subprocess.DEVNULL)
 
-    wait_for_port(6379, "Redis")
-    wait_for_port(5672, "RabbitMQ")
+    if not wait_for_port(6379, "Redis", timeout=5.0):
+        print("[*] Redis systemctl failed, attempting direct daemonize...")
+        redis_user = pwd.getpwnam("redis")
+        subprocess.Popen(["redis-server", "--daemonize", "no"], preexec_fn=lambda: (os.setresgid(redis_user.pw_gid, redis_user.pw_gid, redis_user.pw_gid), os.setresuid(redis_user.pw_uid, redis_user.pw_uid, redis_user.pw_uid)), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        wait_for_port(6379, "Redis")
+
+    if not wait_for_port(5672, "RabbitMQ", timeout=5.0):
+        print("[*] RabbitMQ systemctl failed, attempting direct daemonize...")
+        os.makedirs("/var/lib/rabbitmq", exist_ok=True)
+        with open("/var/lib/rabbitmq/.erlang.cookie", "w") as f:
+            f.write("HAMS_TEST_RABBITMQ_COOKIE_12345")
+        rmq_user = pwd.getpwnam("rabbitmq")
+        os.chown("/var/lib/rabbitmq/.erlang.cookie", rmq_user.pw_uid, rmq_user.pw_gid)
+        os.chmod("/var/lib/rabbitmq/.erlang.cookie", 0o400)
+        def preexec_rmq():
+            os.setresgid(rmq_user.pw_gid, rmq_user.pw_gid, rmq_user.pw_gid)
+            os.setresuid(rmq_user.pw_uid, rmq_user.pw_uid, rmq_user.pw_uid)
+            os.environ["HOME"] = "/var/lib/rabbitmq"
+        subprocess.Popen(["rabbitmq-server", "-detached"], preexec_fn=preexec_rmq, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        wait_for_port(5672, "RabbitMQ")
 
     os.environ["PGHOST"] = pg_socket
 
