@@ -22,6 +22,12 @@ import subprocess
 import sys
 import threading
 import time
+import functools
+
+# Force all print statements to flush immediately to prevent
+# inter-process pipe buffering from chronologically reordering log lines
+# relative to the unbuffered child test process output.
+print = functools.partial(print, flush=True)
 
 @contextlib.contextmanager
 def micro_privilege(username):
