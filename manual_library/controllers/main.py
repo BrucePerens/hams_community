@@ -189,8 +189,9 @@ class ManualLibraryController(http.Controller):
                         (article.id,),
                     )
         except (ValueError, AccessError):
-            # Silently fail on bad input or unauthorized access to prevent brute-force discovery
-            pass
+            # Silently fail on bad input or unauthorized access to prevent brute-force discovery.
+            # Log at debug level to satisfy linter while maintaining security obscurity.
+            _logger.debug("Manual feedback failed for article_id: %s", article_id)
 
         # Protect against open redirects by enforcing local paths
         referer = request.httprequest.referrer or "/manual"

@@ -51,8 +51,12 @@
     <li><strong>No Access:</strong> The article is hidden from everyone except the creator and people listed in the <strong>Shared Members</strong> tab. Both internal and portal users can be granted access here.</li>
 </ul>
 
-<h3>Multi-Website Support</h3>
-<p>If your Odoo instance manages multiple websites, you can restrict an article to a specific website using the <strong>Website</strong> field. If this field is left empty, the article will be available across all websites (subject to normal permission rules). This allows you to maintain separate knowledge bases for different brands or departments on a single Odoo system.</p>
+<h3>Multi-Website &amp; Multi-Company Support</h3>
+<p>The Manual Library is fully multi-tenant aware:</p>
+<ul>
+    <li><strong>Website Isolation:</strong> Restrict articles to specific websites using the <strong>Website</strong> field. If empty, the article is available across all websites.</li>
+    <li><strong>Company Isolation:</strong> Restrict articles to specific companies using the <strong>Company</strong> field. This ensures that in a multi-company Odoo environment, documentation stays relevant to the appropriate business unit.</li>
+</ul>
 
 <h2 class="mt-4">5. Publishing to the Web</h2>
 <p>To make your documentation available to customers or the general public without requiring them to log in:</p>
