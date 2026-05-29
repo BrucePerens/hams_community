@@ -83,12 +83,21 @@ def hook_install_odoo_key(env_vars, dest_dir, path, run_cmd_func):
     run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
 
 
-def hook_install_kopia_key(env_vars, dest_dir, path, run_cmd_func):
-    out = '/usr/share/keyrings/kopia-keyring.gpg'
-    if dest_dir:
-        out = os.path.join(dest_dir, out.lstrip('/'))
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
+def hook_install_kopia_binary(env_vars, dest_dir, path, run_cmd_func):
+    try:
+        target_dir = '/usr/bin'
+        if dest_dir:
+            target_dir = os.path.join(dest_dir, target_dir.lstrip('/'))
+        os.makedirs(target_dir, exist_ok=True)
+        run_cmd_func(['tar', '-xzf', path, '-C', target_dir, '--strip-components=1', 'kopia-0.23.0-linux-x64/kopia'])
+        run_cmd_func(['chmod', '+x', os.path.join(target_dir, 'kopia')])
+    except Exception as e: # audit-ignore-catch-all
+        _logger.warning("Kopia binary install failed: %s", e)
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
@@ -384,13 +393,6 @@ MANIFEST = {
             "environments": ["prod"],
         },
         {
-            "path": "/etc/apt/sources.list.d/kopia.list",
-            "content": "deb [signed-by=/usr/share/keyrings/kopia-keyring.gpg] https://packages.kopia.io/apt/ stable main\n",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod"],
-        },
-        {
             "path": "/opt/hams/etc/pdns_gsqlite3.conf",
             "content": """\
 launch=gsqlite3
@@ -480,12 +482,12 @@ WantedBy=multi-user.target
             "post_provision_hooks": [hook_install_odoo_key],
         },
         {
-            "path": "/tmp/kopia-keyring.key",
-            "url": "https://kopia.io/signing-key",
+            "path": "/tmp/kopia.tar.gz",
+            "url": "https://github.com/kopia/kopia/releases/download/v0.23.0/kopia-0.23.0-linux-x64.tar.gz",
             "owner": "root:root",
             "mode": "644",
             "environments": ["prod"],
-            "post_provision_hooks": [hook_install_kopia_key],
+            "post_provision_hooks": [hook_install_kopia_binary],
         },
         {
             "path": "/tmp/cloudflared.deb",
@@ -1348,7 +1350,6 @@ WantedBy=timers.target
         {"name": "sqlite3", "environments": ["early_prod"]},
         {"name": "pdns-server", "environments": ["early_prod"]},
         {"name": "pdns-backend-sqlite3", "environments": ["early_prod"]},
-        {"name": "kopia", "environments": ["early_prod"]},
         {"name": "pgbackrest", "environments": ["early_prod"]},
         {"name": "certbot", "environments": ["early_prod"]},
         {"name": "python3-certbot-nginx", "environments": ["early_prod"]},
