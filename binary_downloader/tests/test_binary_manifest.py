@@ -79,9 +79,23 @@ class TestBinaryManifest(HamsTransactionCase):
             self.env["binary.manifest"].ensure_executable("testbin")
 
     def test_04_successful_download_and_checksum(self):
+        self.safe_patch("shutil.which", return_value=None)
+        self.safe_patch("platform.system", return_value="Linux")
+        self.safe_patch("platform.machine", return_value="x86_64")
+        mock_urlopen = self.safe_patch("urllib.request.urlopen")
+
+        mock_response_get = MagicMock()
+        del mock_response_get.readinto
+        mock_response_get.read.side_effect = [b"1234", b""]
+        mock_response_get.getheader.return_value = "fake-etag"
+        mock_response_get.__enter__.return_value = mock_response_get
+        mock_urlopen.return_value = mock_response_get
+
         path = self.env["binary.manifest"].ensure_executable("testbin")
         self.assertTrue(path.endswith("testbin"))
         self.assertTrue(os.path.exists(path))
+        with open(path, "rb") as f:
+            self.assertEqual(f.read(), b"1234")
 
     def test_05_views_render(self):
         # [@ANCHOR: test_binary_manifest_views]
