@@ -96,8 +96,8 @@ def hook_install_kopia_binary(env_vars, dest_dir, path, run_cmd_func):
     if os.path.exists(path):
         try:
             os.remove(path)
-        except OSError:
-            pass
+        except OSError as e:
+            _logger.debug("OSError removing file: %s", e)
 
 
 def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
@@ -106,7 +106,10 @@ def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
     if token:
         run_cmd_func(['cloudflared', 'service', 'install', token])
     if os.path.exists(path):
-        os.remove(path)
+        try:
+            os.remove(path)
+        except OSError as e:
+            _logger.debug("OSError removing file: %s", e)
 
 
 def hook_install_pypdf2(env_vars, dest_dir, path, run_cmd_func):
@@ -117,8 +120,8 @@ def hook_install_pypdf2(env_vars, dest_dir, path, run_cmd_func):
     if os.path.exists(path):
         try:
             os.remove(path)
-        except OSError:
-            pass
+        except OSError as e:
+            _logger.debug("OSError removing file: %s", e)
 
 
 MANIFEST = {
@@ -530,7 +533,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/systemctl start uk.ofcom.sync.service nz.rsm.sync.service de.bnetza.sync.service br.anatel.sync.service au.acma.sync.service amsat.tle.sync.service
+ExecStart=/bin/systemctl start amsat.tle.sync.service
 RemainAfterExit=yes
 
 [Install]
@@ -582,114 +585,6 @@ WantedBy=multi-user.target
             "environments": ["prod", "test"],
         },
         {
-            "path": "/opt/hams/systemd/br.anatel.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio Brazil Callbook Sync Service
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/br_anatel_sync
-
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-Environment="BR_MIRRORS=https://data.hamradiodata.example/br/callbook.csv,https://mirror2.example.com/br_callsigns.csv"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/br_anatel_sync/br_sync.py
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=br.anatel.sync
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/br.anatel.sync.timer",
-            "content": """\
-[Unit]
-Description=Run Brazil Callbook Sync Hourly
-
-[Timer]
-OnCalendar=hourly
-Persistent=true
-RandomizedDelaySec=5m
-
-[Install]
-WantedBy=timers.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/de.bnetza.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio Germany Callbook Sync Service
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/de_bnetza_sync
-
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-Environment="DE_MIRRORS=https://afu.darc.de/bnetza-rufzeichenliste.csv,https://data.hamradiodata.example/de/Rufzeichenliste_AFU.csv"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/de_bnetza_sync/de_sync.py
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=de.bnetza.sync
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/de.bnetza.sync.timer",
-            "content": """\
-[Unit]
-Description=Run Germany Callbook Sync Hourly
-
-[Timer]
-OnCalendar=hourly
-Persistent=true
-RandomizedDelaySec=5m
-
-[Install]
-WantedBy=timers.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
             "path": "/opt/hams/systemd/dx.firehose.service",
             "content": """\
 [Unit]
@@ -733,47 +628,6 @@ WantedBy=multi-user.target
             "environments": ["prod", "test"],
         },
         {
-            "path": "/opt/hams/systemd/fcc.uls.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio FCC ULS Daily Sync Daemon
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/fcc_uls_sync
-
-# Odoo JSON2-RPC Credentials
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/fcc_uls_sync/fcc_sync.py
-
-# Resiliency
-Restart=always
-RestartSec=60
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
             "path": "/opt/hams/systemd/ham.dx.daemon.service",
             "content": """\
 [Unit]
@@ -805,88 +659,6 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=ham.dx.daemon
-
-[Install]
-WantedBy=multi-user.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/ised.canada.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio ISED Canada Daily Sync Daemon
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/ised_canada_sync
-
-# Odoo JSON2-RPC Credentials
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/ised_canada_sync/ised_sync.py
-
-# Resiliency
-Restart=always
-RestartSec=60
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/ncvec.sync.service",
-            "content": """\
-[Unit]
-Description=NCVEC Question Pool Sync Daemon
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-ReadWritePaths=/opt/hams/spool/ncvec
-Type=simple
-User=odoo
-Group=odoo
-WorkingDirectory=/opt/hams/daemons/ncvec_sync
-
-Environment="ODOO_USER=captcha_service_internal"
-
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/ncvec_sync/ncvec_sync.py --url "https://www.ncvec.org/downloads/2022-2026 Tech Pool.txt"
-
-# Resiliency
-Restart=always
-RestartSec=60
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=ncvec.sync
 
 [Install]
 WantedBy=multi-user.target
@@ -974,114 +746,6 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/nz.rsm.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio New Zealand Callbook Sync Service
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/nz_rsm_sync
-
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-Environment="NZ_MIRRORS=https://data.hamradiodata.example/nz/callbook.csv,https://mirror2.example.com/nz_callsigns.csv"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/nz_rsm_sync/nz_sync.py
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=nz.rsm.sync
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/nz.rsm.sync.timer",
-            "content": """\
-[Unit]
-Description=Run New Zealand Callbook Sync Hourly
-
-[Timer]
-OnCalendar=hourly
-Persistent=true
-RandomizedDelaySec=5m
-
-[Install]
-WantedBy=timers.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/uk.ofcom.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio UK Callbook Sync Service
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/uk_ofcom_sync
-
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-Environment="UK_MIRRORS=https://data.hamradiodata.example/uk/callbook.csv,https://mirror2.example.com/uk_callsigns.csv"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/uk_ofcom_sync/uk_sync.py
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=uk.ofcom.sync
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/uk.ofcom.sync.timer",
-            "content": """\
-[Unit]
-Description=Run UK Callbook Sync Hourly
-
-[Timer]
-OnCalendar=hourly
-Persistent=true
-RandomizedDelaySec=5m
-
-[Install]
-WantedBy=timers.target
 """,
             "owner": "root:root",
             "mode": "644",
@@ -1263,60 +927,6 @@ WantedBy=multi-user.target
             "mode": "644",
             "environments": ["prod", "test"],
         },
-        {
-            "path": "/opt/hams/systemd/au.repeater.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio Australia Callbook Sync Service
-After=network.target
-
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/au_acma_sync
-
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=fcc_sync_service"
-Environment="AU_MIRRORS=https://data.hamradiodata.example/au/callbook.csv,https://mirror2.example.com/au_callsigns.csv"
-
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/au_acma_sync/au_sync.py
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=au.acma.sync
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/au.repeater.sync.timer",
-            "content": """\
-[Unit]
-Description=Run Australia Callbook Sync Hourly
-
-[Timer]
-OnCalendar=hourly
-Persistent=true
-RandomizedDelaySec=5m
-
-[Install]
-WantedBy=timers.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
     ],
     "addon_repos": [
         "hams_community",
@@ -1428,8 +1038,8 @@ def scaffold_test_environment(args_db, provision_dirs=True):
                     for item in subdirs + files:
                         try:
                             os.chmod(os.path.join(root, item), 0o777)
-                        except OSError:
-                            pass
+                        except OSError as e:
+                            _logger.debug("Failed chmod on %s: %s", item, e)
         except PermissionError:
             print("[*] Elevating briefly to provision required host directories...")
             subprocess.run(["sudo", "mkdir", "-p"] + dirs, check=True)
@@ -1481,8 +1091,8 @@ def apply_production_directories(run_cmd_func, environment="prod", dest_dir=""):
                         try:
                             os.chown(item_path, uid, gid)
                             os.chmod(item_path, mode)
-                        except OSError:
-                            pass
+                        except OSError as e:
+                            _logger.debug("Failed chown/chmod on %s: %s", item_path, e)
             except KeyError:
                 _logger.warning("User/Group %s not found on host. Skipping chown for %s", owner, path)
 
@@ -1495,8 +1105,9 @@ def write_env_files(base_etc_dir, env_vars, run_cmd_func, dest_dir=""):
     try:
         uid = pwd.getpwnam("root").pw_uid
         gid = grp.getgrnam("root").gr_gid
-    except KeyError:
+    except KeyError as e:
         uid, gid = -1, -1
+        _logger.warning("Root user/group not found: %s", e)
 
     for filename, keys in MANIFEST["env_groups"].items():
         filepath = os.path.join(base_etc_dir, filename)
@@ -1567,10 +1178,10 @@ def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir
                 target_path = os.path.join(root, item) if item != root else root
                 try:
                     os.chown(target_path, uid, gid)
-                except OSError:
-                    pass
-    except KeyError:
-        pass
+                except OSError as e:
+                    _logger.debug("Failed chown on custom addon path %s: %s", target_path, e)
+    except KeyError as e:
+        _logger.warning("Odoo user/group not found for custom addons: %s", e)
 
 
 def provision_python_venvs(run_cmd_func, environment="prod", dest_dir=""):
@@ -1628,8 +1239,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
         path = file_spec["path"]
         try:
             path = path.format(**env_vars)
-        except KeyError:
-            pass
+        except KeyError as e:
+            _logger.debug("KeyError formatting path %s: %s", path, e)
 
         if dest_dir:
             path = os.path.join(dest_dir, path.lstrip("/"))
@@ -1643,8 +1254,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
         if src:
             try:
                 src = src.format(**env_vars)
-            except KeyError:
-                pass
+            except KeyError as e:
+                _logger.debug("KeyError formatting src %s: %s", src, e)
             if os.path.exists(src):
                 if os.path.isdir(src):
                     shutil.copytree(src, path, dirs_exist_ok=True)
@@ -1665,8 +1276,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                     if res.returncode == 0:
                         env_vars["DEB_TARGET_ARCH_CPU"] = res.stdout.strip()
                 url = url.format(**env_vars)
-            except KeyError:
-                pass
+            except KeyError as e:
+                _logger.debug("KeyError formatting url %s: %s", url, e)
             ua = env_vars.get(
                 "SYSTEM_USER_AGENT",
                 "Hams.com Bruce Perens K6BP <bruce@perens.com> +1 510-394-5627",
@@ -1687,8 +1298,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
             content = file_spec.get("content", "")
             try:
                 content = content.format(**env_vars)
-            except KeyError:
-                pass
+            except KeyError as e:
+                _logger.debug("KeyError formatting content: %s", e)
 
             flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
             fd = os.open(path, flags, int(file_spec.get("mode", "644"), 8))
@@ -1703,7 +1314,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                         target = os.path.join(root, item) if item != root else root
                         try:
                             os.chmod(target, mode)
-                        except OSError: pass
+                        except OSError as e:
+                            _logger.debug("Failed chmod on %s: %s", target, e)
             else:
                 os.chmod(path, mode)
         if "owner" in file_spec:
@@ -1717,10 +1329,12 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                             target = os.path.join(root, item) if item != root else root
                             try:
                                 os.chown(target, uid, gid)
-                            except OSError: pass
+                            except OSError as e:
+                                _logger.debug("Failed chown on %s: %s", target, e)
                 else:
                     os.chown(path, uid, gid)
-            except KeyError: pass
+            except KeyError as e:
+                _logger.warning("User/Group not found: %s", e)
 
         if "post_provision_hooks" in file_spec:
             for hook in file_spec["post_provision_hooks"]:
