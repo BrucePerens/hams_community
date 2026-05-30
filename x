@@ -1,6 +1,1927 @@
-docs/JULES_VM_NOTES.md
-docs/modules/hams_helpdesk.md
-docs/modules/pager_duty.md
-hams_helpdesk/README.md
-pager_duty/README.md
-tools/infrastructure.py
+@@BOUNDARY_REPAIR_OVERWRITE@@
+Path: backup_management/models/backup_config.py
+Operation: overwrite
+
+# -*- coding: utf-8 -*-
+import logging
+import json
+import os
+import datetime
+import shutil
+import pika
+import odoo
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError, AccessError
+from .utils import validate_backup_path
+
+from cryptography.fernet import Fernet
+
+
+class BackupConfig(models.Model):
+    _name = "backup.config"
+    _description = "Backup Configuration"
+    _inherit = ["mail.thread"]
+
+    name = fields.Char(string="Name", required=True)
+    website_id = fields.Many2one("website", string="Website")
+    engine = fields.Selection(
+        [("kopia", "Kopia"), ("pgbackrest", "pgBackRest")], required=True
+    )
+    target_path = fields.Char(
+        string="Target / Stanza",
+        required=True,
+        help="Repository path for Kopia, or Stanza name for pgBackRest.",
+    )
+    minimum_size_mb = fields.Integer(
+        string="Minimum Size (MB)",
+        default=0,
+        help="Triggers a Pager Duty alert if a new snapshot is smaller than this.",
+    )
+
+    kopia_password_crypt = fields.Char(
+        string="Encrypted Kopia Password", groups="backup_management.group_backup_admin"
+    )
+    kopia_password = fields.Char(
+        string="Kopia Password",
+        compute="_compute_kopia_password",
+        inverse="_inverse_kopia_password",
+        groups="backup_management.group_backup_admin",
+    )
+
+    storage_type = fields.Selection(
+        [("local", "Local Directory"), ("s3", "AWS S3"), ("b2", "Backblaze B2")],
+        default="local",
+        string="Storage Type",
+        required=True,
+    )
+    bucket_name = fields.Char(string="Bucket Name")
+    endpoint_url = fields.Char(string="Endpoint URL")
+    access_key = fields.Char(
+        string="Access Key", groups="backup_management.group_backup_admin"
+    )
+    secret_key_crypt = fields.Char(
+        string="Encrypted Secret Key", groups="backup_management.group_backup_admin"
+    )
+    secret_key = fields.Char(
+        string="Secret Key",
+        compute="_compute_secret_key",
+        inverse="_inverse_secret_key",
+        groups="backup_management.group_backup_admin",
+    )
+
+    keep_daily = fields.Integer(string="Keep Daily", default=7)
+    keep_weekly = fields.Integer(string="Keep Weekly", default=4)
+    keep_monthly = fields.Integer(string="Keep Monthly", default=6)
+    exclude_patterns = fields.Text(
+        string="Exclude Patterns (.kopiaignore)", help="One pattern per line."
+    )
+
+    restore_drill_script = fields.Char(
+        string="Automated Restore Drill Script",
+        help="Absolute path to a shell script that performs a test restore and data validation.",
+    )
+    last_drill_time = fields.Datetime(string="Last Successful Drill", readonly=True)
+
+    snapshot_ids = fields.One2many("backup.snapshot", "config_id", string="Snapshots")
+
+    _name_uniq = models.Constraint(
+        "UNIQUE(name)", "The backup configuration name must be unique!"
+    )
+    _target_uniq = models.Constraint(
+        "UNIQUE(engine, target_path)", "The target path must be unique per engine!"
+    )
+
+    _name_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(name)) > 0)", "The configuration name cannot be empty."
+    )
+    _target_path_not_empty = models.Constraint(
+        "CHECK(LENGTH(TRIM(target_path)) > 0)", "The target path cannot be empty."
+    )
+    _retention_positive = models.Constraint(
+        "CHECK(keep_daily >= 0 AND keep_weekly >= 0 AND keep_monthly >= 0)",
+        "Retention values cannot be negative.",
+    )
+    _min_size_positive = models.Constraint(
+        "CHECK(minimum_size_mb >= 0)", "Minimum size threshold cannot be negative."
+    )
+
+    def _get_fernet(self):
+        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get("HAMS_CRYPTO_KEY")  # burn-ignore-env
+        if not key:
+            return None
+        try:
+            return Fernet(key.encode("utf-8"))
+        except (ValueError, TypeError):
+            return None
+
+    def _crypt_field(self, value, decrypt=False):
+        f = self._get_fernet()
+        if not f or not value:
+            return False
+        try:
+            if decrypt:
+                return f.decrypt(value.encode("utf-8")).decode("utf-8")
+            else:
+                return f.encrypt(value.encode("utf-8")).decode("utf-8")
+        except ValueError as e:
+            logging.getLogger(__name__).warning("Encryption/Decryption error: %s", e)
+            return "***ERROR***" if decrypt else False
+
+    @api.depends("kopia_password_crypt")
+    def _compute_kopia_password(self):
+        for rec in self:
+            rec.kopia_password = rec._crypt_field(
+                rec.kopia_password_crypt, decrypt=True
+            )
+
+    def _inverse_kopia_password(self):
+        for rec in self:
+            rec.kopia_password_crypt = rec._crypt_field(rec.kopia_password)
+
+    @api.depends("secret_key_crypt")
+    def _compute_secret_key(self):
+        for rec in self:
+            rec.secret_key = rec._crypt_field(rec.secret_key_crypt, decrypt=True)
+
+    def _inverse_secret_key(self):
+        for rec in self:
+            rec.secret_key_crypt = rec._crypt_field(rec.secret_key)
+
+    @api.constrains("target_path", "restore_drill_script", "engine", "storage_type")
+    def _check_security_paths(self):
+        for rec in self:
+            if rec.engine == "kopia" and rec.storage_type == "local":
+                validate_backup_path(rec.target_path)
+
+            if rec.engine == "pgbackrest":
+                # pgBackRest target_path is a stanza name, not a direct path.
+                # Ensure no shell metacharacters in stanza name.
+                if (
+                    not rec.target_path
+                    or ";" in rec.target_path
+                    or "&" in rec.target_path
+                    or "|" in rec.target_path
+                ):
+                    raise UserError(
+                        _("Invalid pgBackRest stanza name: %s") % rec.target_path
+                    )
+
+            if rec.restore_drill_script:
+                validate_backup_path(rec.restore_drill_script)
+
+    def _get_executable(self, engine):
+        """
+        Retrieves the path to the backup engine binary.
+        If Kopia is missing, it attempts to download it via binary_downloader.
+        """
+        cmd_path = shutil.which(engine)
+        if cmd_path:
+            return cmd_path
+
+        if engine == "pgbackrest":
+            raise UserError(
+                _(
+                    "pgBackRest is missing. It requires OS-level PostgreSQL dependencies and must be installed via your package manager (e.g., 'sudo apt-get install pgbackrest')."
+                )
+            )
+
+        if engine == "kopia":
+            msg_body = _(
+                "Kopia binary not found. Deferring to central generalized downloader..."
+            )
+            # Use Service ID for security & audit trails
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "backup_management.user_backup_service_internal"
+            )
+            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
+
+            # Binary manifestation is centralized in binary_downloader
+            bin_path = (
+                self.env["binary.manifest"]
+                .with_user(svc_uid)
+                .with_context(active_test=False)
+                .ensure_executable("kopia")
+            )
+
+            msg_body = _("Kopia successfully installed to %s") % bin_path
+            self.with_user(svc_uid).message_post(body=msg_body)  # audit-ignore-mail: Tested by [@ANCHOR: test_kopia_auto_download]  # fmt: skip
+            return bin_path
+
+        raise UserError(_("Unknown engine: %s") % engine)
+
+    def _publish_to_worker(self, engine, payload_extra=None):
+        """
+        Internal helper to offload tasks to the RabbitMQ Bastion.
+        """
+        if not self.env.su and not self.env.user.has_group(
+            "backup_management.group_backup_admin"
+        ):
+            raise AccessError(
+                _("Only Backup Administrators can trigger backup operations.")
+            )
+
+        jobs = self.env["backup.job"]
+        created_jobs = []
+
+        for rec in self:
+            job = jobs.create(
+                {
+                    "config_id": rec.id,
+                    "website_id": rec.website_id.id,
+                    "job_type": (
+                        rec.engine if engine != "restore_cmd" else "kopia"
+                    ),  # map restore_cmd to engine for UI
+                    "state": "pending",
+                    "output_log": "Queued in RabbitMQ...",
+                }
+            )
+            created_jobs.append(job)
+
+            payload_dict = {
+                "job_id": job.id,
+                "config_id": rec.id,
+                "engine": engine,
+                "target_path": rec.target_path,
+                "svc_uid": self.env.uid,
+                "website_id": rec.website_id.id,
+            }
+            if payload_extra:
+                payload_dict.update(payload_extra)
+
+            payload = json.dumps(payload_dict)
+
+            def publish_task(msg=payload):
+                if odoo.tools.config.get("test_enable"):
+                    return
+                try:
+                    rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
+                    rmq_user = os.environ.get("RMQ_USER") or "guest"
+                    rmq_pass = os.environ.get("RMQ_PASS") or "guest"  # burn-ignore-env
+                    credentials = pika.PlainCredentials(rmq_user, rmq_pass)
+                    conn_params = pika.ConnectionParameters(
+                        host=rmq_host, credentials=credentials
+                    )
+                    connection = pika.BlockingConnection(conn_params)
+                    channel = connection.channel()
+                    channel.queue_declare(queue="backup_tasks", durable=True)
+                    channel.basic_publish(
+                        exchange="",
+                        routing_key="backup_tasks",
+                        body=msg,
+                        properties=pika.BasicProperties(delivery_mode=2),
+                    )
+                    connection.close()
+                except pika.exceptions.AMQPError as e:
+                    logging.getLogger(__name__).warning("An error occurred: %s", e)
+                    logging.getLogger(__name__).error(
+                        "Failed to publish backup task to RMQ: %s", e
+                    )
+
+            self.env.cr.postcommit.add(publish_task)
+
+        if len(created_jobs) == 1:
+            return {
+                "type": "ir.actions.act_window",
+                "res_model": "backup.job",
+                "res_id": created_jobs[0].id,
+                "view_mode": "form",
+                "target": "current",
+            }
+        return True
+
+    def action_trigger_backup(self):
+        # [@ANCHOR: backup_management:backup_trigger_execution]
+        # Verified by [@ANCHOR: backup_management:test_backup_orchestration]
+        # Implements ADR-0071: Asynchronous Bastion Pattern
+        # Use Service ID for security & audit trails
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        res = True
+        for rec in self:
+            if rec.engine == "kopia" and rec.storage_type == "local":
+                validate_backup_path(rec.target_path)
+            res = rec.with_user(svc_uid)._publish_to_worker(rec.engine)
+        return res
+
+    def action_apply_policies(self):
+        # [@ANCHOR: backup_management:backup_apply_policies]
+        # Verified by [@ANCHOR: test_apply_policies]
+        # Use Service ID for security & audit trails
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        for rec in self:
+            if rec.engine == "kopia" and rec.storage_type == "local":
+                validate_backup_path(rec.target_path)
+            rec.with_user(svc_uid)._publish_to_worker("kopia_policy")
+        return True
+
+    def action_sync_snapshots(self):
+        # [@ANCHOR: UX_BACKUP_SYNC]
+        # [@ANCHOR: backup_management:backup_sync_kopia]
+        # [@ANCHOR: backup_management:backup_sync_pgbackrest]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
+        # Use Service ID for security & audit trails
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        for rec in self:
+            if rec.engine == "kopia" and rec.storage_type == "local":
+                validate_backup_path(rec.target_path)
+            rec.with_user(svc_uid)._publish_to_worker("sync_snapshots")
+        return True
+
+    def _execute_restore_drill(self):
+        """
+        Offloads the restore drill to the worker.
+        """
+        if self.restore_drill_script:
+            validate_backup_path(self.restore_drill_script)
+        # Use Service ID for security & audit trails
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        return self.with_user(svc_uid)._publish_to_worker(
+            "restore_drill", {"script": self.restore_drill_script}
+        )
+
+    def _report_backup_failure(self, message):
+        # [@ANCHOR: backup_management:backup_pager_synergy]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
+        # Verified by [@ANCHOR: test_trigger_kopia_and_pgbackrest]
+        if "pager.incident" in self.env:
+            try:
+                pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "pager_duty.user_pager_service_internal"
+                )
+                self.env["pager.incident"].with_user(pager_uid).report_incident(
+                    {
+                        "source": f"Backup Manager: {self.name}",
+                        "severity": "critical",
+                        "description": message,
+                    }
+                )
+            except (UserError, AccessError, ValueError) as e:
+                logging.getLogger(__name__).warning("An error occurred: %s", e)
+
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        self.with_user(svc_uid).message_post(
+            body=message
+        )  # audit-ignore-mail: Tested by [@ANCHOR: backup_management:backup_pager_synergy]  # fmt: skip
+
+    @api.model
+    def get_board_data(self):
+        # [@ANCHOR: backup_management:backup_board_data]
+        # Verified by [@ANCHOR: backup_management:test_backup_view]
+        domain = []
+        if self.env.context.get("website_id"):
+            domain = [
+                "|",
+                ("website_id", "=", False),
+                ("website_id", "=", self.env.context.get("website_id")),
+            ]
+        configs = self.search_read(domain, ["name", "engine", "target_path"])
+        now = fields.Datetime.now()
+
+        latest_snaps = self.env["backup.latest.snapshot.view"].search_read(
+            [], ["config_id", "snapshot_id", "start_time", "size_bytes", "status"]
+        )
+        snap_map = {s["config_id"][0]: s for s in latest_snaps if s.get("config_id")}
+
+        for c in configs:
+            snap = snap_map.get(c["id"])
+            if snap:
+                c["latest_snapshot"] = snap
+                if snap.get("start_time"):
+                    # Handle string or datetime
+                    start_time = snap["start_time"]
+                    if isinstance(start_time, str):
+                        start_time = fields.Datetime.to_datetime(start_time)
+                    delta = (now - start_time).total_seconds()
+                else:
+                    delta = 999999
+                c["is_stale"] = delta > (26 * 60 * 60)
+            else:
+                c["latest_snapshot"] = False
+                c["is_stale"] = True
+        return configs
+
+    def _process_snapshot_data(self, data, engine):
+        Snapshot = self.env["backup.snapshot"]
+        existing_snaps = Snapshot.search([("config_id", "=", self.id)], limit=5000)
+        existing_map = {s.snapshot_id: s for s in existing_snaps}
+
+        creates = []
+        if engine == "kopia":
+            for snap in data:
+                sid = snap.get("id")
+                if sid and sid not in existing_map:
+                    creates.append(
+                        {
+                            "config_id": self.id,
+                            "snapshot_id": sid,
+                            "start_time": snap.get("startTime", "")[:19].replace(
+                                "T", " "
+                            ),
+                            "size_bytes": snap.get("summary", {}).get("totalBytes", 0),
+                            "status": "completed",
+                        }
+                    )
+        elif engine == "pgbackrest":
+            for stanza in data:
+                for snap in stanza.get("backup", []):
+                    sid = snap.get("label")
+                    if sid and sid not in existing_map:
+                        ts = snap.get("timestamp", {}).get("start", 0)
+                        dt = (
+                            datetime.datetime.utcfromtimestamp(ts).strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                            if ts
+                            else False
+                        )
+                        creates.append(
+                            {
+                                "config_id": self.id,
+                                "snapshot_id": sid,
+                                "start_time": dt,
+                                "size_bytes": snap.get("info", {}).get("size", 0),
+                                "status": "completed",
+                            }
+                        )
+
+        if creates:
+            # Sort by start_time to ensure we check the absolute latest if multiple are created
+            creates.sort(key=lambda x: x["start_time"], reverse=True)
+            Snapshot.create(creates)
+            if self.minimum_size_mb > 0:
+                for c in creates:
+                    snap_mb = c.get("size_bytes", 0) / (1024 * 1024)
+                    if snap_mb < self.minimum_size_mb:
+                        self._report_backup_failure(
+                            f"Snapshot Anomaly: Snapshot {c.get('snapshot_id')} is {snap_mb:.2f} MB, below the {self.minimum_size_mb} MB minimum."
+                        )
+
+    @api.model
+    def cron_sync_all_backups(self):
+        # [@ANCHOR: backup_management:cron_sync_all_backups]
+        # Verified by [@ANCHOR: backup_management:test_backup_cron]
+        # Use Service ID for security & audit trails
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "backup_management.user_backup_service_internal"
+        )
+        configs = self.env["backup.config"].with_user(svc_uid).search([], limit=1000)
+        now = fields.Datetime.now()
+        for conf in configs:
+            conf.action_sync_snapshots()
+
+            snaps = conf.snapshot_ids.sorted(lambda s: s.start_time, reverse=True)
+            latest_snap = snaps[0] if snaps else None
+            if latest_snap and latest_snap.start_time:
+                delta = (now - latest_snap.start_time).total_seconds()
+                if delta > (
+                    26 * 60 * 60
+                ):  # 26 hours (allows for 24h cron jitter without false positives)
+                    conf._report_backup_failure(
+                        f"Stale Backup Alert: No new snapshots detected for {conf.name} in over 26 hours."
+                    )
+
+            if conf.restore_drill_script:
+                delta_drill = (
+                    (now - conf.last_drill_time).total_seconds()
+                    if conf.last_drill_time
+                    else 9999999
+                )
+                if delta_drill > (7 * 24 * 60 * 60):  # 7 Days
+                    conf._execute_restore_drill()
+
+@@BOUNDARY_REPAIR_OVERWRITE@@
+Path: backup_management/tests/test_backup_worker_real.py
+Operation: overwrite
+
+# -*- coding: utf-8 -*-
+import time
+import pika
+import json
+import os
+import logging
+from odoo.tests import tagged
+from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
+
+_logger = logging.getLogger(__name__)
+
+@tagged("post_install", "-at_install")
+class TestRealBackupWorker(RealTransactionCase):
+    def setUp(self):
+        super().setUp()
+        self.daemon_proc = None
+
+    def tearDown(self):
+        if self.daemon_proc:
+            try:
+                self.daemon_proc.terminate()
+                self.daemon_proc.wait(timeout=2.0)
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Daemon termination ignored: %s", repr(e))
+        super().tearDown()
+
+    def test_real_backup_worker_rabbitmq(self):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        daemon_script = os.path.join(base_dir, "daemon", "backup_worker.py")
+
+        daemon_utils = self.env["zero_sudo.daemon.utils"]
+        self.daemon_proc = daemon_utils.start_daemon_process(daemon_script)
+
+        rmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq")
+        # System infrastructure variables are permissible in daemon bootstrap hooks
+        creds = pika.PlainCredentials(os.environ.get("RMQ_USER", "guest"), os.environ.get("RMQ_PASS", "guest"))  # burn-ignore-env
+        conn = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_host, credentials=creds))
+        channel = conn.channel()
+        channel.queue_declare(queue="backup_jobs", durable=True)
+        channel.queue_purge("backup_jobs")
+
+        job_payload = {
+            "job_id": 999,
+            "engine": "dummy",
+            "target_path": "/var/lib/odoo/backups/dummy_backup",
+            "config_id": 1
+        }
+        channel.basic_publish(
+            exchange="",
+            routing_key="backup_jobs",
+            body=json.dumps(job_payload),
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+
+        consumed = False
+        start_time = time.time()
+        while time.time() - start_time < 60.0:
+            q = channel.queue_declare(queue="backup_jobs", durable=True)
+            if q.method.message_count == 0:
+                consumed = True
+                break
+            time.sleep(0.5)  # audit-ignore-sleep
+
+        conn.close()
+        self.assertTrue(consumed, "The real backup worker daemon failed to consume the RabbitMQ message!")
+
+@@BOUNDARY_REPAIR_OVERWRITE@@
+Path: distributed_redis_cache/redis_pool.py
+Operation: overwrite
+
+# -*- coding: utf-8 -*-
+# Copyright © Bruce Perens K6BP. AGPL-3.0.
+import os
+import logging
+import redis
+
+_logger = logging.getLogger(__name__)
+
+# [@ANCHOR: redis_connection_pool]
+redis_host = os.getenv("REDIS_HOST") or "redis"
+redis_port = int(os.getenv("REDIS_PORT") or "6379")
+redis_password = os.getenv("REDIS_PASSWORD")  # burn-ignore-env
+redis_pool = redis.ConnectionPool(
+    host=redis_host,
+    port=redis_port,
+    password=redis_password,
+    db=0,
+    decode_responses=True,
+    socket_timeout=1.0,
+    socket_connect_timeout=1.0,
+)
+_logger.debug("Initialized Centralized Redis Connection Pool.")
+
+@@BOUNDARY_REPAIR_OVERWRITE@@
+Path: pager_duty/daemon/generalized_monitor.py
+Operation: overwrite
+
+# -*- coding: utf-8 -*-
+import binascii
+import concurrent.futures
+import datetime
+import json
+import logging
+import os
+import psutil
+import re
+import secrets
+import shutil
+import smtplib
+import socket
+import ssl
+import subprocess
+import sys
+import time
+import urllib.request
+import urllib.error
+import ftplib
+import imaplib
+import poplib
+import ldap3
+import ntplib
+import shlex
+import xmlrpc.client
+from email.message import EmailMessage
+
+import psycopg2
+import pymysql
+import redis as redis_lib
+
+
+class OdooClient:
+    def __init__(self, url, db, user, password):
+        self.url = url.rstrip("/")
+        self.db = db
+        self.headers = {
+            "Authorization": f"bearer {password}",
+            "X-Odoo-Database": db,
+            "Content-Type": "application/json",
+            "User-Agent": "Pager-Daemon/1.0",
+        }
+
+    def execute(self, model, method, **kwargs):
+        req = urllib.request.Request(
+            f"{self.url}/json/2/{model}/{method}",
+            data=json.dumps(kwargs).encode("utf-8"),
+            headers=self.headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8")
+            raise Exception(f"JSON-2 API Error {e.code}: {err_body}")
+
+
+def get_odoo_client(logger, config):
+    url = (os.environ.get("ODOO_URL") or "http://odoo:8069").rstrip("/")
+    db = config.get("odoo_database") or os.environ.get("ODOO_DB")
+    if not db:
+        try:
+            req = urllib.request.Request(
+                f"{url}/web/database/list",
+                data=json.dumps({}).encode("utf-8"),
+                headers={"Content-Type": "application/json-rpc"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as res:
+                data = json.loads(res.read().decode("utf-8"))
+                dbs = data.get("result", [])
+                if dbs:
+                    db = dbs[0]
+        except (urllib.error.URLError, json.JSONDecodeError, socket.timeout) as e:
+            logger.warning("Failed to query Odoo databases (Network/JSON): %s", e)
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.error("Unexpected error querying Odoo databases: %s", e)
+    if not db:
+        db = "odoo"
+
+    user = os.environ.get("ODOO_USER") or "pager_service_internal"
+    password = os.environ.get("ODOO_PASSWORD") or ""  # burn-ignore-env
+    try:
+        return OdooClient(url, db, user, password)
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        logger.error(f"Failed to connect to Odoo: {e}")
+        return None
+
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s"
+)
+logger = logging.getLogger("generalized_monitor")
+
+
+def parse_env(val):
+    if isinstance(val, str) and val.startswith("ENV:"):
+        return os.environ.get(val[4:]) or ""
+    return val
+
+
+def ensure_executable(cmd_name):
+    path = shutil.which(cmd_name)
+    if path:
+        return path, ""
+    return None, f"Missing dependency: '{cmd_name}'. Startup verification failed."
+
+
+def verify_and_install_dependencies(client, checks):
+    # [@ANCHOR: daemon_verify_dependencies]
+    type_to_cmd = {
+        "dns": "dig",
+        "snmp": "snmpget",
+        "pg_dump": "pg_dump",
+        "nginx": "nginx",
+        "certbot": "certbot",
+        "logrotate": "logrotate",
+        "http3": "curl",
+        "icmp": "ping",
+        "docker": "docker",
+        "systemd": "systemctl",
+        "cloudflared": "cloudflared",
+    }
+
+    required_cmds = set()
+    for check in checks:
+        ctype = check.get("type")
+        if ctype in type_to_cmd:
+            required_cmds.add(type_to_cmd[ctype])
+
+    for cmd in required_cmds:
+        if not shutil.which(cmd):
+            logger.info(f"Dependency '{cmd}' missing. Polling Odoo...")
+            success = False
+            for attempt in range(12):
+                try:
+                    res = client.execute(
+                        "pager.check", "rpc_ensure_executable", cmd_name=cmd
+                    )
+                    if res and res.get("status") == "ok":
+                        bin_path = res.get("path")
+                        logger.info(f"Provisioned {cmd} at {bin_path}")
+                        bin_dir = os.path.dirname(bin_path)
+                        if bin_dir not in os.environ["PATH"]:
+                            os.environ["PATH"] = (
+                                bin_dir + os.pathsep + os.environ["PATH"]
+                            )
+                        success = True
+                        break
+                    else:
+                        err_msg = res.get("message") if res else "Unknown error"
+                        logger.warning(f"Provision failed: {err_msg}")
+                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                    logger.warning(f"RPC unavailable, waiting... ({e})")
+                time.sleep(10)
+
+            if not success:
+                msg = f"FATAL: Missing dependency '{cmd}'. Halting."
+                logger.critical(msg)
+                fallback_notify("Daemon Boot", msg, "critical")
+            try:
+                client.execute(
+                    "pager.incident",
+                    "report_incident",
+                    vals={
+                        "source": "Daemon Boot",
+                        "severity": "critical",
+                        "description": msg,
+                    },
+                )
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                logger.warning("Failed to report missing dependency incident via RPC: %s", e)
+            sys.exit(1)
+
+
+THREAD_HEARTBEATS = {}
+THREAD_TIMEOUTS = {}
+FAILING_CHECKS = set()
+
+
+def is_in_maintenance(check):
+    maint_start_str = check.get("maint_start")
+    maint_end_str = check.get("maint_end")
+    if maint_start_str and maint_end_str:
+        try:
+            start = datetime.datetime.strptime(maint_start_str, "%Y-%m-%d %H:%M:%S")
+            end = datetime.datetime.strptime(maint_end_str, "%Y-%m-%d %H:%M:%S")
+            now = datetime.datetime.utcnow()
+            if start <= now <= end:
+                return True
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Maintenance time parse error: %s", e)
+    return False
+
+
+def fallback_notify(source, msg, severity):
+    fallback_email = os.environ.get("PAGER_FALLBACK_EMAIL") # burn-ignore-env
+    smtp_host = os.environ.get("SMTP_HOST") # burn-ignore-env
+    smtp_port = int(os.environ.get("SMTP_PORT") or 587)
+    smtp_user = os.environ.get("SMTP_USER") # burn-ignore-env
+    smtp_pass = os.environ.get("SMTP_PASS") # burn-ignore-env
+    from_email = os.environ.get("SMTP_FROM") or "pager-daemon@example.com" # burn-ignore-env
+
+    if not fallback_email or not smtp_host:
+        logger.critical(
+            f"SMTP Fallback not configured! Incident lost: {source} - {msg}"
+        )
+        return
+
+    try:
+        em = EmailMessage()
+        em.set_content(
+            f"CRITICAL INCIDENT: {source}\nSeverity: {severity}\nDetails: {msg}\n\n(Sent via Daemon SMTP Fallback because Odoo RPC failed.)"
+        )
+        em["Subject"] = f"[Pager Alert] {source}"
+        em["From"] = from_email
+        em["To"] = fallback_email
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            if smtp_port in (587, 465):
+                server.starttls()
+            if smtp_user and smtp_pass:
+                server.login(smtp_user, smtp_pass)
+            server.send_message(em)
+        logger.info("Successfully dispatched SMTP fallback email.")
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        logger.critical(f"SMTP Fallback completely failed: {e}")
+
+
+def report(client, source, msg, severity="high", website_id=False):
+    # [@ANCHOR: daemon_report_incident]
+    webhook_url = os.environ.get("PAGER_WEBHOOK_URL") # burn-ignore-env
+    if webhook_url:
+        try:
+            payload = {
+                "content": f"🚨 **[PAGER ALERT]**\n**Source:** {source}\n**Severity:** {severity}\n**Details:** {msg}"
+            }
+            req = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Webhook dispatch failed: %s", e)
+
+    try:
+        payload = {"source": source, "description": msg, "severity": severity}
+        if website_id:
+            payload["website_id"] = website_id
+        client.execute("pager.incident", "report_incident", vals=payload)
+        logger.error(f"Incident reported [{source}]: {msg} (Website: {website_id})")
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        logger.error(
+            f"Failed to report incident via RPC: {e}. Triggering SMTP fallback."
+        )
+        fallback_notify(source, msg, severity)
+
+
+def auto_resolve(client, source, website_id=False):
+    try:
+        client.execute(
+            "pager.incident",
+            "auto_resolve_incidents",
+            source=source,
+            context={"website_id": website_id} if website_id else {},
+        )
+        logger.info(
+            f"[{source}] System stable. Auto-resolved open incidents. (Website: {website_id})"
+        )
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        logger.error(f"Failed to auto-resolve incidents for {source}: {e}")
+
+
+def execute_check(check, client=None):
+    # [@ANCHOR: daemon_execute_check]
+    ctype = check.get("type")
+    target = parse_env(check.get("target", ""))
+
+    if ctype == "system":
+        if target == "disk":
+            part = parse_env(check.get("partition", "/"))
+            try:
+                pct = psutil.disk_usage(part).percent
+                if pct > check.get("critical", 90):
+                    return False, f"Disk space at {pct}% on {part}"
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                logger.warning("Disk check failed: %s", e)
+                return False, f"Disk check failed for {part}: {e}"
+        elif target == "memory":
+            pct = psutil.virtual_memory().percent
+            if pct > check.get("critical", 90):
+                return False, f"Memory usage at {pct}%"
+        elif target == "cpu":
+            pct = psutil.cpu_percent(interval=1)
+            if pct > check.get("critical", 90):
+                return False, f"CPU usage at {pct}%"
+        elif target == "iowait":
+            pct = getattr(psutil.cpu_times_percent(interval=1), "iowait", 0)
+            if pct > check.get("critical", 90):
+                return False, f"CPU IO Wait at {pct}%"
+        elif target == "steal":
+            pct = getattr(psutil.cpu_times_percent(interval=1), "steal", 0)
+            if pct > check.get("critical", 90):
+                return False, f"CPU Steal at {pct}%"
+        return True, "OK"
+
+    elif ctype == "load":
+        try:
+            load1, load5, load15 = os.getloadavg()
+            crit = check.get("critical", 0)
+            if crit > 0 and load1 > crit:
+                return False, f"Load average {load1:.2f} exceeds {crit}"
+            return True, f"OK (Load: {load1:.2f})"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Load check failed: %s", e)
+            return False, f"Load check failed: {e}"
+
+    elif ctype == "ftp":
+        port = int(parse_env(check.get("port", 21)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        try:
+            with ftplib.FTP() as ftp:
+                ftp.connect(target, port, timeout=5)
+                if user and password:
+                    ftp.login(user, password)
+                else:
+                    ftp.login()
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("FTP check failed: %s", e)
+            return False, f"FTP check failed: {e}"
+
+    elif ctype == "imap":
+        port = int(parse_env(check.get("port", 143)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        try:
+            if port == 993:
+                imap = imaplib.IMAP4_SSL(target, port, timeout=5)
+            else:
+                imap = imaplib.IMAP4(target, port, timeout=5)
+            if user and password:
+                imap.login(user, password)
+            imap.logout()
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("IMAP check failed: %s", e)
+            return False, f"IMAP check failed: {e}"
+
+    elif ctype == "pop3":
+        port = int(parse_env(check.get("port", 110)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        try:
+            if port == 995:
+                pop = poplib.POP3_SSL(target, port, timeout=5)
+            else:
+                pop = poplib.POP3(target, port, timeout=5)
+            if user and password:
+                pop.user(user)
+                pop.pass_(password)
+            pop.quit()
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("POP3 check failed: %s", e)
+            return False, f"POP3 check failed: {e}"
+
+    elif ctype == "mysql":
+        port = int(parse_env(check.get("port", 3306)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        dbname = parse_env(check.get("dbname", ""))
+        try:
+            conn = pymysql.connect(
+                host=target,
+                port=port,
+                user=user,
+                password=password,
+                database=dbname,
+                connect_timeout=5,
+            )
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1;")
+                    cur.fetchone()
+            finally:
+                conn.close()
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("MySQL check failed: %s", e)
+            return False, f"MySQL/MariaDB check failed: {e}"
+
+    elif ctype == "ldap":
+        port = int(parse_env(check.get("port", 389)))
+        try:
+            server = ldap3.Server(
+                target, port=port, get_info=ldap3.ALL, connect_timeout=5
+            )
+            conn = ldap3.Connection(server, auto_bind=True, receive_timeout=5)
+            conn.unbind()
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("LDAP check failed: %s", e)
+            return False, f"LDAP check failed: {e}"
+
+    elif ctype == "ntp":
+        port = int(parse_env(check.get("port", 123)))
+        try:
+            client_ntp = ntplib.NTPClient()
+            response = client_ntp.request(target, version=3, timeout=5)
+            return True, f"OK (Offset: {response.offset:.4f}s)"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("NTP check failed: %s", e)
+            return False, f"NTP check failed: {e}"
+
+    elif ctype == "snmp":
+        community = parse_env(check.get("snmp_community", "public"))
+        oid = parse_env(check.get("snmp_oid", ""))
+        exe, err = ensure_executable("snmpget")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "-v2c", "-c", community, target, oid],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if res.returncode != 0:
+                return (
+                    False,
+                    f"SNMP failed: {res.stderr.strip() or res.stdout.strip()[:100]}",
+                )
+            expect = parse_env(check.get("expect"))
+            if expect and expect not in res.stdout:
+                return False, "SNMP payload mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("SNMP check failed: %s", e)
+            return False, f"SNMP check error: {e}"
+
+    elif ctype == "dns":
+        domain = target
+        exe, _ = ensure_executable("dig")
+        try:
+            if exe:
+                result = subprocess.run(
+                    [exe, "+trace", domain], capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0 and domain in result.stdout:
+                    return True, "OK"
+            socket.gethostbyname(domain)
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("DNS check failed: %s", e)
+            return False, f"DNS resolution failed: {e}"
+
+    elif ctype == "http":
+        try:
+            headers = {"User-Agent": "Pager-Daemon/1.0"}
+            req = urllib.request.Request(target, headers=headers)
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    body = response.read().decode("utf-8")
+                    expect = parse_env(check.get("expect"))
+                    if expect and expect not in body:
+                        return False, "HTTP body mismatch"
+                    return True, "OK"
+                return False, f"HTTP status {response.status}"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("HTTP check failed: %s", e)
+            return False, f"HTTP check failed: {e}"
+
+    elif ctype == "http3":
+        expect = parse_env(check.get("expect"))
+        exe, err = ensure_executable("curl")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "-s", "--http3", target],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if res.returncode != 0:
+                return False, f"HTTP/3 Curl failed: {res.stderr[:100]}"
+            if expect and expect not in res.stdout:
+                return False, "HTTP/3 body mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("HTTP3 check failed: %s", e)
+            return False, f"HTTP/3 check failed: {e}"
+
+    elif ctype == "tcp":
+        port = int(parse_env(check.get("port", 80)))
+        send_payload = parse_env(check.get("send"))
+        send_hex = parse_env(check.get("send_hex"))
+        expect = parse_env(check.get("expect"))
+        try:
+            with socket.create_connection((target, port), timeout=2) as s:
+                if send_hex:
+                    s.sendall(binascii.unhexlify(send_hex))
+                elif send_payload:
+                    s.sendall(
+                        send_payload.encode("utf-8")
+                        .decode("unicode_escape")
+                        .encode("utf-8")
+                    )
+
+                if expect:
+                    response = s.recv(1024)
+                    if expect.encode("utf-8") not in response:
+                        return False, "TCP payload mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("TCP check failed: %s", e)
+            return False, f"TCP connection failed: {e}"
+
+    elif ctype == "udp":
+        port = int(parse_env(check.get("port", 80)))
+        send_payload = parse_env(check.get("send"))
+        send_hex = parse_env(check.get("send_hex"))
+        expect = parse_env(check.get("expect"))
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(2)
+                if send_hex:
+                    s.sendto(binascii.unhexlify(send_hex), (target, port))
+                elif send_payload:
+                    s.sendto(
+                        send_payload.encode("utf-8")
+                        .decode("unicode_escape")
+                        .encode("utf-8"),
+                        (target, port),
+                    )
+                else:
+                    return False, "UDP check requires a payload to send"
+
+                if expect:
+                    response, _ = s.recvfrom(4096)
+                    if expect.encode("utf-8") not in response:
+                        return False, "UDP payload mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("UDP check failed: %s", e)
+            return False, f"UDP connection failed: {e}"
+
+    elif ctype == "redis":
+        port = int(parse_env(check.get("port", 6379)))
+        password = parse_env(check.get("password", ""))
+        try:
+            r = redis_lib.Redis(
+                host=target, port=port, password=password or None, socket_timeout=2
+            )
+            if r.ping():
+                return True, "OK"
+            return False, "Redis PING returned False"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Redis check failed: %s", e)
+            return False, f"Redis connection failed: {e}"
+
+    elif ctype == "rabbitmq":
+        port = int(parse_env(check.get("port", 5672)))
+        try:
+            with socket.create_connection((target, port), timeout=2) as s:
+                s.sendall(b"AMQP\x00\x00\x09\x01")
+                res = s.recv(1024)
+                if len(res) > 0:
+                    return True, "OK"
+                return False, "RabbitMQ handshake mismatch"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("RabbitMQ check failed: %s", e)
+            return False, f"RabbitMQ connection failed: {e}"
+
+    elif ctype == "xmlrpc":
+        method = parse_env(check.get("rpc_method", ""))
+        params_str = parse_env(check.get("rpc_params", "[]"))
+        expect = parse_env(check.get("expect"))
+        try:
+            params = json.loads(params_str) if params_str else []
+            proxy = xmlrpc.client.ServerProxy(target)
+            if method.startswith("_"):
+                return False, f"Illegal RPC method: {method}"
+            res = getattr(proxy, method)(*params)
+            if expect and expect not in str(res):
+                return False, "XML-RPC output mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("XMLRPC check failed: %s", e)
+            return False, f"XML-RPC check failed: {e}"
+
+    elif ctype == "jsonrpc":
+        method = parse_env(check.get("rpc_method", ""))
+        params_str = parse_env(check.get("rpc_params", "{}"))
+        expect = parse_env(check.get("expect"))
+        try:
+            params = json.loads(params_str) if params_str else {}
+            payload = json.dumps(
+                {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                target,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                body = response.read().decode("utf-8")
+                if expect and expect not in body:
+                    return False, "JSON-RPC output mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("JSONRPC check failed: %s", e)
+            return False, f"JSON-RPC check failed: {e}"
+
+    elif ctype == "postgres" or ctype == "anomaly":
+        port = int(parse_env(check.get("port", 5432)))
+        dbname = parse_env(check.get("dbname", "odoo"))
+        user = parse_env(check.get("user", "odoo"))
+        password = parse_env(check.get("password", ""))
+        query = (
+            parse_env(check.get("query", "SELECT 1;"))
+            if ctype == "anomaly"
+            else "SELECT 1;"
+        )
+
+        conn = None
+        try:
+            conn = psycopg2.connect(
+                host=target,
+                port=port,
+                dbname=dbname,
+                user=user,
+                password=password,
+                connect_timeout=2,
+            )
+            with conn.cursor() as cur:
+                cur.execute(query)
+                val = cur.fetchone()[0]
+
+            if ctype == "anomaly":
+                critical_min = int(check.get("critical", 0))
+                if val < critical_min:
+                    return (
+                        False,
+                        f"Anomaly Threshold Breached: {val} < {critical_min}",
+                    )
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Postgres check failed: %s", e)
+            return False, f"PostgreSQL/Anomaly check failed: {e}"
+        finally:
+            if conn:
+                conn.close()
+
+    elif ctype == "ssl":
+        try:
+            port = int(parse_env(check.get("port", 443)))
+            ctx = ssl.create_default_context()
+            with socket.create_connection((target, port), timeout=5) as sock:
+                with ctx.wrap_socket(sock, server_hostname=target) as ssock:
+                    cert = ssock.getpeercert()
+                    expire_date = datetime.datetime.strptime(
+                        cert["notAfter"], "%b %d %H:%M:%S %Y %Z"
+                    )
+                    days_left = (expire_date - datetime.datetime.utcnow()).days
+                    critical_days = int(check.get("critical", 14))
+                    if days_left <= critical_days:
+                        return False, f"SSL Cert expires in {days_left} days"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("SSL check failed: %s", e)
+            return False, f"SSL check failed: {e}"
+
+    elif ctype == "synthetic":
+        script = parse_env(check.get("script", ""))
+        if not script:
+            return False, "Synthetic script path missing"
+        try:
+            res = subprocess.run(
+                shlex.split(script),
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if res.returncode != 0:
+                return (
+                    False,
+                    f"Synthetic failure (Code {res.returncode}): {res.stderr[:100]}",
+                )
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Synthetic check failed: %s", e)
+            return False, f"Synthetic execution error: {e}"
+
+    elif ctype == "certbot":
+        headers = {"User-Agent": "Pager-Daemon/1.0"}
+        try:
+            req = urllib.request.Request(
+                "https://acme-v02.api.letsencrypt.org/directory", headers=headers
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status != 200:
+                    return False, f"Let's Encrypt API unreachable ({response.status})"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Certbot check failed: %s", e)
+            return False, f"Let's Encrypt API unreachable: {e}"
+
+        domains = parse_env(check.get("target", ""))
+        if domains and domains != "auto":
+            try:
+                req = urllib.request.Request("https://api.ipify.org", headers=headers)
+                with urllib.request.urlopen(req, timeout=10) as ip_resp:
+                    my_ip = ip_resp.read().decode("utf-8").strip()
+
+                domain_list = [d.strip() for d in domains.split(",") if d.strip()]
+                for d in domain_list:
+                    try:
+                        resolved = socket.gethostbyname(d)
+                        if resolved != my_ip:
+                            return (
+                                False,
+                                f"Domain {d} resolves to {resolved}, expected our IP {my_ip}.",
+                            )
+                    except socket.gaierror:
+                        return False, f"Domain {d} failed DNS resolution."
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                logger.warning(f"Could not verify public IP for domain matching: {e}")
+
+        exe, _ = ensure_executable("certbot")
+        if exe:
+            try:
+                res = subprocess.run(
+                    [exe, "renew", "--dry-run"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                if res.returncode != 0:
+                    failed = [
+                        line.strip()
+                        for line in (res.stdout + "\n" + res.stderr).split("\n")
+                        if "Failed to renew" in line or "Challenge failed" in line
+                    ]
+                    err_msg = "Certbot dry-run failed!"
+                    if failed:
+                        err_msg += " " + " | ".join(failed[:2])
+                    return False, err_msg
+            except subprocess.TimeoutExpired:
+                return False, "Certbot dry-run timed out."
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                logger.warning("Certbot renew check failed: %s", e)
+                return False, f"Certbot execution error: {e}"
+
+        return True, "OK"
+
+    elif ctype == "pg_dump":
+        port = str(parse_env(check.get("port", 5432)))
+        dbname = parse_env(check.get("dbname", "odoo"))
+        user = parse_env(check.get("user", "odoo"))
+        password = parse_env(check.get("password", ""))
+        env = os.environ.copy()
+        if password:
+            env["PGPASSWORD"] = password
+        exe, err = ensure_executable("pg_dump")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [
+                    exe,
+                    "-s",
+                    "-U",
+                    user,
+                    "-h",
+                    target or "postgres",
+                    "-p",
+                    port,
+                    dbname,
+                ],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+                shell=False,
+            )
+            if res.returncode != 0:
+                return False, f"pg_dump pre-flight failed: {res.stderr[:100]}"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("pg_dump check failed: %s", e)
+            return False, f"pg_dump execution error: {e}"
+
+    elif ctype == "nginx":
+        exe, err = ensure_executable("nginx")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "-t"], capture_output=True, text=True, timeout=15
+            )
+            if res.returncode != 0:
+                return False, f"Nginx config error: {res.stderr[:100]}"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Nginx check failed: %s", e)
+            return False, f"Nginx execution error: {e}"
+
+    elif ctype == "logrotate":
+        exe, err = ensure_executable("logrotate")
+        if not exe:
+            return False, err
+        conf = target or "/etc/logrotate.conf"
+        try:
+            res = subprocess.run(
+                [exe, "-d", conf], capture_output=True, text=True, timeout=30
+            )
+            if res.returncode != 0:
+                return False, f"Logrotate dry-run failed: {res.stderr[:100]}"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("logrotate check failed: %s", e)
+            return False, f"Logrotate execution error: {e}"
+
+    elif ctype == "cloudflared":
+        if not target:
+            return False, "Cloudflared requires target (Tunnel ID or Name)"
+        exe, err = ensure_executable("cloudflared")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "tunnel", "info", target],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode != 0:
+                return False, f"Cloudflared tunnel info failed: {res.stderr[:100]}"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("cloudflared check failed: %s", e)
+            return False, f"Cloudflared execution error: {e}"
+
+    elif ctype == "smtp_dryrun":
+        port = int(parse_env(check.get("port", 587)))
+        user = parse_env(check.get("user", ""))
+        password = parse_env(check.get("password", ""))
+        if not target:
+            return False, "SMTP dry-run requires target host"
+        try:
+            with smtplib.SMTP(target, port, timeout=10) as server:
+                server.ehlo()
+                if port in (587, 465) or server.has_extn("STARTTLS"):
+                    server.starttls()
+                    server.ehlo()
+                if user and password:
+                    server.login(user, password)
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("SMTP dryrun failed: %s", e)
+            return False, f"SMTP dry-run failed: {e}"
+
+    elif ctype == "icmp":
+        if not target:
+            return False, "ICMP requires target"
+        exe, err = ensure_executable("ping")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "-c", "3", "-W", "2", target],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if res.returncode != 0:
+                return (
+                    False,
+                    f"ICMP ping failed: {res.stderr.strip() or res.stdout.strip()[:100]}",
+                )
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("ICMP check failed: %s", e)
+            return False, f"ICMP execution error: {e}"
+
+    elif ctype == "docker":
+        if not target:
+            return False, "Docker check requires target container name"
+        exe, err = ensure_executable("docker")
+        if not exe:
+            return False, err
+        try:
+            res = subprocess.run(
+                [exe, "inspect", "-f", "{{.State.Running}}", target],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if res.returncode != 0:
+                return False, f"Docker inspect failed: {res.stderr.strip()[:100]}"
+            if res.stdout.strip().lower() != "true":
+                return False, f"Docker container {target} is not running"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Docker check failed: %s", e)
+            return False, f"Docker execution error: {e}"
+
+    elif ctype == "memcached":
+        port = int(parse_env(check.get("port", 11211)))
+        if not target:
+            return False, "Memcached requires target"
+        try:
+            with socket.create_connection((target, port), timeout=2) as s:
+                s.sendall(b"stats\r\n")
+                res = s.recv(1024)
+                if b"STAT " not in res:
+                    return False, "Memcached stats mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Memcached check failed: %s", e)
+            return False, f"Memcached connection failed: {e}"
+
+    elif ctype == "ssh":
+        port = int(parse_env(check.get("port", 22)))
+        if not target:
+            return False, "SSH requires target"
+        try:
+            with socket.create_connection((target, port), timeout=5) as s:
+                res = s.recv(1024)
+                if not res.startswith(b"SSH-"):
+                    return False, "SSH protocol mismatch"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("SSH check failed: %s", e)
+            return False, f"SSH connection failed: {e}"
+
+    elif ctype == "heartbeat":
+        chk_uuid = parse_env(check.get("uuid"))
+        if not client:
+            return False, "Client not provided for heartbeat"
+        try:
+            res = client.execute(
+                "pager.check",
+                "check_heartbeat_rpc",
+                hb_uuid=chk_uuid,
+                interval=int(check.get("interval", 60)),
+            )
+            if res:
+                return True, "OK"
+            return False, "Heartbeat missing"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Heartbeat check failed: %s", e)
+            return False, f"Heartbeat check failed: {e}"
+
+    elif ctype == "smart":
+        if not target:
+            return False, "SMART check requires target device (e.g. /dev/sda)"
+
+        spool_file = "/var/log/pager_smart_spool.json"
+        if not os.path.exists(spool_file):
+            return (
+                False,
+                "SMART spool file not found. Is the pager-smart-spooler.timer running?",
+            )
+
+        mtime = os.path.getmtime(spool_file)
+        if time.time() - mtime > 1800:
+            return (
+                False,
+                "SMART spool file is stale (>30 mins old). Root spooler daemon may have crashed.",
+            )
+
+        try:
+            with open(spool_file, "r") as f:
+                smart_data = json.load(f)
+
+            if target not in smart_data:
+                return False, f"Device {target} not found in SMART spool data."
+
+            dev_data = smart_data[target]
+            smart_status = dev_data.get("smart_status", {})
+            passed = smart_status.get("passed", False)
+
+            if not passed:
+                return (
+                    False,
+                    f"SMART health check FAILED for {target}. Impending disk failure.",
+                )
+
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("SMART check failed: %s", e)
+            return False, f"SMART spool read error: {e}"
+
+    elif ctype in ("playwright", "bash", "executable"):
+        spool_file = "/var/log/pager_synthetic_spool.json"
+        if not os.path.exists(spool_file):
+            return (
+                False,
+                "Synthetic spool file missing. Is pager-synthetic-spooler.service running?",
+            )
+
+        mtime = os.path.getmtime(spool_file)
+        if time.time() - mtime > int(check.get("interval", 60)) * 3 + 300:
+            return (
+                False,
+                "Synthetic spool file is stale. Spooler daemon may have crashed.",
+            )
+
+        try:
+            with open(spool_file, "r") as f:
+                data = json.load(f)
+
+            name = check.get("name")
+            if name not in data:
+                return False, f"Check '{name}' not found in synthetic spool."
+
+            res = data[name]
+            if not res.get("success"):
+                err = str(res.get("error", "Unknown error"))
+                return False, f"Execution Failed: {err[:200]}"
+            return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Synthetic script check failed: %s", e)
+            return False, f"Synthetic spool read error: {e}"
+
+    elif ctype == "file_absent":
+        if not target:
+            return False, "Target required"
+        if os.path.exists(target):
+            return False, f"File {target} exists"
+        return True, "OK"
+
+    elif ctype == "systemd":
+        if not target:
+            return (
+                False,
+                "Systemd check requires target (use '*' for all failed services)",
+            )
+        exe, err = ensure_executable("systemctl")
+        if not exe:
+            return False, err
+        try:
+            ignored = [
+                s.strip()
+                for s in parse_env(check.get("ignored_services", "")).split(",")
+                if s.strip()
+            ]
+            if target == "*":
+                res = subprocess.run(
+                    [exe, "list-units", "--state=failed", "--no-legend", "--plain"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if res.returncode != 0:
+                    return False, f"Systemctl list-units failed: {res.stderr.strip()}"
+
+                failed_svcs = []
+                for line in res.stdout.strip().split("\n"):
+                    if not line.strip():
+                        continue
+                    parts = line.split()
+                    if parts:
+                        svc_name = parts[0]
+                        if svc_name not in ignored:
+                            failed_svcs.append(svc_name)
+
+                if failed_svcs:
+                    return (
+                        False,
+                        f"Failed systemd services detected: {', '.join(failed_svcs)}",
+                    )
+                return True, "OK (0 failed services)"
+            else:
+                svcs = [s.strip() for s in target.split(",") if s.strip()]
+                failed_svcs = []
+                for svc in svcs:
+                    res = subprocess.run(
+                        [exe, "is-active", svc],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if res.returncode != 0 or res.stdout.strip() != "active":
+                        failed_svcs.append(f"{svc} ({res.stdout.strip()})")
+
+                if failed_svcs:
+                    return (
+                        False,
+                        f"Systemd services not active: {', '.join(failed_svcs)}",
+                    )
+                return True, "OK"
+        except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+            logger.warning("Systemd check failed: %s", e)
+            return False, f"Systemd execution error: {e}"
+
+    return False, "Unknown check type"
+
+
+def polling_thread(client, check):
+    name = check.get("name", "Unknown")
+    check_id = check.get("id")
+    website_id = check.get("website_id")
+    interval = int(check.get("interval", 60))
+    grace = int(check.get("grace", 0))
+    thread_start_time = time.time()
+
+    THREAD_TIMEOUTS[name] = max(300, interval * 3)
+    logger.info(
+        f"Starting polling thread for [{name}] every {interval}s (Grace: {grace}s)"
+    )
+
+    THREAD_HEARTBEATS[name] = time.time()
+    success, msg = execute_check(check, client)
+    clean_loops = 1 if success else 0
+    if not success:
+        FAILING_CHECKS.add(name)
+        if time.time() - thread_start_time < grace:
+            logger.info(
+                f"[{name}] Startup grace period active. Suppressing failure: {msg}"
+            )
+        else:
+            report(client, name, msg, "high", website_id=website_id)
+            remedy = check.get("remediate")
+            if clean_loops > 0 and remedy and os.path.exists(remedy):
+                logger.info(f"[{name}] Triggering auto-remediation script: {remedy}")
+                try:
+                    subprocess.Popen([remedy], shell=False)
+                except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                    logger.error(f"Remediation failed: {e}")
+    else:
+        FAILING_CHECKS.discard(name)
+
+    jitter = secrets.SystemRandom().uniform(0, interval)
+    logger.info(f"[{name}] Applying startup jitter: sleeping for {jitter:.1f}s")
+    time.sleep(jitter)
+
+    while True:
+        THREAD_HEARTBEATS[name] = time.time()
+        parent = check.get("parent")
+
+        if is_in_maintenance(check):
+            time.sleep(interval)
+            continue
+
+        if parent and parent in FAILING_CHECKS:
+            logger.debug(f"[{name}] Suppressed due to parent '{parent}' failure.")
+            time.sleep(interval)
+            continue
+
+        success, msg = execute_check(check, client)
+
+        # Update status in Odoo
+        if client and check_id:
+            try:
+                status = "passing" if success else "failing"
+                now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+                client.execute("pager.check", "write", ids=[check_id], vals={"status": status, "last_run": now})
+            except Exception as e: # audit-ignore-catch-all
+                logger.warning(f"[{name}] Failed to update status in Odoo: {e}")
+
+        if not success:
+            FAILING_CHECKS.add(name)
+            if time.time() - thread_start_time < grace:
+                logger.info(
+                    f"[{name}] Startup grace period active. Suppressing failure: {msg}"
+                )
+            else:
+                report(client, name, msg, "high", website_id=website_id)
+                remedy = check.get("remediate")
+                if clean_loops > 0 and remedy and os.path.exists(remedy):
+                    logger.info(
+                        f"[{name}] Triggering auto-remediation script: {remedy}"
+                    )
+                    try:
+                        subprocess.Popen([remedy], shell=False)
+                    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                        logger.error(f"Remediation failed: {e}")
+            clean_loops = 0
+        else:
+            FAILING_CHECKS.discard(name)
+            clean_loops += 1
+            if clean_loops == 3:
+                auto_resolve(client, name, website_id=website_id)
+        time.sleep(interval)
+
+
+def log_tail_thread(client, check):
+    name = check.get("name", "Log Monitor")
+    website_id = check.get("website_id")
+    filepath = parse_env(check.get("target", ""))
+    regex_str = parse_env(check.get("regex", ""))
+    grace = int(check.get("grace", 0))
+    thread_start_time = time.time()
+
+    THREAD_TIMEOUTS[name] = 120
+    logger.info(
+        f"Starting log tail thread for [{name}] on {filepath} (Grace: {grace}s)"
+    )
+
+    cur_inode = None
+    f = None
+    while True:
+        THREAD_HEARTBEATS[name] = time.time()
+        try:
+            stat_obj = os.stat(filepath)
+            new_inode = stat_obj.st_ino
+            if cur_inode != new_inode:
+                if f:
+                    f.close()
+                f = open(filepath, "r")
+                if cur_inode is None:
+                    f.seek(0, 2)
+                else:
+                    f.seek(0, 0)
+                cur_inode = new_inode
+                logger.info(f"Tailing log file {filepath} (inode: {cur_inode})")
+            if f:
+                line = f.readline()
+                if not line:
+                    time.sleep(0.5)
+                    continue
+                if regex_str and re.search(regex_str, line, re.IGNORECASE):
+                    if time.time() - thread_start_time < grace:
+                        logger.info(
+                            f"[{name}] Suppressed log alert during grace period."
+                        )
+                    else:
+                        report(client, name, line.strip(), "critical", website_id=website_id)
+            else:
+                time.sleep(1)
+        except FileNotFoundError:
+            time.sleep(5)
+            continue
+
+
+if __name__ == "__main__":
+    # [@ANCHOR: daemon_main_loop]
+    config_path = os.path.join(os.path.dirname(__file__), "pager_config.json")
+
+    if not os.path.exists(config_path):
+        msg = f"Configuration file not found at {config_path}. Halting."
+        logger.critical(msg)
+        fallback_notify("Daemon Boot", msg, "critical")
+        sys.exit(1)
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+        msg = f"FATAL: Failed to parse {config_path} as valid JSON: {e}"
+        logger.critical(msg)
+        fallback_notify("Daemon Boot", msg, "critical")
+        sys.exit(1)
+
+    client = get_odoo_client(logger, config)
+    if not client:
+        logger.critical("Failed to connect to Odoo JSON-2. Halting.")
+        sys.exit(1)
+
+    checks = config.get("checks", [])
+    logger.info(f"Loaded {len(checks)} checks from configuration.")
+
+    verify_and_install_dependencies(client, checks)
+
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=max(1, len(checks) + 1)
+    )
+    futures = []
+
+    def log_anomaly_proxy(cl):
+        r = redis_lib.Redis(
+            host=os.getenv("REDIS_HOST") or "redis",
+            port=int(os.getenv("REDIS_PORT") or "6379"),
+            db=0,
+            decode_responses=True,
+        )
+        while True:
+            try:
+                res = r.blpop("pager_log_anomalies", timeout=5)
+                if res:
+                    _, data = res
+                    payload = json.loads(data)
+                    report(
+                        cl,
+                        payload["source"],
+                        payload["description"],
+                        payload["severity"],
+                        website_id=payload.get("website_id"),
+                    )
+            except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
+                logger.warning("Anomaly proxy loop error: %s", e)
+                time.sleep(1)
+
+    futures.append(executor.submit(log_anomaly_proxy, client))
+
+    for check in checks:
+        if check.get("type") == "log":
+            futures.append(executor.submit(log_tail_thread, client, check))
+        else:
+            futures.append(executor.submit(polling_thread, client, check))
+
+    try:
+        while True:
+            time.sleep(10)
+            now = time.time()
+            for t_name, last_beat in THREAD_HEARTBEATS.items():
+                timeout = THREAD_TIMEOUTS.get(t_name, 300)
+                if now - last_beat > timeout:
+                    logger.critical(
+                        f"WATCHDOG: Thread '{t_name}' hung for {now - last_beat:.1f}s (Timeout: {timeout}s)! Force restarting daemon."
+                    )
+                    os._exit(1)
+    except KeyboardInterrupt:
+        logger.info("Shutting down monitoring daemon.")
+@@BOUNDARY_REPAIR_OVERWRITE@@--

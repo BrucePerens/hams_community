@@ -21,7 +21,7 @@ ODOO_PASS = os.environ.get("ODOO_SERVICE_PASSWORD", "")  # burn-ignore-env
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "guest")
-RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")  # burn-ignore-env
+RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")  # burn-ignore-env", "guest")  # burn-ignore-env
 
 
 class OdooAPIError(Exception):

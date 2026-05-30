@@ -32,6 +32,7 @@ class TestRealBackupWorker(RealTransactionCase):
         self.daemon_proc = daemon_utils.start_daemon_process(daemon_script)
 
         rmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq")
+        # System infrastructure variables are permissible in daemon bootstrap hooks
         creds = pika.PlainCredentials(os.environ.get("RMQ_USER", "guest"), os.environ.get("RMQ_PASS", "guest"))  # burn-ignore-env
         conn = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_host, credentials=creds))
         channel = conn.channel()
