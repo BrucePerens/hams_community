@@ -49,9 +49,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         )
         res_id_row = self.env.cr.fetchone()
         if not res_id_row:
-            raise AccessError(
-                _("Security Alert: Service Account '%s' not found.") % xml_id
-            )
+            raise AccessError(_("Security Alert: Service Account '%s' not found.") % xml_id)
         uid = res_id_row[0]
 
         # Verify the account is active AND is explicitly flagged as a service account
@@ -65,12 +63,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         if not res or not res[0]:
             raise AccessError(_("Security Alert: Service Account '%s' is disabled.") % xml_id)
         if not res[1]:
-            raise AccessError(
-                _(
-                    "Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied."
-                )
-                % xml_id
-            )
+            raise AccessError(_("Security Alert: '%s' is a human user, not a Service Account. Privilege escalation denied.") % xml_id)
 
         # THE MECHANICAL GOD-MODE BLOCK: Ensure the service account does not possess global administrative privileges.
         # This mathematically forces downstream modules to utilize the Micro-Service Account CSV pattern.
@@ -86,12 +79,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         )
 
         if self.env.cr.fetchone():
-            raise AccessError(
-                _(
-                    "Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead."
-                )
-                % xml_id
-            )
+            raise AccessError(_("Security Alert: Service Account '%s' violates the Zero-Sudo mandate by possessing global administrative groups (group_system or group_erp_manager). You must use domain-specific Micro-Privilege ACLs instead.") % xml_id)
 
         return uid
 
@@ -120,10 +108,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             return env_svc["binary.manifest"].ensure_executable(cmd_name)
 
         pkg = pkg_name or cmd_name
-        raise UserError(
-            _("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').")
-            % (cmd_name, pkg)
-        )
+        raise UserError(_("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').") % (cmd_name, pkg))
 
     @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
@@ -187,18 +172,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
         if key not in whitelist:
             if any(banned in lower_key for banned in banned_substrings):
-                raise AccessError(
-                    _(
-                        "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo."
-                    )
-                    % key
-                )
-            raise AccessError(
-                _(
-                    "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
-                )
-                % key
-            )
+                raise AccessError(_("Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo.") % key)
+            raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
 
         env_svc = self._get_service_env("zero_sudo.config_service_internal")
         return env_svc["ir.config_parameter"].get_param(key, default)
@@ -215,17 +190,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
         if key not in whitelist:
             if any(banned in lower_key for banned in banned_substrings):
-                raise AccessError(
-                    _(
-                        "Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo."
-                    ) % key
-                )
-            raise AccessError(
-                _(
-                    "Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py."
-                )
-                % key
-            )
+                raise AccessError(_("Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be modified via Zero-Sudo.") % key)
+            raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
 
         env_svc = self._get_service_env("zero_sudo.config_service_internal")
         env_svc["ir.config_parameter"].set_param(key, value)

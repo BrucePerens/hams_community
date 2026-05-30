@@ -180,12 +180,12 @@ class TestSecurityUtils(HamsTransactionCase):
         self.assertTrue(0 <= hash1 <= 2147483647, "Hash should be within 32-bit integer range")
 
     def test_07_update_python_venv(self):
-        mock_exists = self.safe_patch("os.path.exists")
-        mock_run = self.safe_patch("subprocess.run")
         # [@ANCHOR: test_update_python_venv]
         # Tests [@ANCHOR: update_python_venv]
         # Tests [@ANCHOR: story_venv_management]
         """Test the _update_python_venv method."""
+        mock_exists = self.safe_patch("os.path.exists")
+        mock_run = self.safe_patch("subprocess.run")
         utils = self.env["zero_sudo.security.utils"]
 
         # Test 1: requirements.txt not found
@@ -299,8 +299,8 @@ class TestSecurityUtils(HamsTransactionCase):
         self.assertTrue(env_svc.context.get("mail_notrack"))
 
     def test_11_ensure_executable(self):
-        mock_which = self.safe_patch("shutil.which")
         """Verify the fallback system for auto-installing binary manifests."""
+        mock_which = self.safe_patch("shutil.which")
         utils = self.env["zero_sudo.security.utils"]
 
         # Scenario 1: Binary exists in system PATH
@@ -309,9 +309,10 @@ class TestSecurityUtils(HamsTransactionCase):
 
         # Scenario 2: Missing binary, no manifest available (should raise UserError)
         mock_which.return_value = None
-        original_models = self.env.registry.models.copy()
+
+        # Pop only the specific model to prevent test runner teardown crashes
+        manifest_model = self.env.registry.models.pop('binary.manifest', None)
         try:
-            self.env.registry.models.pop('binary.manifest', None)
             with self.assertRaises(UserError) as cm:
                 utils._ensure_executable("missing_bin", pkg_name="apt-pkg-missing")
             self.assertIn("Missing dependency", str(cm.exception))
@@ -331,8 +332,11 @@ class TestSecurityUtils(HamsTransactionCase):
             self.assertEqual(res, "/var/lib/odoo/hams_bin/kopia")
             mock_manifest.ensure_executable.assert_called_once_with("kopia")
         finally:
-            self.env.registry.models.clear()
-            self.env.registry.models.update(original_models)
+            # Restore the individual model cleanly to protect the global registry
+            if manifest_model is not None:
+                self.env.registry.models['binary.manifest'] = manifest_model
+            else:
+                self.env.registry.models.pop('binary.manifest', None)
 
     def test_12_kv_store(self):
         # [@ANCHOR: test_set_kv_sql_check]
