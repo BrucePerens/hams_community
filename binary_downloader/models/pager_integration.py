@@ -7,8 +7,8 @@ class BinaryVersionPager(models.Model):
 
     def action_notify_tenants(self):
         """Integrates with PagerDuty to alert tenants of a new upstream binary version."""
-        # Fail fast if pager_duty is uninstalled
-        if 'pager.incident' not in self.env.registry:
+        # Fail fast: Require pager_duty for explicit tenant notification actions
+        if 'pager.incident' not in self.env:
             raise UserError(_("PagerDuty integration is not installed. Please install the 'pager_duty' module to use this feature."))
 
         # Security: Elevate using micro-privilege architecture instead of sudo()

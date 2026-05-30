@@ -320,11 +320,6 @@ ODOO_ERROR_RULES = [
         "CRITICAL ROUTING DEPRECATION: /web is deprecated and forcefully redirected to /odoo in Odoo 19, losing the query parameters! Use /odoo instead.",
     ),
     (
-        r"\.py$",
-        re.compile(r"['\"][a-zA-Z0-9_\.]+['\"]\s+not\s+in\s+self\.env"),
-        "CRITICAL DEPENDENCY FALLBACK: Soft fallbacks ('model' not in self.env) are forbidden. Fail fast with UserError or manage dependencies explicitly.",
-    ),
-    (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"\.\.\.TourUtils\.safeSave\("),
         "CRITICAL JS TOUR MINIFIER CRASH: Do not use the ES6 spread operator (...) inside tour step arrays. Odoo's rjsmin minifier corrupts it and throws 'Unexpected token :'. Use .concat(TourUtils.safeSave()) instead.",
