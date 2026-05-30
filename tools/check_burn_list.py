@@ -155,6 +155,11 @@ GENERAL_ERROR_RULES = [
         re.compile(r"(?:@patch\b|with\s+patch\b|with\s+patch\.object\b)"),
         "CRITICAL ARCHITECTURE: Native patch decorators and context managers are forbidden. Use self.safe_patch() or self.safe_patch_object().",
     ),
+    (
+        r"\.py$",
+        re.compile(r"os\.(?:environ\.get|getenv)\s*\(\s*['\"][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASS|API|CRED)[A-Za-z0-9_]*['\"]", re.IGNORECASE),
+        "CRITICAL TENANT LEAK: Do not use environment variables as fallbacks for credentials in multi-tenant systems. This breaks isolation. Use configuration models or secure daemon key registries instead.",
+    ),
 ]
 
 ODOO_ERROR_RULES = [

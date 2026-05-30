@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 import shutil
+import stat
 import tarfile
 import tempfile
 import urllib.request
@@ -144,15 +145,8 @@ class BinaryVersion(models.Model):
                         for zinfo in zip_ref.infolist():
                             name = zinfo.filename
                             if name.endswith(f"/{extract_target}") or name == extract_target:
-                                # Security: Check for symlinks (external attributes)
-                                # ZIP external attributes: bits 16-31 for Unix permissions
-                                if (zinfo.external_attr >> 16) & 0o120000 == 0o120000:
-                                    raise UserError(
-                                        _(
-                                            "Security Alert: Links are not allowed in the archive."
-                                        )
-                                    )
-
+                                if (zinfo.external_attr >> 16) & stat.S_IFLNK:
+                                    raise UserError(_("Security Alert: Links are not allowed in the archive."))
                                 target_path = os.path.join(bin_dir, os.path.basename(target_bin))
                                 if not os.path.abspath(target_path).startswith(os.path.abspath(bin_dir)):
                                     raise UserError(_("Security Alert: Zip slip attempt detected."))

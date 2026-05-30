@@ -94,27 +94,36 @@ class CloudflarePurgeQueue(models.Model):
             if first_website:
                 token, zone_id = first_website._get_cloudflare_credentials()
             else:
-                token = os.environ.get("CLOUDFLARE_API_TOKEN")
-                zone_id = os.environ.get("CLOUDFLARE_ZONE_ID")
+                # If there's no website_id, we fail fast.
+                token = None
+                zone_id = None
 
             url_records = batch_records.filtered(lambda r: r.purge_type == "url")
             tag_records = batch_records.filtered(lambda r: r.purge_type == "tag")
 
             success = True
 
-            if url_records:
-                if not purge_urls(url_records.mapped("target_item"), token, zone_id):
-                    success = False
+            if not token or not zone_id:
+                # Missing credentials, immediately fail the batch to prevent infinite loops
+                success = False
+                if url_records:
                     url_records.write({"state": "failed"})
-                else:
-                    url_records.unlink()
-
-            if tag_records:
-                if not purge_tags(tag_records.mapped("target_item"), token, zone_id):
-                    success = False
+                if tag_records:
                     tag_records.write({"state": "failed"})
-                else:
-                    tag_records.unlink()
+            else:
+                if url_records:
+                    if not purge_urls(url_records.mapped("target_item"), token, zone_id):
+                        success = False
+                        url_records.write({"state": "failed"})
+                    else:
+                        url_records.unlink()
+
+                if tag_records:
+                    if not purge_tags(tag_records.mapped("target_item"), token, zone_id):
+                        success = False
+                        tag_records.write({"state": "failed"})
+                    else:
+                        tag_records.unlink()
 
             if not success:
                 if not tools.config.get("test_enable"):

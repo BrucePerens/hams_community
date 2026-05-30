@@ -26,7 +26,7 @@ class BlogPost(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" not in self.env.registry:
+        if "cloudflare.purge.queue" not in self.env:
             return
 
         # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
@@ -45,7 +45,7 @@ class BlogPost(models.Model):
         if tags:
             try:
                 svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "cloudflare.user_cloudflare_service"
+                    "cloudflare.user_cloudflare_purge"
                 )
                 self.env["cloudflare.purge.queue"].with_user(svc_uid).enqueue_tags(
                     list(tags)
