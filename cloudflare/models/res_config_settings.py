@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 import time
 from odoo import models, fields, _
 from odoo.exceptions import UserError
@@ -88,10 +87,8 @@ class ResConfigSettings(models.TransientModel):
             else self.env["website"].get_current_website()
         )
 
-        token = website.cloudflare_api_token or os.environ.get("CLOUDFLARE_API_TOKEN")
-        account_id = website.cloudflare_account_id or os.environ.get(
-            "CLOUDFLARE_ACCOUNT_ID"
-        )
+        token = website.cloudflare_api_token
+        account_id = website.cloudflare_account_id
 
         if not token or not account_id:
             raise UserError(
