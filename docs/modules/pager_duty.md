@@ -126,6 +126,6 @@ To add a new monitoring plugin:
 ## 5. Testing & Maintenance
 Run module tests using the unified test runner:
 ```bash
-python3 tools/test_runner.py -u pager_duty --already-provisioned
+python3 tools/test.py -u pager_duty --already-provisioned
 ```
 Daemon tests are located in `pager_duty/daemon/` and run via pure `unittest`. **Do not import Odoo packages in daemon tests.**

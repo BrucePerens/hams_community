@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Infrastructure Blueprint & Provisioning Engine
-Serves as the Single Source of Truth for test_runner.py and deploy_wizard.py.
+Serves as the Single Source of Truth for test.py and deploy_wizard.py.
 Supports environment scoping, lifecycle hooks, and precise runtime mount states.
 """
 
