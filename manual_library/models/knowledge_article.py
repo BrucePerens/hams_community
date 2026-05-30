@@ -38,6 +38,12 @@ class KnowledgeArticle(models.Model):
     active = fields.Boolean(string="Active", default=True)
 
     website_id = fields.Many2one("website", string="Website", ondelete="cascade")
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        ondelete="cascade",
+        default=lambda self: self.env.company,
+    )
 
     internal_permission = fields.Selection(
         [("read", "Read Only"), ("write", "Read & Write"), ("none", "No Access")],

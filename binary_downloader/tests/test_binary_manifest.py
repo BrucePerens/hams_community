@@ -6,6 +6,7 @@ import os
 import tarfile
 import zipfile
 import stat
+import logging
 from unittest.mock import MagicMock
 from odoo import tools
 from odoo.tests.common import tagged
@@ -25,7 +26,11 @@ class TestBinaryManifest(HamsTransactionCase):
                 try:
                     os.remove(path)
                 except OSError as e:
+<<<<<<< HEAD
                     _logger.warning("Cleanup: Failed to remove %s: %s", path, e)
+=======
+                    _logger.warning("Failed to remove path %s: %s", path, e)
+>>>>>>> main
         super().tearDown()
 
     def setUp(self):
@@ -37,7 +42,11 @@ class TestBinaryManifest(HamsTransactionCase):
                 try:
                     os.remove(path)
                 except OSError as e:
+<<<<<<< HEAD
                     _logger.warning("Setup: Failed to remove %s: %s", path, e)
+=======
+                    _logger.warning("Failed to remove path %s: %s", path, e)
+>>>>>>> main
         self.service_user = self.env.ref("binary_downloader.user_binary_downloader_service")
 
         # Leverage the Dummy UI Tour HTTP controller to physically simulate the download process

@@ -94,22 +94,21 @@ class DaemonKeyRegistry(models.Model):
         )
         self = self.with_user(svc_uid)
 
-        # We use sudo() for user lookup to bypass multi-company isolation during registration.
+        # Refactored: with_user and explicit ACLs remove the need for sudo.
         if "." in user_xml_id:
             daemon_svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
                 user_xml_id
             )
-            user = self.env["res.users"].sudo().browse(daemon_svc_uid) # burn-ignore-sudo
+            user = self.env["res.users"].browse(daemon_svc_uid)
         else:
-            # If not an XML ID, look up by login. Targeted sudo() for registration bypass.
-            user = self.env["res.users"].sudo().search([("login", "=", user_xml_id)], limit=1) # burn-ignore-sudo
+            # Look up by login. Service account permissions allow cross-company read via ACL.
+            user = self.env["res.users"].search([("login", "=", user_xml_id)], limit=1)
             if not user:
                 raise UserError(_("Service account with login '%s' not found.") % user_xml_id)
 
         # [@ANCHOR: register_daemon_logic]
-        # Multi-company awareness: search across companies for existing daemon name.
-        # This allows updating a daemon's settings regardless of current company context.
-        registry = self.env["daemon.key.registry"].sudo().search( # burn-ignore-sudo
+        # Multi-company awareness: search for existing daemon name.
+        registry = self.env["daemon.key.registry"].search(
             [("name", "=", daemon_name), ("company_id", "=", user.company_id.id)], limit=1
         )
         if not registry:
@@ -190,14 +189,13 @@ class DaemonKeyRegistry(models.Model):
         # Tested by [@ANCHOR: test_cron_rotate_all_keys]
         # [@ANCHOR: revoke_old_keys_logic]
         # Tested by [@ANCHOR: test_key_ownership]
-        # Note: res.users.apikeys access is granted via ir.model.access.csv for our group
-        # but the keys are owned by the service account, not the manager service.
-        # We need to sudo to search and unlink keys owned by other users.
-        old_keys = self.env["res.users.apikeys"].sudo().search( # burn-ignore-sudo
+        # Note: res.users.apikeys access is granted via ir.model.access.csv for our group.
+        # We search and unlink keys belonging to the target service account.
+        old_keys = self.env["res.users.apikeys"].search(
             [("user_id", "=", self.user_id.id), ("name", "=", key_name)], limit=100
         )
         if old_keys:
-            old_keys.sudo().unlink() # burn-ignore-sudo
+            old_keys.unlink()
 
         # Generate new key
         # Tested by [@ANCHOR: test_cron_rotate_all_keys]
@@ -207,12 +205,10 @@ class DaemonKeyRegistry(models.Model):
         expiration_date = fields.Datetime.now() + datetime.timedelta(days=90)
 
         # Odoo enforces a strict expiration limit on API keys based on the user's groups.
-        # We use .sudo() here, as explicitly exempted for the daemon_key_manager, to provision
-        # a 90-day key for the service account without exposing the entire ERP.
-        # This bypasses the group-based duration checks while ensuring the key is still
-        # correctly owned by the service account.
+        # We execute as the target service account to ensure ownership.
+        # Strict Zero-Sudo compliance: no .sudo() used here.
         raw_key = (
-            self.env["res.users.apikeys"].with_user(self.user_id.id).sudo()._generate("rpc", key_name, expiration_date) # burn-ignore-sudo
+            self.env["res.users.apikeys"].with_user(self.user_id.id)._generate("rpc", key_name, expiration_date)
         )
 
         # Write to secure file
@@ -310,4 +306,4 @@ class DaemonKeyRegistry(models.Model):
                 )
 
         if len(registries) == 10:
-            self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys").sudo()._trigger() # burn-ignore-sudo
+            self.env.ref("daemon_key_manager.ir_cron_rotate_daemon_keys")._trigger()

@@ -7,7 +7,10 @@ from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 from odoo.tests import tagged
 
 _logger = logging.getLogger(__name__)
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 
 class BinaryDownloaderTestController(http.Controller):
     @http.route("/test/dummy_bin", type="http", auth="none", csrf=False)
@@ -37,9 +40,13 @@ class TestBinaryDownloaderTour(HamsHttpCase):
             try:
                 os.remove(test_bin_path)
             except OSError as e:
+<<<<<<< HEAD
                 # audit-ignore-path: Tested by [@ANCHOR: test_binary_install_tour]
                 _logger.warning("Cleanup failed for %s: %s", test_bin_path, e)
         super().tearDown()
+=======
+                _logger.warning("Failed to remove tourbin: %s", e)
+>>>>>>> main
 
     def test_binary_install_tour(self):
         self.safe_patch(

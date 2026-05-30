@@ -15,7 +15,7 @@ Because it uses the exact same database structure (`knowledge.article`) as the E
 * **Rich Text Editor:** Use Odoo's standard editor to write guides, insert images, and format text.
 * **Public Web Portal:** Click "Publish" to instantly push your manuals to the public website (`/manual`). The system automatically builds a handy sidebar menu for visitors.
 * **Access Control:** Keep private admin notes hidden, share drafts with logged-in coworkers or portal customers, or publish finalized guides to the public.
-* **Multi-Website Support:** Restrict articles to specific websites or share them across all websites in a multi-website Odoo instance.
+* **Multi-Website & Multi-Company Support:** Restrict articles to specific websites or companies, or share them across all contexts in a multi-tenant Odoo instance.
 * **Smart Navigation:** Recursive breadcrumbs and a dynamic Table of Contents (TOC) help users navigate deep documentation structures effortlessly.
 
 ## 🛠️ Installation
@@ -31,7 +31,12 @@ Because it uses the exact same database structure (`knowledge.article`) as the E
 1. Click the **Manuals** app in the main Odoo menu.
 2. Click **New**.
 3. If you want this article to sit inside a folder, pick a **Parent Article**.
-4. When you're ready to share it with the world, hit the **Is Published** button at the top.
+4. Set the **Internal Permission**:
+   - **Read Only**: Visible to all staff and portal users.
+   - **Read & Write**: Collaborative—all staff can edit.
+   - **No Access**: Private—only you and specifically added members can see it.
+5. Choose a **Website** or **Company** if you want to restrict visibility to a specific tenant.
+6. When you're ready to share it with the general public, hit the **Is Published** button at the top.
 
 ### Reading Articles on the Web
 * Go to `/manual` on your website to see the public knowledge base.

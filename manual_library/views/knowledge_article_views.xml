@@ -49,6 +49,7 @@
                             <field name="website_id" groups="website.group_multi_website" options="{'no_create': True}"/>
                         </group>
                         <group>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
                             <field name="member_ids" widget="many2many_tags" invisible="internal_permission != 'none'"/>
                             <field name="active" invisible="1"/>
                         </group>
