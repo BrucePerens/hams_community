@@ -1,0 +1,168 @@
+# -*- coding: utf-8 -*-
+import hashlib
+import logging
+import os
+import shutil
+import tarfile
+import tempfile
+import urllib.request
+import urllib.error
+import zipfile
+from odoo import models, fields, api, tools, _
+from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
+
+class BinaryVersion(models.Model):
+    _name = "binary.version"
+    _description = "Specific Binary Version Release"
+    _order = "release_date desc, id desc"
+
+    manifest_id = fields.Many2one(
+        "binary.manifest",
+        string="Software Manifest",
+        required=True,
+        ondelete="cascade"
+    )
+    version_number = fields.Char(string="Version", required=True)
+    release_date = fields.Date(string="Upstream Release Date")
+    url = fields.Char(string="Download URL", required=True)
+    checksum = fields.Char(string="SHA-256 Checksum", required=True)
+
+    archive_type = fields.Selection(
+        [
+            ("binary", "Raw Binary"),
+            ("tar.gz", "Tarball (.tar.gz)"),
+            ("zip", "Zip Archive (.zip)"),
+        ],
+        string="Archive Type",
+        default="binary",
+        required=True,
+    )
+    extract_member = fields.Char(
+        string="Extract Member", help="Specific file to extract from the archive."
+    )
+
+    is_downloaded = fields.Boolean(
+        string="Downloaded to Central Pool",
+        compute="_compute_is_downloaded"
+    )
+
+    _version_uniq = models.Constraint(
+        'unique(manifest_id, version_number)',
+        'This version number already exists for this software.'
+    )
+
+    def _get_central_path(self):
+        """Returns the deterministic central storage path for this specific version."""
+        self.ensure_one()
+        data_dir = tools.config.get("data_dir", "/var/lib/odoo")
+        bin_dir = os.path.join(data_dir, "hams_bin")
+        safe_hash = self.checksum[:12] if self.checksum else "nohash"
+        filename = f"{self.manifest_id.name}_{self.version_number}_{safe_hash}"
+        return os.path.join(bin_dir, filename)
+
+    @api.depends("version_number", "checksum")
+    def _compute_is_downloaded(self):
+        for record in self:
+            if not record.id or not record.checksum:
+                record.is_downloaded = False
+                continue
+            path = record._get_central_path()
+            record.is_downloaded = os.path.exists(path) and os.access(path, os.X_OK)
+
+    def action_download_to_pool(self):
+        """Downloads and verifies the binary into the central version pool."""
+        self.ensure_one()
+        target_bin = self._get_central_path()
+        bin_dir = os.path.dirname(target_bin)
+
+        if not os.path.exists(bin_dir):
+            os.makedirs(bin_dir, exist_ok=True)
+            os.chmod(bin_dir, 0o750)
+
+        # Skip if perfectly matching binary already exists
+        if os.path.exists(target_bin):
+            hasher = hashlib.sha256()
+            try:
+                with open(target_bin, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        hasher.update(chunk)
+                if hasher.hexdigest() == self.checksum:
+                    if not os.access(target_bin, os.X_OK):
+                        os.chmod(target_bin, 0o750)
+                    return True
+                else:
+                    os.unlink(target_bin)
+            except OSError as e:
+                _logger.warning("Failed to verify existing central binary %s: %s", target_bin, e)
+
+        # Standard secure download and extraction protocol
+        try:
+            get_req = urllib.request.Request(
+                self.url, headers={"User-Agent": "OdooBinaryDownloader/2.0 (Versioned)"}
+            )
+            tmp_path = None
+            try:
+                with urllib.request.urlopen(get_req, timeout=600) as response:
+                    with tempfile.NamedTemporaryFile(dir=bin_dir, delete=False) as tmp:
+                        tmp_path = tmp.name
+                        shutil.copyfileobj(response, tmp)
+
+                hasher = hashlib.sha256()
+                with open(tmp_path, "rb") as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        hasher.update(chunk)
+
+                if hasher.hexdigest() != self.checksum:
+                    raise UserError(_("Security Alert: Checksum mismatch for downloaded version %s.") % self.version_number)
+
+                if self.archive_type == "tar.gz":
+                    with tarfile.open(tmp_path, "r:gz") as tar:
+                        found = False
+                        extract_target = self.extract_member or self.manifest_id.name
+                        for member in tar.getmembers():
+                            if member.name.endswith(f"/{extract_target}") or member.name == extract_target:
+                                member.name = os.path.basename(target_bin)
+                                if member.islnk() or member.issym():
+                                    raise UserError(_("Security Alert: Links are not allowed in the archive."))
+                                if hasattr(tarfile, "data_filter"):
+                                    tar.extract(member, path=bin_dir, filter="data")
+                                else:
+                                    target_path = os.path.abspath(os.path.join(bin_dir, member.name))
+                                    if not target_path.startswith(os.path.abspath(bin_dir)):
+                                        raise UserError(_("Security Alert: Tar slip attempt detected."))
+                                    tar.extract(member, path=bin_dir)
+                                found = True
+                                break
+                        if not found:
+                            raise UserError(_("Member %s not found in archive.") % extract_target)
+                elif self.archive_type == "zip":
+                    with zipfile.ZipFile(tmp_path, "r") as zip_ref:
+                        extract_target = self.extract_member or self.manifest_id.name
+                        found = False
+                        for name in zip_ref.namelist():
+                            if name.endswith(f"/{extract_target}") or name == extract_target:
+                                target_path = os.path.join(bin_dir, os.path.basename(target_bin))
+                                if not os.path.abspath(target_path).startswith(os.path.abspath(bin_dir)):
+                                    raise UserError(_("Security Alert: Zip slip attempt detected."))
+                                with zip_ref.open(name) as source:
+                                    with open(target_path, "wb") as target:
+                                        shutil.copyfileobj(source, target)
+                                found = True
+                                break
+                        if not found:
+                            raise UserError(_("Member %s not found in zip archive.") % extract_target)
+                else:
+                    shutil.copy2(tmp_path, target_bin)
+
+                os.chmod(target_bin, 0o750)
+                return True
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError as e:
+                        _logger.warning("Failed to clean up temporary file %s: %s", tmp_path, e)
+        except (urllib.error.URLError, OSError, tarfile.TarError, zipfile.BadZipFile, UserError) as e:
+            raise UserError(_("Failed to download version %s: %s") % (self.version_number, str(e)))

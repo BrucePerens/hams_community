@@ -277,7 +277,7 @@ ODOO_ERROR_RULES = [
     (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"trigger:\s*['\"`](?:.*[\s,>])?(?:select|option)(?:[\[:#.\s].*?)?['\"`]"),
-        "CRITICAL JS TOUR DEPRECATION: Native <select> and <option> tags are removed from backend form views in Odoo 19. Target '.o_select_menu' and '.o_select_menu_item' instead.",
+        "CRITICAL JS TOUR DEPRECATION: Native \x3cselect\x3e and \x3coption\x3e tags are removed from backend form views in Odoo 19. Target '.o_select_menu' and '.o_select_menu_item' instead.",
     ),
     (
         r"\.js$",
@@ -287,7 +287,7 @@ ODOO_ERROR_RULES = [
     (
         r"tour.*\.js$|.*_tour\.js$",
         re.compile(r"trigger:\s*['\"`].*?\bselect\b.*?['\"`]"),
-        "FRAGILE TOUR TRIGGER: Native <select> elements are deprecated in Odoo 19 form views. Use '.o_select_menu' and '.o_select_menu_item' instead.",
+        "FRAGILE TOUR TRIGGER: Native \x3cselect\x3e elements are deprecated in Odoo 19 form views. Use '.o_select_menu' and '.o_select_menu_item' instead.",
     ),
     (
         r"tour.*\.js$|.*_tour\.js$",
@@ -1350,7 +1350,7 @@ def scan_file(filepath, is_odoo_module=False):
                             has_tour = True
                     if not has_tour:
                         errors_found.append(
-                            f"Line {node.lineno}: UI TOUR MANDATE VIOLATION: All XML views (<record model='ir.ui.view'>) and templates must be tested by a UI tour (include an '[@ANCHOR: ...]' comment linking to the tour) or explicitly bypassed using '' if a tour is unjustified."
+                            f"Line {node.lineno}: UI TOUR MANDATE VIOLATION: All XML views (\x3crecord model='ir.ui.view'\x3e) and templates must be tested by a UI tour (include an '\x3c!-- [@ANCHOR: ...] --\x3e' comment linking to the tour) or explicitly bypassed using '\x3c!-- audit-ignore-view --\x3e' if a tour is unjustified."
                         )
                     if node.attrs.get("inherit_id") in (
                         "website.snippet_options",
@@ -1392,12 +1392,12 @@ def scan_file(filepath, is_odoo_module=False):
                         missing = required - defined_fields
                         if missing:
                             errors_found.append(
-                                f"Line {node.lineno}: CRITICAL XML DATA INTEGRITY: <record model='{model_name}'> is missing mandatory fields required in Odoo 19: {', '.join(missing)}. This causes silent installation failures."
+                                f"Line {node.lineno}: CRITICAL XML DATA INTEGRITY: \x3crecord model='{model_name}'\x3e is missing mandatory fields required in Odoo 19: {', '.join(missing)}. This causes silent installation failures."
                             )
 
                     if model_name == "res.users" and any(anc.tag == "data" and anc.attrs.get("noupdate") in ("1", "True", "true") for anc in node.get_ancestors()):
                         warnings_found.append(
-                            f"Line {node.lineno}: [%AUDIT] RECORD UPDATE: <record model='res.users'> is inside a noupdate='1' block. If this service account requires updates in the future, Odoo will ignore them."
+                            f"Line {node.lineno}: [%AUDIT] RECORD UPDATE: \x3crecord model='res.users'\x3e is inside a noupdate='1' block. If this service account requires updates in the future, Odoo will ignore them."
                         )
 
                 if node.tag == "record" and node.attrs.get("model") == "ir.rule":
@@ -1450,7 +1450,7 @@ def scan_file(filepath, is_odoo_module=False):
                 if node.attrs.get("t-name") == "kanban-box":
                     errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: t-name=\"kanban-box\" is banned in Odoo 19. Use t-name=\"card\".")
                 if node.tag == "group" and (node.attrs.get("expand") == "0" or "string" in node.attrs):
-                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: <group expand=\"0\"> and <group string=\"...\"> are banned in Odoo 19. Odoo 19 requires clean group tags.")
+                    errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: \x3cgroup expand=\"0\"\x3e and \x3cgroup string=\"...\"\x3e are banned in Odoo 19. Odoo 19 requires clean group tags.")
                 if node.tag == "xpath" and "expr" in node.attrs:
                     expr = str(node.attrs.get("expr", ""))
                     if ".." in expr or re.search(r"//[a-zA-Z0-9_]+\[\s*[a-zA-Z0-9_]+\[@", expr):

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tenant Link Action -->
+    <record id="action_binary_tenant_link" model="ir.actions.act_window">
+        <field name="name">Tenant Execution Paths</field>
+        <field name="res_model">binary.tenant.link</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Binary Version Pool Action -->
+    <record id="action_binary_version" model="ir.actions.act_window">
+        <field name="name">Central Version Pool</field>
+        <field name="res_model">binary.version</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Tenant Link Form -->
+    <!-- audit-ignore-ui-tour -->
+    <record id="view_binary_tenant_link_form" model="ir.ui.view">
+        <field name="name">binary.tenant.link.form</field>
+        <field name="model">binary.tenant.link</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_upgrade_to_latest" type="object" string="1-Click Upgrade to Latest" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="website_id"/>
+                        <field name="manifest_id"/>
+                        <field name="active_version_id"/>
+                        <field name="symlink_path" readonly="1" force_save="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Version Form -->
+    <!-- audit-ignore-ui-tour -->
+    <record id="view_binary_version_form" model="ir.ui.view">
+        <field name="name">binary.version.form</field>
+        <field name="model">binary.version</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_download_to_pool" type="object" string="Download to Pool" invisible="is_downloaded"/>
+                    <button name="action_notify_tenants" type="object" string="Alert Tenants via PagerDuty" class="btn-warning"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="manifest_id"/>
+                        <field name="version_number"/>
+                        <field name="release_date"/>
+                        <field name="url"/>
+                        <field name="checksum"/>
+                        <field name="archive_type"/>
+                        <field name="extract_member"/>
+                        <field name="is_downloaded" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- UI Menus under Technical Settings -->
+    <menuitem id="menu_binary_tenant_link" name="Tenant Executables" parent="base.menu_custom" action="action_binary_tenant_link" sequence="120"/>
+    <menuitem id="menu_binary_version" name="Version Pool" parent="base.menu_custom" action="action_binary_version" sequence="121"/>
+</odoo>
