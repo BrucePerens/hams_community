@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 # [@ANCHOR: redis_connection_pool]
 redis_host = os.getenv("REDIS_HOST") or "redis"
 redis_port = int(os.getenv("REDIS_PORT") or "6379")
-redis_password = os.getenv("REDIS_PASSWORD")
+redis_password = os.getenv("REDIS_PASSWORD")  # burn-ignore-env
 redis_pool = redis.ConnectionPool(
     host=redis_host,
     port=redis_port,

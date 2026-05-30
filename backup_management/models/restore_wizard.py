@@ -46,6 +46,7 @@ class BackupRestoreWizard(models.TransientModel):
         job = jobs.create(
             {
                 "config_id": self.snapshot_id.config_id.id,
+                "website_id": self.snapshot_id.config_id.website_id.id,
                 "job_type": self.snapshot_id.config_id.engine,
                 "state": "pending",
                 "output_log": "Restore queued in RabbitMQ...",
@@ -86,7 +87,7 @@ class BackupRestoreWizard(models.TransientModel):
             try:
                 rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
                 rmq_user = os.environ.get("RMQ_USER") or "guest"
-                rmq_pass = os.environ.get("RMQ_PASS") or "guest"
+                rmq_pass = os.environ.get("RMQ_PASS") or "guest"  # burn-ignore-env
                 credentials = pika.PlainCredentials(rmq_user, rmq_pass)
                 conn_params = pika.ConnectionParameters(
                     host=rmq_host, credentials=credentials

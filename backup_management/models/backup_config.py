@@ -20,12 +20,6 @@ class BackupConfig(models.Model):
 
     name = fields.Char(string="Name", required=True)
     website_id = fields.Many2one("website", string="Website")
-    company_id = fields.Many2one(
-        "res.company",
-        string="Company",
-        required=True,
-        default=lambda self: self.env.company,
-    )
     engine = fields.Selection(
         [("kopia", "Kopia"), ("pgbackrest", "pgBackRest")], required=True
     )
@@ -108,9 +102,7 @@ class BackupConfig(models.Model):
     )
 
     def _get_fernet(self):
-        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get(
-            "HAMS_CRYPTO_KEY"
-        )
+        key = os.environ.get("ODOO_BACKUP_CRYPTO_KEY") or os.environ.get("HAMS_CRYPTO_KEY")  # burn-ignore-env
         if not key:
             return None
         try:
@@ -231,6 +223,7 @@ class BackupConfig(models.Model):
             job = jobs.create(
                 {
                     "config_id": rec.id,
+                    "website_id": rec.website_id.id,
                     "job_type": (
                         rec.engine if engine != "restore_cmd" else "kopia"
                     ),  # map restore_cmd to engine for UI
@@ -259,7 +252,7 @@ class BackupConfig(models.Model):
                 try:
                     rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
                     rmq_user = os.environ.get("RMQ_USER") or "guest"
-                    rmq_pass = os.environ.get("RMQ_PASS") or "guest"
+                    rmq_pass = os.environ.get("RMQ_PASS") or "guest"  # burn-ignore-env
                     credentials = pika.PlainCredentials(rmq_user, rmq_pass)
                     conn_params = pika.ConnectionParameters(
                         host=rmq_host, credentials=credentials

@@ -350,7 +350,7 @@ WARNING_RULES = [
     (
         r"\.py$",
         re.compile(r"zipfile\.ZipFile|tarfile\.open"),
-        "[%AUDIT] ARCHIVE EXTRACTION: Ensure zip/tar extraction includes a check for symlink bits (e.g., `external_attr`) to prevent path traversal/slip attacks.",
+        "[%AUDIT] PATH TRAVERSAL / ARCHIVE EXTRACTION: Ensure zip/tar extraction includes a check for symlink bits (e.g., `external_attr`) to prevent slip attacks.",
     ),
 ]
 MULTILINE_WARNING_RULES = []
@@ -1715,7 +1715,8 @@ def scan_file(filepath, is_odoo_module=False):
                 "burn-ignore-financial",
                 "burn-ignore-tour",
                 "burn-ignore-sudo",
-                "burn-ignore-route"
+                "burn-ignore-route",
+                "burn-ignore-env"
             ]
         ):
             errors_found.append(

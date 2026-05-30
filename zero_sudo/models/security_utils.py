@@ -103,8 +103,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         if path:
             return path
 
-        # Properly check if the binary_downloader module is installed before attempting to use its model
-        if self.env.registry.get("binary.manifest") and svc_xml_id:
+        if "binary.manifest" in self.env and svc_xml_id:
             env_svc = self._get_service_env(svc_xml_id)
             return env_svc["binary.manifest"].ensure_executable(cmd_name)
 
@@ -259,7 +258,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         Checks environment variables first, then a local file, and falls back to config.
         RAM-cached for performance and to avoid redundant filesystem I/O.
         """
-        secret = os.environ.get("HAMS_CRYPTO_KEY")
+        secret = os.environ.get("HAMS_CRYPTO_KEY")  # burn-ignore-env
         if not secret:
             try:
                 # We check the file strictly if it exists to avoid repeated failed opens

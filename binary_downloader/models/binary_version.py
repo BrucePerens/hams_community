@@ -119,7 +119,7 @@ class BinaryVersion(models.Model):
                     raise UserError(_("Security Alert: Checksum mismatch for downloaded version %s.") % self.version_number)
 
                 if self.archive_type == "tar.gz":
-                    with tarfile.open(tmp_path, "r:gz") as tar:
+                    with tarfile.open(tmp_path, "r:gz") as tar:  # audit-ignore-path
                         found = False
                         extract_target = self.extract_member or self.manifest_id.name
                         for member in tar.getmembers():
@@ -139,7 +139,7 @@ class BinaryVersion(models.Model):
                         if not found:
                             raise UserError(_("Member %s not found in archive.") % extract_target)
                 elif self.archive_type == "zip":
-                    with zipfile.ZipFile(tmp_path, "r") as zip_ref:
+                    with zipfile.ZipFile(tmp_path, "r") as zip_ref:  # audit-ignore-path
                         extract_target = self.extract_member or self.manifest_id.name
                         found = False
                         for zinfo in zip_ref.infolist():

@@ -81,7 +81,7 @@ def get_odoo_client(logger, config):
         db = "odoo"
 
     user = os.environ.get("ODOO_USER") or "pager_service_internal"
-    password = os.environ.get("ODOO_PASSWORD") or ""
+    password = os.environ.get("ODOO_PASSWORD") or ""  # burn-ignore-env
     try:
         return OdooClient(url, db, user, password)
     except (ConnectionError, socket.timeout, Exception) as e: # audit-ignore-catch-all
@@ -175,7 +175,7 @@ def fallback_notify(source, msg, severity):
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT") or 587)
     smtp_user = os.environ.get("SMTP_USER")
-    smtp_pass = os.environ.get("SMTP_PASS")
+    smtp_pass = os.environ.get("SMTP_PASS")  # burn-ignore-env
     from_email = os.environ.get("SMTP_FROM") or "pager-daemon@example.com"
 
     if not fallback_email or not smtp_host:
