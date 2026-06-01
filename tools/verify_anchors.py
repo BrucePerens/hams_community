@@ -31,7 +31,22 @@ def get_module(path):
         rel_path = os.path.relpath(abs_path, repo_root)
         parts = rel_path.split(os.sep)
         if len(parts) > 1 and parts[0] not in ("docs", "tools", "scripts", ".git", "venv", "__pycache__"):
+            if parts[0] == "daemons" and len(parts) > 2:
+                return parts[1]
             return parts[0]
+
+    # 4. Fallback for isolated test environments (e.g. Jules ~/tmp)
+    parts = abs_path.split(os.sep)
+    if "daemons" in parts:
+        idx = parts.index("daemons")
+        if idx + 1 < len(parts):
+            return parts[idx + 1]
+
+    for common_dir in ["models", "controllers", "views", "static", "tests", "data", "security", "reduced"]:
+        if common_dir in parts:
+            idx = parts.index(common_dir)
+            if idx > 0:
+                return parts[idx - 1]
 
     return "global"
 
@@ -461,12 +476,13 @@ def main():
                 full_doc_path = os.path.join(root, "documentation.html")
                 try:
                     with open(full_doc_path, "r", encoding="utf-8") as f:
-                        for match in re.finditer(r"\[@ANCHOR:\s*(UX_[a-zA-Z0-9_:]+)\s*\]", f.read()):
+                        for match in re.finditer(r"\[@ANCHOR:\s*([a-zA-Z0-9_:]+)\s*\]", f.read()):
                             mod = get_module(full_doc_path)
                             anchor_name = match.group(1)
                             if ":" in anchor_name:
                                 mod, anchor_name = anchor_name.split(":", 1)
-                            user_manual_anchors.add(f"{mod}:{anchor_name}")
+                            if anchor_name.startswith("UX_"):
+                                user_manual_anchors.add(f"{mod}:{anchor_name}")
                 except (OSError, UnicodeDecodeError):
                     continue
 

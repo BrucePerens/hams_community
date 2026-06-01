@@ -439,8 +439,10 @@ def get_addons_path(base_dir):
         community_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_community"))
         primary_dir = os.path.abspath(os.path.join(base_dir, "..", "hams_com"))
         nested_community = os.path.abspath(os.path.join(base_dir, "hams_community"))
+        root_community = "/hams_community"
 
-        for d in [community_dir, primary_dir, nested_community]:
+        app_community = "/app/hams_community"
+        for d in [community_dir, primary_dir, nested_community, root_community, app_community]:
             if os.path.isdir(d) and d not in paths:
                 paths.append(d)
                 found_community = True
@@ -568,6 +570,7 @@ def rebuild_db(db_name):
     subprocess.run([psql_cmd, "postgres", "-c", f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}';"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     subprocess.run([dropdb_cmd, "--if-exists", "--force", db_name], check=False, stderr=subprocess.DEVNULL, env=env)
     subprocess.run([createdb_cmd, db_name], check=True, env=env)
+    subprocess.run([psql_cmd, db_name, "-c", "CREATE EXTENSION IF NOT EXISTS vector;"], check=True, env=env)
 
 
 def setup_namespace_and_run_tests(real_log_dir, sys_args):
@@ -619,7 +622,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
                 extra_mounts.append(os.path.join(parent_dir, item))
     except OSError as e:
         _logger.debug("Ignored OSError: %s", e)
-    extra_mounts.extend([os.path.join(base_dir, "..", "hams_community"), "/hams_community", os.path.join(base_dir, "hams_community")])
+    extra_mounts.extend([os.path.join(base_dir, "..", "hams_community"), "/hams_community", "/app/hams_community", os.path.join(base_dir, "hams_community")])
 
     mounted_dirs = set()
     for extra_dir in extra_mounts:
@@ -777,17 +780,30 @@ def provision_jules(base_dir, already_provisioned=False):
     if not already_provisioned:
         print("[*] Provisioning APT Sources and Packages...")
 
+        try:
+            with open("/etc/hosts", "r") as f:
+                hosts_content = f.read()
+            if "redis" not in hosts_content:
+                print("[*] Ensuring docker-compose hostnames resolve locally in /etc/hosts...")
+                with open("/etc/hosts", "a") as f:
+                    f.write("\n127.0.0.1 redis rabbitmq postgres pdns memcached\n")
+        except OSError as e:
+            print(f"[*] WARNING: Failed to update /etc/hosts: {e}")
+
         # Identify if the current repository is hams_community by checking for a signature core module.
         is_hams_community = os.path.exists(os.path.join(base_dir, "zero_sudo", "__manifest__.py"))
 
         if not is_hams_community:
-            target_clone = "/app/hams_community" if os.path.abspath(base_dir) == "/app" else "../hams_community"
+            target_clone = "/app/hams_community"
             if not os.path.exists(target_clone):
                 print(f"[*] Sibling repository not found. Cloning hams_community to {target_clone}...")
                 try:
                     run_sys(["git", "clone", "https://github.com/BrucePerens/hams_community", target_clone])
+                    if orig_user:
+                        u_info = pwd.getpwnam(orig_user)
+                        run_sys(["chown", "-R", f"{u_info.pw_uid}:{u_info.pw_gid}", target_clone])
                 except subprocess.CalledProcessError as e:
-                    print(f"[*] WARNING: Failed to clone hams_community: {e}")
+                    print(f"[*] WARNING: Failed to clone to {target_clone}: {e}")
 
         try:
             apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
@@ -800,6 +816,20 @@ def provision_jules(base_dir, already_provisioned=False):
 
             run_sys(["apt-get", "update"] + apt_opts)
             run_sys(["apt-get", "install", "-y"] + apt_opts + ["postgresql-common", "postgresql-client", "postgresql"])
+
+            print("[*] Detecting PostgreSQL version for pgvector...")
+            try:
+                psql_bin = get_pg_bin("psql")
+                pg_res = subprocess.run(
+                    [psql_bin, "--version"], capture_output=True, text=True
+                )
+                if pg_res.returncode == 0:
+                    pg_version_str = pg_res.stdout.strip()
+                    pg_major = pg_version_str.split()[2].split('.')[0]
+                    pgv_pkg = f"postgresql-{pg_major}-pgvector"
+                    run_sys(["apt-get", "install", "-y"] + apt_opts + [pgv_pkg])
+            except (FileNotFoundError, IndexError) as e:
+                print(f"[*] WARNING: Failed to determine postgres version: {e}")
 
             infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
             infrastructure.provision_apt_packages(run_sys, environment="early_prod")
@@ -988,8 +1018,8 @@ def main():
                     os.environ.setdefault(k.strip(), v.strip("'\" \n"))
 
     os.environ.setdefault("PGHOST", "localhost")
-    os.environ.setdefault("PGUSER", os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER") or "odoo")
-    os.environ.setdefault("PGPASSWORD", os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD") or "odoo")
+    os.environ.setdefault("PGUSER", "odoo")
+    os.environ.setdefault("PGPASSWORD", "odoo")
     os.environ.setdefault("RABBITMQ_HOST", "localhost")
     os.environ.setdefault("REDIS_HOST", "localhost")
 
