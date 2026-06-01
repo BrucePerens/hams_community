@@ -19,6 +19,8 @@ class ResUsersZeroSudo(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # [@ANCHOR: service_account_password_generation]
+        # Verified by [@ANCHOR: test_service_account_password]
         for vals in vals_list:
             if vals.get("is_service_account"):
                 # Inject a cryptographically secure, extremely large password
