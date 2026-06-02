@@ -24,7 +24,7 @@ console.warn = function(...args) {
         originalLog.apply(console, ["[WHITELISTED WARN]"].concat(args));
         return;
     }
-    originalWarn.apply(console, new Error.captureStackTrace());
+    originalWarn.apply(console, [new Error("Warning Trace").stack]);
     originalWarn.apply(console, args);
 };
 

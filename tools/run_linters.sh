@@ -2,12 +2,8 @@
 # Copyright © Bruce Perens K6BP. All Rights Reserved.
 # Centralized linter execution script. Silent on success.
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMUNITY_DIR="$(cd "$DIR/../hams_community" 2>/dev/null && pwd || echo "$DIR/../hams_community")"
-PRIMARY_DIR="$(cd "$DIR/../hams_private_primary" 2>/dev/null && pwd || echo "$DIR/../hams_private_primary")"
-SECONDARY_DIR="$(cd "$DIR/../hams_private_secondary" 2>/dev/null && pwd || echo "$DIR/../hams_private_secondary")"
-TERTIARY_DIR="$(cd "$DIR/../hams_private_tertiary" 2>/dev/null && pwd || echo "$DIR/../hams_private_tertiary")"
-ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR,$COMMUNITY_DIR,$PRIMARY_DIR,$SECONDARY_DIR,$TERTIARY_DIR"
-VENV_PYTHON="$DIR/.venv/bin/python"
+ADDONS_PATH="/usr/lib/python3/dist-packages/odoo/addons,$DIR"
+VENV_PYTHON="$DIR/../hams_community/.venv/bin/python"
 
 if [ ! -f "$VENV_PYTHON" ] && [ -f "$PRIMARY_DIR/.venv/bin/python" ]; then
 VENV_PYTHON="$PRIMARY_DIR/.venv/bin/python"
