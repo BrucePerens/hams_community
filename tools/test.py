@@ -771,186 +771,43 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     sys.exit(ret)
 
 
-def provision_jules(base_dir, already_provisioned=False):
-    """Provisions a pre-isolated Jules VM environment"""
-    orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
-
-    if os.geteuid() != 0:
-        print("[*] Elevating privileges (sudo) to provision Jules environment...")
-        exec_cmd = ["sudo", "-H", "-E", sys.executable, os.path.abspath(__file__), "--internal-jules-provision"]
-        if already_provisioned:
-            exec_cmd.append("--already-provisioned")
-        subprocess.run(exec_cmd, check=True)
-        pg_socket = "/opt/hams/pgsock"
-        wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
-        os.environ["PGHOST"] = pg_socket
-
-        def teardown():
-            try:
-                u_info = pwd.getpwnam(orig_user)
-                def pre_td():
-                    os.setresgid(u_info.pw_gid, u_info.pw_gid, u_info.pw_gid)
-                    os.setresuid(u_info.pw_uid, u_info.pw_uid, u_info.pw_uid)
-                pg_ctl_cmd = get_pg_bin("pg_ctl")
-                subprocess.run([pg_ctl_cmd, "-D", "/opt/hams/pgdata", "-m", "fast", "stop"], preexec_fn=pre_td, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except Exception as e: # audit-ignore-catch-all
-                _logger.warning("Teardown exception: %s", e)
-        atexit.register(teardown)
-        return
-
-    env_vars = dict(os.environ)
-    env_vars["DEBIAN_FRONTEND"] = "noninteractive"
-
-    def run_sys(cmd, **kw):
-        print(f"[*] Running: {' '.join(cmd)}")
-        if "env" not in kw:
-            kw["env"] = env_vars
-        return subprocess.run(cmd, check=True, **kw)
-
-    if not already_provisioned:
-        print("[*] Provisioning APT Sources and Packages...")
-
-        try:
-            with open("/etc/hosts", "r") as f:
-                hosts_content = f.read()
-            if "redis" not in hosts_content:
-                print("[*] Ensuring docker-compose hostnames resolve locally in /etc/hosts...")
-                with open("/etc/hosts", "a") as f:
-                    f.write("\n127.0.0.1 redis rabbitmq postgres pdns memcached\n")
-        except OSError as e:
-            print(f"[*] WARNING: Failed to update /etc/hosts: {e}")
-
-        # Identify if the current repository is hams_community by checking for a signature core module.
-        is_hams_community = os.path.exists(os.path.join(base_dir, "zero_sudo", "__manifest__.py"))
-
-        if not is_hams_community:
-            target_clone = "/hams_community"
-            if not os.path.exists(target_clone):
-                print(f"[*] Sibling repository not found. Cloning hams_community to {target_clone}...")
-                try:
-                    clone_env = dict(env_vars)
-                    clone_env["GIT_TERMINAL_PROMPT"] = "0"
-                    run_sys(["git", "clone", "https://github.com/BrucePerens/hams_community", target_clone], env=clone_env)
-                    if orig_user:
-                        u_info = pwd.getpwnam(orig_user)
-                        run_sys(["chown", "-R", f"{u_info.pw_uid}:{u_info.pw_gid}", target_clone])
-                except subprocess.CalledProcessError as e:
-                    print(f"[*] WARNING: Failed to clone to {target_clone}: {e}")
-                    print("[!] DIAGNOSTIC FOR AI: The hams_community repository could not be cloned due to GitHub authentication restrictions in this headless VM.")
-                    print("    If the required 'zero_sudo' module is not present in your current working directory, the tests will fatally crash.")
-                    print("    ACTION: Document this blocker in JULES_ISSUES.md and gracefully conclude your session.")
-
-        try:
-            apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
-            # APT Packages MUST run before static files to ensure python3-setuptools exists for PyPDF2 setup.py
-            run_sys(["apt-get", "update"] + apt_opts)
-            run_sys(["apt-get", "install", "-y"] + apt_opts + ["python3-setuptools", "python3-stdeb", "dh-python", "python3-all", "fakeroot", "curl", "gnupg", "lsb-release", "python3-pip"])
-
-            run_sys(["bash", "-c", "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor --yes -o /usr/share/keyrings/postgresql-keyring.gpg"])
-            run_sys(["bash", "-c", "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list"])
-
-            run_sys(["apt-get", "update"] + apt_opts)
-            run_sys(["apt-get", "install", "-y"] + apt_opts + ["postgresql-common", "postgresql-client", "postgresql"])
-
-            print("[*] Detecting PostgreSQL version for pgvector...")
-            try:
-                psql_bin = get_pg_bin("psql")
-                pg_res = subprocess.run(
-                    [psql_bin, "--version"], capture_output=True, text=True
-                )
-                if pg_res.returncode == 0:
-                    pg_version_str = pg_res.stdout.strip()
-                    pg_major = pg_version_str.split()[2].split('.')[0]
-                    pgv_pkg = f"postgresql-{pg_major}-pgvector"
-                    run_sys(["apt-get", "install", "-y"] + apt_opts + [pgv_pkg])
-            except (FileNotFoundError, IndexError) as e:
-                print(f"[*] WARNING: Failed to determine postgres version: {e}")
-
-            infrastructure.provision_static_files(run_sys, env_vars, environment="prod")
-            infrastructure.provision_apt_packages(run_sys, environment="early_prod")
-            run_sys(["apt-get", "install", "-y"] + apt_opts + ["odoo"])
-
-            req_file = os.path.join(base_dir, "requirements.txt")
-            if os.path.exists(req_file):
-                try:
-                    pip_env = dict(env_vars)
-                    pip_env["PIP_ROOT_USER_ACTION"] = "ignore"
-                    run_sys(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "--ignore-installed", "-r", req_file], env=pip_env)
-                except subprocess.CalledProcessError as e:
-                    print(f"[*] WARNING: pip install encountered an error: {e}. Continuing to ensure database provisioning completes.")
-
-            print("[*] Preparing testing directories with production paths...")
-            try:
-                odoo_pwnam = pwd.getpwnam("odoo")
-                odoo_uid, odoo_gid = odoo_pwnam.pw_uid, odoo_pwnam.pw_gid
-
-                for d in [
-                    "/var/lib/odoo/daemon_keys", "/opt/hams/etc/keys", "/opt/hams/spool",
-                    "/opt/hams/spool/ncvec", "/opt/hams/spool/adif_queue", "/opt/hams/cache",
-                    "/opt/hams/pycache", "/opt/hams/failed_input", "/opt/hams/downloads",
-                    "/var/lib/odoo/backups"
-                ]:
-                    os.makedirs(d, exist_ok=True)
-                    try:
-                        os.chown(d, odoo_uid, odoo_gid)
-                        os.chmod(d, 0o750)
-                    except OSError as e:
-                        _logger.debug("Ignored OSError: %s", e)
-            except KeyError:
-                print("[*] WARNING: 'odoo' user not found during directory preparation.")
-
-        except subprocess.CalledProcessError as e:
-            print(f"❌ ERROR: Failed to provision system packages: {e}")
-            sys.exit(1)
-
+def start_jules_daemons():
     print("[*] Clearing port 8069 bindings...")
-    subprocess.run(["fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
 
     print("[*] Configuring local PostgreSQL...")
     try:
         initdb_cmd = get_pg_bin("initdb")
         pg_ctl_cmd = get_pg_bin("pg_ctl")
         psql_cmd = get_pg_bin("psql")
-    except FileNotFoundError as e:
-        print(f"❌ ERROR: {e}")
+    except FileNotFoundError as err:
+        print(f"❌ ERROR: {err}")
         sys.exit(1)
 
     pg_data, pg_socket = "/opt/hams/pgdata", "/opt/hams/pgsock"
 
-    subprocess.run(["systemctl", "stop", "postgresql"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "systemctl", "stop", "postgresql"], check=False, stderr=subprocess.DEVNULL)
 
     os.makedirs(pg_data, exist_ok=True)
     os.makedirs(pg_socket, exist_ok=True)
 
-    user_info = pwd.getpwnam(orig_user)
-    orig_uid, orig_gid = user_info.pw_uid, user_info.pw_gid
-
-    def preexec_orig_user():
-        os.setresgid(orig_gid, orig_gid, orig_gid)
-        os.setresuid(orig_uid, orig_uid, orig_uid)
-
-    os.chown(pg_data, orig_uid, orig_gid)
-    os.chown(pg_socket, orig_uid, orig_gid)
-
-    os.chmod(pg_data, 0o700)
-    os.chmod(pg_socket, 0o2775)
-
     if not os.listdir(pg_data):
-        subprocess.run([initdb_cmd, "-D", pg_data], preexec_fn=preexec_orig_user, check=True)
+        subprocess.run([initdb_cmd, "-D", pg_data], check=True)
 
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], preexec_fn=preexec_orig_user, check=False, stderr=subprocess.DEVNULL)
+    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], check=False, stderr=subprocess.DEVNULL)
 
     try:
         os.remove(f"{pg_data}/postmaster.pid")
-    except OSError as e:
-        _logger.debug("Ignored OSError: %s", e)
+    except OSError as err:
+        _logger.debug("Ignored OSError: %s", err)
 
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], preexec_fn=preexec_orig_user, check=True)
+    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], check=True)
     wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
 
+    orig_user = os.environ.get("USER") or "odoo"
     custom_env = dict(os.environ)
     custom_env["PGUSER"] = orig_user
-    p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_orig_user, env=custom_env, text=True, stdout=subprocess.DEVNULL)
+    p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, env=custom_env, text=True, stdout=subprocess.DEVNULL)
     sql_create_roles = f"""
     DO $$
     BEGIN
@@ -966,31 +823,30 @@ def provision_jules(base_dir, already_provisioned=False):
     p.wait()
 
     print("[*] Starting local Redis and RabbitMQ...")
-    subprocess.run(["systemctl", "start", "redis-server"], check=False, stderr=subprocess.DEVNULL)
-    subprocess.run(["systemctl", "start", "rabbitmq-server"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "systemctl", "start", "redis-server"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "systemctl", "start", "rabbitmq-server"], check=False, stderr=subprocess.DEVNULL)
 
     if not wait_for_port(6379, "Redis", timeout=5.0):
         print("[*] Redis systemctl failed, attempting direct daemonize...")
-        redis_user = pwd.getpwnam("redis")
-        subprocess.Popen(["redis-server", "--daemonize", "no"], preexec_fn=lambda: (os.setresgid(redis_user.pw_gid, redis_user.pw_gid, redis_user.pw_gid), os.setresuid(redis_user.pw_uid, redis_user.pw_uid, redis_user.pw_uid)), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["redis-server", "--daemonize", "yes"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         wait_for_port(6379, "Redis")
 
     if not wait_for_port(5672, "RabbitMQ", timeout=5.0):
         print("[*] RabbitMQ systemctl failed, attempting direct daemonize...")
-        os.makedirs("/var/lib/rabbitmq", exist_ok=True)
-        with open("/var/lib/rabbitmq/.erlang.cookie", "w") as f:
-            f.write("HAMS_TEST_RABBITMQ_COOKIE_12345")
-        rmq_user = pwd.getpwnam("rabbitmq")
-        os.chown("/var/lib/rabbitmq/.erlang.cookie", rmq_user.pw_uid, rmq_user.pw_gid)
-        os.chmod("/var/lib/rabbitmq/.erlang.cookie", 0o400)
-        def preexec_rmq():
-            os.setresgid(rmq_user.pw_gid, rmq_user.pw_gid, rmq_user.pw_gid)
-            os.setresuid(rmq_user.pw_uid, rmq_user.pw_uid, rmq_user.pw_uid)
-            os.environ["HOME"] = "/var/lib/rabbitmq"
-        subprocess.Popen(["rabbitmq-server", "-detached"], preexec_fn=preexec_rmq, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.makedirs("/tmp/rabbitmq", exist_ok=True)
+        custom_rmq = dict(os.environ)
+        custom_rmq["RABBITMQ_BASE"] = "/tmp/rabbitmq"
+        subprocess.Popen(["rabbitmq-server", "-detached"], env=custom_rmq, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         wait_for_port(5672, "RabbitMQ")
 
     os.environ["PGHOST"] = pg_socket
+
+    def teardown():
+        try:
+            subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:  # audit-ignore-catch-all
+            _logger.warning("Teardown exception occurred.")
+    atexit.register(teardown)
 
 
 def main():
@@ -1020,7 +876,7 @@ def main():
             setup_namespace_and_run_tests(real_log_dir, sys_args)
             return
 
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
         parser.add_argument("-l", "--log-directory", default="~/tmp")
         args, _ = parser.parse_known_args()
 
@@ -1081,17 +937,13 @@ def main():
     parser.add_argument("-l", "--log-directory", default="~/tmp")
     parser.add_argument("-c", "--config", default="ignore_list.txt")
     parser.add_argument("--daemon")
-    parser.add_argument("--provision-jules", action="store_true")
-    parser.add_argument("--already-provisioned", action="store_true")
     parser.add_argument("--profile", action="store_true")
-    parser.add_argument("--internal-jules-provision", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
 
-    if args.internal_jules_provision:
-        provision_jules(base_dir, already_provisioned=args.already_provisioned)
-        sys.exit(0)
+    if is_jules:
+        start_jules_daemons()
 
     venv_python = "/usr/bin/python3" if is_jules else os.path.join(base_dir, ".venv", "bin", "python")
     odoo_bin = "/usr/bin/odoo"
@@ -1117,24 +969,6 @@ def main():
         if args.profile:
             cmd.extend(["-m", "cProfile", "-o", f"/opt/hams/spool/odoo_test{suffix}.prof"])
         return cmd
-
-    if is_jules:
-        if args.provision_jules and not args.module:
-            print("[*] Provisioning Jules VM without running global tests to prevent timeouts. Use -u to test specific modules.")
-            provision_jules(base_dir, already_provisioned=False)
-            print("[*] Provisioning sequence completed successfully.")
-            sys.exit(0)
-        elif args.provision_jules:
-            provision_jules(base_dir, already_provisioned=False)
-        elif args.already_provisioned:
-            provision_jules(base_dir, already_provisioned=True)
-        else:
-            has_initdb = bool(glob.glob("/usr/lib/postgresql/*/bin/initdb") or shutil.which("initdb") or os.path.exists("/usr/bin/initdb"))
-            if os.path.exists("/opt/hams/pgdata/PG_VERSION") or (shutil.which("psql") and has_initdb):
-                provision_jules(base_dir, already_provisioned=True)
-            else:
-                print("[*] Jules VM detected without provisioning flags. Auto-provisioning...")
-                provision_jules(base_dir, already_provisioned=False)
 
     extractor = FailureExtractor(args.log_directory)
     print(f"==========================================================\n 🧪 ODOO TEST RUNNER [{args.mode.upper()} MODE]\n==========================================================")

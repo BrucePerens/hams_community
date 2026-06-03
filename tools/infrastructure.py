@@ -602,9 +602,9 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/dx_firehose
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/dx_firehose
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="WS_PORT=8765"
@@ -612,7 +612,7 @@ Environment="WS_PORT=8765"
 LimitNOFILE=65535
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/dx_firehose/dx_firehose.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/dx_firehose/dx_firehose.py
 
 Restart=always
 RestartSec=10
@@ -644,15 +644,15 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/ham_dx_daemon
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dx_daemon_service"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/ham_dx_daemon/dx_daemon.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/ham_dx_daemon/dx_daemon.py
 
 Restart=always
 RestartSec=10
@@ -684,9 +684,9 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
 EnvironmentFile=/etc/hams_daemons.env
@@ -694,7 +694,7 @@ Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/noaa_swpc_sync/noaa_swpc_sync.py
 
 # Resiliency
 Restart=always
@@ -769,15 +769,15 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/pdns_sync
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/pdns_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dns_api_service_internal"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/pdns_sync/pdns_sync.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/pdns_sync/pdns_sync.py
 
 Restart=always
 RestartSec=10
@@ -809,16 +809,16 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/lotw_eqsl_sync
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/lotw_eqsl_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
 
 Restart=always
 RestartSec=60
@@ -850,15 +850,15 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=oneshot
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/amsat_tle_sync
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=satellite_sync_service_internal"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/amsat_tle_sync/amsat_sync.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/amsat_tle_sync/amsat_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -904,15 +904,15 @@ NoNewPrivileges=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
-User=bruce
-Group=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/qrz_scraper
+User=odoo
+Group=odoo
+WorkingDirectory=/opt/hams/daemons/qrz_scraper
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=onboarding_service_internal"
 
 # Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/qrz_scraper/qrz_scraper.py
+ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/qrz_scraper/qrz_scraper.py
 
 Restart=always
 RestartSec=10
@@ -951,7 +951,6 @@ WantedBy=multi-user.target
     "apt_packages": [
         {"name": "postgresql", "environments": ["early_prod"]},
         {"name": "postgresql-client", "environments": ["early_prod"]},
-        {"name": "postgresql-17-pgvector", "environments": ["early_prod"]},
         {"name": "nginx", "environments": ["early_prod"]},
         {"name": "redis-server", "environments": ["early_prod"]},
         {"name": "rabbitmq-server", "environments": ["early_prod"]},
