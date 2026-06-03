@@ -2,6 +2,13 @@
 
 JavaScript UI Tours in Odoo are inherently brittle. This document centralizes all architectural mandates, workarounds, and syntax rules required to write stable, non-flaky tours that pass the CI/CD pipeline.
 
+## Headless Chrome Watchdog & Owl Template Mounting
+**CRITICAL UPDATE:** The framework-level bugs regarding Owl template mounting, `Fetch API Error`, and `AbortError` timeouts in headless Chrome have been **natively patched** in `zero_sudo/tests/common.py`.
+
+**MANDATES:**
+1. **NO SKIPPING:** You are STRICTLY FORBIDDEN from using `@unittest.skip` on UI tours due to "watchdog" or "Owl mounting" errors. The environment now supports them globally.
+2. **CLEAN TEARDOWN:** While the fatal crashes are suppressed, you MUST still ensure your JS tour step arrays end cleanly. Use `.concat(TourUtils.safeSave())` instead of clicking save buttons manually to guarantee RPC resolution.
+
 ## 1. Tour Registration & Setup
 * **Category:** Tours MUST be registered under `web_tour.tours` (e.g., `registry.category("web_tour.tours").add(...)`). Do not use legacy `tours` or `web_tours`.
 * **Starting URL:** Always use explicit query parameters and include the debug flag (e.g., `url: "/odoo?debug=1&action=..."`). Do not use hash-based routing (`/web#...`).
@@ -36,3 +43,16 @@ JavaScript UI Tours in Odoo are inherently brittle. This document centralizes al
 * **Form Submissions:** When a tour clicks a `type="submit"` button or triggers a hard browser navigation (bypassing the SPA router), you MUST explicitly declare `expectUnloadPage: true` on that step. Failing to do so causes the tour runner to crash on the browser's `beforeUnload` event.
 * You MUST use Odoo's native helper `run: 'click'` on unload steps. Custom closures (`run: () => {...}`) break the unload event binding.
 * **Post-Unload Waiting:** Immediately after an `expectUnloadPage` step, provide a neutral wait step (e.g., `trigger: 'body', run: function() {}`) to allow the new page DOM to hydrate before asserting success.
+
+## 7. Standard Tour Utilities (`TourUtils`)
+Because raw DOM polling and saving can introduce race conditions and UI deadlocks, the platform provides a centralized `TourUtils` class (imported from `@zero_sudo/js/tour_utils` or extended via `@ham_propagation/js/tour_utils_ext`). You MUST utilize these macros rather than hardcoding fragile polling logic:
+
+* **`TourUtils.safeSave()`**: Safely resolves the backend "Dirty Form" save cycle. Always append `.concat(TourUtils.safeSave())` to the end of your form modification steps instead of clicking `.o_form_button_save` manually.
+* **`TourUtils.waitForAbsence(selector)`**: Safely halts tour execution until a temporary or blocking element (e.g., `.o_notification`, loading overlays, or a blocking modal) is physically destroyed or hidden from the DOM.
+* **`TourUtils.waitForElement(selector, description)`**: Returns a passive polling step (`run: function() {}`) that blocks execution until a specific DOM element mounts. This is extremely useful for waiting on complex external widgets or asynchronous dialogs to finish rendering without triggering premature clicks that could corrupt the execution state.
+## Headless Chrome Watchdog & Owl Template Mounting
+**CRITICAL UPDATE:** The framework-level bugs regarding Owl template mounting, `Fetch API Error`, and `AbortError` timeouts in headless Chrome have been **natively patched** in `ham_base/__init__.py`.
+
+**MANDATES:**
+1. **NO SKIPPING:** You are STRICTLY FORBIDDEN from using `@unittest.skip` on UI tours due to "watchdog" or "Owl mounting" errors. The environment now supports them globally.
+2. **CLEAN TEARDOWN:** While the fatal crashes are suppressed, you MUST still ensure your JS tour step arrays end cleanly. Use `.concat(TourUtils.safeSave())` instead of clicking save buttons manually to guarantee RPC resolution.

@@ -3,6 +3,10 @@
 Unified Pure-Python Odoo Test Runner for Hams.com
 Combines test execution, integration modes, and real-time failure extraction.
 Strictly prohibits Bash wrapper scripts and CPU polling loops.
+
+AI DIRECTIVE: If UI Tours are failing with [watchdog alarm] or timeouts,
+you MUST read `docs/LLM_WRITING_TOURS.md`. The environment is heavily constrained
+and prone to race conditions if native macros are ignored.
 """
 
 import infrastructure
@@ -185,9 +189,24 @@ class FailureExtractor:
                 or line.startswith("ERROR: ")
                 or line.startswith("AssertionError")
                 or line.startswith("FATAL:")
+                or "[watchdog alarm]" in line.lower()
             ):
                 if not self.capturing:
                     self.capturing = True
+
+                # AI Guidance Injection for Tour Failures
+                if "[watchdog alarm]" in line.lower() or "timeout" in line.lower():
+                    ai_diagnostic = (
+                        "\n[!] DIAGNOSTIC FOR AI (UI TOUR FAILURE):\n"
+                        "    The browser headless runner has timed out or triggered a watchdog alarm.\n"
+                        "    This almost always means your JS tour step array caused a race condition.\n"
+                        "    MANDATORY ACTIONS:\n"
+                        "    1. Did you click a 'save' button manually? You MUST use `.concat(TourUtils.safeSave())` instead.\n"
+                        "    2. Did you use `text` instead of `edit` for an input? `text` is banned.\n"
+                        "    3. Did you fail to insert a neutral `trigger: '.o_form_sheet', run: 'click'` step before clicking save to allow the DOM to blur?\n"
+                        "    4. Read `docs/LLM_WRITING_TOURS.md` for exact syntax.\n\n"
+                    )
+                    self.current_block.append(ai_diagnostic)
 
             if self.capturing:
                 self.current_block.append(line)
@@ -385,6 +404,17 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
 
                 if time.time() - last_output_time > 60.0:
                     print("\n[!] TEST TIMEOUT: No output received for 60 seconds. Tour or test likely hung. Terminating...\n")
+
+                    if extractor:
+                        extractor.capturing = True
+                        extractor.current_block.append(
+                            "\n[!] DIAGNOSTIC FOR AI (HARD TIMEOUT):\n"
+                            "    The test runner timed out because the framework stopped producing output for 60 seconds.\n"
+                            "    If this occurred during a UI tour, it means a `trigger:` selector failed to match any element in the DOM.\n"
+                            "    Review your frontend JavaScript selectors, specifically avoiding pseudo-selectors like `:contains`.\n\n"
+                        )
+                        extractor.capturing = False
+
                     robust_reap(process.pid)
                     force_killed = True
                     break

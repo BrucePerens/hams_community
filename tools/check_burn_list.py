@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""
+Odoo DevSecOps AST Linter (ADR-0083, ADR-0022)
+
+This script parses all source code (Python, JS, XML, CSV) into Abstract Syntax Trees (AST)
+to physically block security vulnerabilities, linter evasion, and framework anti-patterns.
+
+Future AI sessions MUST read this docstring. If this linter fails your code:
+1. DO NOT attempt to obfuscate or bypass the check using string concatenation or `getattr`. The AST parser will trace it.
+2. DO NOT wrap the offending logic in `try/except` to hide it.
+3. FIX the underlying architectural violation described in the diagnostic message.
+4. If the pattern is a false positive or an explicitly authorized exception, use the appropriate `# burn-ignore-...` or `audit-ignore-...` tag, AND append a tracing anchor.
+"""
 import os
 import re
 import sys
@@ -33,6 +45,7 @@ class XMLNode:
 
 
 def parse_odoo_xml(content):
+    """Safely parses Odoo XML handling edge cases like bare ampersands and inline logic."""
     def preserve_lines(match):
         return re.sub(r"[^\n]", " ", match.group(0))
 
@@ -89,6 +102,10 @@ def parse_odoo_xml(content):
     return root
 
 
+# -------------------------------------------------------------------------
+# REGEX-BASED GLOBAL SCANNERS
+# -------------------------------------------------------------------------
+
 GENERAL_ERROR_RULES = [
     (
         r"hooks\.py$",
@@ -144,6 +161,26 @@ GENERAL_ERROR_RULES = [
         r"test_.*\.py$",
         re.compile(r"['\"]/tmp(?:/|['\"])"),
         "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"os\.symlink\("),
+        "CRITICAL ARCHITECTURE: Creating symbolic links to resolve modules (like zero_sudo or distributed_redis_cache) is strictly forbidden. You MUST configure the Odoo --addons-path correctly instead.",
+    ),
+    (
+        r".*tour\.js$",
+        re.compile(r"run:\s*['\"]text['\"]"),
+        "CRITICAL TOUR ARCHITECTURE: 'text' is banned in JS tours. Use 'edit' instead to ensure proper mounting and event firing.",
+    ),
+    (
+        r".*tour\.js$",
+        re.compile(r"trigger:\s*['\"][^'\"]*:contains\("),
+        "CRITICAL TOUR ARCHITECTURE: The ':contains' pseudo-selector is banned in Odoo 19 UI tours as it causes DOMExceptions on un-mounted elements.",
+    ),
+    (
+        r".*tour\.js$",
+        re.compile(r"trigger:\s*['\"]\.(modal|o_technical_modal)['\"],\s*run:\s*function"),
+        "CRITICAL TOUR RACE CONDITION: Do not poll the DOM natively for modals. You MUST use TourUtils.waitForAbsence or TourUtils.waitForElement to ensure they are mounted properly.",
     ),
     (
         r"test_.*\.py$",
@@ -361,6 +398,10 @@ FOUND_TOURS = []
 FOUND_MANIFESTS = {}
 
 
+# -------------------------------------------------------------------------
+# AST VULNERABILITY VISITOR (PYTHON)
+# -------------------------------------------------------------------------
+
 def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
     errors = []
     warnings = []
@@ -415,11 +456,12 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self.warnings.append((lineno, msg))
 
         def is_tainted_sql(self, node):
+            """Recursively traces variables to detect if they contain f-strings or concatenation before being passed to cr.execute()"""
             if isinstance(node, ast.JoinedStr):
                 return "f-string"
             if isinstance(node, ast.BinOp):
                 if isinstance(node.op, ast.Mod):
-                    return "%% interpolation"
+                    return "percent interpolation"
                 if isinstance(node.op, ast.Add):
                     return "string concatenation"
             if (
@@ -445,6 +487,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             return False
 
         def is_untranslated_string(self, node):
+            """Detects raw strings that are not wrapped in Odoo's _() translation function."""
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 val = node.value.strip()
                 if (
@@ -471,7 +514,6 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
 
         def visit_BinOp(self, node):
             if isinstance(node.op, ast.Add):
-
                 def is_string_node(n):
                     if isinstance(n, ast.Constant) and isinstance(n.value, str):
                         return True
@@ -519,7 +561,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                         if has_create_write and not has_flush:
                             self.add_error(
                                 node.lineno,
-                                "CONSTRAINT FLUSH TRAP: ORM create/write inside assertRaises requires self.env.flush_all() before the context manager exits to trigger @api.constrains."
+                                "[!] DIAGNOSTIC FOR AI: ORM create/write inside assertRaises requires self.env.flush_all() before the context manager exits to trigger @api.constrains."
                             )
 
             self.generic_visit(node)
@@ -543,12 +585,12 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                                 )
                         if k.value == "groups_id":
                             self.add_error(
-                                node.lineno, "CRITICAL BIAS TRAP: Do not use 'groups_id'."
+                                node.lineno, "[!] DIAGNOSTIC FOR AI: Odoo 18+ normalized the res.users groups relation to 'group_ids'."
                             )
                         if k.value == "group_ids" and not self.filename.startswith("test_"):
                             self.add_error(
                                 node.lineno,
-                                "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                                "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV."
                             )
             if self.is_odoo_module and "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
                 self.add_error(
@@ -588,6 +630,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self.in_real_transaction_case = old_val
 
         def _check_test_empty(self, node):
+            """Blocks dead-code testing evasion tactics."""
             if self.filename.startswith("test_") and node.name.startswith("test_"):
                 calls_external = any(
                     isinstance(child, ast.Call)
@@ -598,7 +641,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if not calls_external:
                     self.add_error(
                         node.lineno,
-                        f"EMPTY TEST: Test '{node.name}' must call external functions.",
+                        f"[!] DIAGNOSTIC FOR AI: Empty test detected. Test '{node.name}' must actually execute target logic.",
                     )
 
                 for i, stmt in enumerate(node.body):
@@ -610,7 +653,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     ):
                         self.add_error(
                             stmt.lineno,
-                            f"AST EVASION: Unreachable code detected after return/raise/break/continue in '{node.name}'.",
+                            f"[!] DIAGNOSTIC FOR AI: AST Evasion Detected. Unreachable code detected after return/raise/break/continue in '{node.name}'. Tests must execute fully.",
                         )
 
         def visit_FunctionDef(self, node):
@@ -618,12 +661,12 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if not node.args.vararg or not node.args.kwarg:
                     self.add_error(
                         node.lineno,
-                        "CRITICAL MONKEY PATCH SIGNATURE: Monkey-patch wrapper functions MUST include *args and **kwargs to absorb unexpected framework arguments and prevent TypeErrors."
+                        "[!] DIAGNOSTIC FOR AI: Monkey-patch wrapper functions MUST include *args and **kwargs to absorb unexpected framework arguments."
                     )
 
             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                 if not self.filename.startswith("test_"):
-                    self.add_error(node.lineno, "CRITICAL AI LAZINESS: Empty functions using 'pass' are forbidden. Implement the logic or remove the method.")
+                    self.add_error(node.lineno, "[!] DIAGNOSTIC FOR AI: Empty functions using 'pass' are forbidden. Implement the logic or remove the method.")
 
             is_controller = any(
                 (
@@ -705,19 +748,19 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     elif isinstance(target, ast.Name) and target.id == "_sql_constraints":
                         self.add_error(
                             node.lineno,
-                            "Use 'models.Constraint' instead of '_sql_constraints'.",
+                            "[!] DIAGNOSTIC FOR AI: Use 'models.Constraint' instead of '_sql_constraints'.",
                         )
                     elif isinstance(target, ast.Attribute) and target.attr == "group_ids" and not self.filename.startswith("test_"):
                         self.add_error(
                             node.lineno,
-                            "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                            "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                         )
                     elif isinstance(target, ast.Subscript) and getattr(target, "slice", None):
                         slice_val = getattr(target.slice, "value", None)
                         if slice_val == "group_ids" and not self.filename.startswith("test_"):
                             self.add_error(
                                 node.lineno,
-                                "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                                "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                             )
                         elif slice_val in ("error", "success", "warning", "message") and self.is_untranslated_string(node.value):
                             self.add_warning(
@@ -763,7 +806,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                 self.add_error(
                     getattr(node, 'lineno', 1),
-                    "CRITICAL AI LAZINESS: Empty exception handlers using 'pass' are forbidden. Log the error or handle it."
+                    "[!] DIAGNOSTIC FOR AI: Empty exception handlers using 'pass' are forbidden. Log the error or handle it."
                 )
             self.generic_visit(node)
 
@@ -784,7 +827,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     if "audit-ignore-catch-all" not in line_content:
                         self.add_error(
                             handler_line,
-                            "CRITICAL EXCEPTION MASKING: Catch-all exceptions (bare or Exception) are forbidden. Target specific exceptions (e.g., KeyError, ValueError). Use # audit-ignore-catch-all ONLY where an operation must continue past failure.",
+                            "[!] DIAGNOSTIC FOR AI: Catch-all exceptions (bare or Exception) are forbidden. Target specific exceptions (e.g., KeyError, ValueError). Use # audit-ignore-catch-all ONLY where an operation must continue past failure.",
                         )
                     else:
                         has_logging = any(
@@ -797,6 +840,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                                 "CRITICAL SILENT FAILURE: Even with audit-ignore-catch-all, the exception block must contain a logging call to prevent swallowed tracebacks.",
                             )
             self.generic_visit(node)
+
         def visit_ImportFrom(self, node):
 
             if getattr(self, 'current_method', None):
@@ -843,7 +887,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if node.id == "numbercall":
                     self.add_error(node.lineno, "Remove 'numbercall'.")
                 elif node.id == "_sql_constraints":
-                    self.add_error(node.lineno, "Use 'models.Constraint'.")
+                    self.add_error(node.lineno, "[!] DIAGNOSTIC FOR AI: Use 'models.Constraint' instead of '_sql_constraints'.")
             self.generic_visit(node)
 
         def visit_keyword(self, node):
@@ -858,12 +902,12 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 elif node.arg == "groups_id":
                     self.add_error(
                         getattr(node, "lineno", 1),
-                        "CRITICAL BIAS TRAP: Do not use 'groups_id'.",
+                        "[!] DIAGNOSTIC FOR AI: Do not use 'groups_id'. Odoo 19 requires 'group_ids'.",
                     )
                 elif node.arg == "group_ids" and not self.filename.startswith("test_"):
                     self.add_error(
                         getattr(node, "lineno", 1),
-                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                        "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
                     )
                 elif node.arg in ("oldname", "select"):
                     self.add_error(
@@ -910,7 +954,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     ):
                         self.add_error(
                             node.lineno,
-                            "CRITICAL PRIVILEGE ESCALATION: `.sudo()` is forbidden.",
+                            "[!] DIAGNOSTIC FOR AI: `.sudo()` is completely forbidden on this platform to prevent privilege escalation. Use the service account architecture (`with_user()`) instead.",
                         )
                 if getattr(node.value, "id", "") == "self":
                     if node.attr in ("_context", "_uid"):
@@ -959,7 +1003,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 ):
                     self.add_error(
                         node.lineno,
-                        "CRITICAL PRIVILEGE ESCALATION: Obfuscated use of sudo via getattr().",
+                        "[!] DIAGNOSTIC FOR AI: Obfuscated use of sudo via getattr() detected and blocked.",
                     )
                 elif (
                     fid == "setattr"
@@ -969,7 +1013,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 ):
                     self.add_error(
                         node.lineno,
-                        "CRITICAL PRIVILEGE ESCALATION: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV.",
+                        "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' via setattr is forbidden. Define privileges statically.",
                     )
 
         def _check_i18n_messages(self, node, func_name):
@@ -1133,7 +1177,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     )
                 if any(kw.arg == "count" for kw in node.keywords):
                     self.add_error(
-                        node.lineno, "CRITICAL DEPRECATION: Use `search_count(...)`."
+                        node.lineno, "[!] DIAGNOSTIC FOR AI: Use `search_count(...)` instead of search with count=True."
                     )
 
             val = node.func.value
@@ -1152,12 +1196,13 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 )
 
         def _check_cr_execute(self, node, is_cr_execute):
+            """Blocks dynamic SQL construction."""
             if is_cr_execute and node.args:
                 taint_reason = self.is_tainted_sql(node.args[0])
                 if taint_reason:
                     self.add_error(
                         node.lineno,
-                        f"CRITICAL SQLi: Query constructed via {taint_reason} passed to cr.execute().",
+                        f"[!] DIAGNOSTIC FOR AI: SQLi Prevention. Query constructed via {taint_reason} passed to cr.execute(). Use parameterized queries or psycopg2.sql.",
                     )
 
         def visit_Call(self, node):
@@ -1235,7 +1280,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if caller_id != "re" and "regex" not in caller_id:
                     self.add_error(
                         node.lineno,
-                        f"CRITICAL N+1 DB LOCK: ORM '.{attr}()' inside a loop. Pre-fetch outside the loop per ADR-0022.",
+                        f"[!] DIAGNOSTIC FOR AI: ORM '.{attr}()' inside a loop causes N+1 locking. Pre-fetch data outside the loop.",
                     )
 
             if attr in ("search", "search_count") and self.is_odoo_module:
@@ -1246,7 +1291,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     if "debug=" not in node.args[0].value:
                         self.add_error(
                             node.lineno,
-                            "CRITICAL TOUR LATENCY TRAP: start_tour() URLs MUST explicitly include 'debug=1' to prevent Owl 'dev' mode crashes per ADR-0081."
+                            "[!] DIAGNOSTIC FOR AI: start_tour() URLs MUST explicitly include 'debug=1' to prevent Owl 'dev' mode crashes per ADR-0081."
                         )
 
             self._check_cr_execute(node, is_cr_execute)
@@ -1275,6 +1320,10 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
     visitor.visit(tree)
     return visitor.errors, visitor.warnings
 
+
+# -------------------------------------------------------------------------
+# FILE INGESTION & XML SCANNING
+# -------------------------------------------------------------------------
 
 def scan_file(filepath, is_odoo_module=False):
     filename = os.path.basename(filepath)
@@ -1797,6 +1846,10 @@ def scan_file(filepath, is_odoo_module=False):
     return errors_found, warnings_found
 
 
+# -------------------------------------------------------------------------
+# CI/CD BYPASS TEST VERIFICATION
+# -------------------------------------------------------------------------
+
 def _verify_test_ast(
     req, target_content, target_file, verification_errors, total_errors
 ):
@@ -2031,11 +2084,11 @@ def main():
                             first_line = f.readline()
                             filepath_forward = filepath.replace("\\", "/")
                             if first_line.startswith("#!") and not "daemons/" in filepath_forward and not "daemon/" in filepath_forward and not "tools/" in filepath_forward and not filepath.endswith("setup.py") and not filepath.endswith("__init__.py"):
-                                errors.append(f"Line 1 (Shebang): Shebangs are strictly prohibited in standard Odoo module files as they can interfere with packaging and execution expectations. Code: {first_line.strip()}")
+                                errors.append("Line 1 (Shebang): Shebangs are strictly prohibited in standard Odoo module files as they can interfere with packaging and execution expectations.")
                             if file == "__manifest__.py":
                                 f.seek(0)
                                 if first_line.startswith("#!"):
-                                    errors.append(f"Line 1 (__manifest__.py format): __manifest__.py must not contain a shebang. It should ideally start with the dictionary '{{' or standard -*- coding -*- comment. Code: {first_line.strip()}")
+                                    errors.append("Line 1 (__manifest__.py format): __manifest__.py must not contain a shebang. It should ideally start with the dictionary '{' or standard -*- coding -*- comment.")
                     except Exception:
                         pass
                 if errors or warnings:
@@ -2050,14 +2103,26 @@ def main():
     verification_errors = 0
     for req in REQUIRE_TEST_VERIFICATION:
         anchor = req["anchor"]
-        target_content, target_file = next(
-            (
-                (c, f)
-                for f, c in FOUND_TEST_CONTENTS.items()
-                if f"[@ANCHOR: {anchor}]" in c
-            ),
-            (None, None),
-        )
+
+        def get_mod_dir(p):
+            d = os.path.dirname(os.path.abspath(p))
+            while d and d != os.path.dirname(d):
+                if os.path.exists(os.path.join(d, "__manifest__.py")): return d
+                d = os.path.dirname(d)
+            return None
+
+        req_mod = get_mod_dir(req["file"])
+        best_match = None
+        for f, c in FOUND_TEST_CONTENTS.items():
+            if f"[@ANCHOR: {anchor}]" in c:
+                if req_mod and get_mod_dir(f) == req_mod:
+                    best_match = (c, f)
+                    break
+                elif not best_match:
+                    best_match = (c, f)
+
+        target_content, target_file = best_match if best_match else (None, None)
+
         if not target_content:
             print(
                 f"  ❌ ERROR: Orphaned Bypass. {req['type']} in {req['file']}:{req['line']} cites anchor '{anchor}' not found in any test file."

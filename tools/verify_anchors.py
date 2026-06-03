@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
+"""
+Semantic Anchor Verification Linter (ADR-0054, ADR-0055, ADR-0074)
+
+This script enforces bidirectional traceability between source code, automated tests,
+and user-facing documentation. Future AI sessions MUST read this docstring to understand
+how to resolve anchor-related CI/CD failures.
+
+RULES OF TRACEABILITY:
+1. BASE ANCHOR: Define a feature in source code using: `# [@ANCHOR: feature_name]`
+2. TEST LINK: The test file testing that feature MUST contain: `# Tests [@ANCHOR: feature_name]`
+3. VERIFICATION LINK: The source code MUST point back to the test using: `# Verified by [@ANCHOR: test_method_name]`
+4. DOC LINK: The base anchor MUST exist in a Markdown file in `docs/stories/` or `docs/journeys/`.
+5. UX LINK: If the anchor starts with `UX_`, it MUST exist in the module's `data/documentation.html`.
+6. CROSS-REF: If code triggers another module's anchor, use: `# Triggers [@ANCHOR: target_module:feature_name]`
+"""
+
 import os
 import re
 import sys
 
 def get_module(path):
+    """Resolves the Odoo module boundary for a given file path to enforce cross-module strictness."""
     abs_path = os.path.abspath(path)
     current_dir = os.path.dirname(abs_path)
 
@@ -52,6 +69,7 @@ def get_module(path):
 
 
 def find_anchors_in_docs(root_dir, repo_root):
+    """Scans all markdown and documentation files for base feature declarations."""
     doc_anchors = {}
     contract_anchors = {}
     pattern = re.compile(r"\[@ANCHOR:\s*([a-zA-Z0-9_:]+)\s*\]")
@@ -109,6 +127,10 @@ def _process_file_for_anchors(
     duplicates,
     repo_root,
 ):
+    """
+    Parses code files (Python, XML, JS) to categorize anchors based on text prefixes.
+    LLM NOTE: This function defines EXACTLY how you must format your comments to satisfy the linter.
+    """
     mod = get_module(full_path)
     rel_path = os.path.relpath(full_path, repo_root)
 
@@ -124,24 +146,37 @@ def _process_file_for_anchors(
             anchor_name = match.group(1)
             explicit_mod = mod
 
+            # LLM NOTE: Allows crossing module boundaries explicitly via `module_name:anchor_name`
             if ":" in anchor_name:
                 explicit_mod, anchor_name = anchor_name.split(":", 1)
 
             anchor = f"{explicit_mod}:{anchor_name}"
 
             if first_prefix.endswith("Tests"):
+                # LLM NOTE: Matches `# Tests [@ANCHOR: target]`
+                # Used in test files to explicitly state what feature is being tested.
                 tests_links.setdefault(full_path, []).append((anchor, line_num))
                 tests_links_set.setdefault(anchor, []).append(loc_str)
                 code_anchors.setdefault(anchor, []).append(loc_str)
+
             elif first_prefix.endswith("Verified by") or first_prefix.endswith("Tested by"):
+                # LLM NOTE: Matches `# Verified by [@ANCHOR: test_method_name]`
+                # Used in source files to point to the test that verifies it.
                 verified_by_links.setdefault(anchor, []).append(loc_str)
+
             elif first_prefix.endswith("Triggers") or first_prefix.endswith("Triggered by"):
+                # LLM NOTE: Matches `# Triggers [@ANCHOR: target_feature]`
+                # Documents architectural handoffs between modules or daemons.
                 cross_references.setdefault(anchor, []).append(loc_str)
+
             elif anchor_name.startswith(("story_", "journey_", "doc_")):
-                pass
+                pass # Documentation-only anchors, ignored in code logic tracing.
+
             elif re.search(r'\b(See|and|also|or|to)\b$', first_prefix, re.IGNORECASE):
-                pass
+                pass # Conversational/Inline references, ignored in logic tracing.
+
             else:
+                # LLM NOTE: Matches a BASE declaration, e.g., `# [@ANCHOR: my_feature]`
                 base_name = anchor.split(":")[1]
                 if (
                     anchor in anchor_locations
@@ -199,7 +234,8 @@ def find_anchors_in_code(root_dir, repo_root):
         duplicates,
     )
 
-def is_primary(path_or_loc, primary_dirs, repo_root):
+def is_primary(path_or_loc, primary_dirs, repo_root, explicit_non_primary=None):
+    """Determines if the tested anchor is located in the target directory being scanned."""
     if not primary_dirs:
         return True
     if ":" in path_or_loc:
@@ -209,16 +245,21 @@ def is_primary(path_or_loc, primary_dirs, repo_root):
     else:
         path_or_loc = os.path.abspath(path_or_loc)
 
+    if explicit_non_primary:
+        for np in explicit_non_primary:
+            if path_or_loc.startswith(np):
+                return False
+
     for p in primary_dirs:
         if path_or_loc.startswith(p):
             return True
     return False
 
-def _report_duplicates(duplicates, primary_dirs, repo_root):
+def _report_duplicates(duplicates, primary_dirs, repo_root, explicit_non_primary=None):
     actual_duplicates = []
     for dup in duplicates:
         anchor, current_loc, prior_locs = dup
-        if is_primary(current_loc, primary_dirs, repo_root) or any(is_primary(p, primary_dirs, repo_root) for p in prior_locs):
+        if is_primary(current_loc, primary_dirs, repo_root, explicit_non_primary) or any(is_primary(p, primary_dirs, repo_root, explicit_non_primary) for p in prior_locs):
             actual_duplicates.append(dup)
 
     if actual_duplicates:
@@ -232,20 +273,22 @@ def _report_duplicates(duplicates, primary_dirs, repo_root):
 
             base_name = anchor.split(":")[1]
             if base_name.startswith("test_"):
-                print("      [!] DIAGNOSTIC: Do not use a 'test_' prefix for a base code anchor definition.")
+                print("      [!] DIAGNOSTIC FOR AI: Do not use a 'test_' prefix for a base code anchor definition.")
+                print("          If you are writing a test, ensure it starts with `# Tests [@ANCHOR: target]` instead of a base declaration.")
             else:
                 msg_formatting = {"prefix": "[@ANCHOR", "label": "feature"}
-                print(f"      [!] DIAGNOSTIC: Did you accidentally wrap a base macro '{msg_formatting['prefix']}: {msg_formatting['label']}]' inside python multiline docstrings?")
+                print(f"      [!] DIAGNOSTIC FOR AI: Did you accidentally wrap a base macro '{msg_formatting['prefix']}: {msg_formatting['label']}]' inside python multiline docstrings?")
+                print("          Base anchors must only be defined exactly ONCE across the entire repository.")
         return True
     return False
 
 
-def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors, primary_dirs, repo_root):
+def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors, primary_dirs, repo_root, explicit_non_primary=None):
     has_errors = False
     all_known_anchors = set(code_anchors.keys()) | set(contract_anchors.keys())
 
     for anchor, source_locs in cross_references.items():
-        primary_source_locs = [loc for loc in source_locs if is_primary(loc, primary_dirs, repo_root)]
+        primary_source_locs = [loc for loc in source_locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
         if not primary_source_locs:
             continue
         if anchor not in all_known_anchors:
@@ -261,16 +304,17 @@ def _report_missing_cross_refs(cross_references, code_anchors, contract_anchors,
             print("      Triggered from locations:")
             for loc in primary_source_locs:
                 print(f"        -> {loc}")
-            print("      [!] DIAGNOSTIC: Use 'target_module:anchor_name' syntax to cross boundaries intentionally.")
+            print("      [!] DIAGNOSTIC FOR AI: A `# Triggers` tag points to an anchor that does not exist.")
+            print("          Ensure you spelled the target anchor correctly. If targeting another module, use 'module_name:anchor_name' syntax.")
     return has_errors
 
 
-def _report_missing_tests(tests_links, code_anchors, contract_anchors, repo_root, primary_dirs):
+def _report_missing_tests(tests_links, code_anchors, contract_anchors, repo_root, primary_dirs, explicit_non_primary=None):
     has_errors = False
     all_known_anchors = set(code_anchors.keys()) | set(contract_anchors.keys())
 
     for filepath, links in tests_links.items():
-        if not is_primary(filepath, primary_dirs, repo_root):
+        if not is_primary(filepath, primary_dirs, repo_root, explicit_non_primary):
             continue
         rel_path = os.path.relpath(filepath, repo_root)
         for anchor, line in links:
@@ -284,14 +328,19 @@ def _report_missing_tests(tests_links, code_anchors, contract_anchors, repo_root
                     has_errors = True
                 print(f"    - Broken '# Tests' Binding: Target '{anchor}' does not exist in any codebase directory.")
                 print(f"      Location: ./{rel_path}:{line}")
+                print("      [!] DIAGNOSTIC FOR AI: Your test file claims to test an anchor that is not defined in the source code.")
+                print("          Verify the base anchor exists in the production file: `# [@ANCHOR: feature_name]`")
     return has_errors
 
 
-def _report_bidirectional_orphans(code_anchors, tests_links_set, verified_by_links, contract_anchors, primary_dirs, repo_root):
+def _report_bidirectional_orphans(code_anchors, tests_links_set, verified_by_links, contract_anchors, primary_dirs, repo_root, explicit_non_primary=None):
     has_errors = False
     all_contracts = set(contract_anchors.keys())
 
+    # Anchors explicitly named starting with "test_"
     test_anchors = {a: locs for a, locs in code_anchors.items() if a.split(":")[1].startswith("test_")}
+
+    # All other base source code anchors
     source_anchors = {
         a: locs for a, locs in code_anchors.items()
         if not a.split(":")[1].startswith("test_")
@@ -300,14 +349,17 @@ def _report_bidirectional_orphans(code_anchors, tests_links_set, verified_by_lin
         and a.split(":")[1] not in ("unique_name", "name", "feature_name")
     }
 
+    # An orphan source is one that lacks a matching '# Tests [@ANCHOR: name]' in the test suite
     orphaned_source = {a: locs for a, locs in source_anchors.items() if a not in tests_links_set and a not in all_contracts}
+
+    # An orphan test is one that lacks a matching '# Verified by [@ANCHOR: name]' in the source code
     orphaned_tests = {a: locs for a, locs in test_anchors.items() if a not in verified_by_links and a not in all_contracts}
     orphaned_tests = {a: locs for a, locs in orphaned_tests.items() if "test_tour_signup" not in a.split(":")[1]}
 
     if orphaned_source:
         reported = False
         for anchor, locs in orphaned_source.items():
-            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root)]
+            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
             if not primary_locs:
                 continue
             if not reported:
@@ -317,31 +369,33 @@ def _report_bidirectional_orphans(code_anchors, tests_links_set, verified_by_lin
             print("      Feature Definition Locations:")
             for loc in primary_locs:
                 print(f"        -> {loc}")
-            print(f"      [!] DIAGNOSTIC: Append a tracking line '# Tests [@ANCHOR: {anchor.split(':')[1]}]' inside the corresponding test file.")
+            print("      [!] DIAGNOSTIC FOR AI: The source code defines a feature, but no test claims to test it.")
+            print(f"          ACTION: Open the appropriate test file and insert: `# Tests [@ANCHOR: {anchor.split(':')[1]}]` above the test logic.")
         if reported:
             has_errors = True
 
     if orphaned_tests:
         reported = False
         for anchor, locs in orphaned_tests.items():
-            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root)]
+            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
             if not primary_locs:
                 continue
             if not reported:
                 print("\n[!] CI/CD FAILURE: ADR-0054 Bidirectional Disconnect (Test Missing Feature Reference):")
                 reported = True
-            print(f"    - Test Logic Target '{anchor}' has no inverse implementation link.")
+            print(f"    - Test Logic Target '{anchor}' has no inverse implementation link in the source code.")
             print("      Test Definition Locations:")
             for loc in primary_locs:
                 print(f"        -> {loc}")
-            print("      [!] DIAGNOSTIC: Ensure your production files define the feature, and add '# Tested by' anchors where appropriate.")
+            print("      [!] DIAGNOSTIC FOR AI: The test file defines a test anchor, but the production code does not acknowledge it.")
+            print(f"          ACTION: Open the production code file being tested and insert: `# Verified by [@ANCHOR: {anchor.split(':')[1]}]` near the logic.")
         if reported:
             has_errors = True
 
     return has_errors, source_anchors
 
 
-def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, contract_anchors, primary_dirs, repo_root):
+def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, contract_anchors, primary_dirs, repo_root, explicit_non_primary=None):
     has_errors = False
     all_contracts = set(contract_anchors.keys())
 
@@ -356,7 +410,7 @@ def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, contr
     if undocumented:
         reported = False
         for anchor, locs in undocumented.items():
-            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root)]
+            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
             if not primary_locs:
                 continue
             if not reported:
@@ -366,13 +420,15 @@ def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, contr
             print("      Feature Definition Locations:")
             for loc in primary_locs:
                 print(f"        -> {loc}")
+            print("      [!] DIAGNOSTIC FOR AI: Every core feature must be documented.")
+            print(f"          ACTION: Add `[@ANCHOR: {anchor.split(':')[1]}]` to the relevant Markdown file in `docs/stories/` or `docs/journeys/`.")
         if reported:
             has_errors = True
 
     if missing_in_code:
         reported = False
         for anchor, locs in missing_in_code.items():
-            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root)]
+            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
             if not primary_locs:
                 continue
             if not reported:
@@ -383,19 +439,19 @@ def _report_documentation_gaps(source_anchors, docs_anchors, code_anchors, contr
             for loc in primary_locs:
                 print(f"        -> {loc}")
             h = {"t": "[@ANCHOR"}
-            print(f"      [!] DIAGNOSTIC: If this targets an external domain context, explicitly structure it as '{h['t']}: module_name:{anchor.split(':')[1]}]'")
+            print(f"      [!] DIAGNOSTIC FOR AI: If this targets an external domain context, explicitly structure it as '{h['t']}: module_name:{anchor.split(':')[1]}]'")
         if reported:
             has_errors = True
     return has_errors
 
 
-def _report_missing_ux_docs(code_anchors, user_manual_anchors, primary_dirs, repo_root):
+def _report_missing_ux_docs(code_anchors, user_manual_anchors, primary_dirs, repo_root, explicit_non_primary=None):
     ux_code_anchors = {a: locs for a, locs in code_anchors.items() if a.split(":")[1].startswith("UX_")}
     has_errors = False
 
     for anchor, locs in ux_code_anchors.items():
         if anchor not in user_manual_anchors:
-            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root)]
+            primary_locs = [loc for loc in locs if is_primary(loc, primary_dirs, repo_root, explicit_non_primary)]
             if not primary_locs:
                 continue
             if not has_errors:
@@ -405,7 +461,8 @@ def _report_missing_ux_docs(code_anchors, user_manual_anchors, primary_dirs, rep
             print("      Declared in layout code files:")
             for loc in primary_locs:
                 print(f"        -> {loc}")
-            print(f"      [!] DIAGNOSTIC: Append a container item '<span style=\"display:none;\">[@ANCHOR: {anchor.split(':')[1]}]</span>' to your module's data/documentation.html file.")
+            print("      [!] DIAGNOSTIC FOR AI: UI features starting with 'UX_' must be documented for the end-user.")
+            print(f"          ACTION: Append a container item '<span style=\"display:none;\">[@ANCHOR: {anchor.split(':')[1]}]</span>' to your module's data/documentation.html file.")
     return has_errors
 
 
@@ -430,6 +487,13 @@ def main():
         ]:
             if os.path.isdir(possible_path):
                 target_dirs.append(possible_path)
+                if os.path.dirname(possible_path) == repo_root:
+                    print("\n================================================================================")
+                    print("🚨 CRITICAL REPOSITORY STRUCTURE WARNING 🚨")
+                    print(f"'{os.path.basename(possible_path)}' was found as a CHILD of the current repository.")
+                    print("This is an ANTI-PATTERN. It MUST be a SIBLING directory instead.")
+                    print(f"Please move it to: {os.path.dirname(repo_root)}{os.sep}{os.path.basename(possible_path)}")
+                    print("================================================================================\n")
                 break
 
     scanned_realpaths = set()
@@ -486,20 +550,21 @@ def main():
                 except (OSError, UnicodeDecodeError):
                     continue
 
+    explicit_non_primary = [os.path.abspath(d) for d in final_targets if d not in primary_dirs]
     errs = [
-        _report_duplicates(duplicates, primary_dirs, repo_root),
-        _report_missing_cross_refs(cross_references, code_anchors, contract_anchors, primary_dirs, repo_root),
-        _report_missing_tests(tests_links, code_anchors, contract_anchors, repo_root, primary_dirs),
-        _report_missing_ux_docs(code_anchors, user_manual_anchors, primary_dirs, repo_root),
+        _report_duplicates(duplicates, primary_dirs, repo_root, explicit_non_primary),
+        _report_missing_cross_refs(cross_references, code_anchors, contract_anchors, primary_dirs, repo_root, explicit_non_primary),
+        _report_missing_tests(tests_links, code_anchors, contract_anchors, repo_root, primary_dirs, explicit_non_primary),
+        _report_missing_ux_docs(code_anchors, user_manual_anchors, primary_dirs, repo_root, explicit_non_primary),
     ]
 
     bidi_err, source_anchors = _report_bidirectional_orphans(
-        code_anchors, tests_links_set, verified_by_links, contract_anchors, primary_dirs, repo_root
+        code_anchors, tests_links_set, verified_by_links, contract_anchors, primary_dirs, repo_root, explicit_non_primary
     )
     errs.append(bidi_err)
     errs.append(
         _report_documentation_gaps(
-            source_anchors, docs_anchors, code_anchors, contract_anchors, primary_dirs, repo_root
+            source_anchors, docs_anchors, code_anchors, contract_anchors, primary_dirs, repo_root, explicit_non_primary
         )
     )
 
