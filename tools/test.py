@@ -824,7 +824,7 @@ def provision_jules(base_dir, already_provisioned=False):
         is_hams_community = os.path.exists(os.path.join(base_dir, "zero_sudo", "__manifest__.py"))
 
         if not is_hams_community:
-            target_clone = "/app/hams_community"
+            target_clone = "/hams_community"
             if not os.path.exists(target_clone):
                 print(f"[*] Sibling repository not found. Cloning hams_community to {target_clone}...")
                 try:
