@@ -163,11 +163,6 @@ GENERAL_ERROR_RULES = [
         "CRITICAL TEST REALISM / PATHING: Hardcoding '/tmp' is forbidden. Tests must use the exact same paths as the production environment per AGENTS.md.",
     ),
     (
-        r"\.py$",
-        re.compile(r"os\.symlink\("),
-        "CRITICAL ARCHITECTURE: Creating symbolic links to resolve modules (like zero_sudo or distributed_redis_cache) is strictly forbidden. You MUST configure the Odoo --addons-path correctly instead.",
-    ),
-    (
         r".*tour\.js$",
         re.compile(r"run:\s*['\"]text['\"]"),
         "CRITICAL TOUR ARCHITECTURE: 'text' is banned in JS tours. Use 'edit' instead to ensure proper mounting and event firing.",
@@ -1318,6 +1313,39 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                                     node.lineno,
                                     "CRITICAL JSON-RPC KWARGS: Do not pass a dictionary of kwargs as a positional argument to search/search_read. Use explicit keyword arguments (e.g., fields=...).",
                                 )
+
+            if func_name == "symlink":
+                is_os_symlink = False
+                if isinstance(node.func, ast.Attribute) and getattr(node.func.value, "id", "") == "os":
+                    is_os_symlink = True
+                elif isinstance(node.func, ast.Name):
+                    is_os_symlink = True
+
+                if is_os_symlink and node.args:
+                    def _resolve_str(n):
+                        if isinstance(n, ast.Constant) and isinstance(n.value, str):
+                            return n.value
+                        if isinstance(n, ast.Name) and n.id in self.assignments:
+                            return _resolve_str(self.assignments[n.id])
+                        return None
+
+                    src_val = _resolve_str(node.args[0])
+                    if src_val:
+                        check_paths = [
+                            src_val,
+                            os.path.join(os.path.dirname(self.filepath), src_val),
+                            os.path.join(os.getcwd(), src_val)
+                        ]
+                        for p in check_paths:
+                            try:
+                                if os.path.isdir(p) and os.path.isfile(os.path.join(p, '__manifest__.py')):
+                                    self.add_error(
+                                        node.lineno,
+                                        "CRITICAL ARCHITECTURE: Creating symbolic links to resolve modules (like zero_sudo or distributed_redis_cache) is strictly forbidden. You MUST configure the Odoo --addons-path correctly instead."
+                                    )
+                                    break
+                            except Exception:
+                                pass
 
             self.generic_visit(node)
 

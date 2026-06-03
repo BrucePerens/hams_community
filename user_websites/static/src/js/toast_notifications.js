@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
-import publicWidget from "@web/legacy/js/public/public_widget";
+import { Interaction } from "@web/public/interaction";
+import { registry } from "@web/core/registry";
 
 /**
  * URL Toast Notification Widget
@@ -8,20 +9,16 @@ import publicWidget from "@web/legacy/js/public/public_widget";
  * Listens for success parameters in the URL, fires a toast notification,
  * and cleans the URL via history.replaceState to prevent duplicate triggers on refresh.
  */
-publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
-    selector: '#wrapwrap', // Attach to the global wrapper so it runs on all frontend pages
+export class UrlToastNotification extends Interaction {
+    static selector = '#wrapwrap';
 
-    /**
-     * @override
-     */
-    start: function () {
-        this._super.apply(this, arguments);
+    start() {
         this._checkUrlForNotifications();
-    },
+    }
 
     // [@ANCHOR: toast_notifications_logic]
     // Verified by [@ANCHOR: test_tour_toast_notifications]
-    _checkUrlForNotifications: function () {
+    _checkUrlForNotifications() {
         const urlParams = new URLSearchParams(document.location.search);
         let message = '';
         let title = '';
@@ -44,7 +41,7 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
 
         if (message) {
             // Trigger Odoo's native notification bus
-            this.call("notification", "add", message, {
+            this.env.services.notification.add(message, {
                 title: title,
                 type: type,
                 sticky: false,
@@ -55,24 +52,23 @@ publicWidget.registry.UrlToastNotification = publicWidget.Widget.extend({
             const newUrl = document.location.protocol + "//" + document.location.host + document.location.pathname;
             window.history.replaceState({path: newUrl}, '', newUrl);
         }
-    },
-});
+    }
+}
+registry.category("public.interactions").add("user_websites.UrlToastNotification", UrlToastNotification);
 
-publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
-    selector: '#wrapwrap',
+export class AdminViolationToast extends Interaction {
+    static selector = '#wrapwrap';
 
-    start: function () {
-        this._super.apply(this, arguments);
+    start() {
         if (sessionStorage.getItem('admin_violation_toast_shown') !== 'true') {
             this._checkPendingReports();
         }
-    },
+    }
 
     // [@ANCHOR: admin_toast_logic]
     // Verified by [@ANCHOR: test_tour_toast_notifications]
     // Verified by [@ANCHOR: test_admin_violation_toast_rpc]
-    _checkPendingReports: function () {
-        var self = this;
+    _checkPendingReports() {
         fetch('/api/v1/user_websites/pending_reports')
             .then(response => {
                 if (!response.ok) throw new Error("Network response was not ok");
@@ -80,7 +76,7 @@ publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
             })
             .then(data => {
                 if (data && data.count > 0) {
-                    self.call("notification", "add", "There are " + data.count + " pending violation reports requiring review.", {
+                    this.env.services.notification.add("There are " + data.count + " pending violation reports requiring review.", {
                         title: "Pending Moderation",
                         type: "warning",
                         sticky: true,
@@ -91,4 +87,5 @@ publicWidget.registry.AdminViolationToast = publicWidget.Widget.extend({
                 // Silently ignore network errors to prevent UI disruption
             });
     }
-});
+}
+registry.category("public.interactions").add("user_websites.AdminViolationToast", AdminViolationToast);
