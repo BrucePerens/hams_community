@@ -143,6 +143,12 @@ def provision_jules():
                     user_tmp = os.path.join(u_info.pw_dir, "tmp")
                     os.makedirs(user_tmp, exist_ok=True)
                     os.chown(user_tmp, u_info.pw_uid, u_info.pw_gid)
+
+                    # Ensure postgres test directories exist and are writable by the test runner
+                    for d in ["/opt/hams/pgdata", "/opt/hams/pgsock"]:
+                        os.makedirs(d, exist_ok=True)
+                        os.chown(d, u_info.pw_uid, u_info.pw_gid)
+                        os.chmod(d, 0o700) # Postgres requires strict permissions on pgdata
                 except KeyError as e:
                     _logger.debug("Original user %s not found: %s", orig_user, e)
 
