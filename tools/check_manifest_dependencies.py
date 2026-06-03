@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Manifest Dependency Graph Linter
+Manifest Dependency Graph & Completeness Linter
 Simulates Odoo's XML parsing chronology offline to detect forward references
-and broken load-orders before the database is ever provisioned.
+and broken load-orders. Also enforces manifest completeness (missing XMLs, missing Tours).
 """
 
 import os
@@ -15,9 +15,7 @@ import re
 def check_manifest(base_dir):
     errors = []
 
-    # Regex definitions for Odoo XML patterns
     id_def_re = re.compile(r'<(?:record|template|menuitem|act_window)[^>]+id="([^"]+)"')
-    # \b ensures we strictly match 'ref=' and not 'href=' or 't-attf-href='
     ref_attr_re = re.compile(r'\bref="([^"]+)"')
     eval_ref_re = re.compile(r"ref\(['\"]([^'\"]+)['\"]\)")
 
@@ -29,13 +27,56 @@ def check_manifest(base_dir):
             with open(manifest_path, 'r', encoding='utf-8') as f:
                 try:
                     manifest_data = ast.literal_eval(f.read())
-                except Exception as e:
+                except (SyntaxError, ValueError, TypeError) as e:
                     errors.append(f"❌ ERROR: Failed to parse {manifest_path}: {e}")
                     continue
 
             data_files = manifest_data.get('data', [])
+            assets = manifest_data.get('assets', {})
+            data_files_set = set(data_files)
             defined_ids = set()
 
+            # --- 1. Manifest Completeness Checks ---
+            for dirpath, _, filenames in os.walk(root):
+                # Check XML and CSV completeness (skip static and tests for data)
+                path_parts = dirpath.replace(base_dir, '').split(os.sep)
+                is_static = 'static' in path_parts
+
+                for filename in filenames:
+                    # Data Array Completeness
+                    if not is_static and (filename.endswith('.xml') or filename == 'ir.model.access.csv'):
+                        rel_path = os.path.relpath(os.path.join(dirpath, filename), root)
+                        rel_path_fwd = rel_path.replace(os.sep, '/')
+                        if rel_path_fwd not in data_files_set:
+                            errors.append(f"📄 {module_name}/{rel_path_fwd}\n ❌ CRITICAL: File exists but is NOT registered in the 'data' array of __manifest__.py")
+
+                    # Tour Asset Completeness
+                    if is_static and filename.endswith('.js') and 'tours' in path_parts:
+                        rel_path = os.path.relpath(os.path.join(dirpath, filename), root)
+                        rel_path_fwd = rel_path.replace(os.sep, '/')
+
+                        web_assets_tests = assets.get('web.assets_tests', [])
+                        covered = False
+                        for asset_path in web_assets_tests:
+                            if asset_path == f"{module_name}/{rel_path_fwd}":
+                                covered = True
+                                break
+                            # Glob check
+                            if asset_path.endswith('**/*') and asset_path.startswith(f"{module_name}/static/"):
+                                glob_base = asset_path.replace('**/*', '')
+                                if f"{module_name}/{rel_path_fwd}".startswith(glob_base):
+                                    covered = True
+                                    break
+                            if asset_path.endswith('*.js') and asset_path.startswith(f"{module_name}/static/"):
+                                glob_base = asset_path.replace('*.js', '')
+                                if f"{module_name}/{rel_path_fwd}".startswith(glob_base):
+                                    covered = True
+                                    break
+
+                        if not covered:
+                            errors.append(f"📄 {module_name}/{rel_path_fwd}\n ❌ CRITICAL: Tour file exists but is NOT registered in 'web.assets_tests' in __manifest__.py")
+
+            # --- 2. Load Order & Forward References Check ---
             for data_file in data_files:
                 file_path = os.path.join(root, data_file)
                 if not os.path.exists(file_path):
@@ -44,25 +85,19 @@ def check_manifest(base_dir):
                 if file_path.endswith('.xml'):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         for line_num, line in enumerate(f, 1):
-
-                            # 1. Add new definitions to the simulated registry
                             for match in id_def_re.finditer(line):
                                 new_id = match.group(1)
                                 defined_ids.add(new_id)
                                 defined_ids.add(f"{module_name}.{new_id}")
 
-                            # 2. Check all reference calls against the running registry
                             refs_to_check = []
                             refs_to_check.extend(ref_attr_re.findall(line))
                             refs_to_check.extend(eval_ref_re.findall(line))
 
                             for ref_id in refs_to_check:
-                                # Skip Odoo's implicit Python-generated model IDs (e.g., model_res_users)
-                                # These are instantiated in PostgreSQL before XML evaluation begins.
                                 if ref_id.startswith('model_') or ('.' in ref_id and ref_id.split('.')[1].startswith('model_')):
                                     continue
 
-                                # Skip external dependencies (trusting the manifest 'depends' array)
                                 if '.' in ref_id:
                                     ref_module, _ = ref_id.split('.', 1)
                                     if ref_module != module_name:
@@ -76,7 +111,6 @@ def check_manifest(base_dir):
                                     )
 
                 elif file_path.endswith('.csv'):
-                    # Basic CSV ID extraction
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = f.readlines()
                         if not lines:
@@ -95,7 +129,7 @@ def check_manifest(base_dir):
         print("\n".join(errors))
         sys.exit(1)
     else:
-        print("[+] SUCCESS: Manifest Dependency Graph validated. No chronological forward references found.")
+        print("[+] SUCCESS: Manifest dependencies and completeness validated.")
         sys.exit(0)
 
 if __name__ == "__main__":

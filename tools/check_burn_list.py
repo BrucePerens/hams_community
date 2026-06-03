@@ -1542,6 +1542,9 @@ def scan_file(filepath, is_odoo_module=False):
                     errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: The 'attrs' attribute was removed in Odoo 17+. Use invisible, readonly, and required directly.")
                 if node.attrs.get("t-name") == "kanban-box":
                     errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: t-name=\"kanban-box\" is banned in Odoo 19. Use t-name=\"card\".")
+                if node.attrs.get("data-snippet", "").startswith("s_dynamic_snippet"):
+                    if "data-filter-id" not in node.attrs or "data-template-key" not in node.attrs:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL OWL 2 CRASH: Dynamic snippets ({node.attrs.get('data-snippet')}) must explicitly declare 'data-filter-id' and 'data-template-key' to prevent InteractionService null pointer crashes on empty datasets.")
                 if node.tag == "group" and (node.attrs.get("expand") == "0" or "string" in node.attrs):
                     errors_found.append(f"Line {node.lineno}: CRITICAL DEPRECATION: \x3cgroup expand=\"0\"\x3e and \x3cgroup string=\"...\"\x3e are banned in Odoo 19. Odoo 19 requires clean group tags.")
                 if node.tag == "xpath" and "expr" in node.attrs:

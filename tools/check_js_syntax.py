@@ -30,6 +30,17 @@ def check_file(file_path):
         logging.warning("Failed to read %s: %s", file_path, e)
         return None
 
+    # --- Custom Odoo Architecture Checks ---
+    if "extends Interaction" in code and "mountComponent(" in code:
+        err_msg = (
+            "🚨 [AUDIT] ARCHITECTURE TRAP: Do not manually call `mountComponent(`\n"
+            "inside an Interaction class. This causes an Owl Registry Collision with\n"
+            "the NotificationContainer. Let Odoo handle mounting natively via\n"
+            "`static components` and data props.\n"
+            "See docs/LLM_EXPERIENCE.md (Item 38) for details."
+        )
+        return file_path, err_msg
+
     # Using --input-type=module forces Node to natively parse ES6 Imports/Exports
     # without needing experimental VM modules or package.json overrides.
     res = subprocess.run(

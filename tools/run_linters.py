@@ -160,6 +160,36 @@ def main():
     elif res.stdout and res.stdout.strip():
         print(res.stdout, end="")
 
+    # 10. check_manifest_dependencies
+    res = subprocess.run([
+        venv_python,
+        os.path.join(dir_path, "tools", "check_manifest_dependencies.py"),
+        dir_path
+    ], capture_output=True, text=True)
+    if res.returncode != 0:
+        if res.stdout:
+            print(res.stdout, end="")
+        if res.stderr:
+            print(res.stderr, end="")
+        linters_failed = True
+    elif res.stdout and res.stdout.strip():
+        print(res.stdout, end="")
+
+    # 11. check_js_syntax
+    res = subprocess.run([
+        venv_python,
+        os.path.join(dir_path, "tools", "check_js_syntax.py"),
+        dir_path
+    ], capture_output=True, text=True)
+    if res.returncode != 0:
+        if res.stdout:
+            print(res.stdout, end="")
+        if res.stderr:
+            print(res.stderr, end="")
+        linters_failed = True
+    elif res.stdout and res.stdout.strip():
+        print(res.stdout, end="")
+
     if linters_failed:
         print("\n🛑 Halting due to linter violations. Please review the output above.")
         sys.exit(1)
