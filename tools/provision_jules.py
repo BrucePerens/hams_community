@@ -97,15 +97,15 @@ def provision_jules():
         # 5. Final update with all repositories loaded
         run_sys(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
-        # 6. Collect all required packages (excluding those already in Jules: curl, python3-pip, build-essential)
+        # 5. Collect all required packages (excluding those already in Jules: curl, build-essential)
         all_packages = [
             "python3-setuptools", "python3-stdeb", "dh-python", "python3-all",
             "fakeroot", "postgresql-common", "postgresql-client",
-            "postgresql", "odoo"
+            "postgresql", "odoo", "python3-pip"
         ]
 
         # Tools explicitly pre-installed by the Jules VM
-        jules_provided = {"curl", "python3-pip", "build-essential"}
+        jules_provided = {"curl", "build-essential"}
 
         for pkg_spec in infrastructure.MANIFEST.get("apt_packages", []):
             if "early_prod" in pkg_spec["environments"]:
