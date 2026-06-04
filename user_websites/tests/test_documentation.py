@@ -64,7 +64,7 @@ class TestDocumentation(RealTransactionCase):
         )
 
         self.assertIn(
-            "Site Provisioning Wizard",
+            "Creating Your Site",
             article.body,
             "The hook must successfully read the actual HTML file content.",
         )

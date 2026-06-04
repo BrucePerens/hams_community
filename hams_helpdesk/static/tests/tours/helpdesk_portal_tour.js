@@ -8,6 +8,7 @@ registry.category("web_tour.tours").add("helpdesk_portal_tour", {
     url: "/my/tickets",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
+        TourUtils.bypassDialogs(),
         { trigger: 'table tbody tr td a', content: 'Wait for Ticket List to Render', run: function() {} },
         {
             trigger: 'table tbody tr td a',

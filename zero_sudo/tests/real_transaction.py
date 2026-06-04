@@ -60,7 +60,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         # 2. Snapshot exact table counts
         # [@ANCHOR: leak_snapshotting]
         self.cr.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE 'pg_stat_statements%'"
         )
         self._tables = [r[0] for r in self.cr.fetchall()]
         self._initial_counts = {}

@@ -131,9 +131,15 @@ class FailureExtractor:
             self.output_path = self.display_path
 
         try:
-            os.remove(self.output_path)
-        except OSError as e:
-            _logger.debug("Ignored OSError: %s", e)
+            if os.path.exists(self.output_path):
+                os.remove(self.output_path)
+        except OSError as os_err:
+            _logger.warning("Could not remove log natively, attempting sudo fallback: %s", os_err)
+            try:
+                if not os.access(self.output_path, os.W_OK):
+                    subprocess.run(["sudo", "rm", "-f", self.output_path], check=False, stderr=subprocess.DEVNULL)
+            except Exception as cleanup_e: # audit-ignore-catch-all
+                _logger.warning("Ignored Exception removing log: %s", cleanup_e)
 
         self.log_prefix_pattern = re.compile(
             r"^(?:\s*)?\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}"
@@ -253,43 +259,47 @@ class FailureExtractor:
 
         num_failures = len(grouped_blocks)
 
-        with open(self.output_path, "w", encoding="utf-8") as out:
-            out.write("=== EXTRACTED TEST FAILURES & ERRORS ===\n")
+        try:
+            with open(self.output_path, "w", encoding="utf-8") as out:
+                out.write("=== EXTRACTED TEST FAILURES & ERRORS ===\n")
+                if num_failures == 0:
+                    out.write("\nNo errors or failures detected in the log.\n")
+                else:
+                    failed_modules = self._extract_failed_modules()
+                    out.write("\n" + "*" * 80 + "\n")
+                    out.write("SYSTEM DIRECTIVE FOR AI ASSISTANT:\n")
+                    out.write("The following log contains extracted test failures, tracebacks, and CRITICAL errors from the Odoo test suite.\n")
+                    out.write("Your immediate task is to analyze these errors, identify the root causes within the provided codebase, and generate the necessary patches to fix these test flaws.\n")
+
+                    if failed_modules:
+                        out.write("\nTARGET MODULES FOR ANALYSIS:\n")
+                        out.write("Based on the tracebacks, the following modules are responsible for or implicated in the failure:\n")
+                        for mod in failed_modules:
+                            out.write(f"  - {mod}\n")
+                        out.write("\nASSUMPTION: The GitHub repository containing these modules has been imported to your environment.\n")
+                        out.write("ACTION: Please look up the code for the implicated modules above to diagnose and fix the issue.\n")
+
+                    out.write("*" * 80 + "\n")
+
+                    for context, block in grouped_blocks.items():
+                        if not block: continue
+                        out.write("\n" + "=" * 80 + "\n")
+                        out.write(f"CONTEXT: {context}\n")
+                        out.write("-" * 80 + "\n")
+                        for b_line in block:
+                            out.write(b_line)
+                        out.write("\n")
+
+            print("\n==========================================================")
             if num_failures == 0:
-                out.write("\nNo errors or failures detected in the log.\n")
+                print("🎉 TEST RUN COMPLETE: No test failures detected.")
             else:
-                failed_modules = self._extract_failed_modules()
-                out.write("\n" + "*" * 80 + "\n")
-                out.write("SYSTEM DIRECTIVE FOR AI ASSISTANT:\n")
-                out.write("The following log contains extracted test failures, tracebacks, and CRITICAL errors from the Odoo test suite.\n")
-                out.write("Your immediate task is to analyze these errors, identify the root causes within the provided codebase, and generate the necessary patches to fix these test flaws.\n")
-
-                if failed_modules:
-                    out.write("\nTARGET MODULES FOR ANALYSIS:\n")
-                    out.write("Based on the tracebacks, the following modules are responsible for or implicated in the failure:\n")
-                    for mod in failed_modules:
-                        out.write(f"  - {mod}\n")
-                    out.write("\nASSUMPTION: The GitHub repository containing these modules has been imported to your environment.\n")
-                    out.write("ACTION: Please look up the code for the implicated modules above to diagnose and fix the issue.\n")
-
-                out.write("*" * 80 + "\n")
-
-                for context, block in grouped_blocks.items():
-                    if not block: continue
-                    out.write("\n" + "=" * 80 + "\n")
-                    out.write(f"CONTEXT: {context}\n")
-                    out.write("-" * 80 + "\n")
-                    for b_line in block:
-                        out.write(b_line)
-                    out.write("\n")
-
-        print("\n==========================================================")
-        if num_failures == 0:
-            print("🎉 TEST RUN COMPLETE: No test failures detected.")
-        else:
-            print(f"🚨 TEST RUN COMPLETE: {num_failures} test failure(s) detected!")
-            print(f"📄 Failure details extracted and saved to: {self.display_path}")
-        print("==========================================================\n")
+                print(f"🚨 TEST RUN COMPLETE: {num_failures} test failure(s) detected!")
+                print(f"📄 Failure details extracted and saved to: {self.display_path}")
+            print("==========================================================\n")
+        except PermissionError as e:
+            print(f"\n❌ [ERROR] FailureExtractor could not write to {self.output_path} due to permission denied: {e}")
+            print("To resolve this, delete the file manually: sudo rm -f " + self.output_path + "\n")
 
 
 def robust_reap(pid):
@@ -754,11 +764,17 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         os.setresgid(odoo_user.pw_gid, odoo_user.pw_gid, odoo_user.pw_gid)
         os.setresuid(odoo_user.pw_uid, odoo_user.pw_uid, odoo_user.pw_uid)
 
+    if os.path.exists("/var/tmp/filtered_test.txt"):
+        try:
+            os.remove("/var/tmp/filtered_test.txt")
+        except OSError as e:
+            _logger.warning("Ignored OSError during test runner log cleanup: %s", e)
+
     test_cmd = [sys.executable, os.path.abspath(__file__)] + sys_args
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
 
     # 7. Graceful Ephemeral Teardown
-    subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False, stdout=subprocess.DEVNULL)
+    subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     redis_proc.terminate()
 
     try:
@@ -917,7 +933,7 @@ def main():
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-m", "--mode", choices=["standard", "individual", "xml", "downloads"], default="standard")
-    parser.add_argument("-d", "--db", default="zero_sudo")
+    parser.add_argument("-d", "--db", default="hams_test")
     parser.add_argument("-u", "--module")
     parser.add_argument("-l", "--log-directory", default="~/tmp")
     parser.add_argument("-c", "--config", default="ignore_list.txt")

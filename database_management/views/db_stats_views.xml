@@ -23,6 +23,9 @@
         <field name="model">database.query.stat</field>
         <field name="arch" type="xml">
             <list string="Slow Queries" create="false" edit="false">
+                <header>
+                    <button name="action_install_extension" type="object" string="Install / Fix Extension" class="btn-info"/>
+                </header>
                 <field name="query"/>
                 <field name="calls" sum="Executions"/>
                 <field name="total_time" sum="Total Load"/>

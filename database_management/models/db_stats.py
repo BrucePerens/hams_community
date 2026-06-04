@@ -95,16 +95,7 @@ class DatabaseTableStat(models.Model):
                 raise UserError(
                     _("Error executing vacuumdb for %s: %s") % (rec.table_name, str(e))
                 )
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Vacuum Completed"),
-                "message": _("The selected table(s) have been successfully vacuumed and analyzed."),
-                "type": "success",
-                "sticky": False,
-            },
-        }
+        return True
 
     @api.model
     def cron_check_bloat(self):
@@ -157,23 +148,36 @@ class DatabaseQueryStat(models.Model):
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, self._table)
-        self.env.cr.execute(
-            "SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'"
-        )
-        if not self.env.cr.fetchone():
-            self.env.cr.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
 
-        self.env.cr.execute("""
-            CREATE OR REPLACE VIEW database_query_stat AS (
-                SELECT
-                    row_number() OVER () as id,
-                    query,
-                    calls,
-                    total_exec_time as total_time,
-                    mean_exec_time as mean_time
-                FROM pg_stat_statements
-            )
-        """)
+        can_query = False
+        try:
+            # We use a savepoint to safely probe the view. If the extension is
+            # installed but NOT loaded in postgresql.conf, this will throw a catchable
+            # ObjectNotInPrerequisiteState rather than destroying the Odoo transaction.
+            with self.env.cr.savepoint():
+                self.env.cr.execute("SELECT 1 FROM pg_stat_statements LIMIT 1")
+            can_query = True
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Graceful degradation: pg_stat_statements is not queryable: %s", e)
+
+        if can_query:
+            self.env.cr.execute("""
+                CREATE OR REPLACE VIEW database_query_stat AS (
+                    SELECT
+                        row_number() OVER () as id,
+                        query,
+                        calls,
+                        total_exec_time as total_time,
+                        mean_exec_time as mean_time
+                    FROM pg_stat_statements
+                )
+            """)
+        else:
+            self.env.cr.execute("""
+                CREATE OR REPLACE VIEW database_query_stat AS (
+                    SELECT 1 as id, 'pg_stat_statements not installed or not loaded via shared_preload_libraries in postgresql.conf.' as query, 0 as calls, 0.0 as total_time, 0.0 as mean_time
+                )
+            """)
 
 
 class DatabaseActivity(models.Model):
@@ -301,6 +305,31 @@ class PgExplainWizard(models.TransientModel):
 class DatabaseQueryStatInherit(models.Model):
     _inherit = "database.query.stat"
 
+    def action_install_extension(self):
+        try:
+            self.env.cr.execute("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+            self.env["database.query.stat"].init()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Installation Attempted'),
+                    'message': _('Extension created. Please refresh the view to see if queries populate.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e: # audit-ignore-catch-all
+            _logger.error("Failed to install pg_stat_statements extension: %s", e)
+            raise UserError(_(
+                "PostgreSQL Extension Installation Failed.\n\n"
+                "Step 1: Ensure your PostgreSQL configuration (postgresql.conf) contains:\n"
+                "shared_preload_libraries = 'pg_stat_statements'\n\n"
+                "Step 2: Restart your PostgreSQL service.\n\n"
+                "Step 3: Ensure your Odoo database user has privileges to run CREATE EXTENSION.\n\n"
+                "Technical Details:\n%s"
+            ) % str(e))
+
     def action_explain_query(self):
         # [@ANCHOR: db_explain_query]
         # Tests [@ANCHOR: db_explain_query]
@@ -341,20 +370,4 @@ class DatabaseQueryStatInherit(models.Model):
             }
         except Exception as e:  # audit-ignore-catch-all
             _logger.error("Failed to explain query: %s", e)
-            # We return a wizard with the error message instead of raising UserError
-            # to avoid unhandled promise rejections in UI tours and provide a better UX.
-            wizard = self.env["pg.explain.wizard"].create(
-                {
-                    "query": self.query,
-                    "explain_plan": _("Could not generate explain plan: %s") % str(e),
-                }
-            )
-
-            return {
-                "name": _("Query Explain Plan"),
-                "type": "ir.actions.act_window",
-                "res_model": "pg.explain.wizard",
-                "res_id": wizard.id,
-                "view_mode": "form",
-                "target": "new",
-            }
+            raise UserError(_("Could not generate explain plan: %s") % str(e))

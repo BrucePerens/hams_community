@@ -203,6 +203,13 @@ MANIFEST = {
     ],
     "directories": [
         {
+            "path": "/opt/hams/pgsock",
+            "owner": "postgres:postgres",
+            "provision_mode": "775",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
             "path": "/opt/hams",
             "owner": "hams_com:hams_com",
             "provision_mode": "750",
@@ -1047,6 +1054,7 @@ WantedBy=multi-user.target
         {"name": "python3-setuptools", "debian_name": "python3-setuptools", "environments": ["early_prod"]},
         {"name": "dh-python", "debian_name": "dh-python", "environments": ["early_prod"]},
         {"name": "jing", "debian_name": "jing", "environments": ["early_prod"]},
+        {"name": "dbus-x11", "debian_name": "dbus-x11", "environments": ["early_prod"]},
     ],
     "env_defaults": {
         "DB_PORT": "5432",
@@ -1388,6 +1396,13 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
 
         all_packages = sorted(list(set(all_packages)))
         run_cmd_func(["apt-get", "install", "-y"] + apt_opts + all_packages)
+
+        try:
+            run_cmd_func(["bash", "-c", "sed -i 's/peer/trust/g; s/md5/trust/g; s/scram-sha-256/trust/g' /etc/postgresql/*/main/pg_hba.conf"])
+            run_cmd_func(["bash", "-c", "echo \"shared_preload_libraries = 'pg_stat_statements'\" >> /etc/postgresql/*/main/postgresql.conf"])
+            run_cmd_func(["systemctl", "restart", "postgresql"])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("[*] Failed to configure PostgreSQL settings: %s", e)
 
         req_file = os.path.join(base_dir, "requirements.txt")
         if os.path.exists(req_file):

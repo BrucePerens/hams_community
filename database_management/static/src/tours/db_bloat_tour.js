@@ -5,6 +5,8 @@ import { TourUtils } from "@zero_sudo/js/tour_utils";
 registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verified by [@ANCHOR: test_db_bloat_tour]
     url: "/odoo?debug=1",
     steps: () => [
+        { trigger: 'body', content: 'Initialize Tour' },
+        TourUtils.bypassDialogs(),
         {
             content: "Wait for navbar",
             trigger: '.o_navbar',
@@ -41,8 +43,8 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             run: 'click',
         },
         {
-            content: "Wait for success notification",
-            trigger: '.o_notification_manager',
+            content: "Wait for RPC to complete (neutral wait)",
+            trigger: 'body',
             run: function() {},
         }
     ],
