@@ -677,7 +677,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     pg_data, pg_sock = "/opt/hams/pgdata", "/opt/hams/pgsock"
 
     orig_user = os.environ.get("SUDO_USER", "odoo")
-    pg_user = pwd.getpwnam("postgres")
+    pg_user = pwd.getpwnam("hams_com")
     def preexec_pg():
         os.setresgid(pg_user.pw_gid, pg_user.pw_gid, pg_user.pw_gid)
         os.setresuid(pg_user.pw_uid, pg_user.pw_uid, pg_user.pw_uid)
@@ -745,6 +745,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     odoo_user = pwd.getpwnam("odoo")
     def preexec_odoo():
+        os.initgroups("odoo", odoo_user.pw_gid)
         os.setresgid(odoo_user.pw_gid, odoo_user.pw_gid, odoo_user.pw_gid)
         os.setresuid(odoo_user.pw_uid, odoo_user.pw_uid, odoo_user.pw_uid)
 
@@ -790,24 +791,28 @@ def start_jules_daemons():
 
     os.makedirs(pg_data, exist_ok=True)
     os.makedirs(pg_socket, exist_ok=True)
+    subprocess.run(["sudo", "chown", "-R", "hams_com:hams_com", pg_data], check=True)
+    subprocess.run(["sudo", "chown", "-R", "hams_com:hams_com", pg_socket], check=True)
+    subprocess.run(["sudo", "chmod", "700", pg_data], check=True)
+    subprocess.run(["sudo", "chmod", "770", pg_socket], check=True)
 
     if not os.listdir(pg_data):
-        subprocess.run([initdb_cmd, "-D", pg_data], check=True)
+        subprocess.run(["sudo", "-u", "hams_com", initdb_cmd, "-D", pg_data], check=True)
 
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], check=False, stderr=subprocess.DEVNULL)
 
     try:
-        os.remove(f"{pg_data}/postmaster.pid")
+        subprocess.run(["sudo", "rm", "-f", f"{pg_data}/postmaster.pid"])
     except OSError as err:
         _logger.debug("Ignored OSError: %s", err)
 
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], check=True)
+    subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], check=True)
     wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
 
     orig_user = os.environ.get("USER") or "odoo"
     custom_env = dict(os.environ)
     custom_env["PGUSER"] = orig_user
-    p = subprocess.Popen([psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, env=custom_env, text=True, stdout=subprocess.DEVNULL)
+    p = subprocess.Popen(["sudo", "-u", "hams_com", psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, env=custom_env, text=True, stdout=subprocess.DEVNULL)
     sql_create_roles = f"""
     DO $$
     BEGIN
@@ -843,7 +848,7 @@ def start_jules_daemons():
 
     def teardown():
         try:
-            subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:  # audit-ignore-catch-all
             _logger.warning("Teardown exception occurred.")
     atexit.register(teardown)

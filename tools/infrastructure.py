@@ -31,6 +31,16 @@ def get_pg_bin(name):
         raise FileNotFoundError(f"Could not find PostgreSQL binary: {name}")
     return res
 
+def get_os_identifier():
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if line.startswith("ID="):
+                    return line.strip().split("=")[1].strip('"').lower()
+    except OSError as e:
+        _logger.debug("Ignored OSError reading /etc/os-release: %s", e)
+    return "ubuntu"
+
 @contextlib.contextmanager
 def micro_privilege(username):
     """
@@ -187,102 +197,102 @@ MANIFEST = {
     "directories": [
         {
             "path": "/opt/hams",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/etc",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/etc/keys",
-            "owner": "odoo:odoo",
-            "provision_mode": "700",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/nginx",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod"],
         },
         {
             "path": "/opt/hams/nginx/ssl",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod"],
             "post_provision_hooks": [hook_generate_ssl],
         },
         {
             "path": "/deploy/ssl",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["docker"],
             "post_provision_hooks": [hook_generate_ssl],
         },
         {
             "path": "/opt/hams/odoo",
-            "owner": "odoo:odoo",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/cache",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/cache/ms-playwright",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/pycache",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
             "post_provision_hooks": [hook_clear_pycache],
         },
         {
             "path": "/opt/hams/spool",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/spool/adif_queue",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/spool/ncvec",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
@@ -296,76 +306,76 @@ MANIFEST = {
         {
             "path": "/opt/hams/pgsock",
             "owner": "hams_com:hams_com",
-            "provision_mode": "777",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["test"],
         },
         {
             "path": "/opt/hams/failed_input",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/downloads",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/test",
-            "owner": "odoo:odoo",
-            "provision_mode": "777",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["test"],
         },
         {
             "path": "/var/lib/odoo",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share/Odoo",
-            "owner": "odoo:odoo",
-            "provision_mode": "775",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/.local/share/Odoo/sessions",
-            "owner": "odoo:odoo",
-            "provision_mode": "700",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/daemon_keys",
-            "owner": "odoo:odoo",
+            "owner": "odoo:hams_com",
             "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/odoo/backups",
-            "owner": "odoo:odoo",
+            "owner": "odoo:hams_com",
             "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
@@ -373,56 +383,56 @@ MANIFEST = {
         {
             "path": "/var/lib/rabbitmq",
             "owner": "rabbitmq:rabbitmq",
-            "provision_mode": "755",
+            "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/odoo",
-            "owner": "odoo:odoo",
-            "provision_mode": "755",
+            "owner": "odoo:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/powerdns",
             "owner": "pdns:pdns",
-            "provision_mode": "755",
+            "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/opt/hams/systemd/odoo.service.d",
-            "owner": "root:root",
-            "provision_mode": "755",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "750",
             "runtime_mount": "ro",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/redis",
             "owner": "redis:redis",
-            "provision_mode": "755",
+            "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/log/rabbitmq",
             "owner": "rabbitmq:rabbitmq",
-            "provision_mode": "755",
+            "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/var/lib/redis",
             "owner": "redis:redis",
-            "provision_mode": "755",
+            "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
         {
             "path": "/tmp/odoo_test_home",
-            "owner": "root:root",
-            "provision_mode": "777",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "770",
             "runtime_mount": "rw",
             "environments": ["test"],
         },
@@ -509,8 +519,8 @@ Before=odoo.service
 
 [Service]
 Type=oneshot
-User=root
-Group=root
+User=hams_com
+Group=hams_com
 Environment="PYTHONPYCACHEPREFIX=/opt/hams/pycache"
 ExecStart=/opt/hams/.venv/bin/python -m compileall -q /opt/hams
 RemainAfterExit=yes
@@ -533,7 +543,7 @@ After=odoo.service
 [Service]
 Type=oneshot
 User=odoo
-Group=odoo
+Group=hams_com
 Environment="ODOO_RC=/opt/hams/etc/odoo.conf"
 Environment="HAMS_KEYS_DIR=/opt/hams/etc/keys"
 EnvironmentFile=-/opt/hams/etc/odoo.env
@@ -636,7 +646,7 @@ CapabilityBoundingSet=
 ReadWritePaths=/opt/hams/spool/adif_queue
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/adif_processor
 
 Environment="ODOO_USER=logbook_api_service_internal"
@@ -676,7 +686,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/dx_firehose
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -718,7 +728,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -758,7 +768,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
@@ -800,7 +810,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=bruce
-Group=bruce
+Group=hams_com
 WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
@@ -843,7 +853,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/pdns_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -883,7 +893,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/lotw_eqsl_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -924,7 +934,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=oneshot
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -978,7 +988,7 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=odoo
+Group=hams_com
 WorkingDirectory=/opt/hams/daemons/qrz_scraper
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -1022,32 +1032,32 @@ WantedBy=multi-user.target
         },
     ],
     "apt_packages": [
-        {"name": "postgresql", "environments": ["early_prod"]},
-        {"name": "postgresql-client", "environments": ["early_prod"]},
-        {"name": "nginx", "environments": ["early_prod"]},
-        {"name": "redis-server", "environments": ["early_prod"]},
-        {"name": "rabbitmq-server", "environments": ["early_prod"]},
-        {"name": "python3-redis", "environments": ["early_prod"]},
-        {"name": "python3-pika", "environments": ["early_prod"]},
-        {"name": "sqlite3", "environments": ["early_prod"]},
-        {"name": "pdns-server", "environments": ["early_prod"]},
-        {"name": "pdns-backend-sqlite3", "environments": ["early_prod"]},
-        {"name": "pgbackrest", "environments": ["early_prod"]},
-        {"name": "certbot", "environments": ["early_prod"]},
-        {"name": "python3-certbot-nginx", "environments": ["early_prod"]},
-        {"name": "python3-venv", "environments": ["early_prod"]},
-        {"name": "python3-passlib", "environments": ["early_prod"]},
-        {"name": "python3-cryptography", "environments": ["early_prod"]},
-        {"name": "build-essential", "environments": ["early_prod"]},
-        {"name": "libpq-dev", "environments": ["early_prod"]},
-        {"name": "python3-dev", "environments": ["early_prod"]},
-        {"name": "bind9-dnsutils", "environments": ["early_prod"]},
-        {"name": "python3-stdeb", "environments": ["early_prod"]},
-        {"name": "fakeroot", "environments": ["early_prod"]},
-        {"name": "python3-all", "environments": ["early_prod"]},
-        {"name": "python3-setuptools", "environments": ["early_prod"]},
-        {"name": "dh-python", "environments": ["early_prod"]},
-        {"name": "jing", "environments": ["early_prod"]},
+        {"name": "postgresql", "debian_name": "postgresql", "environments": ["early_prod"]},
+        {"name": "postgresql-client", "debian_name": "postgresql-client", "environments": ["early_prod"]},
+        {"name": "nginx", "debian_name": "nginx", "environments": ["early_prod"]},
+        {"name": "redis-server", "debian_name": "redis-server", "environments": ["early_prod"]},
+        {"name": "rabbitmq-server", "debian_name": "rabbitmq-server", "environments": ["early_prod"]},
+        {"name": "python3-redis", "debian_name": "python3-redis", "environments": ["early_prod"]},
+        {"name": "python3-pika", "debian_name": "python3-pika", "environments": ["early_prod"]},
+        {"name": "sqlite3", "debian_name": "sqlite3", "environments": ["early_prod"]},
+        {"name": "pdns-server", "debian_name": "pdns-server", "environments": ["early_prod"]},
+        {"name": "pdns-backend-sqlite3", "debian_name": "pdns-backend-sqlite3", "environments": ["early_prod"]},
+        {"name": "pgbackrest", "debian_name": "pgbackrest", "environments": ["early_prod"]},
+        {"name": "certbot", "debian_name": "certbot", "environments": ["early_prod"]},
+        {"name": "python3-certbot-nginx", "debian_name": "python3-certbot-nginx", "environments": ["early_prod"]},
+        {"name": "python3-venv", "debian_name": "python3-venv", "environments": ["early_prod"]},
+        {"name": "python3-passlib", "debian_name": "python3-passlib", "environments": ["early_prod"]},
+        {"name": "python3-cryptography", "debian_name": "python3-cryptography", "environments": ["early_prod"]},
+        {"name": "build-essential", "debian_name": "build-essential", "environments": ["early_prod"]},
+        {"name": "libpq-dev", "debian_name": "libpq-dev", "environments": ["early_prod"]},
+        {"name": "python3-dev", "debian_name": "python3-dev", "environments": ["early_prod"]},
+        {"name": "bind9-dnsutils", "debian_name": "dnsutils", "environments": ["early_prod"]},
+        {"name": "python3-stdeb", "debian_name": "python3-stdeb", "environments": ["early_prod"]},
+        {"name": "fakeroot", "debian_name": "fakeroot", "environments": ["early_prod"]},
+        {"name": "python3-all", "debian_name": "python3-all", "environments": ["early_prod"]},
+        {"name": "python3-setuptools", "debian_name": "python3-setuptools", "environments": ["early_prod"]},
+        {"name": "dh-python", "debian_name": "dh-python", "environments": ["early_prod"]},
+        {"name": "jing", "debian_name": "jing", "environments": ["early_prod"]},
     ],
     "env_defaults": {
         "DB_PORT": "5432",
@@ -1061,6 +1071,7 @@ WantedBy=multi-user.target
     "systemd_odoo_override": {
         "Unit": {"Requires": "hams-pycache.service", "After": "hams-pycache.service"},
         "Service": {
+            "Group": "hams_com",
             "EnvironmentFiles": [
                 "odoo.env",
                 "core.env",
@@ -1097,15 +1108,22 @@ def scaffold_test_environment(args_db, provision_dirs=True):
     os.environ.setdefault("PDNS_API_KEY", "secret")
 
     if provision_dirs:
-        dirs = [d["path"] for d in MANIFEST["directories"] if "test" in d["environments"]]
         try:
-            for d in dirs:
-                os.makedirs(d, exist_ok=True)
-                apply_permissions(d, None, 0o777, recursive=True)
+            for d in MANIFEST["directories"]:
+                if "test" in d["environments"]:
+                    os.makedirs(d["path"], exist_ok=True)
+                    mode = int(d["provision_mode"], 8)
+                    apply_permissions(d["path"], d.get("owner"), mode, recursive=True)
         except PermissionError:
             print("[*] Elevating briefly to provision required host directories...")
-            subprocess.run(["sudo", "mkdir", "-p"] + dirs, check=True)
-            subprocess.run(["sudo", "chmod", "-R", "777"] + dirs, check=True)
+            for d in MANIFEST["directories"]:
+                if "test" in d["environments"]:
+                    path = d["path"]
+                    mode_str = d["provision_mode"]
+                    subprocess.run(["sudo", "mkdir", "-p", path], check=True)
+                    subprocess.run(["sudo", "chmod", "-R", mode_str, path], check=True)
+                    if d.get("owner"):
+                        subprocess.run(["sudo", "chown", "-R", d["owner"], path], check=True)
 
 
 def get_mount_paths(environment, mount_type):
@@ -1179,7 +1197,12 @@ def write_env_files(base_etc_dir, env_vars, run_cmd_func, dest_dir=""):
 
 
 def provision_apt_packages(run_cmd_func, environment="prod"):
-    packages = [p["name"] for p in MANIFEST.get("apt_packages", []) if environment in p["environments"]]
+    os_id = get_os_identifier()
+    packages = []
+    for p in MANIFEST.get("apt_packages", []):
+        if environment in p["environments"]:
+            pkg_name = p.get("debian_name", p["name"]) if os_id == "debian" else p["name"]
+            packages.append(pkg_name)
     if packages:
         run_cmd_func(["apt-get", "update"])
         run_cmd_func(["apt-get", "install", "-y"] + packages)
@@ -1291,6 +1314,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
 def generate_odoo_override_conf(odoo_conf_path):
     spec = MANIFEST["systemd_odoo_override"]
     lines = ["[Unit]"] + [f"{k}={v}" for k, v in spec["Unit"].items()] + ["", "[Service]", f'Environment="ODOO_RC={odoo_conf_path}"']
+    if "Group" in spec["Service"]:
+        lines.append(f"Group={spec['Service']['Group']}")
     lines.extend([f"EnvironmentFile=-/opt/hams/etc/{e}" for e in spec["Service"]["EnvironmentFiles"]])
     lines.extend([f'Environment="{e}"' for e in spec["Service"]["Environment"]])
     lines.append(f"ProtectSystem={spec['Service']['ProtectSystem']}")
@@ -1298,7 +1323,8 @@ def generate_odoo_override_conf(odoo_conf_path):
     lines.append(f"ReadOnlyPaths={' '.join(get_mount_paths('prod', 'ro'))}")
 
     for key in ["BindPaths", "PrivateTmp", "PrivateDevices", "NoNewPrivileges", "KillSignal", "TimeoutStopSec"]:
-        lines.append(f"{key}={spec['Service'][key]}")
+        if key in spec["Service"]:
+            lines.append(f"{key}={spec['Service'][key]}")
 
     lines.append("ExecStart=")
     lines.append(f"ExecStart=/opt/hams/.venv/bin/python /usr/bin/odoo -c {odoo_conf_path}")
@@ -1356,11 +1382,13 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
             "postgresql", "odoo"
         ]
 
+        os_id = get_os_identifier()
         jules_provided = {"curl", "python3-pip", "build-essential"}
         for pkg_spec in MANIFEST.get("apt_packages", []):
             if "early_prod" in pkg_spec["environments"]:
-                if pkg_spec["name"] not in jules_provided:
-                    all_packages.append(pkg_spec["name"])
+                pkg_name = pkg_spec.get("debian_name", pkg_spec["name"]) if os_id == "debian" else pkg_spec["name"]
+                if pkg_spec["name"] not in jules_provided and pkg_name not in jules_provided:
+                    all_packages.append(pkg_name)
 
         pg_res = subprocess.run(
             ["bash", "-c", "apt-cache depends postgresql | grep -Eo 'postgresql-[0-9]+' | head -n1 | grep -Eo '[0-9]+'"],
@@ -1394,9 +1422,10 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
                 apply_permissions(user_tmp, f"{orig_user}:{orig_user}", None)
 
                 # Ensure postgres test directories exist and are writable by the test runner
-                for d in ["/opt/hams/pgdata", "/opt/hams/pgsock"]:
-                    os.makedirs(d, exist_ok=True)
-                    apply_permissions(d, f"{orig_user}:{orig_user}", 0o700)
+                os.makedirs("/opt/hams/pgdata", exist_ok=True)
+                apply_permissions("/opt/hams/pgdata", "hams_com:hams_com", 0o700)
+                os.makedirs("/opt/hams/pgsock", exist_ok=True)
+                apply_permissions("/opt/hams/pgsock", "hams_com:hams_com", 0o770)
             except KeyError as e:
                 _logger.debug("Original user %s not found: %s", orig_user, e)
 
