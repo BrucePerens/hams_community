@@ -641,6 +641,10 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     os.makedirs("/var/tmp", exist_ok=True)
     subprocess.run(["mount", "--bind", host_tmp_dir, "/var/tmp"], check=True)
 
+    if os.path.exists("/var/run/postgresql"):
+        os.makedirs("/var/run/postgresql", exist_ok=True)
+        subprocess.run(["mount", "--bind", "/var/run/postgresql", "/var/run/postgresql"], check=True)
+
     subprocess.run(["mount", "--bind", base_dir, base_dir], check=True)
     subprocess.run(["mount", "-o", "remount,bind,ro", base_dir], check=True)
 
@@ -667,23 +671,25 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     # 3. PostgreSQL Sandboxing
     try:
-        initdb_cmd = get_pg_bin("initdb")
-        pg_ctl_cmd = get_pg_bin("pg_ctl")
         psql_cmd = get_pg_bin("psql")
     except FileNotFoundError as e:
         print(f"❌ ERROR: {e}")
         sys.exit(1)
 
-    pg_data, pg_sock = "/opt/hams/pgdata", "/opt/hams/pgsock"
+    pg_sock = "/var/run/postgresql"
+    if not os.path.exists(pg_sock):
+        pg_sock = "/tmp"
 
     orig_user = os.environ.get("SUDO_USER", "odoo")
-    pg_user = pwd.getpwnam("hams_com")
+
+    try:
+        pg_user = pwd.getpwnam("postgres")
+    except KeyError:
+        pg_user = pwd.getpwnam("root")
+
     def preexec_pg():
         os.setresgid(pg_user.pw_gid, pg_user.pw_gid, pg_user.pw_gid)
         os.setresuid(pg_user.pw_uid, pg_user.pw_uid, pg_user.pw_uid)
-
-    subprocess.run([initdb_cmd, "-D", pg_data], preexec_fn=preexec_pg, check=True, stdout=subprocess.DEVNULL)
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_sock} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], preexec_fn=preexec_pg, check=True, stdout=subprocess.DEVNULL)
 
     wait_for_socket(f"{pg_sock}/.s.PGSQL.5432", "PostgreSQL")
 
@@ -755,7 +761,6 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     # 7. Graceful Ephemeral Teardown
     subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False, stdout=subprocess.DEVNULL)
     redis_proc.terminate()
-    subprocess.run([pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], preexec_fn=preexec_pg, check=False, stdout=subprocess.DEVNULL)
 
     if os.path.exists("/opt/hams/spool/filtered_test.txt"):
         os.makedirs(real_log_dir, exist_ok=True)
@@ -778,41 +783,23 @@ def start_jules_daemons():
 
     print("[*] Configuring local PostgreSQL...")
     try:
-        initdb_cmd = get_pg_bin("initdb")
-        pg_ctl_cmd = get_pg_bin("pg_ctl")
         psql_cmd = get_pg_bin("psql")
     except FileNotFoundError as err:
         print(f"❌ ERROR: {err}")
         sys.exit(1)
 
-    pg_data, pg_socket = "/opt/hams/pgdata", "/opt/hams/pgsock"
+    subprocess.run(["sudo", "systemctl", "start", "postgresql"], check=False, stderr=subprocess.DEVNULL)
 
-    subprocess.run(["sudo", "systemctl", "stop", "postgresql"], check=False, stderr=subprocess.DEVNULL)
+    pg_socket = "/var/run/postgresql"
+    if not os.path.exists(pg_socket):
+        pg_socket = "/tmp"
 
-    os.makedirs(pg_data, exist_ok=True)
-    os.makedirs(pg_socket, exist_ok=True)
-    subprocess.run(["sudo", "chown", "-R", "hams_com:hams_com", pg_data], check=True)
-    subprocess.run(["sudo", "chown", "-R", "hams_com:hams_com", pg_socket], check=True)
-    subprocess.run(["sudo", "chmod", "700", pg_data], check=True)
-    subprocess.run(["sudo", "chmod", "770", pg_socket], check=True)
-
-    if not os.listdir(pg_data):
-        subprocess.run(["sudo", "-u", "hams_com", initdb_cmd, "-D", pg_data], check=True)
-
-    subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], check=False, stderr=subprocess.DEVNULL)
-
-    try:
-        subprocess.run(["sudo", "rm", "-f", f"{pg_data}/postmaster.pid"])
-    except OSError as err:
-        _logger.debug("Ignored OSError: %s", err)
-
-    subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-o", f"-c listen_addresses= -c unix_socket_directories={pg_socket} -c fsync=off -c synchronous_commit=off -c full_page_writes=off", "start"], check=True)
     wait_for_socket(f"{pg_socket}/.s.PGSQL.5432", "PostgreSQL")
 
     orig_user = os.environ.get("USER") or "odoo"
     custom_env = dict(os.environ)
-    custom_env["PGUSER"] = orig_user
-    p = subprocess.Popen(["sudo", "-u", "hams_com", psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, env=custom_env, text=True, stdout=subprocess.DEVNULL)
+    custom_env["PGUSER"] = "postgres"
+    p = subprocess.Popen(["sudo", "-u", "postgres", psql_cmd, "-h", pg_socket, "-d", "postgres"], stdin=subprocess.PIPE, env=custom_env, text=True, stdout=subprocess.DEVNULL)
     sql_create_roles = f"""
     DO $$
     BEGIN
@@ -845,13 +832,6 @@ def start_jules_daemons():
         wait_for_port(5672, "RabbitMQ")
 
     os.environ["PGHOST"] = pg_socket
-
-    def teardown():
-        try:
-            subprocess.run(["sudo", "-u", "hams_com", pg_ctl_cmd, "-D", pg_data, "-m", "fast", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:  # audit-ignore-catch-all
-            _logger.warning("Teardown exception occurred.")
-    atexit.register(teardown)
 
 
 def main():
