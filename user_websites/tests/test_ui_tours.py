@@ -101,7 +101,10 @@ class TestUserWebsitesUITours(RealTransactionCase):
             "login": "reporter",
             "password": "reporter",
             "website_slug": "reporter",
-            "group_ids": [(4, self.env.ref("user_websites.group_user_websites_user").id)],
+            "group_ids": [
+                (4, self.env.ref("base.group_portal").id),
+                (4, self.env.ref("user_websites.group_user_websites_user").id)
+            ],
         })
         self.env.cr.commit()
         self.authenticate(other_user.login, "reporter")
