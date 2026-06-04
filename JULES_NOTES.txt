@@ -1,2 +1,0 @@
-Remove old text from JULES_ISSUES.md, the text in that file must be entirely
-from this session.
