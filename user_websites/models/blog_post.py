@@ -249,7 +249,7 @@ class BlogPost(models.Model):
         )
 
         digests = (
-            self.env["user_websites.weekly.digest.view"]
+            self.env["user_websites.weekly_digest_view"]
             .with_user(svc_uid)
             .search([("id", ">", last_processed_id)], order="id asc", limit=50)
         )

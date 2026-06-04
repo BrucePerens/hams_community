@@ -50,3 +50,5 @@ access_blog_post_public,blog.post public,website_blog.model_blog_post,base.group
 access_blog_post_portal,blog.post portal,website_blog.model_blog_post,base.group_portal,1,0,0,0
 access_blog_blog_public,blog.blog public,website_blog.model_blog_blog,base.group_public,1,0,0,0
 access_blog_blog_portal,blog.blog portal,website_blog.model_blog_blog,base.group_portal,1,0,0,0
+access_public_directory_view_svc,public directory view svc,model_user_websites_public_directory_view,user_websites.group_user_websites_service_account,1,0,0,0
+access_content_routing_view_svc,content routing view svc,model_user_websites_content_routing_view,user_websites.group_user_websites_service_account,1,0,0,0

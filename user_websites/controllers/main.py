@@ -267,9 +267,9 @@ class UserWebsitesController(http.Controller):
         # Load directory entries (Users who opted in)
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
-        users = env_svc["res.users"].search([("privacy_show_in_directory", "=", True)], limit=1000)
+        entries = env_svc["user_websites.public_directory_view"].search([], limit=1000)
 
-        return request.render("user_websites.community_directory", {"pager": pager, "users": users})
+        return request.render("user_websites.community_directory", {"pager": pager, "entries": entries})
 
     @http.route("/my/privacy", type="http", auth="user", website=True)
     def privacy_dashboard(self, **kwargs):
@@ -329,6 +329,24 @@ class UserWebsitesController(http.Controller):
         count = env_svc["content.violation.report"].search_count([("state", "=", "new")], limit=1000)
 
         return request.make_response(json.dumps({"count": count}), status=200, headers=[("Content-Type", "application/json")])
+
+    @http.route("/<string:website_slug>/subscribe", type="http", auth="user", methods=["POST"], website=True, csrf=True)
+    def subscribe(self, website_slug, **kwargs):
+        # [@ANCHOR: UX_SUBSCRIBE]
+        utils = request.env["zero_sudo.security.utils"]
+        env_svc = utils._get_service_env("user_websites.user_websites_service_account")
+
+        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
+        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+
+        if not profile_user and not profile_group:
+            return request.not_found()
+
+        record_id = profile_user.partner_id.id if profile_user else profile_group.id
+        model = 'res.partner' if profile_user else 'user.websites.group'
+
+        env_svc[model].browse(record_id).message_subscribe([request.env.user.partner_id.id])
+        return request.make_response(json.dumps({"success": True}), headers=[("Content-Type", "application/json")])
 
     @http.route("/website/unsubscribe/<string:model>/<int:record_id>/<int:partner_id>/<int:timestamp>/<string:token>", type="http", auth="public", website=True)
     def unsubscribe(self, model, record_id, partner_id, timestamp, token, **kwargs):

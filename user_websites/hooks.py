@@ -9,21 +9,23 @@ def post_init_hook(env):
     """
     Hook executed upon module installation.
     """
+    # Use direct SQL for the initial user group population to circumvent
+    # AccessErrors on the restricted 'is_service_account' field.
     user_group = env.ref(
         "user_websites.group_user_websites_user", raise_if_not_found=False
     )
     if user_group:
-        domain = [
-            ("id", ">", 0),
-            ("is_service_account", "!=", True),
-        ]
-
         public_user = env.ref("base.public_user", raise_if_not_found=False)
-        if public_user:
-            domain.append(("id", "!=", public_user.id))
-
-        users = env["res.users"].with_context(active_test=False).search(domain, limit=100000)
-        user_group.write({"user_ids": [(4, u.id) for u in users]})
+        public_user_id = public_user.id if public_user else -1
+        env.cr.execute("""
+            INSERT INTO res_groups_users_rel (gid, uid)
+            SELECT %s, u.id
+            FROM res_users u
+            WHERE u.id > 0
+              AND u.id != %s
+              AND (u.is_service_account IS NOT TRUE)
+            ON CONFLICT DO NOTHING
+        """, (user_group.id, public_user_id))
 
     env.cr.execute(
         "CREATE INDEX IF NOT EXISTS idx_website_page_published ON website_page (id) WHERE is_published = TRUE;"
@@ -32,7 +34,7 @@ def post_init_hook(env):
         "CREATE INDEX IF NOT EXISTS idx_blog_post_published ON blog_post (id) WHERE is_published = TRUE;"
     )
 
-    # Lock down the Cloudflare service account (Hard Dependency)
+    # Use direct SQL to update is_service_account as the service account itself cannot see/edit this field
     cf_svc = env.ref("cloudflare.user_cloudflare_purge", raise_if_not_found=False)
     if cf_svc:
-        cf_svc.write({"is_service_account": True})
+        env.cr.execute("UPDATE res_users SET is_service_account = true WHERE id = %s", (cf_svc.id,))

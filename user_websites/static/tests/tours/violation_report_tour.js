@@ -4,7 +4,6 @@ import { TourUtils } from "@zero_sudo/js/tour_utils";
 
 // Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
 registry.category("web_tour.tours").add("test_tour_violation_report", {
-    url: "/",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
         TourUtils.bypassDialogs(),
@@ -27,7 +26,7 @@ registry.category("web_tour.tours").add("test_tour_violation_report", {
         {
             trigger: 'body',
             content: 'Wait for page reload after successful controller redirect',
-            run: function() {}
+            run: () => {}
         }
     ]
 });

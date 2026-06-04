@@ -211,15 +211,16 @@
                     </div>
                 </div>
                 <div class="row mt-4">
-                    <t t-foreach="users" t-as="user">
+                    <t t-foreach="entries" t-as="entry">
                         <div class="col-md-4 mb-4">
                             <div class="card h-100 shadow-sm border-0">
                                 <div class="card-body text-center">
                                     <div class="mb-3">
-                                        <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128?unique=#{user.write_date and int(user.write_date.timestamp()) or 0}" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
+                                        <img t-attf-src="/web/image/res.users/#{entry.user_id.id}/avatar_128?unique=#{entry.user_id.write_date and int(entry.user_id.write_date.timestamp()) or 0}" class="rounded-circle img-thumbnail shadow-sm" style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar"/>
                                     </div>
-                                    <h5 class="card-title fw-bold" t-out="user.name"/>
-                                    <a t-attf-href="/#{user.website_slug}/home" class="btn btn-outline-primary w-100 mt-2">
+                                    <h5 class="card-title fw-bold" t-out="entry.name"/>
+                                    <p class="text-muted small mb-2"><i class="fa fa-eye me-1" aria-hidden="true"/> <t t-out="entry.view_count"/> total views</p>
+                                    <a t-attf-href="/#{entry.website_slug}/home" class="btn btn-outline-primary w-100 mt-2">
                                         Visit Website
                                     </a>
                                     <div id="user_websites_dropzone_directory_card" class="mt-3">
@@ -230,7 +231,7 @@
                             </div>
                         </div>
                     </t>
-                    <div t-if="not users" class="col-12">
+                    <div t-if="not entries" class="col-12">
                         <p class="text-muted">No public websites available yet.</p>
                     </div>
                 </div>
