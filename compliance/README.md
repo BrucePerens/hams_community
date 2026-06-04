@@ -7,7 +7,7 @@ This module automatically handles the annoying parts of running a legal website.
 ## 🌟 What It Does
 
 * **Turns on the Cookie Banner:** As soon as you install this, it flips the switch to turn on Odoo's native Cookie Consent Bar across all your websites. It also ensures that any **new** websites created later have this enabled by default. This stops optional tracking scripts until the user clicks "Accept."
-* **Writes Your Legal Pages:** It automatically creates standard, editable pages for your Privacy Policy (`/privacy`), Cookie Policy (`/cookie-policy`), and Terms of Service (`/terms`).
+* **Writes Your Legal Pages:** It automatically creates standard, editable pages for your Privacy Policy (`/privacy`), Cookie Policy (`/cookie-policy`), Terms of Service (`/terms`), and Accessibility Statement (`/accessibility`).
 * **Automatic Footer Links:** It injects links to all legal pages into your website's footer automatically, ensuring global visibility and regulatory compliance.
 * **Doesn't Break Your Edits:** If you've already written a privacy policy at `/privacy`, the module detects it and leaves yours alone. If you edit the pages it creates, it won't overwrite your work when you update the module.
 
@@ -25,10 +25,11 @@ Managing regulatory compliance is easy with this module. Here is how you can ope
 ### 1. Viewing and Editing Your Legal Pages
 As a site owner, it is your responsibility to ensure that your legal documents accurately reflect your specific business practices and jurisdictional requirements. We provide standard templates that cover the default functionality of our modules, but you should review and customize them.
 
-We provide three standard pages that you can edit to fit your needs:
+We provide four standard pages that you can edit to fit your needs:
 * **Privacy Policy:** `/privacy`
 * **Cookie Policy:** `/cookie-policy`
 * **Terms of Service:** `/terms`
+* **Accessibility Statement:** `/accessibility`
 
 **To edit these pages:**
 1. Navigate to the page URL on your website.
@@ -71,7 +72,7 @@ IN_JULES_VM=1 python3 tools/test.py -u compliance --already-provisioned
 
 <enforcement_details>
 ## 1. Overview
-A non-interactive configuration module that enforces baseline regulatory compliance across the Odoo instance upon installation.
+A non-interactive configuration module that enforces baseline regulatory compliance across the Odoo instance upon installation. This module is essential for making the platform accessible and trustworthy for the general population.
 
 ### 📚 User Stories & Journeys
 
@@ -98,6 +99,7 @@ Dependent modules requiring legal links MUST use:
 * `/privacy` : Privacy Policy
 * `/cookie-policy` : Cookie Policy
 * `/terms` : Terms of Service
+* `/accessibility` : Accessibility Statement
 
 ### Integration Rules
 1. **Do Not Build Custom Banners:** Rely entirely on Odoo's native `website.cookies_bar`.

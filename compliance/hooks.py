@@ -35,7 +35,7 @@ def post_init_hook(env):
     # [@ANCHOR: compliance_website_aware_scope]
     # [@ANCHOR: story_automatic_legal_pages]
     # Verified by [@ANCHOR: test_compliance_non_destructive_mandate]
-    legal_urls = ["/privacy", "/cookie-policy", "/terms"]
+    legal_urls = ["/privacy", "/cookie-policy", "/terms", "/accessibility"]
 
     # ADR-0022: Prevent N+1 queries by pre-fetching outside the loop.
     # Use website_id=False in context to ensure we see pages across all websites.
