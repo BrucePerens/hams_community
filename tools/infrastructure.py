@@ -236,8 +236,8 @@ MANIFEST = {
         },
         {
             "path": "/opt/hams/pgsock",
-            "owner": "postgres:postgres",
-            "provision_mode": "777",
+            "owner": "hams_com:hams_com",
+            "provision_mode": "2775",
             "runtime_mount": "rw",
             "environments": ["test"],
         },
