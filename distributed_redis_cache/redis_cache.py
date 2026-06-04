@@ -77,7 +77,7 @@ def distributed_cache():
             # to prevent cross-test ghost cache poisoning after Postgres rollbacks.
             # RealTransactionCase and integration tests can re-enable it via system parameter.
             if tools.config.get("test_enable"):
-                # Use super-user ID directly for system parameter read to comply with zero-sudo linter
+                # Use with_user(1) for system parameter read to comply with zero-sudo linter
                 param_obj = self.env['ir.config_parameter'].with_user(1)
                 integration_active = param_obj.get_param('distributed_redis_cache.test_integration_active')
                 if not integration_active:
