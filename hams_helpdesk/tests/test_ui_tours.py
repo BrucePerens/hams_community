@@ -25,6 +25,10 @@ class TestHelpdeskTours(RealTransactionCase):
         # Tests [@ANCHOR: helpdesk_menu_root]
         self.start_tour("/odoo?debug=1", "helpdesk_operator_tour", login="admin")
 
+        # Flush the mail/discuss thread buffers before tearing down the transaction
+        # to prevent background 'concurrent update' serialization failures.
+        self.env.cr.flush()
+
     def test_helpdesk_portal_tour(self):
         """Execute the helpdesk portal tour to verify frontend ticket viewing."""
         # [@ANCHOR: test_helpdesk_portal_tour]

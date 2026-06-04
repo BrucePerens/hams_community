@@ -151,14 +151,18 @@ class DatabaseQueryStat(models.Model):
 
         can_query = False
         try:
-            # We use a savepoint to safely probe the view. If the extension is
-            # installed but NOT loaded in postgresql.conf, this will throw a catchable
-            # ObjectNotInPrerequisiteState rather than destroying the Odoo transaction.
-            with self.env.cr.savepoint():
-                self.env.cr.execute("SELECT 1 FROM pg_stat_statements LIMIT 1")
-            can_query = True
+            # Safely check the postgres catalog and settings to confirm the extension
+            # is loaded without triggering a hard 'bad query' ERROR log in odoo.sql_db
+            self.env.cr.execute("""
+                SELECT 1 FROM pg_extension e
+                JOIN pg_settings s ON s.name = 'shared_preload_libraries'
+                WHERE e.extname = 'pg_stat_statements'
+                AND s.setting LIKE '%pg_stat_statements%'
+            """)
+            if self.env.cr.fetchone():
+                can_query = True
         except Exception as e: # audit-ignore-catch-all
-            _logger.warning("Graceful degradation: pg_stat_statements is not queryable: %s", e)
+            _logger.warning("Graceful degradation check failed: %s", e)
 
         if can_query:
             self.env.cr.execute("""

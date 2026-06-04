@@ -9,6 +9,11 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
     url: "/odoo?debug=1",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
+        {
+            content: "Open Apps Menu",
+            trigger: '.o_navbar_apps_menu button',
+            run: 'click',
+        },
         // Wait for the home menu app icon to render using pure structure-agnostic attributes
         { trigger: '[data-menu-xmlid="hams_helpdesk.menu_hams_helpdesk_root"]', content: 'Wait for Helpdesk App Icon on Root Menu', run: function() {} },
         {

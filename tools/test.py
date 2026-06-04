@@ -179,6 +179,7 @@ class FailureExtractor:
                 or "[BACKUP_WORKER]" in line
                 or "[LOG_ANALYZER]" in line
                 or "odoo.tests.result:" in line
+                or "discuss_channel_member" in "\n".join(self.current_block)
             ):
                 if self.capturing:
                     self.captured_blocks.append((self.current_context, self.current_block))
