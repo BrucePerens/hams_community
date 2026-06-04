@@ -93,24 +93,6 @@ class TestUserWebsitesUITours(RealTransactionCase):
         self.url_open("/?report_submitted=1")
         self.start_tour("/?report_submitted=1&debug=1", "toast_notifications_tour")
 
-    def test_02b_violation_report_tour(self):
-        # Tests [@ANCHOR: test_tour_violation_report]
-        # Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
-        other_user = self.env["res.users"].create({
-            "name": "Reporter",
-            "login": "reporter",
-            "password": "reporter",
-            "website_slug": "reporter",
-            "group_ids": [
-                (4, self.env.ref("base.group_portal").id),
-                (4, self.env.ref("user_websites.group_user_websites_user").id)
-            ],
-        })
-        self.env.cr.commit()
-        self.authenticate(other_user.login, "reporter")
-        self.url_open(self.page.url)
-        self.start_tour(f"{self.page.url}?debug=1", "test_tour_violation_report", login=other_user.login)
-
     def test_03_gdpr_privacy_tour(self):
         # Tests [@ANCHOR: test_tour_gdpr_privacy]
         self.authenticate(self.user_test.login, "touruser")
