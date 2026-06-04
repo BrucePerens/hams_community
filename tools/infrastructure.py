@@ -296,7 +296,6 @@ MANIFEST = {
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
-
         {
             "path": "/opt/hams/failed_input",
             "owner": "hams_com:hams_com",
@@ -507,7 +506,6 @@ Before=odoo.service
 [Service]
 Type=oneshot
 User=hams_com
-Group=hams_com
 Environment="PYTHONPYCACHEPREFIX=/opt/hams/pycache"
 ExecStart=/opt/hams/.venv/bin/python -m compileall -q /opt/hams
 RemainAfterExit=yes
@@ -530,7 +528,6 @@ After=odoo.service
 [Service]
 Type=oneshot
 User=odoo
-Group=hams_com
 Environment="ODOO_RC=/opt/hams/etc/odoo.conf"
 Environment="HAMS_KEYS_DIR=/opt/hams/etc/keys"
 EnvironmentFile=-/opt/hams/etc/odoo.env
@@ -633,7 +630,6 @@ CapabilityBoundingSet=
 ReadWritePaths=/opt/hams/spool/adif_queue
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/adif_processor
 
 Environment="ODOO_USER=logbook_api_service_internal"
@@ -673,7 +669,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/dx_firehose
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -715,7 +710,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -755,7 +749,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
@@ -797,7 +790,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=bruce
-Group=hams_com
 WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
@@ -840,7 +832,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/pdns_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -880,7 +871,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/lotw_eqsl_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -921,7 +911,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=oneshot
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -975,7 +964,6 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 CapabilityBoundingSet=
 Type=simple
 User=odoo
-Group=hams_com
 WorkingDirectory=/opt/hams/daemons/qrz_scraper
 
 EnvironmentFile=/etc/hams_daemons.env
@@ -1058,7 +1046,6 @@ WantedBy=multi-user.target
     "systemd_odoo_override": {
         "Unit": {"Requires": "hams-pycache.service", "After": "hams-pycache.service"},
         "Service": {
-            "Group": "hams_com",
             "EnvironmentFiles": [
                 "odoo.env",
                 "core.env",
@@ -1408,8 +1395,6 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
                 os.makedirs(user_tmp, exist_ok=True)
                 apply_permissions(user_tmp, f"{orig_user}:{orig_user}", None)
 
-                # Ensure postgres test directories exist and are writable by the test runner
-                # (Removed hardcoded pgdata/pgsock provisioning per instructions)
             except KeyError as e:
                 _logger.debug("Original user %s not found: %s", orig_user, e)
 
