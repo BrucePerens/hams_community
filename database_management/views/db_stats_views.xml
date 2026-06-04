@@ -81,6 +81,21 @@
         </field>
     </record>
 
+    <record id="view_db_replication_stat_list" model="ir.ui.view"> <!-- audit-ignore-view -->
+        <field name="name">database.replication.stat.list</field>
+        <field name="model">database.replication.stat</field>
+        <field name="arch" type="xml">
+            <list string="Replication Status" create="false" edit="false">
+                <field name="usename"/>
+                <field name="application_name"/>
+                <field name="client_addr"/>
+                <field name="state"/>
+                <field name="replay_lag"/>
+                <field name="sync_state"/>
+            </list>
+        </field>
+    </record>
+
     <record id="view_db_index_advisor_list" model="ir.ui.view"> <!-- audit-ignore-view -->
         <field name="name">database.index.advisor.list</field>
         <field name="model">database.index.advisor</field>

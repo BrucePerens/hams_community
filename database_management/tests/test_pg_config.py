@@ -33,7 +33,7 @@ class TestPgConfig(HamsTransactionCase):
         # Execute the optimization (mocked to prevent ActiveSqlTransaction and actual config changes)
         mock_execute = self.safe_patch_object(type(self.env.cr), "execute")
         res = wizard.action_apply_optimizations()
-        self.assertEqual(res.get("type"), "ir.actions.client")
+        self.assertEqual(res.get("type"), "ir.actions.client", "[!] DIAGNOSTIC FOR AI: pg.optimize.wizard.action_apply_optimizations should return a client action.")
 
         # Verify specific calculations
         # 16GB * 0.25 = 4GB = 4096MB
@@ -89,7 +89,7 @@ class TestPgConfig(HamsTransactionCase):
         )
         wizard.action_generate()
 
-        self.assertEqual(wizard.state, "generated")
+        self.assertEqual(wizard.state, "generated", "[!] DIAGNOSTIC FOR AI: pg.ha.wizard state should be 'generated' after generation.")
         # Assert Patroni Primary details
         self.assertIn("192.168.1.10:8008", wizard.patroni_primary)
         self.assertIn("password: testpass", wizard.patroni_primary)

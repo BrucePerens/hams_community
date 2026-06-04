@@ -13,6 +13,7 @@ The `database_management` module provides a comprehensive suite of Database Admi
 *   **Active Session Management:** View and terminate runaway database sessions.
 *   **Slow Query Explain:** Generate `EXPLAIN (ANALYZE, BUFFERS)` plans for slow queries to diagnose performance bottlenecks.
 *   **Index Advisor:** Recommends potentially missing indexes based on sequential scan statistics and table size.
+*   **Replication Monitoring:** Real-time tracking of PostgreSQL replication lag and status across the cluster.
 *   **Performance Tuning Wizard:** Automatically calculates optimal PostgreSQL parameters based on hardware specifications and applies them via `ALTER SYSTEM`.
 *   **High Availability Orchestrator:** Generates production-ready configurations for Patroni, etcd, and PgBouncer clusters.
 *   **Automated Alerts:** Integrates with PagerDuty to notify SREs when table bloat exceeds critical thresholds.
@@ -23,10 +24,10 @@ The `database_management` module provides a comprehensive suite of Database Admi
 ## 🛠 Architecture & Security
 
 ### Micro-Privilege Architecture
-This module strictly adheres to a Zero-Sudo policy. Sensitive operations are delegated to the `user_database_management_service` service account. Privilege elevation is handled via `_get_service_env()` from the `zero_sudo` module, ensuring that no `sudo()` calls are used in the codebase.
+This module strictly adheres to a Zero-Sudo policy. Sensitive operations (like `pg_terminate_backend` or `ALTER SYSTEM`) are delegated to the `user_database_management_service` service account. Privilege elevation is handled via `_get_service_env()` from the `zero_sudo` module, ensuring that no `sudo()` calls are used in the codebase.
 
 ### Multi-Tenant & Global Awareness
-Models in this module are designed to be **logically global**. Since they monitor PostgreSQL system statistics (such as `pg_stat_user_tables` and `pg_stat_statements`), the data they provide represents the aggregate state of the entire database cluster. In multi-tenant environments where multiple Odoo companies share a single database, these statistics correctly reflect the performance and health of the shared infrastructure.
+Models in this module are designed to be **logically global**. Since they monitor PostgreSQL system statistics (such as `pg_stat_user_tables`, `pg_stat_statements`, and `pg_stat_replication`), the data they provide represents the aggregate state of the entire database cluster. In multi-tenant environments where multiple Odoo companies share a single database, these statistics correctly reflect the performance and health of the shared infrastructure.
 
 ### Security Hardening
 *   **SQL Injection Prevention:** All raw SQL queries utilize the `psycopg2.sql` library for AST-compliant parameterization. `[@ANCHOR: pg_optimize_wizard]`
@@ -35,7 +36,7 @@ Models in this module are designed to be **logically global**. Since they monito
 *   **Access Control:** All DBA functionality is restricted to the `base.group_system` role, with additional granular privileges defined in `res.groups.privilege`. Managers have the `database_management.group_database_management_manager` group.
 
 ### Components
-*   **Stat Views:** Native PostgreSQL statistics are exposed via Odoo models (`database.table.stat`, `database.index.stat`, `database.query.stat`, `database.activity`) using PostgreSQL views. `[@ANCHOR: db_index_stats]`
+*   **Stat Views:** Native PostgreSQL statistics are exposed via Odoo models (`database.table.stat`, `database.index.stat`, `database.query.stat`, `database.activity`, `database.replication.stat`) using PostgreSQL views. `[@ANCHOR: db_index_stats]`
 *   **Vacuum Automation:** Manual `VACUUM ANALYZE` is triggered via `subprocess` calling `vacuumdb`, bypassing Odoo's transaction blocks to allow physical cleanup. `[@ANCHOR: vacuum_analyze]`
 *   **Configuration Management:** The Optimization Wizard `[@ANCHOR: pg_optimize_wizard]` writes to `postgresql.auto.conf` and reloads the configuration.
 
@@ -66,5 +67,6 @@ The module includes an exhaustive test suite covering standard and integration s
 *   `[@ANCHOR: pg_optimize_wizard]`: Hardware-based tuning calculations.
 *   `[@ANCHOR: pg_ha_wizard]`: HA cluster configuration generation.
 *   `[@ANCHOR: db_slow_queries]`: APM tracking via `pg_stat_statements`.
+*   `[@ANCHOR: db_replication_stats]`: Replication lag monitoring.
 *   `[@ANCHOR: bloat_alert_synergy]`: PagerDuty integration logic.
 *   `[@ANCHOR: db_doc_injection]`: Documentation bootstrap verification.

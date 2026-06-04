@@ -22,11 +22,7 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
             trigger: '[data-menu-xmlid="database_management.menu_admin_root"]',
             run: 'click',
         },
-        {
-            content: "Wait for Table Health List View",
-            trigger: '.o_list_renderer',
-            run: function() {},
-        },
+        { trigger: '.o_list_renderer' },
         {
             content: "Select First Row",
             trigger: '.o_list_table .o_data_row .o_list_record_selector input',
@@ -39,13 +35,9 @@ registry.category("web_tour.tours").add("db_management_bloat_tour", { // # Verif
         },
         {
             content: "Click Vacuum Analyze Selected",
-            trigger: 'button[name="action_vacuum_analyze"]',
+            trigger: 'button[name="action_vacuum_analyze"]:not([disabled])',
             run: 'click',
         },
-        {
-            content: "Wait for RPC to complete (neutral wait)",
-            trigger: 'body',
-            run: function() {},
-        }
+        { trigger: 'body' }
     ],
 });

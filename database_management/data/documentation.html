@@ -55,6 +55,13 @@
 <section>
     <h2>4. Active Sessions & Kill Switch</h2>
     <p>Sometimes a single "runaway" query or a deadlocked session can freeze parts of the system.</p>
+
+    <h3>Replication Monitoring:</h3>
+    <p>For systems with standby nodes, monitoring replication lag is critical to ensure data consistency and high availability.</p>
+    <ul>
+        <li>Navigate to <strong>Database Health > Replication Monitoring</strong>.</li>
+        <li>The view shows connected standby nodes, their state, and <strong>Replay Lag</strong>.</li>
+    </ul>
     <ul>
         <li>Go to <strong>Database Health > Active Sessions</strong>.</li>
         <li>Review the <strong>Duration</strong> and the <strong>Active Query</strong> text.</li>
