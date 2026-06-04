@@ -296,20 +296,7 @@ MANIFEST = {
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
         },
-        {
-            "path": "/opt/hams/pgdata",
-            "owner": "hams_com:hams_com",
-            "provision_mode": "700",
-            "runtime_mount": "rw",
-            "environments": ["test"],
-        },
-        {
-            "path": "/opt/hams/pgsock",
-            "owner": "hams_com:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["test"],
-        },
+
         {
             "path": "/opt/hams/failed_input",
             "owner": "hams_com:hams_com",
@@ -1422,10 +1409,7 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
                 apply_permissions(user_tmp, f"{orig_user}:{orig_user}", None)
 
                 # Ensure postgres test directories exist and are writable by the test runner
-                os.makedirs("/opt/hams/pgdata", exist_ok=True)
-                apply_permissions("/opt/hams/pgdata", "hams_com:hams_com", 0o700)
-                os.makedirs("/opt/hams/pgsock", exist_ok=True)
-                apply_permissions("/opt/hams/pgsock", "hams_com:hams_com", 0o770)
+                # (Removed hardcoded pgdata/pgsock provisioning per instructions)
             except KeyError as e:
                 _logger.debug("Original user %s not found: %s", orig_user, e)
 
