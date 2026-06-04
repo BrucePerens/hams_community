@@ -15,4 +15,5 @@ class TestComplianceUITour(HamsHttpCase):
         # Tests [@ANCHOR: compliance_privacy_policy_template]
         # Tests [@ANCHOR: compliance_cookie_policy_template]
         # Tests [@ANCHOR: compliance_terms_of_service_template]
+        # Tests [@ANCHOR: compliance_accessibility_statement_template]
         self.start_tour("/privacy?debug=1", "compliance_tour")
