@@ -17,6 +17,7 @@ import sys
 import ast
 import argparse
 import xml.parsers.expat
+import html.parser
 import glob
 
 
@@ -43,6 +44,43 @@ class XMLNode:
             p = p.parent
         return anc
 
+
+class OdooHTMLParser(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.root = XMLNode("root_wrapper", {}, 1)
+        self.stack = [self.root]
+        self.void_elements = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
+
+    def handle_starttag(self, tag, attrs):
+        node = XMLNode(tag, dict(attrs), self.getpos()[0])
+        node.parent = self.stack[-1]
+        self.stack[-1].children.append(node)
+        if tag not in self.void_elements:
+            self.stack.append(node)
+
+    def handle_endtag(self, tag):
+        if tag in self.void_elements:
+            return
+        for i in range(len(self.stack)-1, 0, -1):
+            if self.stack[i].tag == tag:
+                self.stack[i].end_lineno = self.getpos()[0]
+                self.stack = self.stack[:i]
+                break
+
+    def handle_data(self, data):
+        if self.stack:
+            self.stack[-1].text += data
+
+    def handle_comment(self, data):
+        node = XMLNode("#comment", {"text": data}, self.getpos()[0])
+        node.parent = self.stack[-1]
+        self.stack[-1].children.append(node)
+
+def parse_odoo_html(content):
+    parser = OdooHTMLParser()
+    parser.feed(content)
+    return parser.root
 
 def parse_odoo_xml(content):
     """Safely parses Odoo XML handling edge cases like bare ampersands and inline logic."""
@@ -1411,10 +1449,21 @@ def scan_file(filepath, is_odoo_module=False):
                         f"Line {i}: CRITICAL FINANCIAL EXPOSURE: Granting access to '{model_id}' in custom ir.model.access.csv is strictly forbidden."
                     )
 
-    if is_odoo_module and filename.endswith(".xml"):
+    if is_odoo_module and filename.endswith((".xml", ".html")):
         try:
-            root_node = parse_odoo_xml(content)
+            if filename.endswith(".html"):
+                root_node = parse_odoo_html(content)
+            else:
+                root_node = parse_odoo_xml(content)
+
             for node in root_node.walk():
+                if node.tag != "#comment":
+                    if node.text and "[@ANCHOR:" in node.text:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments (<!-- ... -->).")
+                    for attr_name, attr_val in node.attrs.items():
+                        if "[@ANCHOR:" in str(attr_val):
+                            errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments (<!-- ... -->). Found in attribute.")
+
                 if node.tag == "template" or (
                     node.tag == "record" and node.attrs.get("model") == "ir.ui.view"
                 ):
@@ -2120,7 +2169,7 @@ def main():
                 except Exception:
                     pass
 
-            if file.endswith((".py", ".xml", ".js", ".csv")):
+            if file.endswith((".py", ".xml", ".js", ".csv", ".html")):
                 scanned_files += 1
                 is_odoo = _is_odoo_module(filepath, target_dir)
                 errors, warnings = scan_file(filepath, is_odoo_module=is_odoo)

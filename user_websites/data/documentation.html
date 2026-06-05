@@ -17,9 +17,9 @@
                 <li>Clicking this button will initialize your home page with a default layout.</li>
                 <li>Use the <strong>"Edit"</strong> button in the top right to start adding content!</li>
             </ol>
-            <span style="display:none;">[@ANCHOR: UX_CREATE_SITE]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_group_site_creation]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_group_site_routing]</span>
+            <!-- [@ANCHOR: UX_CREATE_SITE] -->
+            <!-- Tests [@ANCHOR: user_websites:test_group_site_creation] -->
+            <!-- Tests [@ANCHOR: user_websites:test_group_site_routing] -->
         </section>
 
         <section id="blogging" class="mb-5">
@@ -31,13 +31,13 @@
                 <li>New posts can be created directly from the blog index page when you are logged in.</li>
                 <li><strong>Subscriptions:</strong> Users can subscribe to your site to receive email notifications when you post new content.</li>
             </ul>
-            <span style="display:none;">[@ANCHOR: UX_CREATE_BLOG_POST]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_tour_create_blog]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_group_blog_post_creation]</span>
-            <span style="display:none;">[@ANCHOR: UX_SUBSCRIBE]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_subscribe_to_site]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_subscription_creation]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_unsubscribe_secret]</span>
+            <!-- [@ANCHOR: UX_CREATE_BLOG_POST] -->
+            <!-- Tests [@ANCHOR: user_websites:test_tour_create_blog] -->
+            <!-- Tests [@ANCHOR: user_websites:test_group_blog_post_creation] -->
+            <!-- [@ANCHOR: UX_SUBSCRIBE] -->
+            <!-- Tests [@ANCHOR: user_websites:test_subscribe_to_site] -->
+            <!-- Tests [@ANCHOR: user_websites:test_subscription_creation] -->
+            <!-- Tests [@ANCHOR: user_websites:test_unsubscribe_secret] -->
         </section>
 
         <section id="directory" class="mb-5">
@@ -47,8 +47,13 @@
                 <li>To appear in the directory, go to your <strong>Settings</strong> and check <strong>"Show in Public Directory"</strong>.</li>
                 <li>The directory shows the total view count for each site, giving you an idea of what's popular.</li>
             </ul>
-            <span style="display:none;">[@ANCHOR: UX_COMMUNITY_DIRECTORY]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_tour_community_directory]</span>
+            <!-- [@ANCHOR: UX_COMMUNITY_DIRECTORY] -->
+            <!-- Tests [@ANCHOR: user_websites:test_tour_community_directory] -->
+        </section>
+
+        <section id="directory-views">
+            <h4>Total View Aggregation</h4>
+            <p>The Community Directory now displays the total view count for each website. This count is aggregated from all public pages and blog posts owned by the user or group.</p>
         </section>
 
         <section id="moderation" class="mb-5">
@@ -58,14 +63,14 @@
                 <li><strong>Report Violation:</strong> If you find any content that is inappropriate or violates our guidelines, click the <strong>"Report Violation"</strong> button at the bottom of the page.</li>
                 <li><strong>Moderation:</strong> Our team reviews all reports. Users who repeatedly violate guidelines may receive strikes. After 3 strikes, website features will be suspended.</li>
             </ul>
-            <span style="display:none;">[@ANCHOR: UX_REPORT_VIOLATION]</span>
+            <!-- [@ANCHOR: UX_REPORT_VIOLATION] -->
         </section>
 
         <section id="appeals" class="mb-5">
             <h2 class="fw-bold"><i class="fa fa-gavel text-warning me-2" aria-hidden="true"></i> Account Appeals</h2>
             <p>If your account has been suspended, you can submit a one-time appeal through your <strong>Portal Dashboard</strong>. Explain clearly why you believe the suspension should be lifted.</p>
-            <span style="display:none;">[@ANCHOR: UX_SUBMIT_APPEAL]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_tour_moderation_appeal]</span>
+            <!-- [@ANCHOR: UX_SUBMIT_APPEAL] -->
+            <!-- Tests [@ANCHOR: user_websites:test_tour_moderation_appeal] -->
         </section>
 
         <section id="privacy" class="mb-5">
@@ -75,25 +80,21 @@
                 <li><strong>Data Export:</strong> Download all your pages and posts in a JSON format for your own records.</li>
                 <li><strong>Right to Erasure:</strong> Permanently delete all your content from our system. <em>Warning: This action is irreversible.</em></li>
             </ul>
-            <span style="display:none;">[@ANCHOR: UX_GDPR_EXPORT]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_gdpr_export_api]</span>
-            <span style="display:none;"># Tests [@ANCHOR: user_websites:test_documentation_route]</span>
-            <span style="display:none;">[@ANCHOR: UX_GDPR_ERASURE]</span>
+            <!-- [@ANCHOR: UX_GDPR_EXPORT] -->
+            <!-- Tests [@ANCHOR: user_websites:test_gdpr_export_api] -->
+            <!-- Tests [@ANCHOR: user_websites:test_documentation_route] -->
+            <!-- [@ANCHOR: UX_GDPR_ERASURE] -->
         </section>
 
         <section id="xpath-rendering" class="d-none">
             <h4>XPath Rendering Elements</h4>
-            <span style="display:none;"># Documents [@ANCHOR: user_websites:xpath_rendering_appeal]</span>
-            <span style="display:none;"># Documents [@ANCHOR: user_websites:xpath_rendering_portal_docs]</span>
-            <span style="display:none;"># Documents [@ANCHOR: user_websites:xpath_rendering_navbar_head]</span>
-            <span style="display:none;">[@ANCHOR: xpath_rendering_appeal]</span>
-            <span style="display:none;">[@ANCHOR: xpath_rendering_portal_docs]</span>
-            <span style="display:none;">[@ANCHOR: xpath_rendering_navbar_head]</span>
+            <!-- Documents [@ANCHOR: user_websites:xpath_rendering_appeal] -->
+            <!-- Documents [@ANCHOR: user_websites:xpath_rendering_portal_docs] -->
+            <!-- Documents [@ANCHOR: user_websites:xpath_rendering_navbar_head] -->
+            <!-- [@ANCHOR: xpath_rendering_appeal] -->
+            <!-- [@ANCHOR: xpath_rendering_portal_docs] -->
+            <!-- [@ANCHOR: xpath_rendering_navbar_head] -->
         </section>
     </main>
 </body>
 </html>
-        <section id="directory-views">
-            <h4>Total View Aggregation</h4>
-            <p>The Community Directory now displays the total view count for each website. This count is aggregated from all public pages and blog posts owned by the user or group.</p>
-        </section>

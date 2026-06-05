@@ -2,10 +2,10 @@
 <odoo>
 
     <template id="user_websites_snippet_category" inherit_id="website.snippets" name="User Websites Snippets">
-        &lt;!-- Verified by [@ANCHOR: test_dropzone_snippets] --&gt;
-        <xpath expr="/*" position="inside"> &lt;!-- audit-ignore-xpath: Tested by [@ANCHOR: test_dropzone_snippets] --&gt;
+        <!-- Verified by [@ANCHOR: test_dropzone_snippets] -->
+        <xpath expr="/*" position="inside"> <!-- audit-ignore-xpath: Tested by [@ANCHOR: test_dropzone_snippets] -->
             <div id="user_websites_dropzone_snippets">
-                &lt;!-- [@ANCHOR: dropzone_snippets] --&gt;
+                <!-- [@ANCHOR: dropzone_snippets] -->
             </div>
             <div id="snippet_user_websites" class="o_panel accordion-item">
                 <div class="o_panel_header accordion-header"><i class="fa fa-address-card-o" aria-hidden="true"/> Profile Widgets</div>

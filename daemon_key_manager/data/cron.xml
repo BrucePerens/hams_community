@@ -7,8 +7,8 @@
             <field name="model_id" ref="daemon_key_manager.model_daemon_key_registry"/>
             <field name="user_id" ref="daemon_key_manager.user_daemon_key_manager_service"/>
             <field name="state">code</field>
+            <!-- [@ANCHOR: cron_rotation_trigger] -->
             <field name="code">
-# [@ANCHOR: cron_rotation_trigger]
 model._cron_rotate_all_keys()
             </field>
             <field name="interval_number">60</field>
