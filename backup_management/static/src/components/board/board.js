@@ -22,6 +22,16 @@ export class BackupBoard extends Component {
         });
     }
 
+    async triggerBackup(configId) {
+        await this.orm.call("backup.config", "action_trigger_backup", [configId]);
+        await this.fetchData();
+    }
+
+    async syncSnapshots(configId) {
+        await this.orm.call("backup.config", "action_sync_snapshots", [configId]);
+        await this.fetchData();
+    }
+
     async fetchData() {
         // Isolation by website_id
         const context = {};

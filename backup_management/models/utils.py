@@ -42,6 +42,9 @@ def validate_backup_path(path):
         "/var/run",
         "/run",
         "/usr/local/bin",
+        "/var/lib/postgresql",
+        "/var/lib/rabbitmq",
+        "/var/lib/redis",
         "/usr/local/sbin",
         "/usr/local/lib",
     ]
