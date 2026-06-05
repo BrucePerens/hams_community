@@ -7,6 +7,7 @@ Synchronized, cluster-wide caching for Odoo servers to ensure all your web nodes
 ## Features
 - **Shared Cluster Cache**: Synchronizes multiple Odoo servers by leveraging a central Redis-backed memory pool, ensuring a "single source of truth" across your infrastructure.
 - **Instant Phase Coherence**: Emits real-time invalidation signals via PostgreSQL NOTIFY and Redis Pub/Sub, ensuring all nodes flush stale data the millisecond it changes.
+- **Smart Model-Level Invalidation**: Precisely clears only the data that changed at the model level, preventing global ORM cache stampedes and maintaining high performance.
 - **Smart Isolation**: Automatically separates data between different websites and companies so information never leaks between clients.
 - **Automatic Fallback**: If the shared memory server (Redis) goes offline, Odoo automatically switches back to its standard local memory so your site stays up.
 - **Fast Cleanup**: Precisely clears only the data that changed, keeping the rest of the system running at full speed.

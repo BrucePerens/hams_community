@@ -95,7 +95,19 @@ class IrHttp(models.AbstractModel):
         stop_after_init = tools.config.get("stop_after_init")
         is_test_cr = getattr(request.env.registry, "test_cr", False)
 
-        if not (
+        # Allow integration tests to use the Redis listener if explicitly enabled
+        integration_active = False
+        if test_mode:
+            # We use a try-except to handle cases where the registry might not be fully initialized
+            try:
+                # We use the ORM if available, but wrap in try-except for safety
+                param = request.env['ir.config_parameter'].with_user(1).get_param('distributed_redis_cache.test_integration_active')
+                integration_active = bool(param)
+            except Exception as e: # audit-ignore-catch-all
+                # Fail silently during initialization/teardown if request context is unstable
+                _logger.info("Failed to read integration status from request env: %s", e)
+
+        if integration_active or not (
             test_mode
             or init_mode
             or update_mode
