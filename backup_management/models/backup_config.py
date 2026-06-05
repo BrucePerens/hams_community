@@ -6,6 +6,7 @@ import datetime
 import shutil
 import pika
 import odoo
+import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, AccessError
 from .utils import validate_backup_path
@@ -152,15 +153,10 @@ class BackupConfig(models.Model):
 
             if rec.engine == "pgbackrest":
                 # pgBackRest target_path is a stanza name, not a direct path.
-                # Ensure no shell metacharacters in stanza name.
-                if (
-                    not rec.target_path
-                    or ";" in rec.target_path
-                    or "&" in rec.target_path
-                    or "|" in rec.target_path
-                ):
+                # Strictly allow only alphanumeric and underscores for stanza names.
+                if not rec.target_path or not re.match(r"^[a-zA-Z0-9_]+$", rec.target_path):
                     raise UserError(
-                        _("Invalid pgBackRest stanza name: %s") % rec.target_path
+                        _("Invalid pgBackRest stanza name: %s. Use only alphanumeric characters and underscores.") % rec.target_path
                     )
 
             if rec.restore_drill_script:
@@ -251,9 +247,14 @@ class BackupConfig(models.Model):
                 if odoo.tools.config.get("test_enable"):
                     return
                 try:
-                    rmq_host = os.environ.get("RMQ_HOST") or "rabbitmq"
-                    rmq_user = os.environ.get("RMQ_USER") or "guest"
-                    rmq_pass = os.environ.get("RMQ_PASS") or "guest"  # burn-ignore-env
+                    # Use Service ID for security & audit trails
+                    svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                        "backup_management.user_backup_service_internal"
+                    )
+                    get_param = self.env["ir.config_parameter"].with_user(svc_uid).get_param
+                    rmq_host = get_param("backup_management.rmq_host") or os.environ.get("RMQ_HOST") or "rabbitmq"
+                    rmq_user = get_param("backup_management.rmq_user") or os.environ.get("RMQ_USER") or "guest"
+                    rmq_pass = get_param("backup_management.rmq_pass") or os.environ.get("RMQ_PASS") or "guest"  # burn-ignore-env
                     credentials = pika.PlainCredentials(rmq_user, rmq_pass)
                     conn_params = pika.ConnectionParameters(
                         host=rmq_host, credentials=credentials
@@ -313,6 +314,36 @@ class BackupConfig(models.Model):
                 validate_backup_path(rec.target_path)
             rec.with_user(svc_uid)._publish_to_worker("kopia_policy")
         return True
+
+    def action_test_connection(self):
+        """
+        Triggers a connection test for Kopia or pgBackRest.
+        For Kopia, it tries to list snapshots. For pgBackRest, it runs 'info'.
+        """
+        for rec in self:
+            rec.action_sync_snapshots()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Connection Test Triggered'),
+                'message': _('The connection test has been offloaded to the background worker. Please check the Active Jobs or Snapshots in a few moments.'),
+                'sticky': False,
+            }
+        }
+
+    def action_view_latest_job(self):
+        self.ensure_one()
+        job = self.env['backup.job'].search([('config_id', '=', self.id)], limit=1)
+        if not job:
+            raise UserError(_("No jobs found for this configuration."))
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'backup.job',
+            'res_id': job.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
     def action_sync_snapshots(self):
         # [@ANCHOR: UX_BACKUP_SYNC]

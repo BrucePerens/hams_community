@@ -20,6 +20,14 @@
                                         </span>
                                     </h3>
                                     <h6 class="card-subtitle mb-3 text-secondary"><t t-out="conf.engine.toUpperCase()"/> - <t t-out="conf.target_path"/></h6>
+                                    <div class="mb-3">
+                                        <button class="btn btn-sm btn-danger me-2" t-on-click="() => this.triggerBackup(conf.id)">
+                                            <i class="fa fa-play me-1" aria-hidden="true"/> Backup
+                                        </button>
+                                        <button class="btn btn-sm btn-primary" t-on-click="() => this.syncSnapshots(conf.id)">
+                                            <i class="fa fa-refresh me-1" aria-hidden="true"/> Sync
+                                        </button>
+                                    </div>
                                     <t t-if="conf.latest_snapshot">
                                         <p class="mb-1"><strong>Last Snapshot:</strong> <t t-out="conf.latest_snapshot.start_time"/></p>
                                         <p class="mb-1"><strong>ID:</strong> <t t-out="conf.latest_snapshot.snapshot_id"/></p>

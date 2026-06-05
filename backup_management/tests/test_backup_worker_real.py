@@ -36,8 +36,8 @@ class TestRealBackupWorker(RealTransactionCase):
         creds = pika.PlainCredentials(os.environ.get("RMQ_USER", "guest"), os.environ.get("RMQ_PASS", "guest"))  # burn-ignore-env
         conn = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_host, credentials=creds))
         channel = conn.channel()
-        channel.queue_declare(queue="backup_jobs", durable=True)
-        channel.queue_purge("backup_jobs")
+        channel.queue_declare(queue="backup_tasks", durable=True)
+        channel.queue_purge("backup_tasks")
 
         job_payload = {
             "job_id": 999,
@@ -47,7 +47,7 @@ class TestRealBackupWorker(RealTransactionCase):
         }
         channel.basic_publish(
             exchange="",
-            routing_key="backup_jobs",
+            routing_key="backup_tasks",
             body=json.dumps(job_payload),
             properties=pika.BasicProperties(delivery_mode=2)
         )
@@ -55,7 +55,7 @@ class TestRealBackupWorker(RealTransactionCase):
         consumed = False
         start_time = time.time()
         while time.time() - start_time < 60.0:
-            q = channel.queue_declare(queue="backup_jobs", durable=True)
+            q = channel.queue_declare(queue="backup_tasks", durable=True)
             if q.method.message_count == 0:
                 consumed = True
                 break

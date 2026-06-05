@@ -10,6 +10,7 @@ This module provides a unified interface for managing system backups using Kopia
 - **Automated Retention:** Configure daily, weekly, and monthly retention policies.
 - **Health Monitoring:** Automated stale backup detection and size anomaly alerts via PagerDuty.
 - **Restore Drills:** Schedule automated restore tests to verify backup integrity.
+- **Zero-Sudo Security:** All background operations and API calls use dedicated service accounts for maximum security.
 
 ## Technical Specification
 
