@@ -15,6 +15,7 @@ import pwd
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 
 _logger = logging.getLogger(__name__)
@@ -323,6 +324,13 @@ MANIFEST = {
             "environments": ["test"],
         },
         {
+            "path": "/etc/odoo",
+            "owner": "odoo:odoo",
+            "provision_mode": "750",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
             "path": "/var/lib/odoo/daemon_keys",
             "owner": "odoo:hams_com",
             "provision_mode": "750",
@@ -449,12 +457,12 @@ After=odoo.service
 [Service]
 Type=oneshot
 User=odoo
-Environment="ODOO_RC=/opt/hams/etc/odoo.conf"
+Environment="ODOO_RC=/etc/odoo/odoo.conf"
 Environment="HAMS_KEYS_DIR=/opt/hams/etc/keys"
 EnvironmentFile=-/opt/hams/etc/odoo.env
 EnvironmentFile=-/opt/hams/etc/core.env
 EnvironmentFile=-/opt/hams/etc/db.env
-ExecStart=/bin/bash -c "/usr/bin/python3 /usr/bin/odoo shell -c /opt/hams/etc/odoo.conf -d {DB_NAME} --no-http < /opt/hams/deploy/bootstrap_daemon_keys.py"
+ExecStart=/bin/bash -c "/usr/bin/python3 /usr/bin/odoo shell -c /etc/odoo/odoo.conf -d {DB_NAME} --no-http < /opt/hams/deploy/bootstrap_daemon_keys.py"
 RemainAfterExit=yes
 
 [Install]
@@ -961,16 +969,19 @@ WantedBy=multi-user.target
     "systemd_odoo_override": {
         "Unit": {"Requires": "hams-pycache.service", "After": "hams-pycache.service"},
         "Service": {
-            "EnvironmentFiles": [
-                "odoo.env",
-                "core.env",
-                "db.env",
-                "redis.env",
-                "rabbitmq.env",
-                "smtp.env",
-                "pdns.env",
+            "EnvironmentFile": [
+                "-/opt/hams/etc/odoo.env",
+                "-/opt/hams/etc/core.env",
+                "-/opt/hams/etc/db.env",
+                "-/opt/hams/etc/redis.env",
+                "-/opt/hams/etc/rabbitmq.env",
+                "-/opt/hams/etc/smtp.env",
+                "-/opt/hams/etc/pdns.env",
             ],
-            "Environment": ["PYTHONPYCACHEPREFIX=/opt/hams/pycache"],
+            "Environment": [
+                "PYTHONPYCACHEPREFIX=/opt/hams/pycache",
+                "ODOO_RC=/etc/odoo/odoo.conf"
+            ],
             "ProtectSystem": "strict",
             "BindPaths": "/opt/hams/etc/keys:/var/lib/odoo/daemon_keys",
             "PrivateTmp": "true",
@@ -1142,6 +1153,99 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
             for hook in file_spec["post_provision_hooks"]:
                 hook(env_vars or {}, dest_dir, path, run_cmd_func)
 
+def provision_systemd_override(run_cmd_func, env_vars, environment="prod", dest_dir=""):
+    if environment not in ["prod", "test"]:
+        return
+    override_data = MANIFEST.get("systemd_odoo_override")
+    if not override_data:
+        return
+
+    override_dir = os.path.join(dest_dir, "etc/systemd/system/odoo.service.d".lstrip("/")) if dest_dir else "/etc/systemd/system/odoo.service.d"
+    os.makedirs(override_dir, exist_ok=True)
+    override_file = os.path.join(override_dir, "override.conf")
+
+    lines = []
+    for section, items in override_data.items():
+        lines.append(f"[{section}]")
+        for k, v in items.items():
+            if isinstance(v, list):
+                for item in v:
+                    lines.append(f"{k}={item}")
+            else:
+                lines.append(f"{k}={v}")
+        lines.append("")
+
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    fd = os.open(override_file, flags, 0o644)
+    with open(fd, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+    apply_permissions(override_file, "root:root", 0o644)
+
+    if not dest_dir and run_cmd_func:
+        try:
+            run_cmd_func(["systemctl", "daemon-reload"])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Failed to reload systemd daemons: %s", e)
+
+def run_post_provision_smoketest():
+    _logger.info("[*] Running post-provisioning smoketest on all services...")
+
+    try:
+        subprocess.run(["systemctl", "daemon-reload"], check=False)
+    except OSError as e:
+        _logger.debug("Ignored OSError during daemon-reload: %s", e)
+
+    potential_services = [
+        "postgresql", "redis-server", "rabbitmq-server", "pdns", "odoo"
+    ]
+
+    for sf in MANIFEST.get("static_files", []):
+        path = sf.get("path", "")
+        if "systemd" in path and path.endswith(".service"):
+            svc_name = os.path.basename(path)
+            if svc_name not in potential_services and "@" not in svc_name:
+                potential_services.append(svc_name)
+
+    services_to_test = []
+    for svc in potential_services:
+        res = subprocess.run(["systemctl", "status", svc], capture_output=True, text=True)
+        if "could not be found" not in res.stderr and "could not be found" not in res.stdout:
+            services_to_test.append(svc)
+
+    started_services = []
+
+    for svc in services_to_test:
+        _logger.info("    Starting %s...", svc)
+        res = subprocess.run(["systemctl", "start", svc], capture_output=True, text=True)
+        started_services.append(svc)
+        if res.returncode != 0:
+            _logger.warning("    [!] systemctl start %s returned non-zero.", svc)
+
+    _logger.info("[*] Waiting for services to stabilize (10 seconds)...")
+    time.sleep(10)
+
+    failed = False
+    for svc in started_services:
+        res = subprocess.run(["systemctl", "is-failed", svc], capture_output=True, text=True)
+        state = res.stdout.strip()
+        if state == "failed":
+            _logger.error("[!] Service %s failed to start or crashed.", svc)
+            logs = subprocess.run(["journalctl", "-u", svc, "-n", "100", "--no-pager"], capture_output=True, text=True)
+            _logger.error("--- LOGS FOR %s ---\n%s\n-------------------", svc, logs.stdout)
+            failed = True
+
+    if failed:
+        _logger.error("[!] One or more services failed the smoketest. Aborting snapshot.")
+        sys.exit(1)
+
+    _logger.info("[*] All services started successfully. Shutting them down...")
+    for svc in reversed(started_services):
+        _logger.info("    Stopping %s...", svc)
+        subprocess.run(["systemctl", "stop", svc], capture_output=True)
+
+    _logger.info("[*] Smoketest complete.")
+
 def provision_jules_environment(run_cmd_func, env_vars, orig_user):
     try:
         with open("/etc/hosts", "r") as f:
@@ -1183,6 +1287,7 @@ def provision_jules_environment(run_cmd_func, env_vars, orig_user):
 
         provision_system_accounts(run_cmd_func, environment="prod")
         provision_static_files(run_cmd_func, env_vars, environment="prod")
+        provision_systemd_override(run_cmd_func, env_vars, environment="prod")
         run_cmd_func(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
         all_packages = []
@@ -1226,6 +1331,8 @@ def provision_jules_environment(run_cmd_func, env_vars, orig_user):
 
             except KeyError as e:
                 _logger.debug("Original user %s not found: %s", orig_user, e)
+
+        run_post_provision_smoketest()
 
     except subprocess.CalledProcessError as e:
         _logger.error("Failed to provision system packages: %s", e)
