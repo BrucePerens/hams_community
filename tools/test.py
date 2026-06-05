@@ -349,7 +349,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
             os.chmod(host_tmp_dir, 0o777)
         except OSError as e:
             _logger.debug("Ignored OSError: %s", e)
-    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus --user-data-dir={host_tmp_dir}")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading --user-data-dir={host_tmp_dir}")
     env.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     process = subprocess.Popen(
@@ -754,7 +754,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     # Inside the namespace, /var/tmp is perfectly bound to the real log dir.
     host_tmp_dir = "/var/tmp"
-    os.environ["ODOO_TEST_CHROME_ARGS"] = f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,dbus --user-data-dir={host_tmp_dir} --single-process"
+    os.environ["ODOO_TEST_CHROME_ARGS"] = f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,dbus,OptimizationGuideModelDownloading --user-data-dir={host_tmp_dir} --single-process"
     os.environ["HAMS_REAL_LOG_DIRECTORY"] = real_log_dir
     os.environ["HOME"] = "/var/lib/odoo"
     os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
@@ -900,7 +900,6 @@ def main():
             # os.execvpe completely replaces the current process, passing control natively
             os.execvpe("unshare", exec_cmd, os.environ)
         return
-
     os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
     host_tmp_dir = "/var/tmp" if os.environ.get("HAMS_ISOLATED_NS") == "1" else os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
     if os.environ.get("HAMS_ISOLATED_NS") != "1":
@@ -909,7 +908,8 @@ def main():
             os.chmod(host_tmp_dir, 0o777)
         except OSError as e:
             _logger.debug("Ignored OSError: %s", e)
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus --user-data-dir={host_tmp_dir}")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading --user-data-dir={host_tmp_dir}")
+    os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
     os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
