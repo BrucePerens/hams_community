@@ -18,7 +18,6 @@ _logger = logging.getLogger(__name__)
 
 def provision_jules():
     os.chdir("/app")
-    base_dir = "/app"
 
     if os.geteuid() != 0:
         _logger.info("[*] Elevating privileges (sudo) to provision Jules environment...")
@@ -36,7 +35,6 @@ def provision_jules():
         return subprocess.run(cmd, check=True, **kw)
 
     infrastructure.provision_jules_environment(run_sys, env_vars, orig_user)
-    infrastructure.provision_jules_environment(run_sys, env_vars, base_dir, orig_user)
 
 if __name__ == "__main__":
     provision_jules()
