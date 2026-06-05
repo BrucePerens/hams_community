@@ -1115,7 +1115,8 @@ def scaffold_test_environment(args_db, provision_dirs=True):
                 if "test" in d["environments"]:
                     os.makedirs(d["path"], exist_ok=True)
                     mode = int(d["provision_mode"], 8)
-                    apply_permissions(d["path"], d.get("owner"), mode, recursive=True)
+                    recursive = d.get("recursive_permissions", True)
+                    apply_permissions(d["path"], d.get("owner"), mode, recursive=recursive)
         except PermissionError:
             print("[*] Elevating briefly to provision required host directories...")
             for d in MANIFEST["directories"]:
