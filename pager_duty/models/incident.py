@@ -1,22 +1,10 @@
 # -*- coding: utf-8 -*-
 import datetime
-import os
 import logging
-import redis
 from odoo import models, fields, api, _
+from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
 
 _logger = logging.getLogger(__name__)
-
-redis_host = os.getenv("REDIS_HOST") or "redis"
-redis_port = int(os.getenv("REDIS_PORT") or "6379")
-redis_pool = redis.ConnectionPool(
-    host=redis_host,
-    port=redis_port,
-    db=0,
-    decode_responses=True,
-    socket_timeout=1.0,
-    socket_connect_timeout=1.0,
-)
 
 
 class PagerIncident(models.Model):
@@ -112,7 +100,15 @@ class PagerIncident(models.Model):
         """
         # [@ANCHOR: test_pager_escalation]
         fifteen_mins_ago = fields.Datetime.now() - datetime.timedelta(minutes=15)
-        incidents = self.env["pager.incident"].search(
+        # Security: search() on Pager Duty records must be performed by a service account
+        # to ensure minimum privilege. We use the mail service internal user to execute
+        # message_post and search.
+        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "zero_sudo.mail_service_internal"
+        )
+        IncidentModel = self.env["pager.incident"].with_user(mail_svc)
+
+        incidents = IncidentModel.search(
             [
                 ("status", "=", "open"),
                 ("is_escalated", "=", False),
@@ -123,9 +119,6 @@ class PagerIncident(models.Model):
         if not incidents:
             return
 
-        mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "zero_sudo.mail_service_internal"
-        )
         pager_admin_group = self.env.ref("pager_duty.group_pager_admin")
 
         # Group incidents by website_id to ensure relevant admins are notified
@@ -151,6 +144,8 @@ class PagerIncident(models.Model):
         # [@ANCHOR: report_incident_rate_limit]
         source = vals.get("source", "unknown")
         website_id = vals.get("website_id") or self.env.context.get("website_id")
+        if not website_id and hasattr(self.env, "website") and self.env.website:
+            website_id = self.env.website.id
         redis_key = f"pager_rate_limit:{source}:{website_id or 'global'}"
 
         if redis and redis_pool:
@@ -244,8 +239,10 @@ class PagerIncident(models.Model):
         duty_name = on_duty_user.name if on_duty_user else "None"
 
         domain = [("status", "in", ["open", "acknowledged"])]
+        check_domain = []
         if self.env.context.get("website_id"):
             domain.append(("website_id", "=", self.env.context.get("website_id")))
+            check_domain.append(("website_id", "=", self.env.context.get("website_id")))
 
         active = self.search_read(
             domain,
@@ -277,4 +274,22 @@ class PagerIncident(models.Model):
             limit=10,
         )
 
-        return {"on_duty": duty_name, "active": active, "resolved": resolved}
+        # [@ANCHOR: pager_board_stats]
+        # Aggregate stats for the health summary component
+        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+            "pager_duty.user_pager_service_internal"
+        )
+        checks = self.env["pager.check"].with_user(svc_uid).read_group(
+            check_domain, ["status"], ["status"]
+        )
+        stats = {"passing": 0, "failing": 0, "maintenance": 0}
+        for c in checks:
+            if c["status"] in stats:
+                stats[c["status"]] = c["status_count"]
+
+        return {
+            "on_duty": duty_name,
+            "active": active,
+            "resolved": resolved,
+            "stats": stats
+        }

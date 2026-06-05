@@ -11,6 +11,7 @@ export class PagerBoard extends Component {
             active_incidents: [],
             resolved_incidents: [],
             on_duty: "Loading...",
+            stats: { passing: 0, failing: 0, maintenance: 0 },
             transformStyle: ""
         });
 
@@ -36,6 +37,7 @@ export class PagerBoard extends Component {
         this.state.active_incidents = data.active;
         this.state.resolved_incidents = data.resolved;
         this.state.on_duty = data.on_duty;
+        this.state.stats = data.stats;
         this.applyBurnInShift();
     }
 

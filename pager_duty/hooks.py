@@ -7,9 +7,16 @@ def post_init_hook(env):
     """
     Register daemon keys and trigger autodiscovery upon installation.
     """
+    # The _bootstrap_knowledge_docs function handles document installation;
+    # do not create redundant post-init hooks.
+    # We keep the autodiscovery logic as it's not handled by bootstrap.
+
     # Trigger autodiscovery if the system is completely empty
     if "pager.check" in env and not env["pager.check"].search_count([]):
-        env["pager.check"]._run_autodiscovery()
+        try:
+            env["pager.check"]._run_autodiscovery()
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("An error occurred during autodiscovery: %s", e)
 
     # Register Daemons for Automated Key Vault Provisioning
     if "daemon.key.registry" in env:

@@ -28,12 +28,16 @@ class TestBoardEdgeCases(HamsTransactionCase):
         """Verify the board loads successfully when no incidents and no on-duty admin exist."""
         self.env["calendar.event"].search([]).unlink()
         self.env["pager.incident"].search([]).unlink()
+        self.env["pager.check"].search([]).unlink()
 
         # Tests [@ANCHOR: pager_board_data]
+        # Tests [@ANCHOR: pager_board_stats]
         data = self.env["pager.incident"].with_user(self.user).get_board_data()
         self.assertEqual(data["on_duty"], "None")
         self.assertEqual(len(data["active"]), 0)
         self.assertEqual(len(data["resolved"]), 0)
+        self.assertIn("stats", data)
+        self.assertEqual(data["stats"]["passing"], 0)
 
     def test_02_acknowledge_rpc(self):
         """Verify acknowledging an incident sets the user correctly via the OWL UI RPC call."""

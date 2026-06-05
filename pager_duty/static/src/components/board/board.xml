@@ -4,7 +4,14 @@
         <div class="pager-board p-4" style="background: #121212; min-height: 100vh; color: #e0e0e0; overflow: hidden;">
             <div t-att-style="state.transformStyle" style="will-change: transform;">
                 <div class="d-flex justify-content-between align-items-center mb-4 p-3 rounded shadow-sm" style="background: #1e1e1e;">
-                    <h1 class="m-0 text-light"><i class="fa fa-tv me-2" aria-hidden="true"/>NOC Dashboard</h1>
+                    <div>
+                        <h1 class="m-0 text-light"><i class="fa fa-tv me-2" aria-hidden="true"/>NOC Dashboard</h1>
+                        <div class="mt-2">
+                            <span class="badge bg-success me-2"><t t-out="state.stats.passing"/> Passing</span>
+                            <span class="badge bg-danger me-2"><t t-out="state.stats.failing"/> Failing</span>
+                            <span class="badge bg-warning"><t t-out="state.stats.maintenance"/> Maintenance</span>
+                        </div>
+                    </div>
                     <h3 class="m-0 text-secondary">On Duty: <strong class="text-info" t-out="state.on_duty"/></h3>
                 </div>
 
