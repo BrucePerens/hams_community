@@ -1220,7 +1220,12 @@ def run_post_provision_smoketest():
         res = subprocess.run(["systemctl", "start", svc], capture_output=True, text=True)
         started_services.append(svc)
         if res.returncode != 0:
-            _logger.warning("    [!] systemctl start %s returned non-zero.", svc)
+            _logger.error("    [!] systemctl start %s returned non-zero exit code: %s", svc, res.returncode)
+            _logger.error("stdout: %s", res.stdout)
+            _logger.error("stderr: %s", res.stderr)
+            logs = subprocess.run(["journalctl", "-u", svc, "-n", "100", "--no-pager"], capture_output=True, text=True)
+            _logger.error("--- LOGS FOR %s ---\n%s\n-------------------", svc, logs.stdout)
+            sys.exit(1)
 
     _logger.info("[*] Waiting for services to stabilize (10 seconds)...")
     time.sleep(10)
