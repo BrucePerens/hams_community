@@ -29,10 +29,6 @@ registry.category("web_tour.tours").add("db_management_slow_query_tour", { // # 
             trigger: '[data-menu-xmlid="database_management.menu_db_queries"]',
             run: 'click',
         },
-        {
-            content: "Wait for Slow Query List View",
-            trigger: '.o_list_renderer',
-            run: function() {},
-        },
+        { trigger: '.o_list_renderer' },
     ],
 });

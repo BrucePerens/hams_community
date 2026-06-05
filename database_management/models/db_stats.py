@@ -262,6 +262,51 @@ class DatabaseIndexStat(models.Model):
         """)
 
 
+class DatabaseReplicationStat(models.Model):
+    # [@ANCHOR: db_replication_stats]
+    # This model tracks PostgreSQL replication lag and status for the entire cluster.
+    _name = "database.replication.stat"
+    _description = "Database Replication Statistics"
+    _auto = False
+
+    usename = fields.Char(string="User", readonly=True)
+    application_name = fields.Char(string="Application", readonly=True)
+    client_addr = fields.Char(string="Client IP", readonly=True)
+    state = fields.Char(string="State", readonly=True)
+    sent_lsn = fields.Char(string="Sent LSN", readonly=True)
+    write_lsn = fields.Char(string="Write LSN", readonly=True)
+    flush_lsn = fields.Char(string="Flush LSN", readonly=True)
+    replay_lsn = fields.Char(string="Replay LSN", readonly=True)
+    write_lag = fields.Char(string="Write Lag", readonly=True)
+    flush_lag = fields.Char(string="Flush Lag", readonly=True)
+    replay_lag = fields.Char(string="Replay Lag", readonly=True)
+    sync_priority = fields.Integer(string="Priority", readonly=True)
+    sync_state = fields.Char(string="Sync State", readonly=True)
+
+    def init(self):
+        tools.drop_view_if_exists(self.env.cr, self._table)
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW database_replication_stat AS (
+                SELECT
+                    row_number() OVER () as id,
+                    usename,
+                    application_name,
+                    client_addr,
+                    state,
+                    sent_lsn::text,
+                    write_lsn::text,
+                    flush_lsn::text,
+                    replay_lsn::text,
+                    write_lag::text,
+                    flush_lag::text,
+                    replay_lag::text,
+                    sync_priority,
+                    sync_state
+                FROM pg_stat_replication
+            )
+        """)
+
+
 class DatabaseIndexAdvisor(models.Model):
     # [@ANCHOR: db_index_advisor]
     # Tests [@ANCHOR: db_index_advisor]
