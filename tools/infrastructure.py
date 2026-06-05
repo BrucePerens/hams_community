@@ -197,23 +197,9 @@ MANIFEST = {
             "shell": "/bin/bash",
             "add_to_users": ["odoo"],
             "environments": ["prod", "test"],
-        },
-        {
-            "user": "rabbitmq",
-            "group": "rabbitmq",
-            "home": "/var/lib/rabbitmq",
-            "shell": "/bin/false",
-            "environments": ["prod", "test"],
         }
     ],
     "directories": [
-        {
-            "path": "/opt/hams/pgsock",
-            "owner": "postgres:postgres",
-            "provision_mode": "775",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
         {
             "path": "/opt/hams",
             "owner": "hams_com:hams_com",
@@ -337,41 +323,6 @@ MANIFEST = {
             "environments": ["test"],
         },
         {
-            "path": "/var/lib/odoo",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/odoo/.local",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/odoo/.local/share",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/odoo/.local/share/Odoo",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/odoo/.local/share/Odoo/sessions",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
             "path": "/var/lib/odoo/daemon_keys",
             "owner": "odoo:hams_com",
             "provision_mode": "750",
@@ -381,55 +332,6 @@ MANIFEST = {
         {
             "path": "/var/lib/odoo/backups",
             "owner": "odoo:hams_com",
-            "provision_mode": "750",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/spool/rabbitmq",
-            "owner": "rabbitmq:rabbitmq",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/log/odoo",
-            "owner": "odoo:hams_com",
-            "provision_mode": "770",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/powerdns",
-            "owner": "pdns:pdns",
-            "provision_mode": "750",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/opt/hams/systemd/odoo.service.d",
-            "owner": "hams_com:hams_com",
-            "provision_mode": "750",
-            "runtime_mount": "ro",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/log/redis",
-            "owner": "redis:redis",
-            "provision_mode": "750",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/log/rabbitmq",
-            "owner": "rabbitmq:rabbitmq",
-            "provision_mode": "750",
-            "runtime_mount": "rw",
-            "environments": ["prod", "test"],
-        },
-        {
-            "path": "/var/lib/redis",
-            "owner": "redis:redis",
             "provision_mode": "750",
             "runtime_mount": "rw",
             "environments": ["prod", "test"],
@@ -1239,27 +1141,6 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
         if "post_provision_hooks" in file_spec:
             for hook in file_spec["post_provision_hooks"]:
                 hook(env_vars or {}, dest_dir, path, run_cmd_func)
-
-
-def generate_odoo_override_conf(odoo_conf_path):
-    spec = MANIFEST["systemd_odoo_override"]
-    lines = ["[Unit]"] + [f"{k}={v}" for k, v in spec["Unit"].items()] + ["", "[Service]", f'Environment="ODOO_RC={odoo_conf_path}"']
-    if "Group" in spec["Service"]:
-        lines.append(f"Group={spec['Service']['Group']}")
-    lines.extend([f"EnvironmentFile=-/opt/hams/etc/{e}" for e in spec["Service"]["EnvironmentFiles"]])
-    lines.extend([f'Environment="{e}"' for e in spec["Service"]["Environment"]])
-    lines.append(f"ProtectSystem={spec['Service']['ProtectSystem']}")
-    lines.append(f"ReadWritePaths=/var/lib/odoo /var/log/odoo {' '.join(get_mount_paths('prod', 'rw'))}")
-    lines.append(f"ReadOnlyPaths={' '.join(get_mount_paths('prod', 'ro'))}")
-
-    for key in ["BindPaths", "PrivateTmp", "PrivateDevices", "NoNewPrivileges", "KillSignal", "TimeoutStopSec"]:
-        if key in spec["Service"]:
-            lines.append(f"{key}={spec['Service'][key]}")
-
-    lines.append("ExecStart=")
-    lines.append(f"ExecStart=/usr/bin/python3 /usr/bin/odoo -c {odoo_conf_path}")
-    return "\n".join(lines) + "\n"
-
 
 def provision_jules_environment(run_cmd_func, env_vars, orig_user):
     try:
