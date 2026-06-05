@@ -1115,17 +1115,30 @@ def scaffold_test_environment(args_db, provision_dirs=True):
                 if "test" in d["environments"]:
                     os.makedirs(d["path"], exist_ok=True)
                     mode = int(d["provision_mode"], 8)
-                    apply_permissions(d["path"], d.get("owner"), mode, recursive=True)
+                    recursive = d.get("recursive_permissions", True)
+                    apply_permissions(d["path"], d.get("owner"), mode, recursive=recursive)
         except PermissionError:
             print("[*] Elevating briefly to provision required host directories...")
             for d in MANIFEST["directories"]:
                 if "test" in d["environments"]:
                     path = d["path"]
                     mode_str = d["provision_mode"]
+                    recursive = d.get("recursive_permissions", True)
+
                     subprocess.run(["sudo", "mkdir", "-p", path], check=True)
-                    subprocess.run(["sudo", "chmod", "-R", mode_str, path], check=True)
+
+                    chmod_cmd = ["sudo", "chmod"]
+                    if recursive:
+                        chmod_cmd.append("-R")
+                    chmod_cmd.extend([mode_str, path])
+                    subprocess.run(chmod_cmd, check=True)
+
                     if d.get("owner"):
-                        subprocess.run(["sudo", "chown", "-R", d["owner"], path], check=True)
+                        chown_cmd = ["sudo", "chown"]
+                        if recursive:
+                            chown_cmd.append("-R")
+                        chown_cmd.extend([d["owner"], path])
+                        subprocess.run(chown_cmd, check=True)
 
 
 def get_mount_paths(environment, mount_type):
