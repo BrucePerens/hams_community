@@ -94,3 +94,12 @@ class TestGeneralizedConfig(HamsTransactionCase):
         v2 = self.env["pager.check"].get_view(view_type="list")
         self.assertIn("arch", v1)
         self.assertIn("arch", v2)
+
+    def test_04_config_path_security(self):
+        """
+        Verify that the configuration path is resolved through the service account.
+        """
+        # Tests [@ANCHOR: generalized_pager_config_path]
+        check_model = self.env["pager.check"].with_user(self.admin)
+        path = check_model._get_config_path()
+        self.assertTrue(path.endswith("pager_config.json"))

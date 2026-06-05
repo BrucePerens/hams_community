@@ -71,6 +71,7 @@ The module follows a **Command Query Responsibility Segregation (CQRS)** pattern
 
 ### Security & Micro-Privileges:
 *   **Zero-Sudo RPC:** Daemons authenticate via the `pager_service_internal` service account. No `sudo()` is used. All operations utilize `with_user()` for minimum privilege execution. High-privilege RPCs are protected by allow-lists. [@ANCHOR: rpc_ensure_executable_security]
+*   **Config Isolation:** The location of the daemon configuration file is managed through system parameters, isolated by service accounts. [@ANCHOR: generalized_pager_config_path]
 *   **Sandboxing:** Synthetic checks run inside a strict **Bubblewrap (bwrap)** sandbox with optional network isolation.
 *   **Service Accounts:** The module uses `zero_sudo.security.utils` to securely escalate privileges within Odoo's ACL framework.
 *   **Multi-Website Isolation:** Data is partitioned by `website_id`. The NOC Dashboard, incident reporting, and on-duty scheduling all respect `website_id` for strict multi-tenant isolation.
