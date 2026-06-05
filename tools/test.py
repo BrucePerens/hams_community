@@ -910,7 +910,6 @@ def main():
             _logger.debug("Ignored OSError: %s", e)
     os.environ.setdefault("ODOO_TEST_CHROME_ARGS", f"--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading --user-data-dir={host_tmp_dir}")
     os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
-    os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     # Force system site-packages resolution for Odoo core in restricted venvs
     sys_paths = os.environ.get("PYTHONPATH", "")

@@ -41,6 +41,16 @@ def get_os_identifier():
         _logger.debug("Ignored OSError reading /etc/os-release: %s", e)
     return "ubuntu"
 
+def get_os_codename():
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if line.startswith("VERSION_CODENAME="):
+                    return line.strip().split("=")[1].strip('"').lower()
+    except OSError as e:
+        _logger.debug("Ignored OSError reading /etc/os-release: %s", e)
+    return "jammy"
+
 @contextlib.contextmanager
 def micro_privilege(username):
     """
@@ -156,6 +166,13 @@ def hook_install_odoo_key(env_vars, dest_dir, path, run_cmd_func):
     safe_remove(path)
 
 
+def hook_install_pg_key(env_vars, dest_dir, path, run_cmd_func):
+    out = os.path.join(dest_dir, 'usr/share/keyrings/postgresql-keyring.gpg') if dest_dir else '/usr/share/keyrings/postgresql-keyring.gpg'
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    run_cmd_func(['gpg', '--dearmor', '-o', out, '--yes', path])
+    safe_remove(path)
+
+
 def hook_install_kopia_binary(env_vars, dest_dir, path, run_cmd_func):
     try:
         target_dir = os.path.join(dest_dir, 'usr/bin') if dest_dir else '/usr/bin'
@@ -172,14 +189,6 @@ def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
     run_cmd_func(['dpkg', '-i', path])
     if token:
         run_cmd_func(['cloudflared', 'service', 'install', token])
-    safe_remove(path)
-
-
-def hook_install_pypdf2(env_vars, dest_dir, path, run_cmd_func):
-    try:
-        run_cmd_func(['/usr/bin/python3', '-m', 'pip', 'install', '--break-system-packages', 'PyPDF2==2.12.1'])
-    except Exception as e: # audit-ignore-catch-all
-        _logger.warning("PyPDF2 pip install failed: %s", e)
     safe_remove(path)
 
 
@@ -534,7 +543,7 @@ Before=odoo.service
 Type=oneshot
 User=hams_com
 Environment="PYTHONPYCACHEPREFIX=/opt/hams/pycache"
-ExecStart=/opt/hams/.venv/bin/python -m compileall -q /opt/hams
+ExecStart=/usr/bin/python3 -m compileall -q /opt/hams
 RemainAfterExit=yes
 
 [Install]
@@ -560,7 +569,7 @@ Environment="HAMS_KEYS_DIR=/opt/hams/etc/keys"
 EnvironmentFile=-/opt/hams/etc/odoo.env
 EnvironmentFile=-/opt/hams/etc/core.env
 EnvironmentFile=-/opt/hams/etc/db.env
-ExecStart=/bin/bash -c "/opt/hams/.venv/bin/python /usr/bin/odoo shell -c /opt/hams/etc/odoo.conf -d {DB_NAME} --no-http < /opt/hams/deploy/bootstrap_daemon_keys.py"
+ExecStart=/bin/bash -c "/usr/bin/python3 /usr/bin/odoo shell -c /opt/hams/etc/odoo.conf -d {DB_NAME} --no-http < /opt/hams/deploy/bootstrap_daemon_keys.py"
 RemainAfterExit=yes
 
 [Install]
@@ -579,6 +588,21 @@ WantedBy=multi-user.target
             "post_provision_hooks": [hook_install_odoo_key],
         },
         {
+            "path": "/tmp/pg.key",
+            "url": "https://www.postgresql.org/media/keys/ACCC4CF8.asc",
+            "owner": "root:root",
+            "mode": "644",
+            "environments": ["prod"],
+            "post_provision_hooks": [hook_install_pg_key],
+        },
+        {
+            "path": "/etc/apt/sources.list.d/pgdg.list",
+            "content": "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ {DEB_CODENAME}-pgdg main\n",
+            "owner": "root:root",
+            "mode": "644",
+            "environments": ["prod"],
+        },
+        {
             "path": "/tmp/kopia.tar.gz",
             "url": "https://github.com/kopia/kopia/releases/download/v0.23.0/kopia-0.23.0-linux-x64.tar.gz",
             "owner": "root:root",
@@ -594,14 +618,6 @@ WantedBy=multi-user.target
             "environments": ["prod"],
             "condition_env": "CLOUDFLARE_TUNNEL_TOKEN",
             "post_provision_hooks": [hook_install_cloudflared],
-        },
-        {
-            "path": "/tmp/PyPDF2-2.12.1.tar.gz",
-            "url": "https://pypi.io/packages/source/P/PyPDF2/PyPDF2-2.12.1.tar.gz",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-            "post_provision_hooks": [hook_install_pypdf2],
         },
         {
             "src": "{REPO_ROOT}/daemons",
@@ -661,8 +677,8 @@ WorkingDirectory=/opt/hams/daemons/adif_processor
 
 Environment="ODOO_USER=logbook_api_service_internal"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/adif_processor/adif_processor.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/adif_processor/adif_processor.py
 
 Restart=always
 RestartSec=10
@@ -703,8 +719,8 @@ Environment="WS_PORT=8765"
 
 LimitNOFILE=65535
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/dx_firehose/dx_firehose.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/dx_firehose/dx_firehose.py
 
 Restart=always
 RestartSec=10
@@ -742,8 +758,8 @@ WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dx_daemon_service"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/ham_dx_daemon/dx_daemon.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/ham_dx_daemon/dx_daemon.py
 
 Restart=always
 RestartSec=10
@@ -783,8 +799,8 @@ EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/noaa_swpc_sync/noaa_swpc_sync.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/noaa_swpc_sync/noaa_swpc_sync.py
 
 # Resiliency
 Restart=always
@@ -824,8 +840,8 @@ EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 
-# Execution via Python virtual environment
-ExecStart=/home/bruce/workspace/hams_com/.venv/bin/python /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
 
 # Resiliency
 Restart=always
@@ -864,8 +880,8 @@ WorkingDirectory=/opt/hams/daemons/pdns_sync
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dns_api_service_internal"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/pdns_sync/pdns_sync.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/pdns_sync/pdns_sync.py
 
 Restart=always
 RestartSec=10
@@ -904,8 +920,8 @@ EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
 
 Restart=always
 RestartSec=60
@@ -943,8 +959,8 @@ WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=satellite_sync_service_internal"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/amsat_tle_sync/amsat_sync.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/amsat_tle_sync/amsat_sync.py
 
 StandardOutput=journal
 StandardError=journal
@@ -996,8 +1012,8 @@ WorkingDirectory=/opt/hams/daemons/qrz_scraper
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=onboarding_service_internal"
 
-# Execution via Python virtual environment
-ExecStart=/opt/hams/.venv/bin/python /opt/hams/daemons/qrz_scraper/qrz_scraper.py
+# Execution via system Python
+ExecStart=/usr/bin/python3 /opt/hams/daemons/qrz_scraper/qrz_scraper.py
 
 Restart=always
 RestartSec=10
@@ -1013,22 +1029,10 @@ WantedBy=multi-user.target
             "environments": ["prod", "test"],
         },
     ],
-    "python_venvs": [
-        {
-            "path": "/opt/hams/.venv",
-            "system_site_packages": True,
-            "requirements_file": "/opt/hams/requirements.txt",
-            "environments": ["prod"],
-        },
-        {
-            "path": ".venv",
-            "system_site_packages": True,
-            "requirements_file": "requirements.txt",
-            "environments": ["pre_flight", "test"],
-        },
-    ],
     "apt_packages": [
+        {"name": "odoo", "debian_name": "odoo", "environments": ["early_prod"]},
         {"name": "postgresql", "debian_name": "postgresql", "environments": ["early_prod"]},
+        {"name": "postgresql-common", "debian_name": "postgresql-common", "environments": ["early_prod"]},
         {"name": "postgresql-client", "debian_name": "postgresql-client", "environments": ["early_prod"]},
         {"name": "nginx", "debian_name": "nginx", "environments": ["early_prod"]},
         {"name": "redis-server", "debian_name": "redis-server", "environments": ["early_prod"]},
@@ -1051,6 +1055,10 @@ WantedBy=multi-user.target
         {"name": "python3-stdeb", "debian_name": "python3-stdeb", "environments": ["early_prod"]},
         {"name": "fakeroot", "debian_name": "fakeroot", "environments": ["early_prod"]},
         {"name": "python3-all", "debian_name": "python3-all", "environments": ["early_prod"]},
+        # Debian deprecated pypdf2 and moved all development to the pypdf package.
+        # We might have to create a bridge package to satisfy the python3-pypdf2
+        # dependency, if we install the Ubuntu odoo package on Debian.
+        {"name": "python3-pypdf2", "debian_name": "python3-pypdf", "environments": ["early_prod"]},
         {"name": "python3-setuptools", "debian_name": "python3-setuptools", "environments": ["early_prod"]},
         {"name": "dh-python", "debian_name": "dh-python", "environments": ["early_prod"]},
         {"name": "jing", "debian_name": "jing", "environments": ["early_prod"]},
@@ -1105,21 +1113,11 @@ def scaffold_test_environment(args_db, provision_dirs=True):
 
     if provision_dirs:
         try:
-            for d in MANIFEST["directories"]:
-                if "test" in d["environments"]:
-                    os.makedirs(d["path"], exist_ok=True)
-                    mode = int(d["provision_mode"], 8)
-                    apply_permissions(d["path"], d.get("owner"), mode, recursive=True)
-        except PermissionError:
-            print("[*] Elevating briefly to provision required host directories...")
-            for d in MANIFEST["directories"]:
-                if "test" in d["environments"]:
-                    path = d["path"]
-                    mode_str = d["provision_mode"]
-                    subprocess.run(["sudo", "mkdir", "-p", path], check=True)
-                    subprocess.run(["sudo", "chmod", "-R", mode_str, path], check=True)
-                    if d.get("owner"):
-                        subprocess.run(["sudo", "chown", "-R", d["owner"], path], check=True)
+            apply_production_directories(environment="test")
+        except PermissionError as e:
+            print(f"[*] PermissionError provisioning test directories: {e}")
+            print("[*] Note: 'sudo' fallback removed per strict DevSecOps mandates.")
+            raise
 
 
 def get_mount_paths(environment, mount_type):
@@ -1165,8 +1163,7 @@ def execute_hooks(environment, run_cmd_func, env_vars=None, dest_dir=""):
                 hook(env_vars or {}, dest_dir, d["path"], run_cmd_func)
 
 
-def apply_production_directories(run_cmd_func, environment="prod", dest_dir=""):
-    provision_system_accounts(run_cmd_func, environment, dest_dir)
+def apply_production_directories(run_cmd_func=None, environment="prod", dest_dir=""):
     for d in MANIFEST["directories"]:
         if environment in d["environments"]:
             path = os.path.join(dest_dir, d["path"].lstrip("/")) if dest_dir else d["path"]
@@ -1193,18 +1190,6 @@ def write_env_files(base_etc_dir, env_vars, run_cmd_func, dest_dir=""):
         apply_permissions(filepath, "root:root", 0o400)
 
 
-def provision_apt_packages(run_cmd_func, environment="prod"):
-    os_id = get_os_identifier()
-    packages = []
-    for p in MANIFEST.get("apt_packages", []):
-        if environment in p["environments"]:
-            pkg_name = p.get("debian_name", p["name"]) if os_id == "debian" else p["name"]
-            packages.append(pkg_name)
-    if packages:
-        run_cmd_func(["apt-get", "update"])
-        run_cmd_func(["apt-get", "install", "-y"] + packages)
-
-
 def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir=""):
     if environment not in ["prod", "test"]:
         return
@@ -1224,37 +1209,6 @@ def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir
                 shutil.copytree(item_path, target, dirs_exist_ok=True)
 
     apply_permissions(custom_addons_dir, "odoo:odoo", None, recursive=True)
-
-
-def provision_python_venvs(run_cmd_func, environment="prod", dest_dir=""):
-    for venv_spec in MANIFEST.get("python_venvs", []):
-        if environment not in venv_spec["environments"]:
-            continue
-
-        venv_path = venv_spec["path"]
-        req_file = venv_spec.get("requirements_file")
-
-        if dest_dir:
-            venv_path = os.path.join(dest_dir, venv_path.lstrip("/"))
-            if req_file:
-                req_file = os.path.join(dest_dir, req_file.lstrip("/"))
-
-        if not os.path.exists(venv_path):
-            cmd = ["/usr/bin/python3", "-m", "venv"]
-            if venv_spec.get("system_site_packages"):
-                cmd.append("--system-site-packages")
-            cmd.append(venv_path)
-            run_cmd_func(cmd)
-
-        pip_exe = os.path.join(venv_path, "bin", "pip")
-        if req_file:
-            if not os.path.exists(req_file):
-                raise FileNotFoundError(f"Required requirements file not found: {req_file}")
-            run_cmd_func([pip_exe, "install", "-r", req_file])
-
-            playwright_exe = os.path.join(venv_path, "bin", "playwright")
-            if os.path.exists(playwright_exe):
-                run_cmd_func(["env", "PLAYWRIGHT_BROWSERS_PATH=/opt/hams/cache/ms-playwright", playwright_exe, "install", "chromium"])
 
 
 def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=""):
@@ -1290,6 +1244,8 @@ def provision_static_files(run_cmd_func, env_vars, environment="prod", dest_dir=
                     env_vars["DEB_TARGET_ARCH_CPU"] = res.stdout.strip()
             download_file(format_env(url, env_vars), path, mode, env_vars)
         else:
+            if "{DEB_CODENAME}" in file_spec.get("content", "") and "DEB_CODENAME" not in env_vars:
+                env_vars["DEB_CODENAME"] = get_os_codename()
             content = format_env(file_spec.get("content", ""), env_vars)
             flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
             fd = os.open(path, flags, mode)
@@ -1319,7 +1275,7 @@ def generate_odoo_override_conf(odoo_conf_path):
             lines.append(f"{key}={spec['Service'][key]}")
 
     lines.append("ExecStart=")
-    lines.append(f"ExecStart=/opt/hams/.venv/bin/python /usr/bin/odoo -c {odoo_conf_path}")
+    lines.append(f"ExecStart=/usr/bin/python3 /usr/bin/odoo -c {odoo_conf_path}")
     return "\n".join(lines) + "\n"
 
 
@@ -1360,19 +1316,13 @@ def provision_jules_environment(run_cmd_func, env_vars, orig_user):
         apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
 
         run_cmd_func(["apt-get", "update"] + apt_opts)
-        run_cmd_func(["apt-get", "install", "-y"] + apt_opts + ["gnupg", "lsb-release"])
-        run_cmd_func(["bash", "-c", "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor --yes -o /usr/share/keyrings/postgresql-keyring.gpg"])
-        run_cmd_func(["bash", "-c", "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main\" > /etc/apt/sources.list.d/pgdg.list"])
+        run_cmd_func(["apt-get", "install", "-y"] + apt_opts + ["gnupg"])
 
         provision_system_accounts(run_cmd_func, environment="prod")
         provision_static_files(run_cmd_func, env_vars, environment="prod")
         run_cmd_func(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
-        all_packages = [
-            "python3-setuptools", "python3-stdeb", "dh-python", "python3-all",
-            "fakeroot", "postgresql-common", "postgresql-client",
-            "postgresql", "odoo"
-        ]
+        all_packages = []
 
         os_id = get_os_identifier()
         jules_provided = {"curl", "python3-pip", "build-essential"}
@@ -1399,10 +1349,6 @@ def provision_jules_environment(run_cmd_func, env_vars, orig_user):
             run_cmd_func(["systemctl", "restart", "postgresql"])
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("[*] Failed to configure PostgreSQL settings: %s", e)
-
-        _logger.info("[*] Provisioning isolated Python virtual environments...")
-        provision_python_venvs(run_cmd_func, environment="prod")
-        provision_python_venvs(run_cmd_func, environment="test")
 
         _logger.info("[*] Preparing testing directories with production paths...")
         apply_production_directories(run_cmd_func, environment="prod")
