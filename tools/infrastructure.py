@@ -1424,14 +1424,17 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("[*] Failed to configure PostgreSQL settings: %s", e)
 
-        req_file = os.path.join(base_dir, "requirements.txt")
-        if os.path.exists(req_file):
+        _logger.info("[*] Provisioning isolated Python virtual environments...")
+        # Provision the production venv at /opt/hams/.venv
+        provision_python_venvs(run_cmd_func, environment="prod")
+
+        # Provision the local testing venv for Jules/developers
+        setup_script = os.path.join(base_dir, "tools", "setup_venv.sh")
+        if os.path.exists(setup_script):
             try:
-                pip_env = dict(env_vars)
-                pip_env["PIP_ROOT_USER_ACTION"] = "ignore"
-                run_cmd_func(["/usr/bin/python3", "-m", "pip", "install", "--break-system-packages", "--ignore-installed", "-r", req_file], env=pip_env)
+                run_cmd_func(["bash", setup_script])
             except subprocess.CalledProcessError as e:
-                _logger.warning("[*] pip install encountered an error: %s", e)
+                _logger.warning("[*] Local .venv setup encountered an error: %s", e)
 
         _logger.info("[*] Preparing testing directories with production paths...")
         apply_production_directories(run_cmd_func, environment="prod")

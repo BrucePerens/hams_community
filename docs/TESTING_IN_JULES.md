@@ -2,10 +2,22 @@
 
 ## Prerequisites
 
-Use IN_JULES_VM=1 to tell the test program it's in the Jules VM.
+### ⚠️ CRITICAL ENVIRONMENT INSTRUCTION FOR JULES
+The isolated virtual environment (`.venv`) is provisioned automatically by the system *before* your session begins.
+
+Before executing any tests or running Python scripts, you **MUST** activate the virtual environment in your shell:
+```bash
+source .venv/bin/activate
+```
+
+
+IN_JULES_VM=1 is set in the environment to tell programs they are in the Jules VM,
+you need not provide it on the command-line.
+
+## Running the Test Program
 
 ```bash
-IN_JULES_VM=1 .venv/bin/python tools/test.py
+ .venv/bin/python tools/test.py
 ```
 
 ## Targeting Specific Modules (-u flag)
@@ -18,7 +30,7 @@ This flag works globally across **all** execution modes (`standard`, `xml`, `dow
 
 Run the test suite but ONLY for the `user_websites` module:
 ```bash
-IN_JULES_VM=1 .venv/bin/python tools/test.py -u user_websites
+ .venv/bin/python tools/test.py -u user_websites
 ```
 
 ## Handling UI Tour Failures & Headless Chrome Watchdogs
