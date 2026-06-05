@@ -27,6 +27,7 @@ def provision_jules():
     orig_user = os.environ.get("SUDO_USER") or os.environ.get("USER")
     env_vars = dict(os.environ)
     env_vars["DEBIAN_FRONTEND"] = "noninteractive"
+    env_vars["REPO_ROOT"] = "/app"
 
     def run_sys(cmd, **kw):
         _logger.info(f"[*] Running: {' '.join(cmd)}")
@@ -34,6 +35,7 @@ def provision_jules():
             kw["env"] = env_vars
         return subprocess.run(cmd, check=True, **kw)
 
+    infrastructure.provision_jules_environment(run_sys, env_vars, orig_user)
     infrastructure.provision_jules_environment(run_sys, env_vars, base_dir, orig_user)
 
 if __name__ == "__main__":

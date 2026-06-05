@@ -1013,12 +1013,6 @@ WantedBy=multi-user.target
             "environments": ["prod", "test"],
         },
     ],
-    "addon_repos": [
-        "hams_community",
-        "hams_com",
-        "hams_private_secondary",
-        "hams_private_tertiary",
-    ],
     "python_venvs": [
         {
             "path": "/opt/hams/.venv",
@@ -1028,9 +1022,9 @@ WantedBy=multi-user.target
         },
         {
             "path": ".venv",
-            "system_site_packages": False,
+            "system_site_packages": True,
             "requirements_file": "requirements.txt",
-            "environments": ["pre_flight"],
+            "environments": ["pre_flight", "test"],
         },
     ],
     "apt_packages": [
@@ -1115,30 +1109,17 @@ def scaffold_test_environment(args_db, provision_dirs=True):
                 if "test" in d["environments"]:
                     os.makedirs(d["path"], exist_ok=True)
                     mode = int(d["provision_mode"], 8)
-                    recursive = d.get("recursive_permissions", True)
-                    apply_permissions(d["path"], d.get("owner"), mode, recursive=recursive)
+                    apply_permissions(d["path"], d.get("owner"), mode, recursive=True)
         except PermissionError:
             print("[*] Elevating briefly to provision required host directories...")
             for d in MANIFEST["directories"]:
                 if "test" in d["environments"]:
                     path = d["path"]
                     mode_str = d["provision_mode"]
-                    recursive = d.get("recursive_permissions", True)
-
                     subprocess.run(["sudo", "mkdir", "-p", path], check=True)
-
-                    chmod_cmd = ["sudo", "chmod"]
-                    if recursive:
-                        chmod_cmd.append("-R")
-                    chmod_cmd.extend([mode_str, path])
-                    subprocess.run(chmod_cmd, check=True)
-
+                    subprocess.run(["sudo", "chmod", "-R", mode_str, path], check=True)
                     if d.get("owner"):
-                        chown_cmd = ["sudo", "chown"]
-                        if recursive:
-                            chown_cmd.append("-R")
-                        chown_cmd.extend([d["owner"], path])
-                        subprocess.run(chown_cmd, check=True)
+                        subprocess.run(["sudo", "chown", "-R", d["owner"], path], check=True)
 
 
 def get_mount_paths(environment, mount_type):
@@ -1228,24 +1209,19 @@ def provision_custom_addons(run_cmd_func, env_vars, environment="prod", dest_dir
     if environment not in ["prod", "test"]:
         return
 
-    repos = MANIFEST.get("addon_repos", [])
-    repo_root = env_vars.get("REPO_ROOT")
-    if not repos or not repo_root:
+    if not env_vars.get("REPO_ROOT"):
         return
 
-    base_dir = os.path.abspath(os.path.join(repo_root, ".."))
     custom_addons_dir = os.path.join(dest_dir, "opt/hams/odoo") if dest_dir else "/opt/hams/odoo"
 
-    for repo_name in repos:
-        repo_path = repo_root if repo_name == os.path.basename(repo_root) else os.path.join(base_dir, repo_name)
-        if os.path.isdir(repo_path):
-            for item in os.listdir(repo_path):
-                item_path = os.path.join(repo_path, item)
-                if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, "__manifest__.py")):
-                    target = os.path.join(custom_addons_dir, item)
-                    shutil.rmtree(target, ignore_errors=True)
-                    os.makedirs(target, exist_ok=True)
-                    shutil.copytree(item_path, target, dirs_exist_ok=True)
+    if os.path.isdir(env_vars["REPO_ROOT"]):
+        for item in os.listdir(env_vars["REPO_ROOT"]):
+            item_path = os.path.join(env_vars["REPO_ROOT"], item)
+            if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, "__manifest__.py")):
+                target = os.path.join(custom_addons_dir, item)
+                shutil.rmtree(target, ignore_errors=True)
+                os.makedirs(target, exist_ok=True)
+                shutil.copytree(item_path, target, dirs_exist_ok=True)
 
     apply_permissions(custom_addons_dir, "odoo:odoo", None, recursive=True)
 
@@ -1347,7 +1323,7 @@ def generate_odoo_override_conf(odoo_conf_path):
     return "\n".join(lines) + "\n"
 
 
-def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
+def provision_jules_environment(run_cmd_func, env_vars, orig_user):
     try:
         with open("/etc/hosts", "r") as f:
             hosts_content = f.read()
@@ -1358,7 +1334,7 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
     except OSError as e:
         _logger.warning("[*] Failed to update /etc/hosts: %s", e)
 
-    is_hams_community = os.path.exists(os.path.join(base_dir, "zero_sudo", "__manifest__.py"))
+    is_hams_community = os.path.exists(os.path.join(env_vars.get("REPO_ROOT", "/app"), "zero_sudo", "__manifest__.py"))
     if not is_hams_community:
         target_clone = "/hams_community"
         if not os.path.exists(target_clone):
@@ -1425,16 +1401,8 @@ def provision_jules_environment(run_cmd_func, env_vars, base_dir, orig_user):
             _logger.warning("[*] Failed to configure PostgreSQL settings: %s", e)
 
         _logger.info("[*] Provisioning isolated Python virtual environments...")
-        # Provision the production venv at /opt/hams/.venv
         provision_python_venvs(run_cmd_func, environment="prod")
-
-        # Provision the local testing venv for Jules/developers
-        setup_script = os.path.join(base_dir, "tools", "setup_venv.sh")
-        if os.path.exists(setup_script):
-            try:
-                run_cmd_func(["bash", setup_script])
-            except subprocess.CalledProcessError as e:
-                _logger.warning("[*] Local .venv setup encountered an error: %s", e)
+        provision_python_venvs(run_cmd_func, environment="test")
 
         _logger.info("[*] Preparing testing directories with production paths...")
         apply_production_directories(run_cmd_func, environment="prod")

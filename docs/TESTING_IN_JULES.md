@@ -5,10 +5,13 @@
 ### ⚠️ CRITICAL ENVIRONMENT INSTRUCTION FOR JULES
 The isolated virtual environment (`.venv`) is provisioned automatically by the system *before* your session begins.
 
-Before executing any tests or running Python scripts, you **MUST** activate the virtual environment in your shell:
+If you are running a persistent shell, you can do this:
 ```bash
 source .venv/bin/activate
 ```
+
+If not, you must run any Python commands using .venv/bin/python as Python, to
+use the virtual environment.
 
 
 IN_JULES_VM=1 is set in the environment to tell programs they are in the Jules VM,
