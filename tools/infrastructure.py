@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 import urllib.request
-import datetime from datetime
+from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
