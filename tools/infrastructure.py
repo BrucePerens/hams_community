@@ -1284,6 +1284,23 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
     repo_root = env_vars.get("REPO_ROOT", "/app")
     has_hams_com = os.path.exists(os.path.join(repo_root, "ham_base", "__manifest__.py"))
 
+    # Inject safe testing defaults for provisioning context so .env files populate
+    for k, v in MANIFEST.get("env_defaults", {}).items():
+        env_vars.setdefault(k, v)
+    env_vars.setdefault("ODOO_URL", "http://odoo:8069")
+    env_vars.setdefault("DB_NAME", "hams_test")
+    env_vars.setdefault("DB_USER", "odoo")
+    env_vars.setdefault("DB_PASS", "odoo")
+    env_vars.setdefault("DB_HOST", "postgres")
+    env_vars.setdefault("PDNS_API_URL", "http://powerdns:8081/api/v1/servers/localhost/zones")
+    env_vars.setdefault("PDNS_API_KEY", "secret")
+    env_vars.setdefault("DOMAIN", "localhost")
+    env_vars.setdefault("ODOO_ADMIN_PASSWORD", "admin")
+    env_vars.setdefault("ODOO_SERVICE_PASSWORD", "service")
+    env_vars.setdefault("SMTP_HOST", "localhost")
+    env_vars.setdefault("SMTP_PORT", "1025")
+    env_vars.setdefault("HAMS_CRYPTO_KEY", "0000000000000000000000000000000000000000000=")
+
     hams_com_dir = None
     hams_community_dir = None
 
