@@ -1002,6 +1002,7 @@ WantedBy=multi-user.target
         {"name": "python3-yaml", "debian_name": "python3-yaml", "environments": ["early_prod"]},
         {"name": "python3-requests", "debian_name": "python3-requests", "environments": ["early_prod"]},
         {"name": "python3-websocket", "debian_name": "python3-websocket", "environments": ["early_prod"]},
+        {"name": "python3-websockets", "debian_name": "python3-websockets", "environments": ["early_prod"]},
         {"name": "flake8", "debian_name": "flake8", "environments": ["early_prod"]},
     ],
     "env_defaults": {
