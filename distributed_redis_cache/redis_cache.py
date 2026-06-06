@@ -4,6 +4,7 @@ import json
 import logging
 import hashlib
 import datetime
+import time
 from functools import wraps
 from odoo import models, tools
 from odoo.addons.distributed_redis_cache.redis_pool import redis, redis_pool
@@ -84,17 +85,22 @@ def distributed_cache():
                     use_redis = False
 
             if use_redis:
-                try:
-                    r = redis.Redis(connection_pool=redis_pool)
-                    cached = r.get(cache_key)
-                    if cached:
-                        # [!] DIAGNOSTIC FOR AI: Redis cache hit for %s
-                        _logger.debug("Redis cache hit: %s", cache_key)
-                        return json.loads(cached)
-                except (redis.RedisError, json.JSONDecodeError) as e:
-                    # [!] DIAGNOSTIC FOR AI: Redis cache read failed. Falling back to local/DB.
-                    _logger.warning("Redis cache read failed: %s", e)
-                    use_redis = False
+                while True:
+                    try:
+                        r = redis.Redis(connection_pool=redis_pool)
+                        cached = r.get(cache_key)
+                        if cached:
+                            # [!] DIAGNOSTIC FOR AI: Redis cache hit for %s
+                            _logger.debug("Redis cache hit: %s", cache_key)
+                            return json.loads(cached)
+                        break  # Successful miss, break loop to query database
+                    except redis.RedisError as e:
+                        _logger.warning("Network partition detected. Pausing worker until Redis is reachable: %s", e)
+                        time.sleep(2)
+                    except json.JSONDecodeError as e:
+                        _logger.warning("Redis cache corrupted JSON payload: %s", e)
+                        use_redis = False
+                        break
 
             if not use_redis:
                 if cache_key in _local_cache:
@@ -103,21 +109,22 @@ def distributed_cache():
             result = func(self, *args, **kwargs)
 
             if use_redis:
-                try:
-                    # Attempt Redis write, fall back to local if serialization or connection fails
-                    serialized_result = json.dumps(result)
-                    r = redis.Redis(connection_pool=redis_pool)
-                    r.setex(cache_key, 86400, serialized_result)  # 24h TTL
-                    return result
-                except (redis.RedisError, TypeError, json.JSONDecodeError) as e:
-                    _logger.warning(
-                        "Redis cache write failed, falling back to local: %s",
-                        e,
-                    )
+                while True:
+                    try:
+                        serialized_result = json.dumps(result)
+                        r = redis.Redis(connection_pool=redis_pool)
+                        r.setex(cache_key, 86400, serialized_result)  # 24h TTL
+                        return result
+                    except redis.RedisError as e:
+                        _logger.warning("Network partition detected during cache write. Pausing worker: %s", e)
+                        time.sleep(2)
+                    except (TypeError, json.JSONDecodeError) as e:
+                        _logger.warning("Redis cache write serialization failed, falling back to local: %s", e)
+                        _local_cache[cache_key] = result
+                        return result
 
-            # Fallback to local memory cache
+            # Final fallback only if explicitly told not to use Redis
             _local_cache[cache_key] = result
-
             return result
 
         return wrapper
@@ -174,10 +181,23 @@ def notify_model_invalidation(env, model_name):
 
     dbname = env.cr.dbname
 
-    # 1. Invalidate locally and in Redis
-    invalidate_model_cache(env, model_name, local_only=False)
+    # 1. Invalidate locally and in Redis ONLY after the transaction commits.
+    # This completely closes the race condition window where an intervening read
+    # might cache out-of-date records before the write finishes.
+    def _do_invalidate():
+        invalidate_model_cache(env, model_name, local_only=False)
 
-    # 2. Notify all other workers via Postgres -> Daemon -> Redis Pub/Sub
+    if hasattr(env.cr, 'postcommit'):
+        env.cr.postcommit.add(_do_invalidate)
+    else:
+        # Safe fallback for environments that utilize alternate post-commit hooking logic
+        try:
+            env.cr.after('commit', _do_invalidate)
+        except AttributeError:
+            _do_invalidate()
+
+    # 2. Notify all other workers via Postgres -> Daemon -> Redis Pub/Sub.
+    # pg_notify is natively transactional and inherently waits until commit to broadcast.
     payload = json.dumps({"model": model_name, "dbname": dbname})
     env.cr.execute(
         "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)

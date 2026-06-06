@@ -164,23 +164,40 @@ class FailureExtractor:
         self.current_context = context_name
 
     def process_line(self, line):
-        if self.test_start_pattern.search(line):
-            self.set_context(line.strip())
+        line_clean = re.sub(r'\x1b\[[0-9;]*m', '', line)
+        if self.test_start_pattern.search(line_clean):
+            self.set_context(line_clean.strip())
 
-        is_log_line = self.log_prefix_pattern.match(line)
+        is_log_line = self.log_prefix_pattern.match(line_clean)
+        line_lower = line_clean.lower()
+
+        is_test_failure_content = (
+            "======================================================================" in line_clean
+            or "Traceback (most recent call last):" in line_clean
+            or "FAIL: " in line_clean
+            or "ERROR: " in line_clean
+            or "AssertionError" in line_clean
+            or "FATAL:" in line_clean
+            or "[watchdog alarm]" in line_lower
+        )
 
         if is_log_line:
-            if (
-                self.safe_log_levels.search(line)
-                or "pika.adapters" in line
-                or "AMQPConnector" in line
-                or "Cloudflare URL purge API failed for chunk: API fail" in line
-                or "Cloudflare Tag purge API failed for chunk: API fail" in line
-                or "[BACKUP_WORKER]" in line
-                or "[LOG_ANALYZER]" in line
-                or "odoo.tests.result:" in line
+            is_safe = (
+                self.safe_log_levels.search(line_clean)
+                or "pika.adapters" in line_clean
+                or "AMQPConnector" in line_clean
+                or "Cloudflare URL purge API failed" in line_clean
+                or "Cloudflare Tag purge API failed" in line_clean
+                or "[BACKUP_WORKER]" in line_clean
+                or "[LOG_ANALYZER]" in line_clean
                 or "discuss_channel_member" in "\n".join(self.current_block)
-            ):
+            )
+
+            # Override 'safe' log levels (like INFO) if the test runner actually logged a failure
+            if is_test_failure_content:
+                is_safe = False
+
+            if is_safe:
                 if self.capturing:
                     self.captured_blocks.append((self.current_context, self.current_block))
                     self.current_block = []
@@ -190,20 +207,12 @@ class FailureExtractor:
                     self.capturing = True
                 self.current_block.append(line)
         else:
-            if (
-                "======================================================================" in line
-                or "Traceback (most recent call last):" in line
-                or line.startswith("FAIL: ")
-                or line.startswith("ERROR: ")
-                or line.startswith("AssertionError")
-                or line.startswith("FATAL:")
-                or "[watchdog alarm]" in line.lower()
-            ):
+            if is_test_failure_content:
                 if not self.capturing:
                     self.capturing = True
 
                 # AI Guidance Injection for Tour Failures
-                if "[watchdog alarm]" in line.lower() or "timeout" in line.lower():
+                if "[watchdog alarm]" in line_lower or "timeout" in line_lower:
                     ai_diagnostic = (
                         "\n[!] DIAGNOSTIC FOR AI (UI TOUR FAILURE):\n"
                         "    The browser headless runner has timed out or triggered a watchdog alarm.\n"
