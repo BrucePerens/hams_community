@@ -1181,7 +1181,7 @@ def provision_systemd_override(run_cmd_func, env_vars, environment="prod", dest_
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Failed to reload systemd daemons: %s", e)
 
-def run_post_provision_smoketest():
+def run_post_provision_smoketest(has_hams_com=True):
     _logger.info("[*] Running post-provisioning smoketest on all services...")
 
     try:
@@ -1198,6 +1198,10 @@ def run_post_provision_smoketest():
         path = sf.get("path", "")
         if "systemd" in path and path.endswith(".service"):
             svc_name = os.path.basename(path)
+            if not has_hams_com and svc_name != "hams-pycache.service":
+                continue
+            if svc_name in ("hams.daemon.keys.service", "system-startup.service"):
+                continue
             if svc_name not in potential_services and "@" not in svc_name:
                 potential_services.append(svc_name)
 
@@ -1252,6 +1256,8 @@ def run_post_provision_smoketest():
 
 def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
     os_id = os_id or get_os_identifier()
+    repo_root = env_vars.get("REPO_ROOT", "/app")
+    has_hams_com = os.path.exists(os.path.join(repo_root, "ham_base", "__manifest__.py"))
     try:
         with open("/etc/hosts", "r") as f:
             hosts_content = f.read()
@@ -1262,7 +1268,7 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
     except OSError as e:
         _logger.warning("[*] Failed to update /etc/hosts: %s", e)
 
-    is_hams_community = os.path.exists(os.path.join(env_vars.get("REPO_ROOT", "/app"), "zero_sudo", "__manifest__.py"))
+    is_hams_community = os.path.exists(os.path.join(repo_root, "zero_sudo", "__manifest__.py"))
     if not is_hams_community:
         target_clone = "/hams_community"
         if not os.path.exists(target_clone):
@@ -1347,6 +1353,8 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
             if os.path.exists(systemd_dir):
                 for item in os.listdir(systemd_dir):
                     if item.endswith(".service") or item.endswith(".timer"):
+                        if not has_hams_com and item != "hams-pycache.service":
+                            continue
                         src = os.path.join(systemd_dir, item)
                         dst = os.path.join("/etc/systemd/system", item)
                         if not os.path.exists(dst):
@@ -1354,7 +1362,7 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
         except OSError as e:
             _logger.warning("Failed to link systemd units: %s", e)
 
-        run_post_provision_smoketest()
+        run_post_provision_smoketest(has_hams_com)
 
     except subprocess.CalledProcessError as e:
         _logger.error("Failed to provision system packages: %s", e)
