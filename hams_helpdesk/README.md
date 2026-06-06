@@ -45,9 +45,11 @@ This module operates within strict DevSecOps parameters, ensuring all actions ar
 * **Micro-Privilege Security (`[@ANCHOR: helpdesk_micro_privilege]`)**: Access is strictly controlled via record rules and explicit field-level security in the ORM.
     - Verified by [@ANCHOR: test_05_portal_write_restrictions]
 * **Helpdesk Operator Workflow**: Verification of the backend operator's ability to manage tickets and execute handoffs.
-    - Verified by [@ANCHOR: test_helpdesk_operator_tour]
+    - Verified by [@ANCHOR: helpdesk_operator_tour]
 * **Helpdesk Portal Facility**: Verification of the portal customer's ability to submit and view tickets.
-    - Verified by [@ANCHOR: test_helpdesk_portal_tour]
+    - Verified by [@ANCHOR: helpdesk_portal_tour]
+* **Portal Ticket Closure**: Customer ability to close their own tickets. ([@ANCHOR: helpdesk_portal_close])
+    - Verified by [@ANCHOR: test_portal_close_ticket]
 
 ## Stories and Journeys
 
@@ -55,7 +57,7 @@ This module operates within strict DevSecOps parameters, ensuring all actions ar
 **Goal**: Efficiently track and resolve system issues while maintaining a clear audit trail.
 1.  **Incoming Request**: A new ticket is created, either manually or via automated incident detection.
 2.  **Automated Routing**: The system identifies the currently on-duty administrator (`[@ANCHOR: helpdesk_ticket_creation]`) and assigns the ticket.
-3.  **Progression**: The operator moves the ticket through stages: New -> In Progress -> Resolved -> Closed.
+3.  **Progression**: The operator manages tickets via the list ([@ANCHOR: helpdesk_ticket_list]) and form ([@ANCHOR: helpdesk_ticket_form]) views, moving through stages: New -> In Progress -> Resolved -> Closed.
 4.  **Customer Communication**: Every stage change triggers an automated update to the reporter.
 
 ### Incident Resolution Journey ([@ANCHOR: journey_incident_resolution])
@@ -72,6 +74,14 @@ This module operates within strict DevSecOps parameters, ensuring all actions ar
 1.  **Initiation**: The outgoing operator selects "Shift Handoff" on an active ticket (`[@ANCHOR: helpdesk_shift_handoff]`).
 2.  **Context Capture**: A wizard appears requiring the selection of the next assignee and detailed handoff notes.
 3.  **Execution**: Upon confirmation, the system atomically updates ownership and logs a briefing (`[@ANCHOR: helpdesk_handoff_execution]`).
+4.  **Verification**: The handoff is recorded in the chatter and the operator workflow is validated by [@ANCHOR: helpdesk_operator_tour].
+
+### Portal Self-Service ([@ANCHOR: journey_portal_self_service])
+**Goal**: Empower customers to manage their own tickets.
+1.  **Submission**: Customer creates a ticket via the portal ([@ANCHOR: helpdesk_portal_new]).
+2.  **Review**: Customer views their tickets in the list ([@ANCHOR: helpdesk_portal_list]) and detail ([@ANCHOR: helpdesk_portal_detail]) views.
+3.  **Closure**: Customer closes the ticket when resolved ([@ANCHOR: helpdesk_portal_close]).
+4.  **Verification**: Validated by [@ANCHOR: helpdesk_portal_tour].
 
 ## 🧪 Specialized Test Environment
 
