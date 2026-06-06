@@ -1236,7 +1236,8 @@ def run_post_provision_smoketest():
 
     _logger.info("[*] Smoketest complete.")
 
-def provision_jules_environment(run_cmd_func, env_vars, orig_user):
+def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
+    os_id = os_id or get_os_identifier()
     try:
         with open("/etc/hosts", "r") as f:
             hosts_content = f.read()
@@ -1282,7 +1283,6 @@ def provision_jules_environment(run_cmd_func, env_vars, orig_user):
 
         all_packages = []
 
-        os_id = get_os_identifier()
         jules_provided = {"curl", "python3-pip", "build-essential"}
         for pkg_spec in MANIFEST.get("apt_packages", []):
             if "early_prod" in pkg_spec["environments"]:
