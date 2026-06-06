@@ -551,6 +551,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/adif_processor
 
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="DAEMON_ARGS="
 
@@ -591,7 +597,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/dx_firehose
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="WS_PORT=8765"
 Environment="DAEMON_ARGS="
 
@@ -633,7 +644,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=dx_daemon_service"
 Environment="DAEMON_ARGS="
 
@@ -674,7 +690,12 @@ User=odoo
 WorkingDirectory=/opt/hams/daemons/noaa_swpc_sync
 
 # Odoo JSON2-RPC Credentials
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
 Environment="DAEMON_ARGS="
@@ -695,47 +716,7 @@ WantedBy=multi-user.target
             "mode": "644",
             "environments": ["prod", "test"],
         },
-        {
-            "path": "/opt/hams/systemd/noaa.swpc.sync.service",
-            "content": """\
-[Unit]
-Description=Ham Radio NOAA Space Weather Sync Daemon
-After=network.target
 
-[Service]
-# ADR-0070 OS-Level Daemon Restriction
-ProtectSystem=strict
-ProtectHome=read-only
-PrivateTmp=true
-PrivateDevices=true
-NoNewPrivileges=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-Type=simple
-User=bruce
-WorkingDirectory=/home/bruce/workspace/hams_com/daemons/noaa_swpc_sync
-
-# Odoo JSON2-RPC Credentials
-EnvironmentFile=/etc/hams_daemons.env
-Environment="ODOO_USER=space_weather_service"
-Environment="POLL_INTERVAL=14400"
-
-# Execution via system Python
-ExecStart=/usr/bin/python3 /home/bruce/workspace/hams_com/daemons/noaa_swpc_sync/noaa_swpc_sync.py
-
-# Resiliency
-Restart=always
-RestartSec=60
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-""",
-            "owner": "root:root",
-            "mode": "644",
-            "environments": ["prod", "test"],
-        },
         {
             "path": "/opt/hams/systemd/pdns.sync.service",
             "content": """\
@@ -757,7 +738,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/pdns_sync
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=dns_api_service_internal"
 Environment="DAEMON_ARGS="
 
@@ -797,7 +783,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/lotw_eqsl_sync
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
 Environment="DAEMON_ARGS="
@@ -838,7 +829,12 @@ Type=oneshot
 User=odoo
 WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=satellite_sync_service_internal"
 Environment="DAEMON_ARGS="
 
@@ -892,7 +888,12 @@ Type=simple
 User=odoo
 WorkingDirectory=/opt/hams/daemons/qrz_scraper
 
-EnvironmentFile=/etc/hams_daemons.env
+EnvironmentFile=-/opt/hams/etc/core.env
+EnvironmentFile=-/opt/hams/etc/db.env
+EnvironmentFile=-/opt/hams/etc/redis.env
+EnvironmentFile=-/opt/hams/etc/rabbitmq.env
+EnvironmentFile=-/opt/hams/etc/pdns.env
+EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=onboarding_service_internal"
 Environment="DAEMON_ARGS="
 
