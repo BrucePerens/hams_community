@@ -565,6 +565,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=logbook_api_service_internal"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/adif_processor/main.py --start-test
@@ -613,6 +614,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="WS_PORT=8765"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 LimitNOFILE=65535
 
@@ -662,6 +664,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=dx_daemon_service"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/ham_dx_daemon/main.py --start-test
@@ -711,6 +714,7 @@ EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/noaa_swpc_sync/main.py --start-test
@@ -759,6 +763,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=dns_api_service_internal"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/pdns_sync/main.py --start-test
@@ -807,6 +812,7 @@ EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/lotw_eqsl_sync/main.py --start-test
@@ -854,6 +860,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=satellite_sync_service_internal"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/amsat_tle_sync/main.py --start-test
@@ -915,6 +922,7 @@ EnvironmentFile=-/opt/hams/etc/rabbitmq.env
 EnvironmentFile=-/opt/hams/etc/pdns.env
 EnvironmentFile=-/opt/hams/etc/odoo.env
 Environment="ODOO_USER=onboarding_service_internal"
+Environment="PYTHONPATH=/opt/hams/daemons"
 
 # Smoketest Resource Verification
 ExecStartPre=/usr/bin/python3 /opt/hams/daemons/qrz_scraper/main.py --start-test
