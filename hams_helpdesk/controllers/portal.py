@@ -62,6 +62,18 @@ class HelpdeskPortal(CustomerPortal):
         }
         return request.render("hams_helpdesk.portal_ticket_detail", values)
 
+    @http.route(["/my/ticket/<int:ticket_id>/close"], type="http", auth="user", methods=["POST"], website=True, csrf=True)
+    def portal_ticket_close(self, ticket_id, **kw):
+        utils = request.env["zero_sudo.security.utils"]
+        hd_env = utils._get_service_env("hams_helpdesk.user_helpdesk_service")
+        ticket_sudo = request.env["hams_helpdesk.ticket"].with_env(hd_env).browse(ticket_id)
+
+        if not ticket_sudo.exists() or ticket_sudo.partner_id != request.env.user.partner_id:
+            return request.redirect("/my")
+
+        ticket_sudo.action_portal_close()
+        return request.redirect("/my/ticket/%s" % ticket_id)
+
     @http.route(["/my/tickets/new"], type="http", auth="user", website=True)
     def portal_ticket_new(self, **kw):
         return request.render("hams_helpdesk.portal_ticket_new", {"page_name": "ticket_new"})

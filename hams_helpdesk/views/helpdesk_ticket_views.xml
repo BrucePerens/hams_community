@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- burn-ignore-tour -->
+    <!-- [@ANCHOR: helpdesk_ticket_form] -->
     <record id="view_hams_helpdesk_ticket_form" model="ir.ui.view">
         <field name="name">hams_helpdesk.ticket.form</field>
         <field name="model">hams_helpdesk.ticket</field>
@@ -40,7 +40,7 @@
         </field>
     </record>
 
-    <!-- burn-ignore-tour -->
+    <!-- [@ANCHOR: helpdesk_ticket_list] -->
     <record id="view_hams_helpdesk_ticket_list" model="ir.ui.view">
         <field name="name">hams_helpdesk.ticket.list</field>
         <field name="model">hams_helpdesk.ticket</field>

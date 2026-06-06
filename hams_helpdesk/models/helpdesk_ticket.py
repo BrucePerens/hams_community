@@ -129,6 +129,10 @@ class HelpdeskTicket(models.Model):
         # account is misconfigured, we fail fast.
         hd_env = utils._get_service_env("hams_helpdesk.user_helpdesk_service")
 
+        # Optimization: Pre-fetch partner info for all tickets to avoid N+1 inside the loop
+        self.mapped('user_id.partner_id')
+        self.mapped('company_id')
+
         for ticket in self:
             # Switch to service account and ensure company context is correct for each ticket
             ticket_service = ticket.with_env(hd_env).with_company(ticket.company_id)
@@ -208,3 +212,15 @@ class HelpdeskTicket(models.Model):
                 "default_old_user_id": self.user_id.id if self.user_id else False,
             }
         }
+
+    def action_portal_close(self):
+        """Allows portal users to close their own tickets."""
+        # [@ANCHOR: helpdesk_portal_close]
+        self.ensure_one()
+        # Security: Ensure the user is the owner of the ticket
+        if self.partner_id != self.env.user.partner_id and not self.env.user.has_group('hams_helpdesk.group_helpdesk_user'):
+             raise AccessError(_("You are not authorized to close this ticket."))
+
+        if self.stage != 'closed':
+            self.write({'stage': 'closed'})
+            self.message_post(body=_("Ticket closed by customer."))

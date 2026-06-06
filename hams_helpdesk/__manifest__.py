@@ -15,6 +15,16 @@
         "views/portal_templates.xml",
     ],
     "assets": {
+        "web.assets_backend": [
+            "hams_helpdesk/static/src/tours/helpdesk_operator_tour.js",
+        ],
+        "web.assets_frontend": [
+            "hams_helpdesk/static/src/tours/helpdesk_portal_tour.js",
+        ],
+        "web.assets_tests": [
+            "hams_helpdesk/static/src/tours/helpdesk_operator_tour.js",
+            "hams_helpdesk/static/src/tours/helpdesk_portal_tour.js",
+        ],
     },
     "knowledge_docs": [
         {
