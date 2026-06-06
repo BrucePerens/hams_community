@@ -552,9 +552,10 @@ User=odoo
 WorkingDirectory=/opt/hams/daemons/adif_processor
 
 Environment="ODOO_USER=logbook_api_service_internal"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/adif_processor/adif_processor.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/adif_processor/adif_processor.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=10
@@ -592,11 +593,12 @@ WorkingDirectory=/opt/hams/daemons/dx_firehose
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="WS_PORT=8765"
+Environment="DAEMON_ARGS="
 
 LimitNOFILE=65535
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/dx_firehose/dx_firehose.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/dx_firehose/dx_firehose.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=10
@@ -633,9 +635,10 @@ WorkingDirectory=/opt/hams/daemons/ham_dx_daemon
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dx_daemon_service"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/ham_dx_daemon/dx_daemon.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/ham_dx_daemon/dx_daemon.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=10
@@ -674,9 +677,10 @@ WorkingDirectory=/opt/hams/daemons/noaa_swpc_sync
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=space_weather_service"
 Environment="POLL_INTERVAL=14400"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/noaa_swpc_sync/noaa_swpc_sync.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/noaa_swpc_sync/noaa_swpc_sync.py $DAEMON_ARGS
 
 # Resiliency
 Restart=always
@@ -755,9 +759,10 @@ WorkingDirectory=/opt/hams/daemons/pdns_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=dns_api_service_internal"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/pdns_sync/pdns_sync.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/pdns_sync/pdns_sync.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=10
@@ -795,9 +800,10 @@ WorkingDirectory=/opt/hams/daemons/lotw_eqsl_sync
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=logbook_api_service_internal"
 Environment="POLL_INTERVAL=86400"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/lotw_eqsl_sync/lotw_eqsl_sync.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=60
@@ -834,9 +840,10 @@ WorkingDirectory=/opt/hams/daemons/amsat_tle_sync
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=satellite_sync_service_internal"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/amsat_tle_sync/amsat_sync.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/amsat_tle_sync/amsat_sync.py $DAEMON_ARGS
 
 StandardOutput=journal
 StandardError=journal
@@ -887,9 +894,10 @@ WorkingDirectory=/opt/hams/daemons/qrz_scraper
 
 EnvironmentFile=/etc/hams_daemons.env
 Environment="ODOO_USER=onboarding_service_internal"
+Environment="DAEMON_ARGS="
 
 # Execution via system Python
-ExecStart=/usr/bin/python3 /opt/hams/daemons/qrz_scraper/qrz_scraper.py
+ExecStart=/usr/bin/python3 /opt/hams/daemons/qrz_scraper/qrz_scraper.py $DAEMON_ARGS
 
 Restart=always
 RestartSec=10
@@ -1177,6 +1185,7 @@ def run_post_provision_smoketest():
     _logger.info("[*] Running post-provisioning smoketest on all services...")
 
     try:
+        subprocess.run(["systemctl", "set-environment", "DAEMON_ARGS=--start-test"], check=False)
         subprocess.run(["systemctl", "daemon-reload"], check=False)
     except OSError as e:
         _logger.debug("Ignored OSError during daemon-reload: %s", e)
@@ -1233,6 +1242,11 @@ def run_post_provision_smoketest():
     for svc in reversed(started_services):
         _logger.info("    Stopping %s...", svc)
         subprocess.run(["systemctl", "stop", svc], capture_output=True)
+
+    try:
+        subprocess.run(["systemctl", "unset-environment", "DAEMON_ARGS"], check=False)
+    except OSError as e:
+        _logger.debug("Ignored OSError: %s", e)
 
     _logger.info("[*] Smoketest complete.")
 
