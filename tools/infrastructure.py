@@ -1423,7 +1423,18 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
             _logger.warning("[*] Failed to add odoo to hams_com group: %s", e)
 
         try:
+            _logger.info("[*] Locking down RabbitMQ to local loopback...")
+            os.makedirs("/etc/rabbitmq", exist_ok=True)
+            with open("/etc/rabbitmq/rabbitmq-env.conf", "a") as f:
+                f.write("NODE_IP_ADDRESS=127.0.0.1\n")
+            run_cmd_func(["systemctl", "restart", "rabbitmq-server"])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("[*] Failed to configure RabbitMQ bindings: %s", e)
+
+        try:
+            _logger.info("[*] Locking down PostgreSQL to local loopback...")
             run_cmd_func(["bash", "-c", "sed -i 's/peer/trust/g; s/md5/trust/g; s/scram-sha-256/trust/g' /etc/postgresql/*/main/pg_hba.conf"])
+            run_cmd_func(["bash", "-c", "echo \"listen_addresses = '127.0.0.1, ::1'\" >> /etc/postgresql/*/main/postgresql.conf"])
             run_cmd_func(["bash", "-c", "echo \"shared_preload_libraries = 'pg_stat_statements'\" >> /etc/postgresql/*/main/postgresql.conf"])
             run_cmd_func(["systemctl", "restart", "postgresql"])
 
