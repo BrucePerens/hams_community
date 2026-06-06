@@ -512,6 +512,8 @@ WantedBy=multi-user.target
         {
             "src": "{HAMS_COM_DIR}/daemons",
             "path": "/opt/hams/daemons",
+            "owner": "hams_com:hams_com",
+            "mode": "755",
             "environments": ["prod", "test"],
             "post_provision_hooks": [hook_daemons_perms],
         },
@@ -1369,6 +1371,11 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
 
         all_packages = sorted(list(set(all_packages)))
         run_cmd_func(["apt-get", "install", "-y"] + apt_opts + all_packages)
+
+        try:
+            run_cmd_func(["usermod", "-a", "-G", "hams_com", "odoo"])
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("[*] Failed to add odoo to hams_com group: %s", e)
 
         try:
             run_cmd_func(["bash", "-c", "sed -i 's/peer/trust/g; s/md5/trust/g; s/scram-sha-256/trust/g' /etc/postgresql/*/main/pg_hba.conf"])
