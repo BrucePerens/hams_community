@@ -850,6 +850,34 @@ infrastructure.provision_environment(_safe_run, env_vars, orig_user, skip_apt=Tr
     os.environ["PGHOST"] = pg_socket
 
 
+def check_host_apt_packages():
+    """
+    Verifies all required host packages are installed on Debian/Ubuntu systems
+    prior to namespace isolation. Uses the manifest in infrastructure.py.
+    """
+    os_id = infrastructure.get_os_identifier()
+    missing = []
+    try:
+        for pkg_spec in infrastructure.MANIFEST.get("apt_packages", []):
+            pkg_name = pkg_spec.get("debian_name", pkg_spec["name"]) if os_id == "debian" else pkg_spec["name"]
+            res = subprocess.run(
+                ["dpkg-query", "-W", "-f=${Status}", pkg_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if "install ok installed" not in res.stdout:
+                missing.append(pkg_name)
+    except FileNotFoundError as e:
+        _logger.debug("Skipping APT package check, dpkg-query not found: %s", e)
+        return
+
+    if missing:
+        print(f"❌ ERROR: Missing required host APT packages: {', '.join(missing)}")
+        print(f"Please install them via: sudo apt-get update && sudo apt-get install -y {' '.join(missing)}")
+        sys.exit(1)
+
+
 def main():
     cwd = os.getcwd()
     if not os.path.isdir(os.path.join(cwd, ".git")) or not os.path.isfile(os.path.join(cwd, "tools", "test.py")):
@@ -876,7 +904,10 @@ def main():
             exec_cmd = ["sudo", "-H", "-E", sys.executable] + sys.argv
             os.execvpe("sudo", exec_cmd, os.environ)
 
-    if os.environ.get("HAMS_ISOLATED_NS") != "1" and not is_jules:
+    if os.environ.get("HAMS_ISOLATED_NS") != "1" and not os.environ.get("IN_JULES_VM") and not os.environ.get("JULES_SESSION_ID"):
+        if "--internal-ns-init" not in sys.argv:
+            check_host_apt_packages()
+
         if "--internal-ns-init" in sys.argv:
             # Phase 2: Execute completely within Python (No bash script interpolation)
             real_log_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY")
