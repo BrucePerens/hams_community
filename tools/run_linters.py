@@ -53,17 +53,7 @@ def main():
         addons_paths.append(community_dir)
     addons_path_str = ",".join(addons_paths)
 
-    # 4. Setup VENV
-    venv_python = os.path.join(dir_path, ".venv", "bin", "python")
-    if not os.path.isfile(venv_python):
-        setup_script = os.path.join(dir_path, "tools", "setup_venv.sh")
-        if os.path.exists(setup_script):
-            subprocess.run(["bash", setup_script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    if not os.path.isfile(venv_python):
-        print("❌ Failed to set up or locate virtual environment python at .venv/bin/python")
-        sys.exit(1)
-
+    python_exec = "/usr/bin/python3"
     linters_failed = False
 
     # 5. Modules Discovery
@@ -91,7 +81,7 @@ def main():
                 continue
 
         pre_flight_cmd = [
-            venv_python,
+            python_exec,
             os.path.join(dir_path, "tools", "pre_flight_check.py"),
             "-m", mod_path,
             "--addons-path", addons_path_str
@@ -105,10 +95,7 @@ def main():
             linters_failed = True
 
     # 7. Flake8
-    flake8_cmd = "flake8"
-    venv_flake8 = os.path.join(dir_path, ".venv", "bin", "flake8")
-    if os.path.isfile(venv_flake8):
-        flake8_cmd = venv_flake8
+    flake8_cmd = "/usr/bin/flake8"
 
     try:
         res = subprocess.run([
@@ -132,7 +119,7 @@ def main():
 
     # 8. check_burn_list
     res = subprocess.run([
-        venv_python,
+        python_exec,
         os.path.join(dir_path, "tools", "check_burn_list.py"),
         dir_path
     ], capture_output=True, text=True)
@@ -147,7 +134,7 @@ def main():
 
     # 9. verify_anchors
     res = subprocess.run([
-        venv_python,
+        python_exec,
         os.path.join(dir_path, "tools", "verify_anchors.py"),
         dir_path
     ], capture_output=True, text=True)
@@ -162,7 +149,7 @@ def main():
 
     # 10. check_manifest_dependencies
     res = subprocess.run([
-        venv_python,
+        python_exec,
         os.path.join(dir_path, "tools", "check_manifest_dependencies.py"),
         dir_path
     ], capture_output=True, text=True)
@@ -177,7 +164,7 @@ def main():
 
     # 11. check_js_syntax
     res = subprocess.run([
-        venv_python,
+        python_exec,
         os.path.join(dir_path, "tools", "check_js_syntax.py"),
         dir_path
     ], capture_output=True, text=True)
