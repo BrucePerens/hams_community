@@ -254,24 +254,20 @@ class FailureExtractor:
 
         if self.capturing and self.current_block:
             self.captured_blocks.append((self.current_context, self.current_block))
-            self.capturing = False
-            self.current_block = []
-
         grouped_blocks = {}
         for context, block in self.captured_blocks:
             if context not in grouped_blocks:
                 grouped_blocks[context] = []
             grouped_blocks[context].extend(block)
 
-        out_dir = os.path.dirname(self.output_path)
-        if out_dir:
-            os.makedirs(out_dir, exist_ok=True)
+        if os.path.dirname(self.output_path):
+            os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
         num_failures = len(grouped_blocks)
 
         try:
-            with open(self.output_path, "w", encoding="utf-8") as out:
-                out.write("=== EXTRACTED TEST FAILURES & ERRORS ===\n")
+            with open(self.output_path, "a", encoding="utf-8") as out:
+                out.write(f"\n=== EXTRACTED TEST FAILURES & ERRORS (Captured {num_failures} blocks) ===\n")
                 if num_failures == 0:
                     out.write("\nNo errors or failures detected in the log.\n")
                 else:
@@ -300,6 +296,12 @@ class FailureExtractor:
                             out.write(b_line)
                         out.write("\n")
 
+                out.flush()
+                os.fsync(out.fileno())
+
+        except PermissionError as e:
+            print(f"\n❌ [ERROR] FailureExtractor could not write to {self.output_path} due to permission denied: {e}")
+            print("To resolve this, delete the file manually: sudo rm -f " + self.output_path + "\n")
             print("\n==========================================================")
             if num_failures == 0:
                 print("🎉 TEST RUN COMPLETE: No test failures detected.")
