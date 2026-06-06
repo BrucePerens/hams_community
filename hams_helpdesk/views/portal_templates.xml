@@ -26,15 +26,15 @@
         </xpath>
     </template>
 
-    <!-- burn-ignore-tour -->
     <!-- audit-ignore-view -->
+    <!-- [@ANCHOR: helpdesk_portal_list] -->
     <template id="portal_my_tickets" name="My Tickets">
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True"/>
             <t t-call="portal.portal_searchbar">
                 <t t-set="title">Tickets</t>
                 <div class="ms-md-auto">
-                    <a href="/my/tickets/new" class="btn btn-primary">New Ticket</a>
+                    <a href="/my/tickets/new" class="btn btn-primary o_tour_new_ticket">New Ticket</a>
                 </div>
             </t>
             <t t-if="not tickets">
@@ -45,34 +45,59 @@
                     <tr class="active">
                         <th>Ticket #</th>
                         <th>Title</th>
-                        <th>Stage</th>
+                        <th class="text-center">Priority</th>
+                        <th class="text-end">Stage</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr t-foreach="tickets" t-as="t">
                         <td><a t-attf-href="/my/ticket/#{t.id}"><t t-out="t.id"/></a></td>
                         <td><a t-attf-href="/my/ticket/#{t.id}"><t t-out="t.name"/></a></td>
-                        <td><span class="badge rounded-pill text-bg-info"><t t-out="t.stage"/></span></td>
+                        <td class="text-center">
+                            <t t-if="t.priority == '3'"><span class="badge rounded-pill text-bg-danger">Critical</span></t>
+                            <t t-elif="t.priority == '2'"><span class="badge rounded-pill text-bg-warning">High</span></t>
+                            <t t-elif="t.priority == '1'"><span class="badge rounded-pill text-bg-info">Medium</span></t>
+                            <t t-else=""><span class="badge rounded-pill text-bg-secondary">Low</span></t>
+                        </td>
+                        <td class="text-end"><span class="badge rounded-pill text-bg-info"><t t-out="dict(t._fields['stage'].selection).get(t.stage)"/></span></td>
                     </tr>
                 </tbody>
             </t>
         </t>
     </template>
 
-    <!-- burn-ignore-tour -->
+    <!-- [@ANCHOR: helpdesk_portal_detail] -->
     <template id="portal_ticket_detail" name="Ticket Detail">
         <t t-call="portal.portal_layout">
             <div id="optional_classes" class="container">
                 <div class="card mt-3">
                     <div class="card-header bg-light">
-                        <div class="row">
+                        <div class="row align-items-center">
                             <div class="col-md-8">
-                                <h3><span t-field="ticket.name"/></h3>
-                                <p class="text-muted mb-0">Status: <span t-field="ticket.stage"/></p>
+                                <h3 class="mb-0"><span t-field="ticket.name"/></h3>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <form t-if="ticket.stage != 'closed'" t-attf-action="/my/ticket/#{ticket.id}/close" method="post">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <button type="submit" class="btn btn-warning btn-sm o_tour_close_ticket">Close Ticket</button>
+                                </form>
                             </div>
                         </div>
                     </div>
                     <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <strong>Status:</strong> <span class="badge rounded-pill text-bg-info" t-field="ticket.stage"/>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Priority:</strong>
+                                <t t-if="ticket.priority == '3'"><span class="badge rounded-pill text-bg-danger">Critical</span></t>
+                                <t t-elif="ticket.priority == '2'"><span class="badge rounded-pill text-bg-warning">High</span></t>
+                                <t t-elif="ticket.priority == '1'"><span class="badge rounded-pill text-bg-info">Medium</span></t>
+                                <t t-else=""><span class="badge rounded-pill text-bg-secondary">Low</span></t>
+                            </div>
+                        </div>
+                        <hr/>
                         <div t-field="ticket.description"/>
                     </div>
                 </div>
@@ -88,6 +113,7 @@
     </template>
 
     <!-- audit-ignore-view -->
+    <!-- [@ANCHOR: helpdesk_portal_new] -->
     <template id="portal_ticket_new" name="New Ticket">
         <t t-call="portal.portal_layout">
             <div class="container">
@@ -98,15 +124,19 @@
                                 <h3>Submit New Ticket</h3>
                             </div>
                             <div class="card-body">
+                                <p class="text-muted mb-4">
+                                    Please provide a clear subject and detailed description of the issue you are experiencing.
+                                    An on-duty engineer will be assigned to assist you shortly.
+                                </p>
                                 <form action="/my/tickets/submit" method="post">
                                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                     <div class="mb-3">
                                         <label for="name" class="form-label">Subject</label>
-                                        <input type="text" name="name" id="name" class="form-control" required="required"/>
+                                        <input type="text" name="name" id="name" class="form-control" required="required" placeholder="Short summary of the issue"/>
                                     </div>
                                     <div class="mb-3">
                                         <label for="description" class="form-label">Description</label>
-                                        <textarea name="description" id="description" class="form-control" rows="5"></textarea>
+                                        <textarea name="description" id="description" class="form-control" rows="5" placeholder="Detailed steps to reproduce, error messages, or context..."></textarea>
                                     </div>
                                     <div class="text-end">
                                         <button type="submit" class="btn btn-primary">Submit Ticket</button>

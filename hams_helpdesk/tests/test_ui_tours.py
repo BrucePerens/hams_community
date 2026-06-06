@@ -1,3 +1,4 @@
+from odoo import http
 from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 
@@ -22,9 +23,16 @@ class TestHelpdeskTours(HamsHttpCase):
             'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])]
         })
 
+    def test_helpdesk_portal_tour(self):
+        """Test portal ticket submission and closure via JS tour."""
+        # [@ANCHOR: helpdesk_portal_tour]
+        self.start_tour("/my/tickets?debug=1", "helpdesk_portal_tour", login="portal_cust_tour")
+
     def test_helpdesk_portal_rendering(self):
         """Test portal ticket submission rendering and basic visibility."""
-        # [@ANCHOR: test_helpdesk_portal_tour]
+        # Tests [@ANCHOR: helpdesk_portal_new]
+        # Tests [@ANCHOR: helpdesk_portal_list]
+        # Tests [@ANCHOR: helpdesk_portal_detail]
         self.authenticate("portal_cust_tour", "password")
         # Access portal tickets list
         res = self.url_open("/my/tickets")
@@ -36,10 +44,27 @@ class TestHelpdeskTours(HamsHttpCase):
         self.assertEqual(res.status_code, 200, "[!] DIAGNOSTIC FOR AI: New ticket form failed to render (Expected 200).")
         self.assertIn(b"Submit New Ticket", res.content, "[!] DIAGNOSTIC FOR AI: 'Submit New Ticket' header not found in portal.")
 
+    def test_portal_close_ticket(self):
+        """Test portal user closing their own ticket."""
+        # Tests [@ANCHOR: helpdesk_portal_close]
+        ticket = self.env['hams_helpdesk.ticket'].create({
+            'name': 'Portal Close Test',
+            'partner_id': self.portal_user.partner_id.id,
+            'stage': 'new'
+        })
+        self.authenticate("portal_cust_tour", "password")
+        res = self.url_open(f"/my/ticket/{ticket.id}/close", data={'csrf_token': http.Request.csrf_token(self)})
+        self.assertEqual(ticket.stage, 'closed', "Ticket should be closed after portal action.")
+
+    def test_helpdesk_operator_tour(self):
+        """Test operator backend workflow via JS tour."""
+        # [@ANCHOR: helpdesk_operator_tour]
+        self.start_tour("/odoo?debug=1&action=hams_helpdesk.action_hams_helpdesk_ticket", "helpdesk_operator_tour", login="hd_manager_tour")
+
     def test_helpdesk_operator_rendering(self):
         """Test operator backend facility rendering."""
-        # [@ANCHOR: test_helpdesk_operator_tour]
-        # Verified by Rendering test
+        # Tests [@ANCHOR: helpdesk_ticket_form]
+        # Tests [@ANCHOR: helpdesk_ticket_list]
         ticket = self.env['hams_helpdesk.ticket'].create({
             'name': 'Rendering Test Ticket',
             'user_id': self.manager_user.id,
