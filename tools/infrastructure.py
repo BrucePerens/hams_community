@@ -388,7 +388,7 @@ MANIFEST = {
             "content": "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.gpg] https://nightly.odoo.com/19.0/nightly/deb/ ./\n",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"],
+            "environments": ["early_prod"],
         },
         {
             "path": "/opt/hams/etc/pdns_gsqlite3.conf",
@@ -474,7 +474,7 @@ WantedBy=multi-user.target
             "url": "https://nightly.odoo.com/odoo.key",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"],
+            "environments": ["early_prod"],
             "post_provision_hooks": [hook_install_odoo_key],
         },
         {
@@ -482,7 +482,7 @@ WantedBy=multi-user.target
             "url": "https://www.postgresql.org/media/keys/ACCC4CF8.asc",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"],
+            "environments": ["early_prod"],
             "post_provision_hooks": [hook_install_pg_key],
         },
         {
@@ -490,7 +490,7 @@ WantedBy=multi-user.target
             "content": "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] https://apt.postgresql.org/pub/repos/apt/ {DEB_CODENAME}-pgdg main\n",
             "owner": "root:root",
             "mode": "644",
-            "environments": ["prod"],
+            "environments": ["early_prod"],
         },
         {
             "path": "/tmp/kopia.tar.gz",
@@ -1304,6 +1304,8 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
     for k, v in MANIFEST.get("env_defaults", {}).items():
         env_vars.setdefault(k, v)
     env_vars.setdefault("ODOO_URL", "http://odoo:8069")
+    env_vars.setdefault("REDIS_HOST", "redis")
+    env_vars.setdefault("RABBITMQ_HOST", "rabbitmq")
     env_vars.setdefault("DB_NAME", "hams_test")
     env_vars.setdefault("DB_USER", "odoo")
     env_vars.setdefault("DB_PASS", "odoo")
@@ -1377,7 +1379,7 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
         if "redis" not in hosts_content:
             _logger.info("[*] Ensuring docker-compose hostnames resolve locally in /etc/hosts...")
             with open("/etc/hosts", "a") as f:
-                f.write("\n127.0.1.1 redis rabbitmq postgres pdns memcached\n")
+                f.write("\n127.0.0.1 redis rabbitmq postgres pdns memcached\n")
     except OSError as e:
         _logger.warning("[*] Failed to update /etc/hosts: %s", e)
 
@@ -1389,8 +1391,7 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
         run_cmd_func(["apt-get", "install", "-y"] + apt_opts + ["gnupg"])
 
         provision_system_accounts(run_cmd_func, environment="prod")
-        provision_static_files(run_cmd_func, env_vars, environment="prod")
-        provision_systemd_override(run_cmd_func, env_vars, environment="prod")
+        provision_static_files(run_cmd_func, env_vars, environment="early_prod")
         run_cmd_func(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
         all_packages = []
@@ -1412,6 +1413,9 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
 
         all_packages = sorted(list(set(all_packages)))
         run_cmd_func(["apt-get", "install", "-y"] + apt_opts + all_packages)
+
+        provision_static_files(run_cmd_func, env_vars, environment="prod")
+        provision_systemd_override(run_cmd_func, env_vars, environment="prod")
 
         try:
             run_cmd_func(["usermod", "-a", "-G", "hams_com", "odoo"])
