@@ -1362,12 +1362,10 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
 
         all_packages = []
 
-        jules_provided = {"curl", "python3-pip", "build-essential"}
         for pkg_spec in MANIFEST.get("apt_packages", []):
             if "early_prod" in pkg_spec["environments"]:
                 pkg_name = pkg_spec.get("debian_name", pkg_spec["name"]) if os_id == "debian" else pkg_spec["name"]
-                if pkg_spec["name"] not in jules_provided and pkg_name not in jules_provided:
-                    all_packages.append(pkg_name)
+                all_packages.append(pkg_name)
 
         pg_res = subprocess.run(
             ["bash", "-c", "apt-cache depends postgresql | grep -Eo 'postgresql-[0-9]+' | head -n1 | grep -Eo '[0-9]+'"],
@@ -1400,6 +1398,9 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
         _logger.info("[*] Preparing testing directories with production paths...")
         apply_production_directories(run_cmd_func, environment="prod")
         apply_production_directories(run_cmd_func, environment="test")
+
+        _logger.info("[*] Writing environment configuration files...")
+        write_env_files("/opt/hams/etc", env_vars, run_cmd_func)
 
         if orig_user:
             try:
