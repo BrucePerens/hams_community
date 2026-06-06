@@ -130,7 +130,7 @@ def download_file(url, path, mode, env_vars):
 
 def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
     domain = env_vars.get('DOMAIN', 'localhost')
-    ssl_dir = os.path.join(dest_dir, path.lstrip('/')) if dest_dir else path
+    ssl_dir = path
     fullchain = os.path.join(ssl_dir, 'fullchain.pem')
     privkey = os.path.join(ssl_dir, 'privkey.pem')
     lotw = os.path.join(ssl_dir, 'lotw_root.pem')
@@ -143,7 +143,7 @@ def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
             shutil.copy2(fullchain, lotw)
 
 def hook_clear_pycache(env_vars, dest_dir, path, run_cmd_func):
-    pycache = os.path.join(dest_dir, 'opt/hams/pycache') if dest_dir else '/opt/hams/pycache'
+    pycache = path
     daemons = os.path.join(dest_dir, 'opt/hams/daemons') if dest_dir else '/opt/hams/daemons'
     if os.path.exists(pycache):
         for item in os.listdir(pycache):
@@ -182,7 +182,7 @@ def hook_install_cloudflared(env_vars, dest_dir, path, run_cmd_func):
     safe_remove(path)
 
 def hook_daemons_perms(env_vars, dest_dir, path, run_cmd_func):
-    target = os.path.join(dest_dir, path.lstrip('/')) if dest_dir else path
+    target = path
     run_cmd_func(['chown', '-R', 'hams_com:hams_com', target])
     run_cmd_func(['chmod', '-R', 'a+rX', target])
 
@@ -1100,7 +1100,8 @@ def execute_hooks(environment, run_cmd_func, env_vars=None, dest_dir=""):
     for d in MANIFEST["directories"]:
         if environment in d["environments"] and "post_provision_hooks" in d:
             for hook in d["post_provision_hooks"]:
-                hook(env_vars or {}, dest_dir, d["path"], run_cmd_func)
+                physical_path = os.path.join(dest_dir, d["path"].lstrip("/")) if dest_dir else d["path"]
+                hook(env_vars or {}, dest_dir, physical_path, run_cmd_func)
 
 def apply_production_directories(run_cmd_func=None, environment="prod", dest_dir=""):
     for d in MANIFEST["directories"]:
@@ -1295,7 +1296,7 @@ def run_post_provision_smoketest(has_hams_com=True):
 
     _logger.info("[*] Smoketest complete.")
 
-def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
+def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None, skip_apt=False):
     os_id = os_id or get_os_identifier()
     repo_root = env_vars.get("REPO_ROOT", "/app")
     has_hams_com = os.path.exists(os.path.join(repo_root, "ham_base", "__manifest__.py"))
@@ -1383,39 +1384,46 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None):
     except OSError as e:
         _logger.warning("[*] Failed to update /etc/hosts: %s", e)
 
-    _logger.info("[*] Provisioning APT Sources and Packages...")
+    _logger.info("[*] Initializing system accounts and static files...")
     try:
-        apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
-
-        run_cmd_func(["apt-get", "update"] + apt_opts)
-        run_cmd_func(["apt-get", "install", "-y"] + apt_opts + ["gnupg"])
-
         provision_system_accounts(run_cmd_func, environment="prod")
+        provision_system_accounts(run_cmd_func, environment="test")
         provision_static_files(run_cmd_func, env_vars, environment="early_prod")
-        run_cmd_func(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
-        all_packages = []
+        if not skip_apt:
+            _logger.info("[*] Provisioning APT Sources and Packages...")
+            apt_opts = ["-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "Dpkg::Lock::Timeout=120"]
 
-        jules_provided = {"curl", "python3-pip", "build-essential"}
-        for pkg_spec in MANIFEST.get("apt_packages", []):
-            if "early_prod" in pkg_spec["environments"]:
-                pkg_name = pkg_spec.get("debian_name", pkg_spec["name"]) if os_id == "debian" else pkg_spec["name"]
-                if pkg_spec["name"] not in jules_provided and pkg_name not in jules_provided:
-                    all_packages.append(pkg_name)
+            run_cmd_func(["apt-get", "update"] + apt_opts)
+            run_cmd_func(["apt-get", "install", "-y"] + apt_opts + ["gnupg"])
+            run_cmd_func(["apt-get", "update"] + apt_opts + ["--allow-insecure-repositories"])
 
-        pg_res = subprocess.run(
-            ["bash", "-c", "apt-cache depends postgresql | grep -Eo 'postgresql-[0-9]+' | head -n1 | grep -Eo '[0-9]+'"],
-            capture_output=True, text=True
-        )
-        if pg_res.returncode == 0 and pg_res.stdout.strip():
-            pg_major = pg_res.stdout.strip()
-            all_packages.append(f"postgresql-{pg_major}-pgvector")
+            all_packages = []
 
-        all_packages = sorted(list(set(all_packages)))
-        run_cmd_func(["apt-get", "install", "-y"] + apt_opts + all_packages)
+            jules_provided = {"curl", "python3-pip", "build-essential"}
+            for pkg_spec in MANIFEST.get("apt_packages", []):
+                if "early_prod" in pkg_spec["environments"]:
+                    pkg_name = pkg_spec.get("debian_name", pkg_spec["name"]) if os_id == "debian" else pkg_spec["name"]
+                    if pkg_spec["name"] not in jules_provided and pkg_name not in jules_provided:
+                        all_packages.append(pkg_name)
+
+            pg_res = subprocess.run(
+                ["bash", "-c", "apt-cache depends postgresql | grep -Eo 'postgresql-[0-9]+' | head -n1 | grep -Eo '[0-9]+'"],
+                capture_output=True, text=True
+            )
+            if pg_res.returncode == 0 and pg_res.stdout.strip():
+                pg_major = pg_res.stdout.strip()
+                all_packages.append(f"postgresql-{pg_major}-pgvector")
+
+            all_packages = sorted(list(set(all_packages)))
+            run_cmd_func(["apt-get", "install", "-y"] + apt_opts + all_packages)
+        else:
+            _logger.info("[*] Bypassing APT phase (skip_apt=True)...")
 
         provision_static_files(run_cmd_func, env_vars, environment="prod")
+        provision_static_files(run_cmd_func, env_vars, environment="test")
         provision_systemd_override(run_cmd_func, env_vars, environment="prod")
+        provision_systemd_override(run_cmd_func, env_vars, environment="test")
 
         try:
             run_cmd_func(["usermod", "-a", "-G", "hams_com", "odoo"])
