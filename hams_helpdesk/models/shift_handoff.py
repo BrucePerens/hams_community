@@ -37,4 +37,7 @@ class ShiftHandoffWizard(models.TransientModel):
             subject=_("Shift Handoff: %s") % ticket.name,
             partner_ids=[self.new_user_id.partner_id.id]
         )
-        return {"type": "ir.actions.act_window_close"}
+
+        # Return a client reload action to force the underlying form view and chatter to refresh.
+        # This is critical for reliable headless UI testing and immediate operator feedback.
+        return {"type": "ir.actions.client", "tag": "reload"}

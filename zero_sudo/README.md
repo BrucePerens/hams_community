@@ -96,4 +96,30 @@ Emits a PostgreSQL `NOTIFY` event to synchronize distributed caches.
 
 #### `_get_crypto_secret()` `[@ANCHOR: get_crypto_secret]`
 Retrieves the root cryptographic key from environment or local file, bypassing DB.
+
+#### `_invalidate_model_cache(model_name)` `[@ANCHOR: invalidate_model_cache]`
+Securely invalidates the entire cache for a specific model. Requires the user to have write access to the model.
 </python_api>
+
+---
+
+<tour_utils>
+## 4. UI Tour Macros (`tour_utils.js`)
+
+The `TourUtils` object (`@zero_sudo/js/tour_utils`) provides centralized macros for Odoo UI Tours to guarantee architectural compliance and eliminate race conditions in headless browser testing.
+
+#### `safeSave(saveButtonTrigger, waitTrigger)`
+Generates a macro array to safely click a save button and explicitly wait for the subsequent RPC resolution or UI state change.
+
+#### `bypassDialogs()`
+Generates a macro to intercept and bypass native blocking dialogs (`window.alert`, `window.confirm`) during testing.
+
+#### `mockExternalRequests(urlPattern, mockResponse)`
+Generates a macro to intercept and mock `fetch` requests matching a specific URL pattern, preventing external network calls during tests.
+
+#### `waitForAbsence(selector, description)`
+Generates a macro that polls and explicitly waits for a specific DOM element to disappear from the page.
+
+#### `deterministicInput(helpers, text)`
+A direct execution function (used within a tour's `run` step) that safely injects text into the currently active input element and explicitly dispatches the `input`, `change`, and `keyup` events required to reliably awaken Odoo's frontend framework (e.g., Many2one debouncers).
+</tour_utils>

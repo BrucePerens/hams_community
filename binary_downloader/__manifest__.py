@@ -17,12 +17,12 @@
             "name": "Binary Downloader Facility",
             "path": "data/documentation.html",
             "icon": "📦",
-            "category": "workspace"
+            "category": "workspace",
         }
     ],
     "assets": {
         "web.assets_tests": [
-            "binary_downloader/static/tests/**/*",
+            "binary_downloader/static/tests/tours/binary_install_tour.js",
         ],
     },
     "installable": True,

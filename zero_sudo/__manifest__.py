@@ -17,7 +17,9 @@ Verified by [@ANCHOR: test_documentation_injection]
     "depends": ["base", "mail"],
     "assets": {
       "web.assets_tests": [
-        "zero_sudo/static/src/**/*"
+        "zero_sudo/static/src/js/tour_utils.js",
+        "zero_sudo/static/src/js/tour_failure_dump.js",
+        "zero_sudo/static/src/tours/zero_sudo_tour.js"
       ],
     },
     "data": [

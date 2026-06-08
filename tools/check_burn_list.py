@@ -635,6 +635,13 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                                 node.lineno,
                                 "[!] DIAGNOSTIC FOR AI: Mutating 'group_ids' in Python is forbidden. Define privileges statically in XML/CSV."
                             )
+                    if self.filename == "__manifest__.py" and k.value == "assets":
+                        if isinstance(v, ast.Dict):
+                            for b_val in v.values:
+                                if isinstance(b_val, ast.List):
+                                    for elt in b_val.elts:
+                                        if isinstance(elt, ast.Constant) and isinstance(elt.value, str) and "*" in elt.value:
+                                            self.add_error(elt.lineno, "CRITICAL ASSET COMPILER CRASH: Glob patterns (*) are strictly forbidden in __manifest__.py asset lists. Odoo's asset compiler fails silently when matching directories. You MUST enumerate every file explicitly.")
             if self.is_odoo_module and "owner_user_id" in keys_found and "user_websites_group_id" in keys_found:
                 self.add_error(
                     node.lineno,

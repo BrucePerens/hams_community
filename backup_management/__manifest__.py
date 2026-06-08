@@ -42,8 +42,11 @@
             "backup_management/static/src/components/board/board.js",
             "backup_management/static/src/components/board/board.xml",
         ],
+        "web.assets_unit_tests": [
+             "backup_management/static/src/components/board/board.js",
+        ],
         "web.assets_tests": [
-            "backup_management/static/src/tests/**/*",
+            "backup_management/static/src/tests/tours/backup_dashboard.js",
         ],
     },
 }

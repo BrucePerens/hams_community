@@ -23,7 +23,7 @@
     ],
     "assets": {
         "web.assets_tests": [
-            "caching/static/tests/**/*",
+            "caching/static/tests/tours/caching_tour.js",
         ],
     },
     "installable": True,

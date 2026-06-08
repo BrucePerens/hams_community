@@ -13,6 +13,7 @@ import infrastructure
 import argparse
 import atexit
 import contextlib
+import ctypes
 import glob
 import logging
 import os
@@ -137,7 +138,7 @@ class FailureExtractor:
             _logger.warning("Could not remove log natively, attempting sudo fallback: %s", os_err)
             try:
                 if not os.access(self.output_path, os.W_OK):
-                    subprocess.run(["sudo", "rm", "-f", self.output_path], check=False, stderr=subprocess.DEVNULL)
+                    subprocess.run(["sudo", "rm", "-f", self.output_path], check=False)
             except Exception as cleanup_e: # audit-ignore-catch-all
                 _logger.warning("Ignored Exception removing log: %s", cleanup_e)
 
@@ -190,6 +191,7 @@ class FailureExtractor:
                 or "Cloudflare Tag purge API failed" in line_clean
                 or "[BACKUP_WORKER]" in line_clean
                 or "[LOG_ANALYZER]" in line_clean
+                or "odoo.tests.result:" in line_clean
                 or "discuss_channel_member" in "\n".join(self.current_block)
             )
 
@@ -241,11 +243,7 @@ class FailureExtractor:
 
             for line in block:
                 for match in addon_pattern.findall(line): modules.add(match)
-                for match in filepath_pattern.findall(line): modules.add(match)
-                for match in daemon_pattern.findall(line): modules.add(f"daemons/{match}")
-
-        ignore_list = {"base", "web", "mail", "website", "bus"}
-        return sorted([m for m in modules if m not in ignore_list])
+        return modules
 
     def finish_and_write(self):
         if getattr(self, "_written", False):
@@ -254,11 +252,10 @@ class FailureExtractor:
 
         if self.capturing and self.current_block:
             self.captured_blocks.append((self.current_context, self.current_block))
+            self.capturing = False
+            self.current_block = []
+
         grouped_blocks = {}
-        for context, block in self.captured_blocks:
-            if context not in grouped_blocks:
-                grouped_blocks[context] = []
-            grouped_blocks[context].extendgrouped_blocks = {}
         for context, block in self.captured_blocks:
             if context not in grouped_blocks:
                 grouped_blocks[context] = []
@@ -305,16 +302,16 @@ class FailureExtractor:
 
         except PermissionError as e:
             print(f"\n❌ [ERROR] FailureExtractor could not write to {self.output_path} due to permission denied: {e}")
-            print("To resolve this, delete the file manually: sudo rm -f " + self.output_path + "\n")("\n==========================================================")
-            if num_failures == 0:
-                print("🎉 TEST RUN COMPLETE: No test failures detected.")
-            else:
-                print(f"🚨 TEST RUN COMPLETE: {num_failures} test failure(s) detected!")
-                print(f"📄 Failure details extracted and saved to: {self.display_path}")
-            print("==========================================================\n")
-        except PermissionError as e:
-            print(f"\n❌ [ERROR] FailureExtractor could not write to {self.output_path} due to permission denied: {e}")
             print("To resolve this, delete the file manually: sudo rm -f " + self.output_path + "\n")
+            return
+
+        print("\n==========================================================")
+        if num_failures == 0:
+            print("🎉 TEST RUN COMPLETE: No test failures detected.")
+        else:
+            print(f"🚨 TEST RUN COMPLETE: {num_failures} test failure(s) detected!")
+            print(f"📄 Failure details extracted and saved to: {self.display_path}")
+        print("==========================================================\n")
 
 
 def robust_reap(pid):
@@ -324,7 +321,7 @@ def robust_reap(pid):
     """
     print(f"\n[*] [REAPER] Initiating robust reaper for PID {pid}...")
     try:
-        subprocess.run(["pkill", "-TERM", "-f", "chrome"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-TERM", "-f", "chrome"], check=False)
 
         pgid = os.getpgid(pid)
         print(f"[*] [REAPER] Sending SIGTERM to Process Group {pgid}")
@@ -341,7 +338,7 @@ def robust_reap(pid):
 
         print(f"[*] [REAPER] Process {pid} did not exit after SIGTERM. Sending SIGKILL to Process Group {pgid}")
         os.killpg(pgid, signal.SIGKILL)
-        subprocess.run(["pkill", "-KILL", "-f", "chrome"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-KILL", "-f", "chrome"], check=False)
     except OSError as e:
         print(f"[*] [REAPER] Error during reap: {e}")
 
@@ -601,19 +598,27 @@ def rebuild_db(db_name):
     print(f"[*] Dropping and Rebuilding Database Schema ({db_name})...")
     env = dict(os.environ)
 
-    print("[*] Flushing persistent daemons (Redis / RabbitMQ)...")
-    subprocess.run(["redis-cli", "flushall"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+    if os.environ.get("HAMS_ISOLATED_NS") != "1":
+        print("[*] Starting core daemons before testing...")
+        for svc in ["postgresql", "redis-server", "rabbitmq-server", "pdns"]:
+            subprocess.run(["sudo", "systemctl", "start", svc], check=False)
 
+    print("[*] Flushing persistent daemons (Redis / RabbitMQ)...")
+    subprocess.run(["redis-cli", "flushall"], check=False, env=env)
+
+    # Get the working directory where data is saved
+    subprocess.run(["redis-cli", "CONFIG", "GET", "dir"], check=False, env=env)
+    subprocess.run(["redis-cli", "CONFIG", "GET", "dbfilename"], check=False, env=env)
     is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
     if is_jules:
         try:
-            subprocess.run(["rabbitmqctl", "stop_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["rabbitmqctl", "reset"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["rabbitmqctl", "start_app"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["systemctl", "stop", "dx.firehose.service", "adif.processor.service", "qrz.scraper.service"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-f", "dx_firehose.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-f", "adif_processor.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pkill", "-f", "qrz_scraper.py"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["rabbitmqctl", "stop_app"], check=False)
+            subprocess.run(["rabbitmqctl", "reset"], check=False)
+            subprocess.run(["rabbitmqctl", "start_app"], check=False)
+            subprocess.run(["sudo", "systemctl", "stop", "dx.firehose.service", "adif.processor.service", "qrz.scraper.service"], check=False)
+            subprocess.run(["pkill", "-f", "dx_firehose.py"], check=False)
+            subprocess.run(["pkill", "-f", "adif_processor.py"], check=False)
+            subprocess.run(["pkill", "-f", "qrz_scraper.py"], check=False)
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Daemon flush exception: %s", e)
 
@@ -625,8 +630,9 @@ def rebuild_db(db_name):
         print(f"❌ ERROR: {e}")
         sys.exit(1)
 
-    subprocess.run([psql_cmd, "postgres", "-c", f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}';"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-    subprocess.run([dropdb_cmd, "--if-exists", "--force", db_name], check=False, stderr=subprocess.DEVNULL, env=env)
+    subprocess.run([psql_cmd, "postgres", "-c", f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}';"], check=False, env=env)
+    subprocess.run([psql_cmd, "postgres", "-c", f"DROP DATABASE IF EXISTS {db_name} WITH (FORCE);"], check=False, env=env)
+    subprocess.run([dropdb_cmd, "--if-exists", "--force", db_name], check=False, env=env)
     subprocess.run([createdb_cmd, db_name], check=True, env=env)
     subprocess.run([psql_cmd, db_name, "-c", "CREATE EXTENSION IF NOT EXISTS vector;"], check=True, env=env)
 
@@ -636,10 +642,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     Pure-Python OS-level namespace bootstrapping.
     Executes entirely without Bash wrappers, leveraging `os.setuid` for micro-privileges.
     """
-    # 1. Loopback Network
-    subprocess.run(["ip", "link", "set", "lo", "up"], check=True)
-
-    # 2. Ephemeral OverlayFS File System
+    # 1. Ephemeral OverlayFS File System
     subprocess.run(["mount", "--make-rprivate", "/"], check=True)
     subprocess.run(["mount", "-t", "tmpfs", "tmpfs", "/mnt"], check=True)
     for d in ["/mnt/upper", "/mnt/work", "/mnt/host_test_dir", "/opt/hams/test"]:
@@ -659,6 +662,27 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
             os.makedirs(temp_sock, exist_ok=True)
             subprocess.run(["mount", "--bind", sock, temp_sock], check=True)
             preserved_socks.append((temp_sock, sock))
+
+    # Anchor the true host path to an un-overlaid tmpfs directory BEFORE overlaying /home
+    host_tmp_dir = real_log_dir if real_log_dir else "/var/tmp"
+    os.makedirs(host_tmp_dir, exist_ok=True)
+    try:
+        os.chmod(host_tmp_dir, 0o777)
+    except OSError as e:
+        _logger.debug("Ignored OSError: %s", e)
+    os.makedirs("/mnt/real_tmp", exist_ok=True)
+    subprocess.run(["mount", "--bind", host_tmp_dir, "/mnt/real_tmp"], check=True)
+
+    # Explicitly prepare the host log directory (~/tmp/log) before overlay
+    host_log_dir = os.path.join(host_tmp_dir, "log")
+    os.makedirs(host_log_dir, exist_ok=True)
+    try:
+        os.chown(host_log_dir, 0, 0)
+        os.chmod(host_log_dir, 0o755)
+    except OSError as e:
+        _logger.debug("Ignored OSError setting permissions on host log dir: %s", e)
+    os.makedirs("/mnt/real_log", exist_ok=True)
+    subprocess.run(["mount", "--bind", host_log_dir, "/mnt/real_log"], check=True)
 
     print("[*] Creating overlay filesystem for isolated testing...")
     for item in ["etc", "opt", "var", "usr", "home", "tmp", "run"]:
@@ -683,15 +707,27 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     infrastructure.provision_environment(_safe_run, env_vars, orig_user, skip_apt=True)
 
-    # Bind mount host tmp directory AFTER overlayfs so it isnt shadowed
-    host_tmp_dir = real_log_dir if real_log_dir else "/var/tmp"
-    os.makedirs(host_tmp_dir, exist_ok=True)
+    print("[*] Isolating network namespace for test daemons...")
+    CLONE_NEWNET = 0x40000000
     try:
-        os.chmod(host_tmp_dir, 0o777)
-    except OSError as e:
-        _logger.debug("Ignored OSError: %s", e)
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+    except OSError:
+        libc = ctypes.CDLL(None, use_errno=True)
+
+    if libc.unshare(CLONE_NEWNET) != 0:
+        print(f"❌ ERROR: Failed to dynamically isolate network namespace: {ctypes.get_errno()}")
+        sys.exit(1)
+
+    # Bring up the isolated loopback interface now that we are in the new network namespace
+    subprocess.run(["ip", "link", "set", "lo", "up"], check=True)
+
+    # Bind the preserved host directory to the overlay's /var/tmp
     os.makedirs("/var/tmp", exist_ok=True)
-    subprocess.run(["mount", "--bind", host_tmp_dir, "/var/tmp"], check=True)
+    subprocess.run(["mount", "--bind", "/mnt/real_tmp", "/var/tmp"], check=True)
+
+    # Bind the preserved host log directory to the overlay's /var/log
+    os.makedirs("/var/log", exist_ok=True)
+    subprocess.run(["mount", "--bind", "/mnt/real_log", "/var/log"], check=True)
 
     if os.path.exists("/var/run/postgresql"):
         os.makedirs("/var/run/postgresql", exist_ok=True)
@@ -743,7 +779,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     wait_for_socket(f"{pg_sock}/.s.PGSQL.5432", "PostgreSQL")
 
-    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, text=True, stdout=subprocess.DEVNULL)
+    p = subprocess.Popen([psql_cmd, "-h", pg_sock, "-d", "postgres"], stdin=subprocess.PIPE, preexec_fn=preexec_pg, text=True)
     sql_create_roles = f"""
     DO $$
     BEGIN
@@ -759,15 +795,84 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     p.wait()
 
     # 4. Redis Sandboxing
-    subprocess.run(["pkill", "redis-server"], check=False, stderr=subprocess.DEVNULL)
+    # No pkill required: network namespace isolation prevents port collision with host
     redis_user = pwd.getpwnam("redis")
-    redis_proc = subprocess.Popen(["redis-server", "--daemonize", "no"], preexec_fn=lambda: (os.setresgid(redis_user.pw_gid, redis_user.pw_gid, redis_user.pw_gid), os.setresuid(redis_user.pw_uid, redis_user.pw_uid, redis_user.pw_uid)), stdout=subprocess.DEVNULL)
+
+    redis_dir = "/var/lib/redis"
+    db_filename = "dump.rdb"
+    log_file = "/var/log/redis/redis-server.log"
+    conf_path = "/etc/redis/redis.conf"
+
+    # Dynamically parse the production configuration to find exact paths
+    if os.path.exists(conf_path):
+        with open(conf_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("dir "):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        redis_dir = parts[1].strip('"\'')
+                elif line.startswith("dbfilename "):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        db_filename = parts[1].strip('"\'')
+                elif line.startswith("logfile "):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        log_file = parts[1].strip('"\'')
+
+    # Explicitly grant the redis user ownership over its dynamic production directories
+    for d in [redis_dir, "/var/log/redis", "/run/redis", "/etc/redis", os.path.dirname(log_file) if log_file and log_file != '""' else ""]:
+        if d:
+            os.makedirs(d, exist_ok=True)
+            try:
+                os.chown(d, redis_user.pw_uid, redis_user.pw_gid)
+                os.chmod(d, 0o750)
+            except OSError as e:
+                _logger.debug("Ignored OSError when setting directory permissions: %s", e)
+
+    if os.path.exists(conf_path):
+        try:
+            os.chown(conf_path, redis_user.pw_uid, redis_user.pw_gid)
+            os.chmod(conf_path, 0o640)
+        except OSError as e:
+            _logger.debug("Ignored OSError when setting redis.conf permissions: %s", e)
+
+    # Ensure the DB snapshot file is writable to prevent BGSAVE failures
+    db_path = os.path.join(redis_dir, db_filename)
+    if os.path.exists(db_path):
+        try:
+            os.chown(db_path, redis_user.pw_uid, redis_user.pw_gid)
+            os.chmod(db_path, 0o660)
+        except OSError as e:
+            _logger.debug("Ignored OSError when setting file permissions: %s", e)
+
+    # Ensure the log file is writable
+    if log_file and log_file != '""' and os.path.exists(log_file):
+        try:
+            os.chown(log_file, redis_user.pw_uid, redis_user.pw_gid)
+            os.chmod(log_file, 0o660)
+        except OSError as e:
+            _logger.debug("Ignored OSError when setting file permissions: %s", e)
+
+    # Run redis-server strictly using its production configuration,
+    # overriding only 'daemonize' so subprocess.Popen can track its lifetime.
+    # Specify the directory to prevent BGSAVE permissions errors (MISCONF).
+    cmd = ["redis-server"]
+    if os.path.exists(conf_path):
+        cmd.append(conf_path)
+    cmd.extend(["--daemonize", "no", "--dir", redis_dir])
+
+    def preexec_redis():
+        os.initgroups("redis", redis_user.pw_gid)
+        os.setresgid(redis_user.pw_gid, redis_user.pw_gid, redis_user.pw_gid)
+        os.setresuid(redis_user.pw_uid, redis_user.pw_uid, redis_user.pw_uid)
+
+    redis_proc = subprocess.Popen(cmd, cwd=redis_dir, preexec_fn=preexec_redis)
     wait_for_port(6379, "Redis")
 
     # 5. RabbitMQ Sandboxing
-    subprocess.run(["pkill", "-u", "rabbitmq"], check=False, stderr=subprocess.DEVNULL)
-    subprocess.run(["pkill", "epmd"], check=False, stderr=subprocess.DEVNULL)
-
+    # No pkill required: network namespace isolation prevents port collision with host
     rmq_user = pwd.getpwnam("rabbitmq")
 
     for d in ["/var/lib/rabbitmq", "/var/log/rabbitmq", "/run/rabbitmq"]:
@@ -822,7 +927,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
 
     # 7. Graceful Ephemeral Teardown
-    subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False)
     redis_proc.terminate()
 
     try:
@@ -842,7 +947,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
 def start_jules_daemons(base_dir):
     print("[*] Clearing port 8069 bindings...")
-    subprocess.run(["sudo", "fuser", "-k", "8069/tcp"], check=False, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "fuser", "-k", "8069/tcp"], check=False)
 
     print("[*] Provisioning Jules environment via infrastructure.py...")
     script = f"""import sys, os, subprocess
@@ -942,6 +1047,7 @@ def main():
         print("[*] Routing test execution to isolated Python namespace...")
 
         os.environ["HAMS_REAL_LOG_DIRECTORY"] = real_log_dir
+        # Isolate mount (-m) namespace. Network isolation happens dynamically post-provisioning.
         exec_cmd = ["unshare", "-m", sys.executable, os.path.abspath(__file__), "--internal-ns-init"] + sys.argv[1:]
 
         if os.geteuid() != 0:

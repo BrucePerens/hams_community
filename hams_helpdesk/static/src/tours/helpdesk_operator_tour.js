@@ -38,7 +38,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         },
         {
             content: "Pick first user",
-            trigger: '.o-autocomplete--dropdown-item:first',
+            trigger: '.o-autocomplete--dropdown-item',
             run: 'click',
         },
         {
@@ -48,7 +48,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         },
         {
             content: "Fill Notes",
-            trigger: 'textarea[name="handoff_notes"]',
+            trigger: 'div[name="handoff_notes"] textarea',
             run: 'edit Handing off for the night.',
         },
         {
@@ -60,20 +60,25 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             content: "Confirm Handoff",
             trigger: 'button[name="action_confirm_handoff"]',
             run: 'click',
+            expectUnloadPage: true,
         },
         {
-            content: "Wait for Wizard to close",
-            trigger: 'body:not(:has(.modal))',
-            run: function() {},
-        },
-        {
-            content: "Verify Handoff in Chatter",
-            trigger: '.o_mail_thread .o_mail_message',
+            content: "Verify Handoff in Chatter via native polling",
+            trigger: 'body',
             run: function() {
-                const thread = document.querySelector('.o_mail_thread');
-                if (!thread || !thread.textContent.includes("Official Shift Handoff Executed")) {
-                    throw new Error("Handoff message not found in chatter");
-                }
+                return new Promise((resolve, reject) => {
+                    let interval = setInterval(() => {
+                        const thread = document.querySelector('.o_mail_thread');
+                        if (thread && thread.textContent.includes("Official Shift Handoff Executed")) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 250);
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        reject(new Error("Handoff message not found in chatter after wizard closed."));
+                    }, 10000);
+                });
             },
         }
     ])

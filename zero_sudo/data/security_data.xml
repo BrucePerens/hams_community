@@ -12,6 +12,10 @@
         <record id="group_config_service" model="res.groups">
             <field name="name">Central Configuration Service Group</field>
         </record>
+
+        <record id="group_cache_invalidator" model="res.groups">
+            <field name="name">Central Cache Invalidation Group</field>
+        </record>
     </data>
     <data>
         <record id="mail_service_internal" model="res.users">
@@ -45,6 +49,17 @@
             <field name="is_service_account" eval="True"/>
             <field name="active" eval="True"/>
             <field name="group_ids" eval="[(6, 0, [ref('zero_sudo.group_config_service')])]"/>
+        </record>
+
+        <record id="cache_invalidation_service_internal" model="res.users">
+            <field name="name">Central Cache Invalidation Service Account</field>
+            <field name="login">cache_invalidation_service_internal</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="company_ids" eval="[(4, ref('base.main_company'))]"/>
+            <field name="notification_type">email</field>
+            <field name="is_service_account" eval="True"/>
+            <field name="active" eval="True"/>
+            <field name="group_ids" eval="[(6, 0, [ref('zero_sudo.group_cache_invalidator')])]"/>
         </record>
     </data>
 </odoo>
