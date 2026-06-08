@@ -1,0 +1,5 @@
+Please use file fetcher to do a git check out of changes to
+daemon_key_manager/models/key_registry.py
+and
+daemon_key_manager/data/cron.xml
+that have been made since you started work.
