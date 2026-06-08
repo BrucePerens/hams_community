@@ -27,7 +27,7 @@ class ShiftHandoffWizard(models.TransientModel):
 
         old_name = self.old_user_id.name if self.old_user_id else "Unassigned"
 
-        body = "<b title=\"handoff_success\">🚨 Official Shift Handoff Executed</b><br/><br/>"
+        body = "<b>🚨 Official Shift Handoff Executed</b><br/><br/>"
         body += f"<b>Relinquished By:</b> {old_name}<br/>"
         body += f"<b>Accepted By:</b> {self.new_user_id.name}<br/>"
         body += f"<b>Operator Briefing:</b><br/><i>{self.handoff_notes}</i>"
@@ -37,4 +37,7 @@ class ShiftHandoffWizard(models.TransientModel):
             subject=_("Shift Handoff: %s") % ticket.name,
             partner_ids=[self.new_user_id.partner_id.id]
         )
-        return {"type": "ir.actions.act_window_close"}
+
+        # Return a client reload action to force the underlying form view and chatter to refresh.
+        # This is critical for reliable headless UI testing and immediate operator feedback.
+        return {"type": "ir.actions.client", "tag": "reload"}

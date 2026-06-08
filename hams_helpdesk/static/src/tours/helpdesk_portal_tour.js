@@ -44,14 +44,26 @@ registry.category("web_tour.tours").add("helpdesk_portal_tour", {
             expectUnloadPage: true,
         },
         {
-            content: "Verify Closed Status",
-            trigger: 'span.badge',
+            content: "Verify Closed Status via native polling",
+            trigger: 'body',
             run: function() {
-                const badge = document.querySelector('span.badge');
-                if (!badge || badge.textContent.trim() !== 'Closed') {
-                    throw new Error("Ticket status is not Closed");
-                }
-            },
+                return new Promise((resolve, reject) => {
+                    let interval = setInterval(() => {
+                        const badges = document.querySelectorAll('span.badge');
+                        for (const badge of badges) {
+                            if (badge.textContent.trim() === 'Closed') {
+                                clearInterval(interval);
+                                resolve();
+                                return;
+                            }
+                        }
+                    }, 250);
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        reject(new Error("Ticket status is not Closed"));
+                    }, 10000);
+                });
+            }
         }
     ]
 });
