@@ -109,6 +109,33 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         raise UserError(_("Missing dependency: '%s'. Please install via OS package manager (e.g., 'apt-get install %s').") % (cmd_name, pkg))
 
     @api.model
+    def _invalidate_model_cache(self, model_name):
+        """
+        Securely invalidates the entire cache for a specific model.
+        This allows non-administrative users (with proper ACLs) to trigger
+        cache clearing for models they own/manage without needing sudo().
+        """
+        # [@ANCHOR: invalidate_model_cache]
+        # Verified by [@ANCHOR: test_invalidate_model_cache]
+        if not model_name:
+            return
+
+        # Check if the current user has access to the model
+        if not self.env.user.has_group('base.group_system'):
+            try:
+                self.env[model_name].check_access('write')
+            except AccessError:
+                raise AccessError(_("Security Alert: You do not have permission to invalidate the cache for model '%s'.") % model_name)
+
+        # We assume the identity of the dedicated cache invalidation service
+        # to perform the registry-level cache clearing.
+        env_svc = self._get_service_env("zero_sudo.cache_invalidation_service_internal")
+        env_svc.registry.clear_cache()
+
+        # Also signal distributed caches via pg_notify
+        self._notify_cache_invalidation(model_name, "CLEAR_ALL")
+
+    @api.model
     def _notify_cache_invalidation(self, model_name, key_value):
         # [@ANCHOR: coherent_cache_signal]
         # Verified by [@ANCHOR: test_coherent_cache_signal]

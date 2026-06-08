@@ -96,4 +96,7 @@ Emits a PostgreSQL `NOTIFY` event to synchronize distributed caches.
 
 #### `_get_crypto_secret()` `[@ANCHOR: get_crypto_secret]`
 Retrieves the root cryptographic key from environment or local file, bypassing DB.
+
+#### `_invalidate_model_cache(model_name)` `[@ANCHOR: invalidate_model_cache]`
+Securely invalidates the entire cache for a specific model. Requires the user to have write access to the model.
 </python_api>

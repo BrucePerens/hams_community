@@ -18,6 +18,11 @@
     <h3>Centralized Security Logs</h3>
     <p>Every blocked login attempt is recorded in a centralized audit log. Administrators can review these logs to identify potential unauthorized access attempts or misconfigured automated services.</p>
 
+    <!-- [@ANCHOR: UX_CACHE_INVALIDATION] -->
+    <h3>Safe Cache Invalidation</h3>
+    <p>To optimize performance without compromising security, the system provides a granular way to refresh data caches. Users with appropriate permissions can safely trigger a refresh for specific parts of the system, ensuring that data is always up-to-date without needing full administrative rights. This prevents "stale data" issues while maintaining strict isolation between different parts of the platform.</p>
+    <!-- [@ANCHOR: UX_CACHE_INVALIDATION] -->
+
     <!-- [@ANCHOR: UX_NOISY_TABLE_MANAGEMENT] -->
     <h3>Noisy Table Management</h3>
     <p>System administrators can flag specific technical tables as "Noisy" to streamline security audits. This reduces false positives by indicating that certain tables are known to have high-frequency, non-sensitive data changes.</p>
@@ -42,4 +47,5 @@
     <!-- [@ANCHOR: zero_sudo_noisy_table_global] -->
     <!-- [@ANCHOR: service_account_password_generation] -->
     <!-- [@ANCHOR: zero_sudo_security_log_global] -->
+    <!-- [@ANCHOR: invalidate_model_cache] -->
 </div>
