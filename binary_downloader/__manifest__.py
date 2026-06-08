@@ -22,7 +22,7 @@
     ],
     "assets": {
         "web.assets_tests": [
-            "binary_downloader/static/tests/**/*",
+            "binary_downloader/static/tests/tours/binary_install_tour.js",
         ],
     },
     "installable": True,

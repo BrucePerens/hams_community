@@ -430,7 +430,6 @@ class TestSecurityUtils(HamsTransactionCase):
         # mock_notify.assert_called_once_with("res.partner", "CLEAR_ALL")
 
         # 2. Non-admin with write access should be able to invalidate
-        portal_user = self.env.ref("base.public_user")
         # We need a user with some write access but not system.
         # Let's create one.
         test_user = self.env["res.users"].create({

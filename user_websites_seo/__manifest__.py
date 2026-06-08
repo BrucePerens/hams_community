@@ -32,7 +32,7 @@ Inherits website.seo.metadata onto user profiles to restore the QWeb SEO widget.
     ],
     "assets": {
         "web.assets_tests": [
-            "user_websites_seo/static/src/js/**/*",
+            "user_websites_seo/static/src/js/tours/user_websites_seo_tour.js",
         ],
     },
     "installable": True,

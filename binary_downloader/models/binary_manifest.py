@@ -226,9 +226,7 @@ class BinaryManifest(models.Model):
             # Checksum verification for existing binary
             hasher = hashlib.sha256()
             try:
-                with open(
-                    target_bin, "rb"
-                ) as f:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                with open(target_bin, "rb") as f:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                     for chunk in iter(lambda: f.read(4096), b""):
                         hasher.update(chunk)
                 if hasher.hexdigest() == manifest_record.checksum:
@@ -238,9 +236,7 @@ class BinaryManifest(models.Model):
                     return target_bin
                 else:
                     _logger.info("Checksum mismatch for %s, re-downloading...", cmd_name)
-                    os.unlink(
-                        target_bin
-                    )  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                    os.unlink(target_bin)  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
             except OSError as e:
                 _logger.warning("Failed to check existing binary %s: %s", target_bin, e)
 
@@ -260,9 +256,7 @@ class BinaryManifest(models.Model):
                         shutil.copyfileobj(response, tmp)
 
                 hasher = hashlib.sha256()
-                with open(
-                    tmp_path, "rb"
-                ) as f:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                with open(tmp_path, "rb") as f:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                     for chunk in iter(lambda: f.read(4096), b""):
                         hasher.update(chunk)
 
@@ -280,9 +274,7 @@ class BinaryManifest(models.Model):
                     )
 
                 if manifest_record.archive_type == "tar.gz":
-                    with tarfile.open(
-                        tmp_path, "r:gz"
-                    ) as tar:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                    with tarfile.open(tmp_path, "r:gz") as tar:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                         found = False
                         extract_target = manifest_record.extract_member or cmd_name
                         for member in tar.getmembers():
@@ -313,7 +305,7 @@ class BinaryManifest(models.Model):
                                 source = tar.extractfile(member)
                                 if source:
                                     with source:
-                                        with open(target_bin, "wb") as target:
+                                        with open(target_bin, "wb") as target:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                                             shutil.copyfileobj(source, target)
                                     found = True
                                     break
@@ -322,9 +314,7 @@ class BinaryManifest(models.Model):
                                 _("Member %s not found in archive.") % extract_target
                             )
                 elif manifest_record.archive_type == "zip":
-                    with zipfile.ZipFile(
-                        tmp_path, "r"
-                    ) as zip_ref:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                    with zipfile.ZipFile(tmp_path, "r") as zip_ref:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                         extract_target = manifest_record.extract_member or cmd_name
                         found = False
                         for zinfo in zip_ref.infolist():
@@ -353,12 +343,8 @@ class BinaryManifest(models.Model):
                                         _("Security Alert: Zip slip attempt detected.")
                                     )
 
-                                with zip_ref.open(
-                                    zinfo
-                                ) as source:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
-                                    with open(
-                                        target_bin, "wb"
-                                    ) as target:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                                with zip_ref.open(zinfo) as source:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                                    with open(target_bin, "wb") as target:  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                                         shutil.copyfileobj(source, target)
                                 found = True
                                 break
@@ -375,9 +361,7 @@ class BinaryManifest(models.Model):
             finally:
                 if tmp_path and os.path.exists(tmp_path):
                     try:
-                        os.unlink(
-                            tmp_path
-                        )  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
+                        os.unlink(tmp_path)  # audit-ignore-path: Tested by [@ANCHOR: test_binary_manifest_standard]
                     except OSError as e:
                         _logger.warning(
                             "Failed to remove temporary file %s: %s", tmp_path, e

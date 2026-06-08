@@ -137,7 +137,7 @@ def hook_generate_ssl(env_vars, dest_dir, path, run_cmd_func):
     lotw = os.path.join(ssl_dir, 'lotw_root.pem')
     if not os.path.exists(fullchain):
         try:
-            run_cmd_func(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'], stderr=subprocess.DEVNULL)
+            run_cmd_func(['openssl', 'req', '-x509', '-nodes', '-days', '3650', '-newkey', 'rsa:2048', '-keyout', privkey, '-out', fullchain, '-subj', f'/C=US/ST=CA/L=SF/O=Hams/CN={domain}'])
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Failed to generate SSL certs: %s", e)
         if os.path.exists(fullchain):
