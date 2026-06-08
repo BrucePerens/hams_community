@@ -55,13 +55,16 @@ class UserWebsitesSEOController(UserWebsitesController):
                 if request and request.env:
                     user = user.with_env(request.env)
                 # ADR-0078: Pre-fetch SEO fields
-                user.read(list(user._get_seo_fields()))
-                qcontext["main_object"] = user
+                # micro-privilege: use sudo so public users can resolve the SEO fields
+                user_sudo = user.sudo()
+                user_sudo.read(list(user_sudo._get_seo_fields()))
+                qcontext["main_object"] = user_sudo
             elif group:
                 if request and request.env:
                     group = group.with_env(request.env)
                 # ADR-0078: Pre-fetch SEO fields
-                group.read(list(group._get_seo_fields()))
-                qcontext["main_object"] = group
+                group_sudo = group.sudo()
+                group_sudo.read(list(group_sudo._get_seo_fields()))
+                qcontext["main_object"] = group_sudo
 
         return response

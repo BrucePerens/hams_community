@@ -80,5 +80,27 @@ export const TourUtils = {
                 });
             }
         };
+    },
+
+    deterministicInput: function (helpers, text) {
+        // Find the active element (typically focused by the previous 'click' step)
+        const el = document.activeElement;
+        if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) {
+            console.warn("[MACRO] deterministicInput: Active element is not an input or textarea.");
+            return;
+        }
+
+        // Safely inject text and explicitly fire the events required by Odoo's autocomplete widgets
+        el.value = text;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Fire keyup to trigger the Owl/Many2one search debouncer
+        const keyUpEvent = new KeyboardEvent('keyup', {
+            bubbles: true,
+            key: text.slice(-1),
+            code: 'Key' + text.slice(-1).toUpperCase()
+        });
+        el.dispatchEvent(keyUpEvent);
     }
 };

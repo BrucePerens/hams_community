@@ -48,7 +48,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         },
         {
             content: "Fill Notes",
-            trigger: 'textarea[name="handoff_notes"]',
+            trigger: 'div[name="handoff_notes"] textarea',
             run: 'edit Handing off for the night.',
         },
         {

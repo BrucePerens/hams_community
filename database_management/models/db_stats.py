@@ -354,7 +354,7 @@ class DatabaseQueryStatInherit(models.Model):
                 },
             }
         except Exception as e:  # audit-ignore-catch-all
-            _logger.error("Failed to install pg_stat_statements extension: %s", e)
+            _logger.warning("Failed to install pg_stat_statements extension: %s", e)
             raise UserError(
                 _(
                     "PostgreSQL Extension Installation Failed.\n\n"
@@ -384,7 +384,7 @@ class DatabaseQueryStatInherit(models.Model):
                 },
             }
         except Exception as e:  # audit-ignore-catch-all
-            _logger.error("Failed to reset query stats: %s", e)
+            _logger.warning("Failed to reset query stats: %s", e)
             raise UserError(_("Could not reset statistics: %s") % str(e))
 
     def action_explain_query(self):
@@ -424,7 +424,7 @@ class DatabaseQueryStatInherit(models.Model):
                 "target": "new",
             }
         except Exception as e:  # audit-ignore-catch-all
-            _logger.error("Failed to explain query: %s", e)
+            _logger.warning("Failed to explain query: %s", e)
             raise UserError(_("Could not generate explain plan: %s") % str(e))
 
 

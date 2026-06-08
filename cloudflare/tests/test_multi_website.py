@@ -38,6 +38,9 @@ class TestMultiWebsiteCloudflare(HamsTransactionCase):
         self.safe_patch(
             "odoo.addons.cloudflare.models.purge_queue.purge_tags", return_value=True
         )
+        self.safe_patch(
+            "odoo.addons.cloudflare.utils.cloudflare_api.purge_everything", return_value=True
+        )
 
         # Enqueue URLs for both websites
         self.PurgeQueue.enqueue_urls(["/page-a"], website_id=self.website_a.id)
