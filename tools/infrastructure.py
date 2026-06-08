@@ -1357,19 +1357,7 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None, skip_ap
 
     if not hams_com_dir:
         hams_com_dir = "/hams_com"
-        _logger.info("[*] Primary repository not found. Cloning hams_com to %s...", hams_com_dir)
-        try:
-            clone_env = dict(env_vars)
-            clone_env["GIT_TERMINAL_PROMPT"] = "0"
-            run_cmd_func(["git", "clone", "https://github.com/BrucePerens/hams_com", hams_com_dir], env=clone_env)
-            if orig_user:
-                try:
-                    u_info = pwd.getpwnam(orig_user)
-                    run_cmd_func(["chown", "-R", f"{u_info.pw_uid}:{u_info.pw_gid}", hams_com_dir])
-                except KeyError as e:
-                    _logger.debug("Original user %s not found: %s", orig_user, e)
-        except subprocess.CalledProcessError as e:
-            _logger.warning("[*] Failed to clone hams_com: %s", e)
+        _logger.warning("[!] Primary repository hams_com not found. Cloning disabled due to headless auth constraints.")
 
     if not hams_community_dir:
         hams_community_dir = "/hams_community"
