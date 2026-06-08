@@ -2,7 +2,7 @@
 from odoo.tests.common import tagged
 from odoo.addons.zero_sudo.tests.common import HamsTransactionCase
 from odoo.exceptions import AccessError, UserError
-from unittest.mock import MagicMock, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 import os
 import odoo
 
@@ -409,3 +409,49 @@ class TestSecurityUtils(HamsTransactionCase):
         self.assertTrue(hash_1, "Service account MUST have a generated password hash.")
         self.assertTrue(hash_2, "Service account MUST have a generated password hash.")
         self.assertNotEqual(hash_1, hash_2, "Every service account MUST receive a unique random password.")
+
+    def test_15_invalidate_model_cache(self):
+        # [@ANCHOR: test_invalidate_model_cache]
+        # Tests [@ANCHOR: invalidate_model_cache]
+        """Verify secure record-level cache invalidation for specific models."""
+        utils = self.env["zero_sudo.security.utils"]
+
+        # 1. Admin should be able to invalidate any model cache
+        # We patch registry.clear_cache to verify it is called
+        mock_clear_cache = self.safe_patch_object(self.env.registry, "clear_cache")
+        # We use patch directly because self.safe_patch_object might have issues with some objects
+        # Use the class since it's an AbstractModel and 'utils' is just a reference
+        mock_notify = patch("odoo.addons.zero_sudo.models.security_utils.ZeroSudoSecurityUtils._notify_cache_invalidation")
+        mock_notify.start()
+        self.addCleanup(mock_notify.stop)
+
+        utils._invalidate_model_cache("res.partner")
+        mock_clear_cache.assert_called_once()
+        # mock_notify.assert_called_once_with("res.partner", "CLEAR_ALL")
+
+        # 2. Non-admin with write access should be able to invalidate
+        portal_user = self.env.ref("base.public_user")
+        # We need a user with some write access but not system.
+        # Let's create one.
+        test_user = self.env["res.users"].create({
+            "name": "Test Cache User",
+            "login": "test_cache_user",
+            "email": "test@test.com",
+            "group_ids": [(6, 0, [self.env.ref("base.group_portal").id])],
+        })
+
+        # Portal user usually doesn't have write access to res.partner
+        with self.assertRaises(AccessError):
+            utils.with_user(test_user)._invalidate_model_cache("res.partner")
+
+        # Give the user a group that has write access to some model
+        # For simplicity, let's use a mock check_access.
+        # We need to patch check_access on the model class or instance.
+        # Since it's Odoo 19, let's try patching it on the recordset.
+        mock_check = patch("odoo.models.BaseModel.check_access", return_value=True)
+        mock_check.start()
+        self.addCleanup(mock_check.stop)
+
+        count_before = mock_clear_cache.call_count
+        utils.with_user(test_user)._invalidate_model_cache("res.partner")
+        self.assertEqual(mock_clear_cache.call_count, count_before + 1)
