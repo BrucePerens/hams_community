@@ -594,9 +594,10 @@ def rebuild_db(db_name):
     print(f"[*] Dropping and Rebuilding Database Schema ({db_name})...")
     env = dict(os.environ)
 
-    print("[*] Starting core daemons before testing...")
-    for svc in ["postgresql", "redis-server", "rabbitmq-server", "pdns"]:
-        subprocess.run(["sudo", "systemctl", "start", svc], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if os.environ.get("HAMS_ISOLATED_NS") != "1":
+        print("[*] Starting core daemons before testing...")
+        for svc in ["postgresql", "redis-server", "rabbitmq-server", "pdns"]:
+            subprocess.run(["sudo", "systemctl", "start", svc], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     print("[*] Flushing persistent daemons (Redis / RabbitMQ)...")
     subprocess.run(["redis-cli", "flushall"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
