@@ -60,11 +60,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
             content: "Confirm Handoff",
             trigger: 'button[name="action_confirm_handoff"]',
             run: 'click',
-        },
-        {
-            content: "Wait for Wizard to close",
-            trigger: 'body:not(:has(.modal))',
-            run: function() {},
+            expectUnloadPage: true,
         },
         {
             content: "Verify Handoff in Chatter via native polling",
