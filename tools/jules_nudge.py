@@ -42,9 +42,9 @@ def send_message(session_name, prompt, headers):
     try:
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
-        logging.info(f"{session_name}: Sent message '{prompt}'.")
+        logging.info(f"https://jules.app/{session_name}: Sent message '{prompt}'.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"{session_name}: Failed to send message. Error: {e}")
+        logging.error(f"https://jules.app/{session_name}: Failed to send message. Error: {e}")
 
 def approve_plan(session_name, headers):
     """Approve the current plan for a Jules session."""
@@ -52,9 +52,9 @@ def approve_plan(session_name, headers):
     try:
         response = requests.post(url, headers=headers)
         response.raise_for_status()
-        logging.info(f"{session_name}: Successfully approved plan.")
+        logging.info(f"https://jules.app/{session_name}: Successfully approved plan.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"{session_name}: Failed to approve plan. Error: {e}")
+        logging.error(f"https://jules.app/{session_name}: Failed to approve plan. Error: {e}")
 
 def process_session(session, headers):
     """Determine the session state and take the appropriate action."""
@@ -77,7 +77,7 @@ def process_session(session, headers):
     
         case "PAUSED" | "FAILED" | "STUCK":
             if "Jules encountered an error when cloning the repo" in str(session):
-                logging.info(f"{session_name}: Skipping 'Proceed' because a repo cloning error was detected.")
+                logging.info(f"https://jules.app/{session_name}: Skipping 'Proceed' because a repo cloning error was detected.")
             else:
                 send_message(session_name, "Proceed", headers)
     
@@ -88,7 +88,7 @@ def process_session(session, headers):
             pass
     
         case _:
-            logging.warning(f"{session_name} is in unexpected state '{state}'.")
+            logging.warning(f"https://jules.app/{session_name} is in unexpected state '{state}'.")
 
 def main():
     logging.info("Starting Jules Nudger... (Press Ctrl-C to stop)")
