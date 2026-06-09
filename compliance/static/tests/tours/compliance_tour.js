@@ -1,11 +1,23 @@
 /** @odoo-module **/
 import { registry } from "@web/core/registry";
+import { TourUtils } from "@zero_sudo/js/tour_utils";
 
 // # Verified by [@ANCHOR: test_compliance_ui_tour]
 registry.category("web_tour.tours").add("compliance_tour", {
     url: "/privacy?debug=1",
     steps: () => [
         { trigger: 'body', content: 'Initialize Tour' },
+        // Handle Cookie Bar if it appears
+        {
+            trigger: 'body',
+            content: 'Check for Cookie Bar',
+            run: function() {
+                const cookieBar = document.querySelector('.js_close_cookie_bar, #website_cookies_bar .btn-primary');
+                if (cookieBar) {
+                    cookieBar.click();
+                }
+            }
+        },
         {
             trigger: 'h1',
             content: 'Verify Privacy Policy content',
@@ -45,11 +57,6 @@ registry.category("web_tour.tours").add("compliance_tour", {
             expectUnloadPage: true,
         },
         {
-            trigger: 'body',
-            content: 'Wait for page load after navigation to Cookie Policy',
-            run: function() {}
-        },
-        {
             trigger: 'h1',
             content: 'Verify Cookie Policy page loaded',
             run: function () {
@@ -66,11 +73,6 @@ registry.category("web_tour.tours").add("compliance_tour", {
             expectUnloadPage: true,
         },
         {
-            trigger: 'body',
-            content: 'Wait for page load after navigation to Terms of Service',
-            run: function() {}
-        },
-        {
             trigger: 'h1',
             content: 'Verify Terms of Service page loaded',
             run: function () {
@@ -85,11 +87,6 @@ registry.category("web_tour.tours").add("compliance_tour", {
             content: 'Click on Accessibility Statement link in footer',
             run: 'click',
             expectUnloadPage: true,
-        },
-        {
-            trigger: 'body',
-            content: 'Wait for page load after navigation to Accessibility Statement',
-            run: function() {}
         },
         {
             trigger: 'h1',
