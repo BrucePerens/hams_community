@@ -1426,6 +1426,25 @@ def scan_file(filepath, is_odoo_module=False):
     except Exception as e:
         return [f"Could not read file: {e}"], []
 
+    if filename == "__manifest__.py":
+        try:
+            tree = ast.parse(content, filename=filepath)
+            for node in tree.body:
+                if isinstance(node, ast.Expr) and isinstance(node.value, ast.Dict):
+                    manifest_dict = ast.literal_eval(node.value)
+                    valid_licenses = [
+                        "GPL-2", "GPL-2 or any later version", "GPL-3",
+                        "GPL-3 or any later version", "AGPL-3", "LGPL-3",
+                        "Other OSI approved licence", "OEEL-1", "OPL-1",
+                        "Other proprietary"
+                    ]
+                    if "license" not in manifest_dict:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL MANIFEST ERROR: 'license' key is missing. It MUST be present and set to a valid Odoo license (e.g., 'Other proprietary').")
+                    elif manifest_dict.get("license") not in valid_licenses:
+                        errors_found.append(f"Line {node.lineno}: CRITICAL MANIFEST ERROR: Invalid 'license' value '{manifest_dict.get('license')}'. Valid options are: {', '.join(valid_licenses)}. Note: 'Other proprietary' must use a lowercase 'p'.")
+        except Exception:
+            pass
+
     if is_odoo_module and filename.endswith(".csv"):
         financial_models = [
             "model_res_partner_bank",
@@ -1867,7 +1886,8 @@ def scan_file(filepath, is_odoo_module=False):
                 "burn-ignore-tour",
                 "burn-ignore-sudo",
                 "burn-ignore-route",
-                "burn-ignore-env"
+                "burn-ignore-env",
+                "burn-ignore-test-tags"
             ]
         ):
             errors_found.append(
