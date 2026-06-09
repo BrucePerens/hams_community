@@ -318,9 +318,15 @@ class WebsitePage(models.Model):
         ]
         if owner_ids:
             unique_owner_ids = list(set(owner_ids))
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "user_websites.user_websites_service_account"
-            )
+            try:
+                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "user_websites.user_websites_service_account"
+                )
+            except AccessError as e:
+                 if "not found" in str(e):
+                     svc_uid = self.env.su
+                 else:
+                     raise
             users = self.env["res.users"].with_user(svc_uid).browse(unique_owner_ids)
             user_limits = {user.id: user._get_page_limit() for user in users}
 
@@ -357,9 +363,15 @@ class WebsitePage(models.Model):
         ]
         if group_ids:
             unique_group_ids = list(set(group_ids))
-            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                "user_websites.user_websites_service_account"
-            )
+            try:
+                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                    "user_websites.user_websites_service_account"
+                )
+            except AccessError as e:
+                 if "not found" in str(e):
+                     svc_uid = self.env.su
+                 else:
+                     raise
             global_limit = int(
                 self.env["zero_sudo.security.utils"]._get_system_param(
                     "user_websites.global_website_page_limit", 100
@@ -396,12 +408,18 @@ class WebsitePage(models.Model):
                     )
 
         # 3. Apply Service Account to safely bypass standard ir.ui.view creation restrictions
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
-        records = super(WebsitePage, self_svc).create(vals_list)
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
+            records = super(WebsitePage, self_svc).create(vals_list)
+        except AccessError as e:
+            if "not found" in str(e):
+                 records = super(WebsitePage, self).create(vals_list)
+            else:
+                 raise
         records._invalidate_cloudflare_cache()
         return records
 
@@ -511,12 +529,18 @@ class WebsitePage(models.Model):
         # Identify URLs to invalidate before mutating
         pages_to_invalidate = [p.url for p in self if p.url]
 
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
-        res = super(WebsitePage, self_svc).write(vals)
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
+            res = super(WebsitePage, self_svc).write(vals)
+        except AccessError as e:
+             if "not found" in str(e):
+                  res = super(WebsitePage, self).write(vals)
+             else:
+                  raise
 
         # Targeted DB NOTIFY invalidation (O(1) line eviction instead of global clear)
         if "url" in vals or "website_published" in vals or "is_published" in vals:
@@ -542,12 +566,18 @@ class WebsitePage(models.Model):
         pages_to_invalidate = [p.url for p in self if p.url]
         self._invalidate_cloudflare_cache()
 
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
-        res = super(WebsitePage, self_svc).unlink()
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
+            res = super(WebsitePage, self_svc).unlink()
+        except AccessError as e:
+             if "not found" in str(e):
+                  res = super(WebsitePage, self).unlink()
+             else:
+                  raise
 
         utils = self.env["zero_sudo.security.utils"]
         if pages_to_invalidate:

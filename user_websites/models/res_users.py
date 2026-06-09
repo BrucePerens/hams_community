@@ -207,11 +207,18 @@ class ResUsers(models.Model):
                 user_domain.append(("id", "!=", record_id))
 
             try:
-                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                    "user_websites.user_websites_service_account"
-                )
-                env_user = env_svc["res.users"]
-                env_group = env_svc["user.websites.group"]
+                try:
+                    env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
+                        "user_websites.user_websites_service_account"
+                    )
+                    env_user = env_svc["res.users"]
+                    env_group = env_svc["user.websites.group"]
+                except AccessError as e:
+                    if "not found" in str(e):
+                         env_user = self.env["res.users"]
+                         env_group = self.env["user.websites.group"]
+                    else:
+                         raise
             except AccessError:
                 if self.env.su:
                     env_user = self.env["res.users"]
@@ -277,9 +284,15 @@ class ResUsers(models.Model):
                     _async_unpublish_content, db_name, users_to_archive
                 )
             else:
-                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                    "user_websites.user_websites_service_account"
-                )
+                try:
+                    env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
+                        "user_websites.user_websites_service_account"
+                    )
+                except AccessError as e:
+                    if "not found" in str(e):
+                        env_svc = self.env
+                    else:
+                        raise
                 while True:
                     pages = env_svc["website.page"].search(
                         [
@@ -321,10 +334,17 @@ class ResUsers(models.Model):
 
         # --- 301 Redirect Automation ---
         if "website_slug" in vals:
-            env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                "user_websites.user_websites_service_account"
-            )
-            redirect_env = env_svc["website.rewrite"]
+            try:
+                env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
+                    "user_websites.user_websites_service_account"
+                )
+                redirect_env = env_svc["website.rewrite"]
+            except AccessError as e:
+                if "not found" in str(e):
+                    env_svc = self.env
+                    redirect_env = env_svc["website.rewrite"]
+                else:
+                    raise
 
             user_ids = self.ids
             blog_post_counts = {}

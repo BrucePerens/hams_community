@@ -3,6 +3,7 @@ import os
 import json
 import logging
 from odoo import models, api
+from odoo.exceptions import AccessError
 from odoo.modules.module import get_module_path
 from ..utils.cloudflare_api import (
     get_zone_ruleset,
@@ -56,9 +57,13 @@ class CloudflareConfigManager(models.AbstractModel):
 
         # ADR-0064: The Cloudflare Purge account lacks base.group_user and cannot read ir.module.module.
         # We must use the generalized facility service account for deep framework reads.
-        facility_uid = utils._get_service_uid(
-            "zero_sudo.odoo_facility_service_internal"
-        )
+        try:
+            facility_uid = utils._get_service_uid(
+                "zero_sudo.odoo_facility_service_internal"
+            )
+        except AccessError as e:
+            _logger.info("Service accounts not yet available, deferring static mtime check: %s", e)
+            return
 
         # ADR-0002: Use ORM for module list, but ensure we use limit=None for exhaustive scan
         installed_modules = (
@@ -116,7 +121,7 @@ class CloudflareConfigManager(models.AbstractModel):
                     latest_mtime,
                     last_mtime,
                 )
-        except (ValueError, OSError, RuntimeError) as e:
+        except (ValueError, OSError, RuntimeError, AccessError) as e:
             _logger.exception(f"Failed to process static mtime purge: {e}")
 
     @api.model

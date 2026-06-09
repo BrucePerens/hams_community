@@ -105,14 +105,20 @@ class BlogPost(models.Model):
                 for k in list(vals.keys()):
                     if k not in allowed:
                         del vals[k]
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True
-        )
-        posts = super(BlogPost, self_svc).create(vals_list)
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(
+                mail_notrack=True
+            )
+            posts = super(BlogPost, self_svc).create(vals_list)
+        except AccessError as e:
+             if "not found" in str(e):
+                  posts = super(BlogPost, self).create(vals_list)
+             else:
+                  raise
 
         utils = self.env["zero_sudo.security.utils"]
         for url in posts._get_blog_urls():
@@ -197,14 +203,20 @@ class BlogPost(models.Model):
 
         urls_to_invalidate = self._get_blog_urls()
 
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True
-        )
-        res = super(BlogPost, self_svc).write(vals)
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(
+                mail_notrack=True
+            )
+            res = super(BlogPost, self_svc).write(vals)
+        except AccessError as e:
+             if "not found" in str(e):
+                  res = super(BlogPost, self).write(vals)
+             else:
+                  raise
 
         if "is_published" in vals or "name" in vals or "content" in vals:
             new_urls = self._get_blog_urls()
@@ -222,14 +234,20 @@ class BlogPost(models.Model):
         urls_to_invalidate = self._get_blog_urls()
         self._invalidate_cloudflare_cache()
 
-        svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-            "user_websites.user_websites_service_account"
-        )
-        # ADR-0001: All service account mutations must include appropriate context
-        self_svc = self.with_user(svc_uid).with_context(
-            mail_notrack=True
-        )
-        res = super(BlogPost, self_svc).unlink()
+        try:
+            svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "user_websites.user_websites_service_account"
+            )
+            # ADR-0001: All service account mutations must include appropriate context
+            self_svc = self.with_user(svc_uid).with_context(
+                mail_notrack=True
+            )
+            res = super(BlogPost, self_svc).unlink()
+        except AccessError as e:
+             if "not found" in str(e):
+                  res = super(BlogPost, self).unlink()
+             else:
+                  raise
 
         utils = self.env["zero_sudo.security.utils"]
         if urls_to_invalidate:

@@ -162,8 +162,8 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             )
 
     @api.model
-    def _get_param_whitelist(self):
-        """Returns the list of system parameters allowed to be read/written via Zero-Sudo."""
+    def _get_param_read_whitelist(self):
+        """Returns the list of system parameters allowed to be read via Zero-Sudo."""
         return [
             "caching.invalidation_version",
             "caching.safe_quota_mb",
@@ -183,12 +183,21 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         ]
 
     @api.model
+    def _get_param_write_whitelist(self):
+        """Returns the list of system parameters allowed to be written via Zero-Sudo."""
+        return [
+            "caching.invalidation_version",
+            "caching.safe_quota_mb",
+            "cloudflare.last_static_mtime",
+        ]
+
+    @api.model
     def _get_system_param(self, key, default=None):
         # [@ANCHOR: get_system_param]
         # Verified by [@ANCHOR: test_01_mechanical_secret_block_enforcement]
         # Tests [@ANCHOR: story_parameter_whitelisting]
         # THE MECHANICAL SECRET BLOCK
-        whitelist = self._get_param_whitelist()
+        whitelist = self._get_param_read_whitelist()
 
         banned_substrings = [
             "secret", "key", "password", "token", "auth", "crypt", "cert",
@@ -206,10 +215,28 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
 
             if any(banned in lower_key for banned in banned_substrings):
                 raise AccessError(_("Security Alert: Parameter '%s' matches restricted cryptographic patterns and cannot be extracted via Zero-Sudo.") % key)
-            raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo PARAM_WHITELIST. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
+            raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo READ whitelist. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
 
         env_svc = self._get_service_env("zero_sudo.config_service_internal")
         return env_svc["ir.config_parameter"].get_param(key, default)
+
+    @api.model
+    def _set_system_param(self, key, value):
+        # [@ANCHOR: set_system_param]
+        whitelist = self._get_param_write_whitelist()
+
+        if key not in whitelist:
+            # Log the unauthorized write attempt
+            facility_env = self._get_service_env("zero_sudo.odoo_facility_service_internal")
+            facility_env['zero_sudo.security.log'].create({
+                'user_id': self.env.user.id,
+                'reason': 'param_write_denied',
+                'login': key,
+            })
+            raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo WRITE whitelist. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
+
+        env_svc = self._get_service_env("zero_sudo.config_service_internal")
+        return env_svc["ir.config_parameter"].set_param(key, value)
 
     @api.model
     def _get_kv(self, key):
