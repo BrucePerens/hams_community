@@ -26,6 +26,7 @@ knowledge.article model. Includes frontend search, feedback, and dynamic TOC.
         "security/ir.model.access.csv",
         "views/knowledge_article_views.xml",
         "views/knowledge_article_templates.xml",
+        "data/procedures.xml",
     ],
     "knowledge_docs": [
         {"path": "README.md", "name": "Manual Library: Developer Guide", "icon": "🛠️", "category": "workspace"},

@@ -1009,6 +1009,7 @@ WantedBy=multi-user.target
         {"name": "python3-pip", "debian_name": "python3-pip", "environments": ["early_prod"]},
         {"name": "python3-pandas", "debian_name": "python3-pandas", "environments": ["early_prod"]},
         {"name": "python3-numpy", "debian_name": "python3-numpy", "environments": ["early_prod"]},
+        {"name": "python3-markdown", "debian_name": "python3-markdown", "environments": ["early_prod"]},
     ],
     "env_defaults": {
         "DB_PORT": "5432",

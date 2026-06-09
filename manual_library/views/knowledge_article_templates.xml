@@ -128,7 +128,12 @@
                                 </header>
 
                                 <section class="article-body lh-lg o_manual_body" style="font-size: 1.1rem;">
-                                    <div t-field="article.body"/>
+                                    <t t-if="compiled_body">
+                                        <div t-out="compiled_body"/>
+                                    </t>
+                                    <t t-else="">
+                                        <div t-field="article.body"/>
+                                    </t>
                                 </section>
 
                                 <div class="mt-5 pt-4 border-top text-center">

@@ -169,17 +169,20 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_param_whitelist(self):
         """Returns the list of system parameters allowed to be read/written via Zero-Sudo."""
         return [
-            "web.base.url",
-            "cloudflare.last_static_mtime",
-            "user_websites.company_abuse_email",
-            "user_websites.max_sites_per_user",
-            "user_websites.enable_blog_comments",
-            "caching.safe_quota_mb",
             "caching.invalidation_version",
+            "caching.safe_quota_mb",
+            "cloudflare.last_static_mtime",
+            "distributed_redis_cache.redis_host",
+            "distributed_redis_cache.redis_password",
+            "distributed_redis_cache.redis_port",
+            "pager_duty.helpdesk_model",
+            "user_websites.company_abuse_email",
+            "user_websites.enable_blog_comments",
             "user_websites.global_website_page_limit",
             "user_websites.last_digest_id",
+            "user_websites.max_sites_per_user",
             "user_websites_seo.docs_installed",
-            "pager_duty.helpdesk_model",
+            "web.base.url",
         ]
 
     @api.model
