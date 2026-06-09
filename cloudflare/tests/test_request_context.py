@@ -36,7 +36,7 @@ class TestRequestContext(HamsHttpCase):
         self.assertEqual(context["city"], "New York")
         self.assertEqual(context["threat_score"], "10")
 
-        # # Verified by [@ANCHOR: test_cf_get_request_context]
+
 
     def test_02_get_request_context_no_headers(self):
         """Verify fallback when Cloudflare headers are missing."""

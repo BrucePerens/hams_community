@@ -174,7 +174,7 @@ class TestKeyRegistry(HamsTransactionCase):
         """Verify that documentation is installed in knowledge.article or manual.article."""
         # # Tests [@ANCHOR: documentation_installed]
         # [@ANCHOR: test_documentation_installed]
-        # Verified by [@ANCHOR: documentation_installed]
+
         model = None
         if "knowledge.article" in self.env:
             model = "knowledge.article"
@@ -344,7 +344,7 @@ class TestKeyRegistry(HamsTransactionCase):
 class TestKeyRegistryTour(HamsHttpCase):
     def test_daemon_key_manager_tour(self):
         # [@ANCHOR: test_daemon_key_manager_tour]
-        # Verified by [@ANCHOR: test_daemon_key_manager_tour]
+
         # Tests [@ANCHOR: register_daemon_api]
         # Tests [@ANCHOR: action_force_provision_all_api]
 

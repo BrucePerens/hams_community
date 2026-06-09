@@ -35,7 +35,7 @@ class TestSEOUI(HamsHttpCase):
 
     def test_01_seo_widget_tour(self):
         # [@ANCHOR: test_seo_widget_tour]
-        # Verified by [@ANCHOR: test_seo_widget_tour]
+
         """Execute the SEO Optimization UI Tour as the admin user."""
         self.start_tour(
             "/odoo?debug=1",

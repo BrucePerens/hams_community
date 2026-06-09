@@ -17,8 +17,8 @@ class TestRealTransactionFacility(RealTransactionCase):
     def test_00_cursor_hijacking_and_snapshot(self):
         # [@ANCHOR: test_cursor_hijacking]
         # [@ANCHOR: test_leak_snapshotting]
-        # Verified by [@ANCHOR: test_cursor_hijacking]
-        # Verified by [@ANCHOR: test_leak_snapshotting]
+
+
         """
         Verify that the cursor is indeed real and that snapshotting occurred.
         """
@@ -33,7 +33,7 @@ class TestRealTransactionFacility(RealTransactionCase):
 
     def test_01_auto_cleanup_tracking(self):
         # [@ANCHOR: test_orm_instrumentation]
-        # Verified by [@ANCHOR: test_orm_instrumentation]
+
         """
         Prove that the facility accurately tracks and auto-deletes standard ORM creations.
         """
@@ -49,7 +49,7 @@ class TestRealTransactionFacility(RealTransactionCase):
 
     def test_02_leak_detector_catches_raw_sql(self):
         # [@ANCHOR: test_leak_verification]
-        # Verified by [@ANCHOR: test_leak_verification]
+
         """
         Prove that the SQL Leak Detector successfully triggers an AssertionError
         if a test bypasses the ORM tracker using raw SQL inserts.
@@ -87,7 +87,7 @@ class TestRealTransactionFacility(RealTransactionCase):
 
     def test_03_foreign_key_cascade_cleanup(self):
         # [@ANCHOR: test_automated_cleanup]
-        # Verified by [@ANCHOR: test_automated_cleanup]
+
         """
         Prove that the multi-pass auto-cleanup handles hierarchical dependencies.
         """

@@ -157,3 +157,6 @@ session.
 ### The Subprocess DEVNULL Trap
 * **The Trap:** Starting background processes, daemons, or test runners in Python (e.g., via `subprocess.Popen` or `subprocess.run`) and routing their `stdout` or `stderr` to `subprocess.DEVNULL` permanently destroys critical crash logs, tracebacks, and initialization warnings. If a daemon fails to start, the system will hang or fail silently, making debugging impossible.
 * **The Solution:** You MUST NEVER route subprocess output to `DEVNULL`. Always capture the output (e.g., using `capture_output=True` and printing on non-zero exit codes), route it to a designated log file, or allow it to natively inherit the parent process's `stdout`/`stderr` so error extractors can process it.
+## 39. The "Verified By" Test Linkage Trap
+**The Trap:** In tests, adding comments like `# Verified by [@ANCHOR: ...]` is a hallucination. "Verified by" tags belong exclusively in the structural source code to indicate which test covers that code.
+**The Solution:** Tests must NEVER contain "Verified by" comments. Tests should use `# Tests [@ANCHOR: ...]` to link back to the source feature they are testing. Do not create circular self-referential anchors in tests.

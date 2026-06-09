@@ -12,7 +12,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
     def test_01_waf_ban_ip(self):
         # [@ANCHOR: test_cf_ban_ip_api]
         # Tests [@ANCHOR: cf_ban_ip_api]
-        # # Verified by [@ANCHOR: test_cf_ban_ip_api]
+
         mock_ban_ip = self.safe_patch("odoo.addons.cloudflare.models.ip_ban.ban_ip")
         mock_ban_ip.return_value = (True, "fake_rule_123")
 
@@ -27,7 +27,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
     def test_02_turnstile_secret_fetch(self):
         # [@ANCHOR: test_cf_turnstile_verify]
         # Tests [@ANCHOR: cf_turnstile_verify]
-        # # Verified by [@ANCHOR: test_cf_turnstile_verify]
+
         website = self.env["website"].get_current_website()
         website.write({"cloudflare_turnstile_secret": "my_super_secret_key"})
 
@@ -115,7 +115,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
 
     def test_06_purge_urls(self):
         # [@ANCHOR: test_purge_urls_api]
-        # # Verified by [@ANCHOR: test_purge_urls_api]
+
 
         mock_post = self.safe_patch(
             "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
@@ -159,7 +159,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
 
     def test_07_purge_tags(self):
         # [@ANCHOR: test_purge_tags_api]
-        # # Verified by [@ANCHOR: test_purge_tags_api]
+
 
         mock_post = self.safe_patch(
             "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
