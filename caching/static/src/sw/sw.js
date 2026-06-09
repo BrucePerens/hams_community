@@ -1,3 +1,5 @@
+/** @odoo-module **/
+
 const CACHE_NAME = '__CACHE_NAME__';
 
 // Matches /web/assets/ OR /any_module_name/static/

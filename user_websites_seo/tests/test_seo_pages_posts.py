@@ -5,6 +5,9 @@ from odoo.addons.zero_sudo.tests.common import HamsTransactionCase
 _logger = logging.getLogger(__name__)
 
 
+from odoo.tests import tagged
+
+@tagged('post_install', '-at_install')
 class TestSEOPagesPosts(HamsTransactionCase):
 
     @classmethod

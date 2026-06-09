@@ -13,6 +13,7 @@
         "binary_downloader",
         "pager_duty",
         "website",
+        "odoo",
     ],
     "external_dependencies": {
         "python": [],

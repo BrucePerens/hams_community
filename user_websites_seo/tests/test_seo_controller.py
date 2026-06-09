@@ -6,6 +6,9 @@ from odoo.addons.user_websites_seo.controllers.main import (
 )
 
 
+from odoo.tests import tagged
+
+@tagged('post_install', '-at_install')
 class TestSEOController(HamsTransactionCase):
 
     def setUp(self):

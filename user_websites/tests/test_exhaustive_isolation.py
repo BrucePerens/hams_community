@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 import odoo.tests
+from odoo.tests import tagged
 import logging
 from odoo.exceptions import AccessError
 
 _logger = logging.getLogger(__name__)
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestExhaustiveIsolation(odoo.tests.common.HttpCase):
     """
     Aggressive Red-Team test suite designed to hunt for cross-tenant IDORs,

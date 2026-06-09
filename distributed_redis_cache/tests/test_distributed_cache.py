@@ -1,6 +1,6 @@
 import os
 import logging
-import odoo.tests
+from odoo.tests import tagged
 from odoo import _
 from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 
@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 # Tests [@ANCHOR: distributed_cache_view]
 # Tests [@ANCHOR: distributed_cache_settings_view]
 
-@odoo.tests.tagged('post_install', '-at_install')
+@tagged('post_install', '-at_install')
 class TestDistributedCacheTour(HamsHttpCase):
 
     def test_distributed_cache_admin_tour(self):

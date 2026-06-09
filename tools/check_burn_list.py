@@ -305,6 +305,26 @@ ODOO_ERROR_RULES = [
     ),
     (
         r"\.js$",
+        re.compile(r"[^\s/]\s*;\s*(?:import|export)\b"),
+        "CRITICAL JS ASSET PARSER: 'import' and 'export' keywords MUST be at the start of a new line or preceded only by spaces. Inline imports after a semicolon (e.g., `let a=1; import X`) crash the Odoo 19 regex transpiler."
+    ),
+    (
+        r"\.js$",
+        re.compile(r"export\s*\{[^\}]*(?://|/\*)[^\}]*\}", re.DOTALL),
+        "CRITICAL JS ASSET PARSER: Inline comments inside an export object block (e.g., `export { a, // comment \\n b }`) break Odoo's module loader. Place comments outside the export block."
+    ),
+    (
+        r"\.js$",
+        re.compile(r"import\s+.*?\s+from\s+['\"](?!\.|@)[^'\"]+/[^'\"]+['\"]"),
+        "CRITICAL JS PATH AMBIGUITY: Imports containing a '/' that do not start with '.' (relative) or '@' (Odoo alias) confuse the asset parser. Odoo will attempt to resolve it as a physical file path and throw an 'Unmet Dependencies' error."
+    ),
+    (
+        r"\.js$",
+        re.compile(r"^(?!\s*//|\s*/\*\*|\s*\*|\s*(?:import|export)\b)[^\n]*?(?:import|export)\s+.*?from\s+['\"][^'\"]+['\"]", re.MULTILINE),
+        "CRITICAL JS ASSET PARSER: Do not embed `import ... from ...` strings inside inline multi-line variable strings. Odoo's regex heuristic will falsely trigger on it and corrupt the transpilation."
+    ),
+    (
+        r"\.js$",
         re.compile(r"\$\("),
         "jQuery ($) is forbidden. Use Vanilla JS or modern OWL components.",
     ),
@@ -1825,6 +1845,23 @@ def scan_file(filepath, is_odoo_module=False):
 
     if filename.startswith("test_") and filename.endswith(".py"):
         FOUND_TEST_CONTENTS[filepath] = content
+
+    if filename.endswith(".js"):
+        has_pragma = False
+        code_started = False
+        for i, line in enumerate(lines, 1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if "/** @odoo-module **/" in stripped or "/** @odoo-module" in stripped:
+                has_pragma = True
+                break
+            if not stripped.startswith("//") and not stripped.startswith("/*") and not stripped.startswith("*"):
+                code_started = True
+                break
+        if code_started and not has_pragma:
+            errors_found.append("Line 1: CRITICAL ASSET BUNDLER: JavaScript file is missing the `/** @odoo-module **/` pragma at the absolute top of the file. Native imports will fail.")
+
     if filename.endswith(".py"):
         ast_errs, ast_warns = check_ast_vulnerabilities(filepath, content, lines, is_odoo_module)
         for lineno, msg in ast_errs:

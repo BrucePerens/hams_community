@@ -3,6 +3,9 @@ from odoo.addons.zero_sudo.tests.common import HamsTransactionCase
 from odoo.exceptions import AccessError
 
 
+from odoo.tests import tagged
+
+@tagged('post_install', '-at_install')
 class TestSEOModels(HamsTransactionCase):
 
     @classmethod

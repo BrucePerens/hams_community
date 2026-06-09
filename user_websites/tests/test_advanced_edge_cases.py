@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
+from odoo.tests import tagged
 import logging
 
 _logger = logging.getLogger(__name__)
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
     def setUp(self):
         super(TestAdvancedEdgeCases, self).setUp()
