@@ -2,14 +2,55 @@
 from odoo import http
 from odoo.http import request
 from odoo.exceptions import AccessError, UserError
+from odoo.tools import html2plaintext
 import werkzeug.exceptions
 import logging
+import re
+import markdown
 from werkzeug.urls import url_parse
+from markupsafe import Markup
 
 _logger = logging.getLogger(__name__)
 
 
 class ManualLibraryController(http.Controller):
+
+    def _compile_markdown(self, html_body):
+        """
+        Heuristic detection and compilation of Markdown from Odoo's HTML fields.
+        Odoo's WYSIWYG editor wraps pasted text in <p> tags and <br/>.
+        html2plaintext safely extracts the raw text to recover the Markdown formatting.
+        """
+        if not html_body:
+            return Markup("")
+
+        text_content = html2plaintext(html_body)
+
+        # Heuristic: Look for common Markdown signatures
+        markdown_signatures = [
+            r'(?m)^#{1,6}\s+.+',       # Headers
+            r'(?m)^```[\s\S]*?^```',   # Code blocks
+            r'(?m)^(\*|-|\d+\.)\s+',   # Lists
+            r'\*\*.*?\*\*',            # Bold
+            r'\[.+?\]\(.+?\)',         # Links
+        ]
+
+        is_md = any(re.search(sig, text_content) for sig in markdown_signatures)
+
+        # Avoid compiling if it contains complex native Odoo UI snippets (tables, deep divs)
+        has_complex_html = bool(re.search(r'<(div|table|section|article|img)[^>]*>', html_body, re.IGNORECASE))
+
+        if is_md and not has_complex_html:
+            try:
+                md_html = markdown.markdown(
+                    text_content,
+                    extensions=['fenced_code', 'tables', 'nl2br', 'toc']
+                )
+                return Markup(md_html)
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Markdown compilation failed: %s", e)
+
+        return Markup(html_body)
 
     def _get_sidebar_articles(self):
         """Helper to fetch and group root articles for the sidebar."""
@@ -91,12 +132,16 @@ class ManualLibraryController(http.Controller):
         if article_slug and article.website_url != request.httprequest.path:
             return request.redirect(article.website_url, code=301)
 
-        # 7. Render standard QWeb response
+        # 7. Compile Markdown if detected
+        compiled_body = self._compile_markdown(article.body)
+
+        # 8. Render standard QWeb response
         return request.render(
             "manual_library.article_template",
             {
                 "main_object": article,
                 "article": article,
+                "compiled_body": compiled_body,
                 "workspace_articles": workspace_articles,
                 "shared_articles": shared_articles,
                 "private_articles": private_articles,
@@ -168,11 +213,18 @@ class ManualLibraryController(http.Controller):
                 )
                 svc_env = request.env(user=svc_uid)
 
-                # Utilize Postgres Procedure to ensure absolute atomic increments and reduce round-trips.
-                svc_env.cr.execute(
-                    "SELECT manual_library_increment_helpful(%s, %s)",
-                    (article.id, is_helpful == "1"),
-                )
+                # Utilize raw SQL to ensure absolute atomic increments and prevent 'Lost Update' race conditions.
+                # Identifiers are hardcoded for security as they are not user-controlled.
+                if is_helpful == "1":
+                    svc_env.cr.execute(
+                        'UPDATE "knowledge_article" SET "helpful_count" = COALESCE("helpful_count", 0) + 1 WHERE "id" = %s',
+                        (article.id,),
+                    )
+                else:
+                    svc_env.cr.execute(
+                        'UPDATE "knowledge_article" SET "unhelpful_count" = COALESCE("unhelpful_count", 0) + 1 WHERE "id" = %s',
+                        (article.id,),
+                    )
         except (ValueError, AccessError) as e:
             # Silently fail on bad input or unauthorized access to prevent brute-force discovery
             _logger.warning("Feedback submission failed gracefully: %s", e)

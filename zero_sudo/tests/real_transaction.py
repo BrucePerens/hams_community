@@ -36,6 +36,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         # By changing the side_effect rather than deleting the attribute, we prevent
         # Werkzeug deadlocks without crashing unittest.mock during tearDown.
         # [@ANCHOR: cursor_hijacking]
+        # Verified by [@ANCHOR: test_cursor_hijacking]
         def _real_cursor_factory(readonly=False):
             return odoo.sql_db.db_connect(self.registry.db_name).cursor()
 
@@ -59,6 +60,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
 
         # 2. Snapshot exact table counts
         # [@ANCHOR: leak_snapshotting]
+        # Verified by [@ANCHOR: test_leak_snapshotting]
         self.cr.execute(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT LIKE 'pg_stat_statements%'"
         )
@@ -74,6 +76,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
 
         # 3. Instrument ORM Creation
         # [@ANCHOR: orm_instrumentation]
+        # Verified by [@ANCHOR: test_orm_instrumentation]
 
         def tracking_create(model_self, *args, **kwargs):
             records = _original_create(model_self, *args, **kwargs)
@@ -96,6 +99,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
 
         # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
         # [@ANCHOR: automated_cleanup]
+        # Verified by [@ANCHOR: test_automated_cleanup]
 
         for attempt in range(5): # Increased to 5 passes for deep hierarchies
             pending_deletes = False
@@ -139,6 +143,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
 
         # 3. Verify No Leaks (Ignoring noisy system logging/chatter tables)
         # [@ANCHOR: leak_verification]
+        # Verified by [@ANCHOR: test_leak_verification]
 
         leaks = []
         noisy_tables = set()

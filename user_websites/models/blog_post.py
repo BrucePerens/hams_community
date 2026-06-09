@@ -95,6 +95,11 @@ class BlogPost(models.Model):
                 "blog_id",
                 "website_id",
                 "view_count",
+                "website_meta_title",
+                "website_meta_description",
+                "website_meta_keywords",
+                "website_meta_og_img",
+                "seo_name"
             }
             for vals in vals_list:
                 for k in list(vals.keys()):
@@ -180,6 +185,11 @@ class BlogPost(models.Model):
                 "blog_id",
                 "website_id",
                 "view_count",
+                "website_meta_title",
+                "website_meta_description",
+                "website_meta_keywords",
+                "website_meta_og_img",
+                "seo_name"
             }
             for k in list(vals.keys()):
                 if k not in allowed:

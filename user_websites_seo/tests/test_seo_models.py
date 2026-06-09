@@ -95,7 +95,7 @@ class TestSEOModels(HamsTransactionCase):
         doc = False
         try:
             utils = self.env["zero_sudo.security.utils"]
-            svc_acc = "user_websites.user_websites_service_account"
+            svc_acc = "manual_library.user_manual_library_service_account"
             svc_uid = utils._get_service_uid(svc_acc)
             env_svc = self.env[article_model].with_user(svc_uid)
             doc = env_svc.search(
