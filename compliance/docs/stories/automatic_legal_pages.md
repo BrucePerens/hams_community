@@ -16,7 +16,7 @@ Alice is worried about legal compliance but doesn't have the budget for a lawyer
    - **Accessibility Statement** (`/accessibility`) [@ANCHOR: compliance_accessibility_statement_template]
 4. Alice visits her website and sees these links already active and populated with relevant content that covers her use of Odoo features.
 5. She notices that links to these legal pages are automatically added to the footer of every page on her website, ensuring she meets visibility requirements. [@ANCHOR: compliance_footer_links]
-6. If she already has a custom page, the module detects it and unpublishes its own boilerplate to avoid duplication.
+7. If she already has a custom page, the module detects it and unpublishes its own boilerplate to avoid duplication. This process is optimized using a high-performance Postgres procedure. [@ANCHOR: compliance_postgres_procedures]
 6. She can now focus on her business, knowing she has basic legal coverage.
 
 ## Verification

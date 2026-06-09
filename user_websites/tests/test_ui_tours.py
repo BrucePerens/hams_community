@@ -184,3 +184,9 @@ class TestUserWebsitesUITours(RealTransactionCase):
         # Tests [@ANCHOR: test_tour_backend_views]
         self.authenticate("admin", "admin")
         self.start_tour("/odoo?debug=1", "backend_views_tour", login="admin")
+
+    def test_10_violation_report_tour(self):
+        # Tests [@ANCHOR: test_tour_violation_report]
+        # Tests [@ANCHOR: user_websites:UX_REPORT_VIOLATION]
+        self.url_open(f"/{self.user_test.website_slug}/home")
+        self.start_tour(f"/{self.user_test.website_slug}/home?debug=1", "test_tour_violation_report")

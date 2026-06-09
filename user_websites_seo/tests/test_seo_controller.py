@@ -21,7 +21,7 @@ class TestSEOController(HamsTransactionCase):
     def test_controller_no_ssti_elevation(self):
         # Tests [@ANCHOR: controller_user_blog_index_seo_override]
         # [@ANCHOR: test_controller_no_ssti_elevation]
-        # Verified by [@ANCHOR: test_controller_no_ssti_elevation]
+
         """
         Verify the controller intercepts the QWeb context and injects
         the main_object without elevating privileges.

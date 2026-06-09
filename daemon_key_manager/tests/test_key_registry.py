@@ -174,7 +174,7 @@ class TestKeyRegistry(HamsTransactionCase):
         """Verify that documentation is installed in knowledge.article or manual.article."""
         # # Tests [@ANCHOR: documentation_installed]
         # [@ANCHOR: test_documentation_installed]
-        # Verified by [@ANCHOR: documentation_installed]
+
         model = None
         if "knowledge.article" in self.env:
             model = "knowledge.article"
@@ -298,12 +298,53 @@ class TestKeyRegistry(HamsTransactionCase):
         with self.assertRaises(AccessError):
             self.env["daemon.key.registry"].with_user(self.regular_user.id).action_force_provision_all()
 
+    def test_action_rotate_key(self):
+        """Test manual rotation of a single key."""
+        # [@ANCHOR: test_action_rotate_key]
+        # Tests [@ANCHOR: action_rotate_key_api]
+        daemon_name = "Single Rotation Test"
+        env_file_path = "/var/lib/odoo/daemon_keys/single_rotation.env"
+        self.test_env_paths.append(env_file_path)
+
+        registry = self.env["daemon.key.registry"].with_user(self.manager_user.id).create({
+            'name': daemon_name,
+            'user_id': self.service_user.id,
+            'env_file_path': env_file_path,
+        })
+
+        # Ensure file does not exist
+        if os.path.exists(env_file_path):
+            os.remove(env_file_path)
+
+        registry.with_user(self.manager_user.id).action_rotate_key()
+        self.assertTrue(os.path.exists(env_file_path))
+
+    def test_rotation_safety_archived_user(self):
+        """Test that keys cannot be rotated for archived service accounts."""
+        # [@ANCHOR: test_rotation_safety_archived_user]
+        # Tests [@ANCHOR: rotation_safety_archived_user]
+        archived_user = self.env['res.users'].create({
+            'name': 'Archived Service Account',
+            'login': 'archived_svc',
+            'is_service_account': True,
+            'active': False,
+        })
+        registry = self.env["daemon.key.registry"].with_user(self.manager_user.id).create({
+            'name': 'Archived Test',
+            'user_id': archived_user.id,
+            'env_file_path': self.test_env_paths[0],
+        })
+
+        with self.assertRaises(UserError) as cm:
+            registry.with_user(self.manager_user.id)._rotate_key_and_write_file()
+        self.assertIn("archived", str(cm.exception))
+
 
 @tagged('post_install', '-at_install')
 class TestKeyRegistryTour(HamsHttpCase):
     def test_daemon_key_manager_tour(self):
         # [@ANCHOR: test_daemon_key_manager_tour]
-        # Verified by [@ANCHOR: test_daemon_key_manager_tour]
+
         # Tests [@ANCHOR: register_daemon_api]
         # Tests [@ANCHOR: action_force_provision_all_api]
 

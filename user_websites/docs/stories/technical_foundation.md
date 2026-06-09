@@ -34,7 +34,7 @@ The module provides several dropzones for UI extension:
 
 ### Performance and Reliability
 - **Slug Invalidation:** Distributed caches are invalidated upon slug mutation ([@ANCHOR: slug_cache_invalidation_unlink], [@ANCHOR: group_slug_cache_invalidation_unlink]).
-- **View Counter Sync:** High-throughput view counters are flushed to the database via cron ([@ANCHOR: ir_cron_flush_view_counters]).
+- **View Counter Sync:** High-throughput view counters are flushed to the database via cron ([@ANCHOR: ir_cron_flush_view_counters]). Database round-trips are optimized via a PostgreSQL procedure ([@ANCHOR: procedure_flush_view_counters]).
 - **Weekly Digest:** Automated subscriptions are handled by a robust cron process ([@ANCHOR: ir_cron_send_weekly_digest]).
 - **Moderation Alerts:** Admins are notified of pending reports ([@ANCHOR: ir_cron_notify_pending_reports]).
 - **Simulation:** End-to-end operational load is verified in the simulation environment ([@ANCHOR: simulation_environment]).

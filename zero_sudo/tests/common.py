@@ -238,6 +238,7 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
         super().tearDownClass()
 
     def start_daemon(self, script_path, args=None, env_vars=None, health_url=None, timeout=600):
+        # Verified by [@ANCHOR: test_integration_daemon_testing]
         if not hasattr(self.__class__, '_active_daemons'):
             self.__class__._active_daemons = []
         daemon_utils = self.env["zero_sudo.daemon.utils"]

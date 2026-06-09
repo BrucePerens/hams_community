@@ -8,6 +8,34 @@ from odoo.addons.compliance.hooks import post_init_hook
 @tagged("post_install", "-at_install")
 class TestComplianceHooks(HamsTransactionCase):
 
+    def test_01_postgres_procedure(self):
+        """Verify the compliance enforcement procedure."""
+        # [@ANCHOR: test_compliance_postgres_procedures]
+        # Tests [@ANCHOR: compliance_postgres_procedures]
+        # Create a custom page to test shielding
+        custom_view = self.env["ir.ui.view"].create({
+            "name": "Custom Privacy",
+            "type": "qweb",
+            "arch": "<div>Custom Content</div>",
+            "key": "custom.privacy_view"
+        })
+        self.env["website.page"].create({
+            "url": "/privacy",
+            "view_id": custom_view.id,
+            "is_published": True,
+            "website_id": False
+        })
+
+        # Ensure boilerplate is published
+        bp = self.env.ref("compliance.compliance_page_privacy_policy")
+        bp.write({"is_published": True})
+
+        # Run the procedure
+        self.env.cr.execute("SELECT compliance_enforce_protection()")
+        bp.invalidate_recordset(["is_published"])
+
+        self.assertFalse(bp.is_published, "Boilerplate should be shielded by procedure")
+
     def test_02_post_init_hook_cookie_bar(self):
         """
         Verify that the post_init_hook successfully enables the cookies_bar
@@ -66,7 +94,7 @@ class TestComplianceHooks(HamsTransactionCase):
         })
 
         # Ensure our boilerplate page exists and is published (default state)
-        boilerplate_page = self.env.ref("compliance.page_privacy_policy")
+        boilerplate_page = self.env.ref("compliance.compliance_page_privacy_policy")
         boilerplate_page.write({"is_published": True, "website_id": False})
 
         self.env.flush_all()
@@ -103,7 +131,7 @@ class TestComplianceHooks(HamsTransactionCase):
         })
 
         # Ensure boilerplate is published
-        boilerplate_cookie = self.env.ref("compliance.page_cookie_policy")
+        boilerplate_cookie = self.env.ref("compliance.compliance_page_cookie_policy")
         boilerplate_cookie.write({"is_published": True, "website_id": False})
 
         # Pre-cleanup: unpublish any existing boilerplate for website 2
@@ -160,7 +188,7 @@ class TestComplianceHooks(HamsTransactionCase):
 
         # Run hook to unpublish boilerplate
         post_init_hook(self.env)
-        boilerplate_page = self.env.ref("compliance.page_privacy_policy")
+        boilerplate_page = self.env.ref("compliance.compliance_page_privacy_policy")
         self.assertFalse(boilerplate_page.is_published)
 
         # Remove custom page
