@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
+from odoo.tests import tagged
 from odoo.exceptions import AccessError
 from psycopg2 import IntegrityError
 from odoo.tools import mute_logger
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestORMSecurity(odoo.tests.common.TransactionCase):
     """
     Tests focused on preventing malicious authenticated users from bypassing

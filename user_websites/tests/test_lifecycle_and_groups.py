@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
+from odoo.tests import tagged
 import logging
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestLifecycleAndGroups(odoo.tests.common.HttpCase):
     def setUp(self):
         super(TestLifecycleAndGroups, self).setUp()

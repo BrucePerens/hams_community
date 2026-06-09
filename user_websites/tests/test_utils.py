@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from odoo.tests.common import BaseCase
+from odoo.tests import tagged
 from odoo.addons.user_websites.utils import slugify
 
 
+@tagged('post_install', '-at_install')
 class TestUtils(BaseCase):
     # [@ANCHOR: test_utils_slugify]
     # Tests [@ANCHOR: utils_slugify]

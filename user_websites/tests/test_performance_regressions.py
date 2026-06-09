@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 import odoo.tests
+from odoo.tests import tagged
 import logging
 
 _logger = logging.getLogger(__name__)
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged("post_install", "-at_install")
 class TestPerformanceORM(odoo.tests.common.TransactionCase):
 
     def setUp(self):
@@ -90,7 +91,7 @@ class TestPerformanceORM(odoo.tests.common.TransactionCase):
         )
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged("post_install", "-at_install")
 class TestPerformanceRouting(odoo.tests.common.HttpCase):
 
     def setUp(self):

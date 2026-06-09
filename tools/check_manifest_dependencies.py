@@ -69,7 +69,7 @@ def main():
                                 imported_mod = match.group(1)
 
                                 # Ignore standard web frameworks or self-imports
-                                if imported_mod != current_mod and imported_mod not in manifests[current_mod] and imported_mod not in ("web", "base"):
+                                if imported_mod != current_mod and imported_mod not in manifests[current_mod] and imported_mod not in ("web", "base", "odoo"):
                                     print(f"🚨 MANIFEST DEPENDENCY VIOLATION in {current_mod}")
                                     print(f"  File: {os.path.relpath(filepath, repo_root)}:{line_no}")
                                     print(f"  Imports: '@{imported_mod}' but '{imported_mod}' is NOT listed in {current_mod}/__manifest__.py 'depends' array.")

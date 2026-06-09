@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import odoo.tests
+import odoo
+from odoo.tests import tagged
 from odoo.exceptions import ValidationError
 from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 import json
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged("post_install", "-at_install")
 class TestRobustnessAndBoundaries(HamsHttpCase):
 
     def setUp(self):

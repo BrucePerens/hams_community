@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
+from odoo.tests import tagged
 from lxml import etree
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestXPathRendering(odoo.tests.common.HttpCase):
     """
     ADR-0053: Exhaustive tests to mathematically prove that all XML XPath

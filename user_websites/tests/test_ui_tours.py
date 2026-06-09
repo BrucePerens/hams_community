@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
-import odoo.tests
+from odoo.tests import tagged
 from odoo.tools import mute_logger
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 
 _logger = logging.getLogger(__name__)
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestUserWebsitesUITours(RealTransactionCase):
     def setUp(self):
         super().setUp()

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import unittest
 import logging
-import odoo.tests
+from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 from odoo.addons.user_websites.hooks import post_init_hook
 
 _logger = logging.getLogger(__name__)
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestDocumentation(RealTransactionCase):
 
     def setUp(self):

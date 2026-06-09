@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import odoo.tests
+from odoo.tests import tagged
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged("post_install", "-at_install")
 class TestQWebContext(odoo.tests.common.HttpCase):
     """
     Tests focused on ensuring the controllers inject the correct context variables

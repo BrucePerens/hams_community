@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
-import odoo.tests
+from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged("post_install", "-at_install")
 class TestUserWebsitesControllers(RealTransactionCase):
     """
     Integration tests targeting the HTTP controller layer.

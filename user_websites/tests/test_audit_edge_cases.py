@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import odoo.tests
+from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.common import HamsTransactionCase
 from unittest.mock import MagicMock
 
 
-@odoo.tests.common.tagged("post_install", "-at_install")
+@tagged('post_install', '-at_install')
 class TestAuditEdgeCases(HamsTransactionCase):
     """
     Advanced integration tests targeting edge cases discovered during
