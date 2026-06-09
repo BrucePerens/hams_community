@@ -597,11 +597,13 @@ class WebsitePage(models.Model):
 
         if updates:
             try:
-                for inc, pid in updates:
-                    self.env.cr.execute(
-                        "UPDATE website_page SET view_count = COALESCE(view_count, 0) + %s WHERE id = %s",
-                        (inc, pid),
-                    )
+                # Optimized multi-record update using Postgres Procedure
+                # Reduces round-trips to exactly one.
+                # Tests [@ANCHOR: procedure_flush_view_counters]
+                self.env.cr.execute(
+                    "SELECT user_websites_flush_view_counters(%s)",
+                    (json.dumps([{"inc": inc, "pid": pid} for inc, pid in updates]),),
+                )
 
                 # RACE CONDITION FIX: Delete from Redis first. If PostgreSQL commits, state is perfect.
                 # If PostgreSQL fails and rolls back, we lose views (acceptable), avoiding double-counting (unacceptable).

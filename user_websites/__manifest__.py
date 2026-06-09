@@ -34,6 +34,7 @@ This module enables:
         "security/ir.model.access.csv",
         # Data
         "data/user_websites_data.xml",
+        "data/procedures.xml",
         # Views
         "views/res_config_settings_views.xml",
         "views/res_users_views.xml",
