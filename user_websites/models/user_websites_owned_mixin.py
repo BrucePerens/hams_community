@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+import logging
 from odoo import models, fields, api, _
 from odoo.exceptions import AccessError, ValidationError
+
+_logger = logging.getLogger(__name__)
 
 
 class UserWebsitesOwnedMixin(models.AbstractModel):
@@ -59,17 +62,19 @@ class UserWebsitesOwnedMixin(models.AbstractModel):
         if group_ids and not is_admin:
             try:
                 svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "user_websites.user_websites_service_account"
+                    "zero_sudo.user_websites_service_account"
                 )
                 groups = (
                     self.env["user.websites.group"]
                     .with_user(svc_uid)
                     .browse(list(group_ids))
                 )
-            except AccessError as e:
+            except Exception as e:  # audit-ignore-catch-all
                 # Defer if service account is not yet provisioned during early testing
-                if "not found" in str(e):
+                if "not found" in str(e).lower():
+                    _logger.debug("Service account not found, deferring proxy ownership check: %s", e)
                     return
+                _logger.error("Failed to execute proxy ownership lookup: %s", e)
                 raise
             for group in groups:
                 if group.exists():

@@ -230,9 +230,19 @@ GENERAL_ERROR_RULES = [
         re.compile(r"os\.(?:environ\.get|getenv)\s*\(\s*['\"][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASS|API|CRED)[A-Za-z0-9_]*['\"]", re.IGNORECASE),
         "CRITICAL TENANT LEAK: Do not use environment variables as fallbacks for credentials in multi-tenant systems. This breaks isolation. Use configuration models or secure daemon key registries instead.",
     ),
+    (
+        r"\.(py|js|xml|csv)$",
+        re.compile(r"\[[^\]\n]+\]\(https?://[^)\n]+\)"),
+        "CRITICAL MARKDOWN BLEED: Found a Markdown-formatted URL `[text](url)` in a non-Markdown file. The Web UI occasionally corrupts raw URLs into markdown links. You MUST output URLs as raw strings.",
+    ),
 ]
 
 ODOO_ERROR_RULES = [
+    (
+        r"\.py$",
+        re.compile(r"\bEnvironment\s*\(\s*[^,]+,\s*(?:uid\s*=\s*)?(?:1|odoo\.SUPERUSER_ID|SUPERUSER_ID)\b"),
+        "CRITICAL ZERO-SUDO VIOLATION: Instantiating Environment with SUPERUSER_ID or 1 is a sudo bypass cheat. Query for a service account ID instead.",
+    ),
     (
         r"\.py$",
         re.compile(r"['\"]groups_id['\"]\s*:"),
@@ -1284,6 +1294,29 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self._check_forbidden_functions(node)
             func_name = getattr(node.func, "id", getattr(node.func, "attr", ""))
             self._check_i18n_messages(node, func_name)
+
+            if func_name == "Environment" or (isinstance(node.func, ast.Attribute) and node.func.attr == "Environment"):
+                uid_arg = None
+                if len(node.args) >= 2:
+                    uid_arg = node.args[1]
+                else:
+                    for kw in node.keywords:
+                        if kw.arg == "uid":
+                            uid_arg = kw.value
+                            break
+                if uid_arg:
+                    is_su = False
+                    if isinstance(uid_arg, ast.Constant) and uid_arg.value == 1:
+                        is_su = True
+                    elif isinstance(uid_arg, ast.Name) and uid_arg.id == "SUPERUSER_ID":
+                        is_su = True
+                    elif isinstance(uid_arg, ast.Attribute) and uid_arg.attr == "SUPERUSER_ID":
+                        is_su = True
+                    if is_su:
+                        self.add_error(
+                            node.lineno,
+                            "CRITICAL ZERO-SUDO VIOLATION: Instantiating an Environment with SUPERUSER_ID or uid=1 is strictly forbidden (sudo cheat). Query for a service account ID instead."
+                        )
 
             if isinstance(node.func, ast.Name) and node.func.id == "print":
                 if not ("tools/" in getattr(self, "filepath", self.filename).replace("\\", "/")):
