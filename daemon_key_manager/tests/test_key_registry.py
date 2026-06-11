@@ -92,10 +92,7 @@ class TestKeyRegistry(RealTransactionCase):
         if os.path.exists(symlink_path):
             os.remove(symlink_path)
 
-        try:
-            os.symlink(target_path, symlink_path)
-        except OSError:
-            self.skipTest("Cannot create symlink for test")
+        os.symlink(target_path, symlink_path)
 
         # Attempting to use the symlink should fail because os.path.realpath resolves it to /etc/passwd
         with self.assertRaises(UserError) as cm:

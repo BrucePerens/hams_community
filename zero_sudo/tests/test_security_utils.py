@@ -72,10 +72,7 @@ class TestSecurityUtils(HamsTransactionCase):
 
         # If this raises AccessError, it means the test env is missing the demo service user.
         # Ensure 'test_tours' data or zero_sudo demo data created it. Assuming it exists:
-        try:
-            utils._get_service_uid(svc_xml_id)
-        except AccessError:
-            self.skipTest(f"Service account {svc_xml_id} not available in test env.")
+        utils._get_service_uid(svc_xml_id)
 
         mock_execute = self.safe_patch_object(
             self.env.cr, "execute", wraps=self.env.cr.execute
