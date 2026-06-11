@@ -108,7 +108,10 @@ class IrHttp(models.AbstractModel):
         init_mode = tools.config.get("init")
         update_mode = tools.config.get("update")
         stop_after_init = tools.config.get("stop_after_init")
-        is_test_cr = getattr(request.env.registry, "test_cr", False)
+        try:
+            is_test_cr = request.env.registry.test_cr
+        except AttributeError:
+            is_test_cr = False
 
         # Allow integration tests to use the Redis listener if explicitly enabled
         integration_active = False
@@ -172,10 +175,14 @@ class IrHttp(models.AbstractModel):
                 _invalidation_queue.update(remaining)
 
             for m in to_process:
-                if m and isinstance(m, str) and m in request.env:
-                    # Pass local_only=True to prevent infinite pub/sub loops
-                    invalidate_model_cache(request.env, m, local_only=True)
-                    info_msg = """Cache cleared for model: %s on %s"""
-                    _logger.info(info_msg, m, current_db)
+                if m and isinstance(m, str):
+                    try:
+                        _ = request.env[m]
+                        # Pass local_only=True to prevent infinite pub/sub loops
+                        invalidate_model_cache(request.env, m, local_only=True)
+                        info_msg = """Cache cleared for model: %s on %s"""
+                        _logger.info(info_msg, m, current_db)
+                    except KeyError as e:
+                        _logger.debug("Model not found in env for cache clear: %s", e)
 
         return super()._authenticate(endpoint)

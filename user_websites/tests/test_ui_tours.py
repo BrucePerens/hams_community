@@ -55,8 +55,17 @@ class TestUserWebsitesUITours(RealTransactionCase):
         dynamic_blogs = self.env["blog.blog"].search([
             ("name", "ilike", "Tour User")
         ])
-        visitors = self.env["website.visitor"].search([]) if "website.visitor" in self.env else None
-        tracks = self.env["website.track"].search([]) if "website.track" in self.env else None
+        try:
+            visitors = self.env["website.visitor"].search([])
+        except KeyError as err:
+            visitors = None
+            _logger.debug("website.visitor not found: %s", err)
+
+        try:
+            tracks = self.env["website.track"].search([])
+        except KeyError as err:
+            tracks = None
+            _logger.debug("website.track not found: %s", err)
 
         # Explicit resilient cleanup to prevent website_visitor/website_track pollution
         # Absorbs SerializationFailures if Werkzeug threads are still closing
@@ -68,16 +77,22 @@ class TestUserWebsitesUITours(RealTransactionCase):
 
                     # Delete child records (pages, blogs) FIRST to prevent massive ORM
                     # cascade updates (like setting write_uid = NULL) when deleting users.
-                    if getattr(self, 'page', False) and self.page.exists():
-                        self.page.unlink()
+                    try:
+                        if self.page and self.page.exists():
+                            self.page.unlink()
+                    except AttributeError as err:
+                        _logger.debug("Cleanup attribute not found: %s", err)
                     if dynamic_pages.exists():
                         dynamic_pages.unlink()
                     if dynamic_blogs.exists():
                         dynamic_blogs.unlink()
 
                     # Clean up users last
-                    if getattr(self, 'user_test', False) and self.user_test.exists():
-                        self.user_test.unlink()
+                    try:
+                        if self.user_test and self.user_test.exists():
+                            self.user_test.unlink()
+                    except AttributeError as err:
+                        _logger.debug("Cleanup attribute not found: %s", err)
                     if dynamic_users.exists():
                         dynamic_users.unlink()
                 break

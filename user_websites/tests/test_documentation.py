@@ -29,8 +29,11 @@ class TestDocumentation(RealTransactionCase):
         for attempt in range(5):
             try:
                 with self.env.cr.savepoint():
-                    if getattr(self, 'regular_user', False) and self.regular_user.exists():
-                        self.regular_user.unlink()
+                    try:
+                        if self.regular_user and self.regular_user.exists():
+                            self.regular_user.unlink()
+                    except AttributeError as err:
+                        _logger.debug("No regular_user attribute to clean up: %s", err)
                 break
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Resilient cleanup encountered exception: %s", e)
@@ -93,9 +96,14 @@ class TestDocumentation(RealTransactionCase):
             )
 
             # Check if the article model has the website_url routing capability
-            if getattr(article, "website_url", False):
+            try:
+                website_url = article.website_url
+            except AttributeError:
+                website_url = False
+
+            if website_url:
                 self.assertIn(
-                    article.website_url.encode(),
+                    website_url.encode(),
                     response.url.encode(),
                     "Should redirect to the knowledge article URL.",
                 )

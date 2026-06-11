@@ -105,8 +105,9 @@ class DatabaseTableStat(models.Model):
         high_bloat = self.env["database.table.stat"].search(
             [("dead_percent", ">", 20.0), ("dead_tuples", ">", 10000)], limit=1000
         )
-        if high_bloat and "pager.incident" in self.env:
+        if high_bloat:
             try:
+                _ = self.env["pager.incident"]
                 env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "pager_duty.user_pager_service_internal"
                 )

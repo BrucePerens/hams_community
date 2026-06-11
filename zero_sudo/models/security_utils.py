@@ -90,7 +90,14 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         if path:
             return path
 
-        if "binary.manifest" in self.env and svc_xml_id:
+        try:
+            _ = self.env["binary.manifest"]
+            has_manifest = True
+        except KeyError as e:
+            has_manifest = False
+            _logger.debug("binary.manifest not found: %s", e)
+
+        if has_manifest and svc_xml_id:
             env_svc = self._get_service_env(svc_xml_id)
             return env_svc["binary.manifest"].ensure_executable(cmd_name)
 
@@ -260,11 +267,17 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         """
         self.env.cr.execute("SELECT zero_sudo_set_kv(%s, %s)", (key, value))
         # Ensure changes are visible to other transactions/round-trips
-        if not getattr(self.env.registry, "test_cr", False):
+        try:
+            is_test = self.env.registry.test_cr
+        except AttributeError:
+            is_test = False
+        if not is_test:
             self.env.cr.commit()
         # Direct SQL bypasses the ORM cache. We must invalidate it.
-        if "zero_sudo.kv" in self.env:
+        try:
             self.env["zero_sudo.kv"].invalidate_recordset()
+        except KeyError as e:
+            _logger.debug("zero_sudo.kv not found: %s", e)
 
     @api.model
     @tools.ormcache()

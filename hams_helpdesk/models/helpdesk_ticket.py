@@ -116,8 +116,8 @@ class HelpdeskTicket(models.Model):
             # PagerDuty service account might not be provisioned yet or module not installed.
             # This is an optional integration, so we continue with standard env.
             _logger.info("PagerDuty service env not loaded (optional integration): %s", e)
-
         # Discover On-Duty Admin
+        # Polymorphic decoupling: calendar_event.py in hams_helpdesk provides a stub returning False
         on_duty_admin = Calendar.get_current_on_duty_admin()
         if on_duty_admin:
             on_duty_user_id = on_duty_admin.id

@@ -63,7 +63,7 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
             self.users.append(u)
 
         # Setup manual library baseline
-        if "knowledge.article" in self.env:
+        try:
             self.article = self.env["knowledge.article"].create(
                 {
                     "name": "Simulation Survival Guide",
@@ -71,6 +71,8 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
                     "is_published": True,
                 }
             )
+        except KeyError as err:
+            _logger.debug("knowledge.article not present: %s", err)
 
     def _execute_simulation_step(self, i, iterations, metrics):
         """Helper method to isolate ORM operations from the AST loop depth counter."""
@@ -113,18 +115,21 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
         )
 
         # Interact with the manual library
-        if getattr(self, "article", False):
-            track(
-                "User: Manual Feedback",
-                self.url_open,
-                "/manual/feedback",
-                data={
-                    "csrf_token": odoo.http.Request.csrf_token(self),
-                    "article_id": self.article.id,
-                    "is_helpful": secrets.choice(["0", "1"]),
-                },
-                method="POST",
-            )
+        try:
+            if self.article:
+                track(
+                    "User: Manual Feedback",
+                    self.url_open,
+                    "/manual/feedback",
+                    data={
+                        "csrf_token": odoo.http.Request.csrf_token(self),
+                        "article_id": self.article.id,
+                        "is_helpful": secrets.choice(["0", "1"]),
+                    },
+                    method="POST",
+                )
+        except AttributeError as err:
+            _logger.debug("No article found: %s", err)
 
         # GDPR Portability check
         track(

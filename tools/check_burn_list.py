@@ -606,6 +606,18 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     return False
             return False
 
+        def visit_Compare(self, node):
+            if self.is_odoo_module:
+                if len(node.ops) == 1 and isinstance(node.ops[0], ast.In):
+                    comp = node.comparators[0]
+                    if isinstance(comp, ast.Attribute) and comp.attr == "env":
+                        if getattr(comp.value, "id", "") == "self" or getattr(comp.value, "id", "") == "request":
+                            self.add_error(
+                                node.lineno,
+                                "CRITICAL ARCHITECTURE: Soft-dependency checking (`'model' in self.env`) is forbidden. You MUST explicitly declare dependencies in __manifest__.py.",
+                            )
+            self.generic_visit(node)
+
         def visit_BinOp(self, node):
             if isinstance(node.op, ast.Add):
                 def is_string_node(n):
@@ -624,6 +636,11 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
 
         def visit_With(self, node):
             if self.is_odoo_module:
+                for item in node.items:
+                    if isinstance(item.context_expr, ast.Call):
+                        func_name = getattr(item.context_expr.func, "id", getattr(item.context_expr.func, "attr", ""))
+                        if func_name == "suppress":
+                            self.add_error(node.lineno, "CRITICAL AI LAZINESS: contextlib.suppress() is strictly forbidden as it acts as a silent black hole for errors. Explicitly catch and log exceptions.")
                 is_cursor = any(
                     isinstance(item.context_expr, ast.Call)
                     and isinstance(item.context_expr.func, ast.Attribute)
@@ -1097,12 +1114,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     "CRITICAL RCE: The use of exec() is strictly forbidden.",
                 )
             elif self.is_odoo_module:
-                if fid == "hasattr":
-                    self.add_error(
-                        node.lineno,
-                        "CRITICAL AI LAZINESS: The use of hasattr() is strictly forbidden to prevent masking architectural type uncertainties.",
-                    )
-                elif fid == "get_module_resource":
+                if fid == "get_module_resource":
                     self.add_error(
                         node.lineno,
                         "CRITICAL DEPRECATION: 'get_module_resource' was removed in Odoo 19. Use 'odoo.tools.file_open'.",
@@ -1119,17 +1131,16 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     )
                 elif fid == "_check_recursion":
                     self.add_error(node.lineno, "Odoo 18+ Hierarchy: Use '_has_cycle()'...")
-                elif fid == "getattr" and len(node.args) >= 2:
-                    arg_val = getattr(node.args[1], "value", None)
-                    if arg_val == "sudo":
+                elif fid == "getattr":
+                    if len(node.args) >= 2 and getattr(node.args[1], "value", None) == "sudo":
                         self.add_error(
                             node.lineno,
                             "[!] DIAGNOSTIC FOR AI: Obfuscated use of sudo via getattr() detected and blocked.",
                         )
-                    elif arg_val == "column_type":
+                    if len(node.args) >= 3 or node.keywords:
                         self.add_error(
                             node.lineno,
-                            "CRITICAL AI LAZINESS: Dynamic data-type introspection via getattr(..., 'column_type') is forbidden. Rely on strict schema contracts.",
+                            "CRITICAL AI LAZINESS: 3-argument getattr() is forbidden to prevent silently defaulting on missing schema attributes. Access fields directly to ensure the schema contract is enforced.",
                         )
                 elif (
                     fid == "setattr"
@@ -1203,6 +1214,12 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                         node.lineno, "Ambiguous ORM call: Use `self.env['your.model']...`"
                     )
                 elif attr in ("with_user", "with_context"):
+                    if attr == "with_user" and getattr(node, "args", []):
+                        arg0 = node.args[0]
+                        if isinstance(arg0, ast.Constant) and arg0.value == 1:
+                            self.add_error(node.lineno, "CRITICAL ZERO-SUDO VIOLATION: Using .with_user(1) is a sudo bypass cheat. Query for a designated service account ID instead.")
+                        elif getattr(arg0, "id", "") == "SUPERUSER_ID" or getattr(arg0, "attr", "") == "SUPERUSER_ID":
+                            self.add_error(node.lineno, "CRITICAL ZERO-SUDO VIOLATION: Using .with_user(SUPERUSER_ID) is a sudo bypass cheat. Query for a designated service account ID instead.")
                     caller = node.func.value
                     if isinstance(caller, ast.Name) and caller.id == "env":
                         self.add_error(
@@ -1360,7 +1377,7 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                         )
 
             if isinstance(node.func, ast.Name) and node.func.id == "print":
-                if not ("tools/" in getattr(self, "filepath", self.filename).replace("\\", "/")):
+                if not ("tools/" in getattr(self, "filepath", self.filename).replace("\\", "/") or self.filename == "check_burn_list.py"):
                     self.add_error(node.lineno, "CRITICAL AI LAZINESS: Native print() is banned. Use logging (_logger.info, etc.) for centralized log aggregation.")
 
             if func_name == "open" or (isinstance(node.func, ast.Attribute) and getattr(node.func, "attr", "") in ("open", "remove", "unlink", "symlink") and getattr(node.func.value, "id", "") == "os"):
@@ -1579,10 +1596,10 @@ def scan_file(filepath, is_odoo_module=False):
             for node in root_node.walk():
                 if node.tag != "#comment":
                     if node.text and "[@ANCHOR:" in node.text:
-                        errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments (<!-- ... -->).")
+                        errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments ().")
                     for attr_name, attr_val in node.attrs.items():
                         if "[@ANCHOR:" in str(attr_val):
-                            errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments (<!-- ... -->). Found in attribute.")
+                            errors_found.append(f"Line {node.lineno}: CRITICAL ANCHOR FORMAT: Semantic anchors in XML/HTML MUST be enclosed within comments (). Found in attribute.")
 
                 if node.tag == "template" or (
                     node.tag == "record" and node.attrs.get("model") == "ir.ui.view"

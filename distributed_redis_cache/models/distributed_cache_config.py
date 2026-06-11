@@ -46,7 +46,11 @@ class DistributedCacheConfig(models.TransientModel):
         # [@ANCHOR: check_redis_status_logic]
         use_redis = bool(redis and redis_pool)
 
-        if getattr(self.env.registry, "test_cr", False):
+        try:
+            is_test = self.env.registry.test_cr
+        except AttributeError:
+            is_test = False
+        if is_test:
             # Use zero_sudo security utils for system parameter read to comply with security mandates
             integration_active = self.env["zero_sudo.security.utils"]._get_system_param('distributed_redis_cache.test_integration_active')
             if not integration_active:

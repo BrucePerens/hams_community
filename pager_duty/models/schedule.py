@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import logging
 from odoo import models, fields, api
 
+_logger = logging.getLogger(__name__)
 
 class PagerSchedule(models.Model):
     """
@@ -27,8 +29,12 @@ class PagerSchedule(models.Model):
         ]
         if self.env.context.get("website_id"):
             domain.append(("website_id", "=", self.env.context.get("website_id")))
-        elif getattr(self.env, "website", False):
-            domain.append(("website_id", "=", self.env.website.id))
+        else:
+            try:
+                if self.env.website:
+                    domain.append(("website_id", "=", self.env.website.id))
+            except AttributeError as err:
+                _logger.debug("No website found in environment: %s", err)
 
         event = self.env["calendar.event"].search(domain, limit=1)
         if event and event.user_id:

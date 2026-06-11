@@ -306,7 +306,11 @@ class ResUsers(models.Model):
         # --- Content Lifecycle Policy ---
         if "active" in vals and not vals["active"]:
             users_to_archive = self.ids
-            if not getattr(self.env.registry, "test_cr", False):
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+            if not is_test:
                 db_name = self.env.cr.dbname
                 BACKGROUND_EXECUTOR.submit(
                     _async_unpublish_content, db_name, users_to_archive
@@ -432,7 +436,10 @@ class ResUsers(models.Model):
         self.ensure_one()
         user_id = self.id
         db_name = self.env.cr.dbname
-        is_test = getattr(self.env.registry, "test_cr", False)
+        try:
+            is_test = self.env.registry.test_cr
+        except AttributeError:
+            is_test = False
 
         if is_test:
             env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
@@ -523,7 +530,10 @@ class ResUsers(models.Model):
                     if len(items) < 1000: break
                     offset += 1000
 
-        res = getattr(super(), "_get_gdpr_streamed_keys", lambda: {})()
+        try:
+            res = super()._get_gdpr_streamed_keys()
+        except AttributeError:
+            res = {}
         res.update({
             "pages": generate_pages,
             "blog_posts": generate_blogs,
@@ -575,7 +585,11 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not getattr(self.env.registry, "test_cr", False):
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+            if not is_test:
                 self.env.cr.commit()
             if len(pages) < 5000:
                 break
@@ -597,7 +611,11 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not getattr(self.env.registry, "test_cr", False):
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+            if not is_test:
                 self.env.cr.commit()
             if len(posts) < 5000:
                 break
@@ -619,7 +637,11 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not getattr(self.env.registry, "test_cr", False):
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+            if not is_test:
                 self.env.cr.commit()
             if len(blogs) < 5000:
                 break

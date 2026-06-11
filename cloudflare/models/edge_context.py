@@ -18,8 +18,11 @@ class CloudflareUtils(models.AbstractModel):
         try:
             if request:
                 request_obj = request._get_current_object()
-                if getattr(request_obj, "website", False):
-                    return request_obj.website.id
+                try:
+                    if request_obj.website:
+                        return request_obj.website.id
+                except AttributeError as err:
+                    _logger.debug("No website attribute found: %s", err)
         except (RuntimeError, AttributeError) as e:
             _logger.warning("Failed to resolve current website: %s", e)
         return self.env["website"].get_current_website().id

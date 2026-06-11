@@ -131,13 +131,12 @@ class TestPagerIncidentStandard(HamsTransactionCase):
 
     def test_04_views_render(self):
         # [@ANCHOR: test_pager_view]
-        if "pager.incident" in self.env:
-            v1 = self.env["pager.incident"].get_view(view_type="form")
-            v2 = self.env["pager.incident"].get_view(view_type="list")
-            v3 = self.env["calendar.event"].get_view(view_type="form")
-            self.assertIn("arch", v1)
-            self.assertIn("arch", v2)
-            self.assertIn("arch", v3)
+        v1 = self.env["pager.incident"].get_view(view_type="form")
+        v2 = self.env["pager.incident"].get_view(view_type="list")
+        v3 = self.env["calendar.event"].get_view(view_type="form")
+        self.assertIn("arch", v1)
+        self.assertIn("arch", v2)
+        self.assertIn("arch", v3)
 
     def test_07_board_data_procedure(self):
         # Tests [@ANCHOR: pager_duty_postgres_procedures]
@@ -157,7 +156,11 @@ class TestPagerIncidentIntegration(HamsTransactionCase):
         self.incident_model = self.env["pager.incident"]
         self.service_user = self.env.ref("pager_duty.user_pager_service_internal")
 
-        if not getattr(self.__class__, '_daemons_started', False):
+        try:
+            started = self.__class__._daemons_started
+        except AttributeError:
+            started = False
+        if not started:
             base_dir = os.path.join(os.path.dirname(__file__), "..", "daemon")
             daemons = ["pager_smart_spooler.py", "pager_log_analyzer.py", "pager_synthetic_spooler.py"]
             for d in daemons:

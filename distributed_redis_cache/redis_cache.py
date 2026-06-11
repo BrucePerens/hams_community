@@ -68,11 +68,13 @@ def distributed_cache():
             # Multi-Tenant awareness: Include website_id and company_id in cache key
             # Force company_id from context if available, else use env.company
             website_id = self.env.context.get("website_id")
-            if not website_id and getattr(self.env, 'website', False):
-                # Handle cases where website might be a recordset or a lazy object
-                website = getattr(self.env, 'website')
-                if website:
-                    website_id = website.id
+            if not website_id:
+                try:
+                    website = self.env.website
+                    if website:
+                        website_id = website.id
+                except AttributeError as e:
+                    _logger.debug("Website resolution skipped in cache key generation: %s", e).id
 
             company_id = self.env.context.get("allowed_company_ids", [self.env.company.id])[0]
             # [!] SECURITY: Multi-tenant isolation is enforced via website_id and company_id in the cache key.
@@ -87,7 +89,11 @@ def distributed_cache():
             # Sever Redis connection during standard automated testing
             # to prevent cross-test ghost cache poisoning after Postgres rollbacks.
             # RealTransactionCase and integration tests can re-enable it via system parameter.
-            if getattr(self.env.registry, "test_cr", False):
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+            if is_test:
                 # Use zero_sudo security utils for system parameter read to comply with security mandates
                 integration_active = self.env["zero_sudo.security.utils"]._get_system_param('distributed_redis_cache.test_integration_active')
                 if not integration_active:
@@ -202,11 +208,13 @@ def notify_model_invalidation(env, model_name):
 
     try:
         env.cr.postcommit.add(_do_invalidate)
-    except AttributeError:
+    except AttributeError as e:
+        _logger.debug("postcommit not found in cursor, attempting fallback: %s", e)
         # Safe fallback for environments that utilize alternate post-commit hooking logic
         try:
             env.cr.after('commit', _do_invalidate)
-        except AttributeError:
+        except AttributeError as e2:
+            _logger.debug("after('commit') not found, invalidating immediately: %s", e2)
             _do_invalidate()
 
     # 2. Notify all other workers via Postgres -> Daemon -> Redis Pub/Sub.

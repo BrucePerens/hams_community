@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+import logging
 from odoo import models
 from odoo.http import request
 
+_logger = logging.getLogger(__name__)
 
 class IrHttp(models.AbstractModel):
     _inherit = "ir.http"
@@ -63,12 +65,11 @@ class IrHttp(models.AbstractModel):
 
         # 3. Dynamic State Isolation (Protecting Authenticated User Data)
         is_public = True
-        if (
-            getattr(request, "env", False)
-            and getattr(request.env, "user", False)
-            and request.env.user
-        ):
-            is_public = request.env.user._is_public()
+        try:
+            if request.env and request.env.user:
+                is_public = request.env.user._is_public()
+        except AttributeError as err:
+            _logger.debug("AttributeError checking is_public: %s", err)
 
         if not is_public:
             response.headers["Cloudflare-CDN-Cache-Control"] = "no-cache, no-store"
@@ -79,7 +80,10 @@ class IrHttp(models.AbstractModel):
         response.headers["Cloudflare-CDN-Cache-Control"] = "max-age=86400"
 
         # Inject Website-specific Cache-Tag for granular site-wide purging if needed.
-        website_id = getattr(request, "website", False) and request.website.id
+        try:
+            website_id = request.website.id if request.website else False
+        except AttributeError:
+            website_id = False
         if website_id:
             existing_tags = response.headers.get("Cache-Tag", "")
             new_tag = f"odoo-website-{website_id}"

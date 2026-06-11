@@ -8,6 +8,7 @@ import shutil
 import time
 import urllib.request
 import threading
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
@@ -16,85 +17,133 @@ from . import watchdog_shared
 _logger = logging.getLogger(__name__)
 
 def _apply_cdp_hook(browser_instance):
-    # Stubbed for Odoo 19 Playwright compatibility.
-    # Playwright abstracts the raw CDP websocket connection.
     if not browser_instance:
         return
     watchdog_shared.global_captured_stack = None
     watchdog_shared.global_active_browser = browser_instance
+    try:
+        websocket = browser_instance._websocket
+        if websocket:
+            try:
+                is_patched = websocket.recv._is_hams_patched
+            except AttributeError as err:
+                is_patched = False
+                _logger.debug("Websocket missing patch attribute: %s", err)
+
+            if not is_patched:
+                original_recv = websocket.recv
+                def _intercepted_recv(*r_args, **r_kwargs):
+                    msg = original_recv(*r_args, **r_kwargs)
+                    if isinstance(msg, str) and 'Debugger.paused' in msg:
+                        try:
+                            data = json.loads(msg)
+                            frames = data.get('params', {}).get('callFrames', [])
+                            stack_lines = ["🚨 V8 HUNG THREAD STACK TRACE 🚨"]
+                            for f in frames:
+                                func = f.get('functionName', '') or '(anonymous)'
+                                url = f.get('url', '') or 'unknown'
+                                loc = f.get('location', {})
+                                line = loc.get('lineNumber', 0) + 1
+                                col = loc.get('columnNumber', 0) + 1
+                                stack_lines.append(f"    at {func} ({url}:{line}:{col})")
+                            watchdog_shared.global_captured_stack = "\n".join(stack_lines)
+                            _logger.error("Successfully captured V8 stack trace via CDP!")
+                        except Exception as e: # audit-ignore-catch-all
+                            _logger.error("Failed to parse Debugger.paused event: %s", e)
+                    return msg
+                _intercepted_recv._is_hams_patched = True
+                browser_instance._websocket.recv = _intercepted_recv
+    except AttributeError as err:
+        _logger.debug("Browser instance missing websocket: %s", err)
 
 # 🚨 PLAYWRIGHT BROWSER LAUNCH INJECTION 🚨
-original_browser_launch = ChromeBrowser.launch
-def _patched_launch(self, *args, **kwargs):
-    for attempt in range(4):
-        try:
-            res = original_browser_launch(self, *args, **kwargs)
-            _apply_cdp_hook(self)
-            return res
-        except unittest.SkipTest:
-            raise
-        except Exception as e: # audit-ignore-catch-all
-            if attempt == 3:
+try:
+    original_browser_launch = ChromeBrowser.launch
+    def _patched_launch(self, *args, **kwargs):
+        for attempt in range(4):
+            try:
+                res = original_browser_launch(self, *args, **kwargs)
+                _apply_cdp_hook(self)
+                return res
+            except unittest.SkipTest:
                 raise
-            _logger.warning("TRACING: Chrome launch failed on attempt %d (%s). Retrying...", attempt + 1, e)
-            time.sleep(1.0) # audit-ignore-sleep
-ChromeBrowser.launch = _patched_launch
+            except Exception as e: # audit-ignore-catch-all
+                if attempt == 3:
+                    raise
+                _logger.warning("TRACING: Chrome launch failed on attempt %d (%s). Retrying...", attempt + 1, e)
+                time.sleep(1.0) # audit-ignore-sleep
+    ChromeBrowser.launch = _patched_launch
+except AttributeError as err:
+    _logger.debug("ChromeBrowser has no launch method: %s", err)
 
 # 🚨 BENIGN ERROR SCRUBBER 🚨
-original_browser_stop = ChromeBrowser.stop
-def _patched_browser_stop(self, *args, **kwargs):
-    for attr in ['_errors', '_browser_errors', 'errors']:
-        if getattr(self, attr, None) is not None:
-            error_list = getattr(self, attr)
-            if isinstance(error_list, list):
-                filtered = []
-                for e in error_list:
-                    msg = str(e).lower()
-                    if "owl is running in 'dev' mode" in msg or "resizeobserver" in msg:
-                        continue
-                    filtered.append(e)
-                setattr(self, attr, filtered)
-    return original_browser_stop(self, *args, **kwargs)
-ChromeBrowser.stop = _patched_browser_stop
+try:
+    original_browser_stop = ChromeBrowser.stop
+    def _patched_browser_stop(self, *args, **kwargs):
+        for attr in ['_errors', '_browser_errors', 'errors']:
+            try:
+                error_list = getattr(self, attr)
+                if error_list is not None and isinstance(error_list, list):
+                    filtered = []
+                    for e in error_list:
+                        msg = str(e).lower()
+                        if "owl is running in 'dev' mode" in msg or "resizeobserver" in msg:
+                            continue
+                        filtered.append(e)
+                    setattr(self, attr, filtered)
+            except AttributeError as err:
+                _logger.debug("Error list attribute missing: %s", err)
+        return original_browser_stop(self, *args, **kwargs)
+    ChromeBrowser.stop = _patched_browser_stop
+except AttributeError as err:
+    _logger.debug("ChromeBrowser has no stop method: %s", err)
 
 # 🚨 NATIVE SCREENSHOT RESCUE 🚨
-original_take_screenshot = ChromeBrowser.take_screenshot
-def _patched_take_screenshot(self, *args, **kwargs):
-    try:
-        path = original_take_screenshot(self, *args, **kwargs)
-        if getattr(path, 'result', None):
-            path = path.result(timeout=20.0)
-
-        _logger.error("TRACING: Screenshot generated by Chrome at %s", path)
-
-        host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY")
-        if path and os.path.exists(path) and host_tmp:
-            os.makedirs(host_tmp, exist_ok=True)
-
-            orig_user = os.environ.get("SUDO_USER", "odoo")
-            orig_uid, orig_gid = -1, -1
+try:
+    original_take_screenshot = ChromeBrowser.take_screenshot
+    def _patched_take_screenshot(self, *args, **kwargs):
+        try:
+            path = original_take_screenshot(self, *args, **kwargs)
             try:
-                user_info = pwd.getpwnam(orig_user)
-                orig_uid = user_info.pw_uid
-                orig_gid = user_info.pw_gid
-                if not os.path.exists(host_tmp):
-                    os.chown(host_tmp, orig_uid, orig_gid)
-            except Exception as user_e: # audit-ignore-catch-all
-                _logger.warning("TRACING: Could not resolve SUDO_USER info for chown: %s", repr(user_e))
+                res_func = path.result
+            except AttributeError as err:
+                res_func = None
+                _logger.debug("Screenshot path missing result: %s", err)
+            if res_func:
+                path = res_func(timeout=20.0)
 
-            dst = os.path.join(host_tmp, os.path.basename(path))
-            shutil.copy2(path, dst)
-            try:
-                if orig_uid != -1:
-                    os.chown(dst, orig_uid, orig_gid)
-            except Exception as chown_e: # audit-ignore-catch-all
-                _logger.warning("TRACING: Could not chown screenshot file: %s", repr(chown_e))
+            _logger.error("TRACING: Screenshot generated by Chrome at %s", path)
 
-            _logger.error("TRACING: Successfully moved screenshot to host partition: %s", dst)
-        return path
-    except Exception as ss_e: # audit-ignore-catch-all
-        _logger.warning("TRACING: Native screenshot failed: %s", repr(ss_e))
-ChromeBrowser.take_screenshot = _patched_take_screenshot
+            host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY")
+            if path and os.path.exists(path) and host_tmp:
+                os.makedirs(host_tmp, exist_ok=True)
+
+                orig_user = os.environ.get("SUDO_USER", "odoo")
+                orig_uid, orig_gid = -1, -1
+                try:
+                    user_info = pwd.getpwnam(orig_user)
+                    orig_uid = user_info.pw_uid
+                    orig_gid = user_info.pw_gid
+                    if not os.path.exists(host_tmp):
+                        os.chown(host_tmp, orig_uid, orig_gid)
+                except Exception as user_e: # audit-ignore-catch-all
+                    _logger.warning("TRACING: Could not resolve SUDO_USER info for chown: %s", repr(user_e))
+
+                dst = os.path.join(host_tmp, os.path.basename(path))
+                shutil.copy2(path, dst)
+                try:
+                    if orig_uid != -1:
+                        os.chown(dst, orig_uid, orig_gid)
+                except Exception as chown_e: # audit-ignore-catch-all
+                    _logger.warning("TRACING: Could not chown screenshot file: %s", repr(chown_e))
+
+                _logger.error("TRACING: Successfully moved screenshot to host partition: %s", dst)
+            return path
+        except Exception as ss_e: # audit-ignore-catch-all
+            _logger.warning("TRACING: Native screenshot failed: %s", repr(ss_e))
+    ChromeBrowser.take_screenshot = _patched_take_screenshot
+except AttributeError as err:
+    _logger.debug("ChromeBrowser has no take_screenshot method: %s", err)
 
 class DiagnosticMock(MagicMock):
     def __init__(self, *args, **kwargs):
@@ -137,20 +186,30 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
 
     @classmethod
     def tearDownClass(cls):
-        if getattr(cls, '_active_daemons', None) is not None:
-            for p in cls._active_daemons:
+        try:
+            daemons = cls._active_daemons
+        except AttributeError as err:
+            daemons = None
+            _logger.debug("No active daemons to terminate: %s", err)
+
+        if daemons is not None:
+            for p in daemons:
                 try:
                     p.terminate()
                     p.wait(timeout=2.0)
                 except Exception as e: # audit-ignore-catch-all
                     _logger.warning("Failed to terminate daemon: %s", repr(e))
-            cls._active_daemons.clear()
+            daemons.clear()
         super().tearDownClass()
 
     def start_daemon(self, script_path, args=None, env_vars=None, health_url=None, timeout=600):
         # Verified by [@ANCHOR: test_integration_daemon_testing]
-        if getattr(self.__class__, '_active_daemons', None) is None:
+        try:
+            _ = self.__class__._active_daemons
+        except AttributeError as err:
+            _logger.debug("Initializing active daemons list: %s", err)
             self.__class__._active_daemons = []
+
         daemon_utils = self.env["zero_sudo.daemon.utils"]
         process = daemon_utils.start_daemon_process(script_path, args, env_vars)
         self.__class__._active_daemons.append(process)
@@ -193,16 +252,38 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
     def tearDownClass(cls):
         _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
 
-        if getattr(cls, 'server_thread', None):
-            cls.server_thread.join = lambda *args, **kwargs: None
+        try:
+            thread = cls.server_thread
+        except AttributeError as err:
+            thread = None
+            _logger.debug("Missing server_thread: %s", err)
+        if thread:
+            thread.join = lambda *args, **kwargs: None
 
-        if getattr(cls, 'server', None):
+        try:
+            server_obj = cls.server
+        except AttributeError as err:
+            server_obj = None
+            _logger.debug("Missing server: %s", err)
+
+        if server_obj:
             try:
-                if getattr(cls.server, 'server', None) and getattr(cls.server.server, 'socket', None):
-                    cls.server.server.socket.close()
+                try:
+                    inner_srv = server_obj.server
+                except AttributeError as err:
+                    inner_srv = None
+                    _logger.debug("Missing server.server: %s", err)
+                if inner_srv:
+                    try:
+                        inner_sock = inner_srv.socket
+                    except AttributeError as err:
+                        inner_sock = None
+                        _logger.debug("Missing inner_srv.socket: %s", err)
+                    if inner_sock:
+                        inner_sock.close()
             except Exception as close_e: # audit-ignore-catch-all
                 _logger.warning("TRACING: Ignored Exception closing server socket: %s", repr(close_e))
-            cls.server.stop = lambda *args, **kwargs: None
+            server_obj.stop = lambda *args, **kwargs: None
 
         try:
             super().tearDownClass()
@@ -211,19 +292,35 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             if "socket is already closed" not in str(e) and "WebSocketConnectionClosedException" not in type(e).__name__:
                 _logger.error("TRACING: Native teardown failed or hung: %s", e)
         finally:
-            if getattr(cls, 'browser', None):
-                if getattr(cls.browser, 'chrome_process', None):
+            try:
+                browser = cls.browser
+            except AttributeError as err:
+                browser = None
+                _logger.debug("Missing browser: %s", err)
+
+            if browser:
+                try:
+                    cproc = browser.chrome_process
+                except AttributeError as err:
+                    cproc = None
+                    _logger.debug("Missing chrome_process: %s", err)
+                if cproc:
                     try:
-                        cls.browser.chrome_process.terminate()
-                        cls.browser.chrome_process.wait(timeout=2.0)
+                        cproc.terminate()
+                        cproc.wait(timeout=2.0)
                     except Exception as term_e: # audit-ignore-catch-all
                         _logger.warning("TRACING: Ignored Exception terminating chrome process: %s", repr(term_e))
                     try:
-                        cls.browser.chrome_process.kill()
+                        cproc.kill()
                     except OSError as kill_e:
                         _logger.warning("TRACING: Ignored OSError killing chrome process: %s", repr(kill_e))
-                if getattr(cls.browser, '_websocket_thread', None):
-                    cls.browser._websocket_thread.join = lambda *args, **kwargs: None
+                try:
+                    ws_thread = browser._websocket_thread
+                except AttributeError as err:
+                    ws_thread = None
+                    _logger.debug("Missing _websocket_thread: %s", err)
+                if ws_thread:
+                    ws_thread.join = lambda *args, **kwargs: None
 
             _logger.info("TRACING: Exiting HamsHttpCase.tearDownClass")
 
@@ -237,21 +334,44 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             if "socket is already closed" not in str(e) and "WebSocketConnectionClosedException" not in type(e).__name__ and "BrokenPipeError" not in type(e).__name__:
                 _logger.error("TRACING: HamsHttpCase.tearDown caught exception: %s", e)
         finally:
-            if getattr(self, 'browser', None):
-                if getattr(self.browser, 'chrome_process', None):
+            try:
+                browser = self.browser
+            except AttributeError as err:
+                browser = None
+                _logger.debug("Missing browser: %s", err)
+
+            if browser:
+                try:
+                    cproc = browser.chrome_process
+                except AttributeError as err:
+                    cproc = None
+                    _logger.debug("Missing chrome_process: %s", err)
+                if cproc:
                     try:
-                        self.browser.chrome_process.terminate()
-                        self.browser.chrome_process.wait(timeout=2.0)
+                        cproc.terminate()
+                        cproc.wait(timeout=2.0)
                     except Exception as term_e: # audit-ignore-catch-all
                         _logger.warning("TRACING: Ignored Exception terminating instance chrome process: %s", repr(term_e))
                     try:
-                        self.browser.chrome_process.kill()
+                        cproc.kill()
                     except OSError as kill_e:
                         _logger.warning("TRACING: Ignored OSError killing instance chrome process: %s", repr(kill_e))
-                if getattr(self.browser, '_websocket_thread', None):
-                    self.browser._websocket_thread.join = lambda *args, **kwargs: None
 
-            if not getattr(self.__class__, '_hams_tour_failed', False):
+                try:
+                    ws_thread = browser._websocket_thread
+                except AttributeError as err:
+                    ws_thread = None
+                    _logger.debug("Missing _websocket_thread: %s", err)
+                if ws_thread:
+                    ws_thread.join = lambda *args, **kwargs: None
+
+            try:
+                tour_failed = self.__class__._hams_tour_failed
+            except AttributeError as err:
+                tour_failed = False
+                _logger.debug("Missing _hams_tour_failed: %s", err)
+
+            if not tour_failed:
                 host_tmp = os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
                 for log_file in glob.glob(os.path.join(host_tmp, "v8_hang*.log")):
                     try:
@@ -263,7 +383,12 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     def browser_js(self, *args, **kwargs):
         _logger.info("TRACING: Entering browser_js wrapper.")
-        _apply_cdp_hook(getattr(self, 'browser', None))
+        try:
+            browser = self.browser
+        except AttributeError as err:
+            browser = None
+            _logger.debug("Missing browser: %s", err)
+        _apply_cdp_hook(browser)
         try:
             # The Jules Headless Chrome Watchdog Suppressions
             jules_protections = """
@@ -331,12 +456,21 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 if "socket is already closed" in str(current_exc) or "BrokenPipeError" in type(current_exc).__name__:
                     is_watchdog = True
                     break
-                current_exc = getattr(current_exc, '__context__', None)
-
-            if not is_watchdog and getattr(self, 'browser', None):
                 try:
-                    if getattr(self.browser, 'take_screenshot', None):
-                        self.browser.take_screenshot()
+                    current_exc = current_exc.__context__
+                except AttributeError as err:
+                    current_exc = None
+                    _logger.debug("No __context__ attribute on exception: %s", err)
+
+            if not is_watchdog and browser:
+                try:
+                    try:
+                        take_ss = browser.take_screenshot
+                    except AttributeError as err:
+                        take_ss = None
+                        _logger.debug("take_screenshot attribute not found: %s", err)
+                    if take_ss:
+                        take_ss()
                 except Exception as ss_e: # audit-ignore-catch-all
                     _logger.warning("TRACING: Ignored Exception taking fallback screenshot: %s", repr(ss_e))
 
@@ -348,7 +482,12 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             _logger.info("TRACING: Exiting browser_js wrapper.")
 
     def start_tour(self, *args, **kwargs):
-        _apply_cdp_hook(getattr(self, 'browser', None))
+        try:
+            browser = self.browser
+        except AttributeError as err:
+            browser = None
+            _logger.debug("Missing browser: %s", err)
+        _apply_cdp_hook(browser)
         args_list = list(args)
 
         tour_debug = os.environ.get("HAMS_TOUR_DEBUG")

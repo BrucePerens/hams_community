@@ -48,8 +48,17 @@ class TestAppealsAndViews(RealTransactionCase):
 
     def tearDown(self):
         # Pre-fetch outside the loop to avoid N+1 DB LOCK
-        visitors = self.env["website.visitor"].search([]) if "website.visitor" in self.env else None
-        tracks = self.env["website.track"].search([]) if "website.track" in self.env else None
+        try:
+            visitors = self.env["website.visitor"].search([])
+        except KeyError as err:
+            visitors = None
+            _logger.debug("website.visitor not found: %s", err)
+
+        try:
+            tracks = self.env["website.track"].search([])
+        except KeyError as err:
+            tracks = None
+            _logger.debug("website.track not found: %s", err)
 
         # Explicit resilient cleanup to prevent website_visitor/website_track pollution
         for attempt in range(5):
@@ -57,10 +66,13 @@ class TestAppealsAndViews(RealTransactionCase):
                 with self.env.cr.savepoint():
                     if visitors and visitors.exists(): visitors.unlink()
                     if tracks and tracks.exists(): tracks.unlink()
-                    if getattr(self, 'page', False) and self.page.exists():
-                        self.page.unlink()
-                    if getattr(self, 'user_public', False) and self.user_public.exists():
-                        self.user_public.unlink()
+                    try:
+                        if self.page and self.page.exists():
+                            self.page.unlink()
+                        if self.user_public and self.user_public.exists():
+                            self.user_public.unlink()
+                    except AttributeError as err:
+                        _logger.debug("AttributeError in cleanup: %s", err)
                 break
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Resilient cleanup encountered exception: %s", e)

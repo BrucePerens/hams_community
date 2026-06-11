@@ -74,9 +74,9 @@ class UserWebsitesController(http.Controller):
         if not profile_user and not profile_group:
             return request.not_found()
 
-        if profile_user and getattr(profile_user, 'is_suspended_from_websites', False):
+        if profile_user and profile_user.is_suspended_from_websites:
             return request.not_found()
-        if profile_group and getattr(profile_group, 'is_suspended_from_websites', False):
+        if profile_group and profile_group.is_suspended_from_websites:
             return request.not_found()
 
         main_object = profile_user or profile_group
@@ -130,9 +130,9 @@ class UserWebsitesController(http.Controller):
         if not profile_user and not profile_group:
             return request.not_found()
 
-        if profile_user and getattr(profile_user, 'is_suspended_from_websites', False):
+        if profile_user and profile_user.is_suspended_from_websites:
             return request.not_found()
-        if profile_group and getattr(profile_group, 'is_suspended_from_websites', False):
+        if profile_group and profile_group.is_suspended_from_websites:
             return request.not_found()
 
         # Check if the page actually exists; if it does, let core ir.http route handle it
@@ -192,12 +192,16 @@ class UserWebsitesController(http.Controller):
             </t>
         </t>"""
 
+        try:
+            req_website_id = request.website.id if request.website else False
+        except AttributeError:
+            req_website_id = False
         create_vals = {
             "url": f"/{website_slug}/home",
             "name": f"{entity_name} Home",
             "type": "qweb",
             "arch_base": arch_base,
-            "website_id": request.website.id if getattr(request, 'website', False) else False,
+            "website_id": req_website_id,
             "website_published": True,
         }
         if profile_user:
@@ -227,9 +231,13 @@ class UserWebsitesController(http.Controller):
 
         entity_name = profile_user.name if profile_user else profile_group.name
 
+        try:
+            req_website_id = request.website.id if request.website else False
+        except AttributeError:
+            req_website_id = False
         create_vals = {
             "name": f"{entity_name}'s Blog",
-            "website_id": request.website.id if getattr(request, 'website', False) else False,
+            "website_id": req_website_id,
         }
         if profile_user:
             create_vals["owner_user_id"] = profile_user.id
@@ -246,14 +254,18 @@ class UserWebsitesController(http.Controller):
             # We explicitly use request.env here instead of env_svc to ensure
             # the current user has the correct portal/public access rights to view the article,
             # avoiding artificial AccessErrors from the backend service account.
-            if 'manual.article' in request.env:
+            try:
                 article = request.env['manual.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
                 if article and article.website_url:
                     return request.redirect(article.website_url)
-            if 'knowledge.article' in request.env:
+            except KeyError as e:
+                _logger.debug("manual.article not found: %s", e)
+            try:
                 article = request.env['knowledge.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
                 if article and article.website_url:
                     return request.redirect(article.website_url)
+            except KeyError as e:
+                _logger.debug("knowledge.article not found: %s", e)
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("Failed to redirect to documentation article: %s", e)
 

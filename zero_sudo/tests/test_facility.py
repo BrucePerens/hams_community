@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+import logging
 from odoo.tests.common import tagged
 from .real_transaction import RealTransactionCase
 
+_logger = logging.getLogger(__name__)
 
 @tagged("post_install", "-at_install")
 class TestRealTransactionFacility(RealTransactionCase):
@@ -64,9 +66,11 @@ class TestRealTransactionFacility(RealTransactionCase):
         # Temporarily mock the tearDown leak detector to ensure it would raise
         leaks = []
         noisy_tables = set()
-        if 'zero_sudo.noisy_table' in self.env:
+        try:
             noisy_tables_records = self.env['zero_sudo.noisy_table'].search([])
             noisy_tables = {record.name for record in noisy_tables_records}
+        except KeyError as err:
+            _logger.debug("zero_sudo.noisy_table not found: %s", err)
 
         self.cr.execute("SELECT count(1) FROM ir_module_category")
         final_count = self.cr.fetchone()[0]
@@ -180,6 +184,11 @@ class TestRealTransactionFacility(RealTransactionCase):
     @classmethod
     def tearDownClass(cls):
         # Stop integration daemon if active
-        if getattr(cls, '_integration_daemon_process', False):
-            cls._integration_daemon_process.terminate()
+        try:
+            daemon_process = cls._integration_daemon_process
+        except AttributeError as err:
+            daemon_process = None
+            _logger.debug("No daemon process to terminate: %s", err)
+        if daemon_process:
+            daemon_process.terminate()
         super().tearDownClass()

@@ -372,20 +372,22 @@ class BackupConfig(models.Model):
         # [@ANCHOR: backup_management:backup_pager_synergy]
         # Verified by [@ANCHOR: backup_management:test_backup_cron]
         # Verified by [@ANCHOR: test_trigger_kopia_and_pgbackrest]
-        if "pager.incident" in self.env:
-            try:
-                pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "pager_duty.user_pager_service_internal"
-                )
-                self.env["pager.incident"].with_user(pager_uid).report_incident(
-                    {
-                        "source": f"Backup Manager: {self.name}",
-                        "severity": "critical",
-                        "description": message,
-                    }
-                )
-            except (UserError, AccessError, ValueError) as e:
-                logging.getLogger(__name__).warning("An error occurred: %s", e)
+        try:
+            Incident = self.env["pager.incident"]
+            pager_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
+                "pager_duty.user_pager_service_internal"
+            )
+            Incident.with_user(pager_uid).report_incident(
+                {
+                    "source": f"Backup Manager: {self.name}",
+                    "severity": "critical",
+                    "description": message,
+                }
+            )
+        except KeyError as e:
+            logging.getLogger(__name__).debug("PagerDuty not installed: %s", e)
+        except (UserError, AccessError, ValueError) as e:
+            logging.getLogger(__name__).warning("An error occurred: %s", e)
 
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "backup_management.user_backup_service_internal"

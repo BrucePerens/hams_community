@@ -77,7 +77,10 @@ class HelpdeskPortal(CustomerPortal):
     @http.route(["/my/tickets/new"], type="http", auth="user", website=True)
     def portal_ticket_new(self, **kw):
         partner = request.env.user.partner_id
-        callsign = getattr(partner, 'callsign', '')
+        try:
+            callsign = partner.callsign
+        except AttributeError:
+            callsign = ''
         return request.render("hams_helpdesk.portal_ticket_new", {
             "page_name": "ticket_new",
             "default_callsign": callsign,

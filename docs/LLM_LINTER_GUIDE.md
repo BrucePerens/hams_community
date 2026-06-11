@@ -120,7 +120,10 @@ You MUST declare dependencies in `__manifest__.py` and let the system fail-fast.
 * **Hallucinatory sys.path Manipulation:** You MUST NOT use `sys.path.append` or `sys.path.insert` to resolve sibling imports using `..` or to redundantly append the script directory (using `__file__`).
 Python naturally resolves local imports. Isolated background daemons are the only permitted exception.
 * **The AI Laziness Catch-All Trap:** Using a bare `except:` or `except Exception:` block is strictly forbidden and is flagged as AI laziness. You MUST target specific exceptions (e.g., `KeyError`, `ValueError`, `urllib.error.URLError`).
-* **The AI Laziness hasattr Trap:** The use of `hasattr()` is strictly forbidden. AI models frequently use it to mask type uncertainties or architectural flaws. Use explicit type checking or strict contracts instead.
+* **The AI Laziness `hasattr`/`getattr` Trap:** The use of `hasattr()` and 3-argument `getattr(..., default)` are strictly forbidden. AI models frequently use them to mask type uncertainties or architectural flaws. Access explicit fields and let missing schema contracts fail loudly.
+* **The Context Manager Silence:** `contextlib.suppress` is strictly banned. Do not use it to silence exceptions; use a dedicated `except` block with an explicit logging call.
+* **Ghost Privilege Cheat:** Calling `.with_user(1)` or `.with_user(SUPERUSER_ID)` on recordsets is tracked and blocked as an absolute Zero-Sudo violation. Query for designated Service Accounts instead.
+* **The Soft-Dependency Trap:** The use of `'model.name' in self.env` is physically blocked. You MUST explicitly declare external dependencies in the `depends` list of `__manifest__.py`.
 * **Catch-All Exception Bypass:** If you are writing a top-level daemon loop or external RPC boundary where an operation must continue past failure, you MUST append the `# audit-ignore-catch-all` bypass tag to the except line. Furthermore, even with this bypass, the block MUST contain a `logging` method call (e.g. `_logger.exception(...)`) to prevent silently swallowed tracebacks.
 </python_standards>
 

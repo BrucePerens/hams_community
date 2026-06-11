@@ -21,7 +21,12 @@ _logger = logging.getLogger(__name__)
 # the resulting thread-locking or savepoint-bypass will throw specific psycopg2 errors.
 # We catch these and emit a highly visible AI/Developer hint to instantly halt debugging.
 
-if getattr(odoo.sql_db, 'TestCursor', False):
+try:
+    test_cursor_cls = odoo.sql_db.TestCursor
+except AttributeError:
+    test_cursor_cls = None
+
+if test_cursor_cls:
     _original_test_cursor_execute = odoo.sql_db.TestCursor.execute
 
     def _monitored_test_execute(self, query, params=None):
@@ -31,7 +36,11 @@ if getattr(odoo.sql_db, 'TestCursor', False):
             # 40001: SerializationFailure (Concurrent Update Deadlock)
             # 55P03: LockNotAvailable (Row-level lock held by another thread)
             # 23505: UniqueViolation (Often happens when raw SQL bypasses the savepoint)
-            if getattr(e, 'pgcode', None) in ('40001', '55P03', '23505'):
+            try:
+                pgcode = e.pgcode
+            except AttributeError:
+                pgcode = None
+            if pgcode in ('40001', '55P03', '23505'):
                 hint = (
                     "\n" + "=" * 80 + "\n"
                     "🚨 [FRAMEWORK HINT] TRANSACTION IMPEDANCE DETECTED 🚨\n"

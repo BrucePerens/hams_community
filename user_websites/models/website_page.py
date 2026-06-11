@@ -53,7 +53,16 @@ class WebsitePage(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" in self.env and not getattr(self.env.registry, "test_cr", False):
+        try:
+            purge_queue = self.env["cloudflare.purge.queue"]
+            try:
+                is_test = self.env.registry.test_cr
+            except AttributeError:
+                is_test = False
+        except KeyError:
+            purge_queue = False
+            is_test = False
+        if purge_queue and not is_test:
             # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
             self.mapped("owner_user_id.website_slug")
             self.mapped("user_websites_group_id.website_slug")
@@ -238,9 +247,9 @@ class WebsitePage(models.Model):
             limit=1,
         )
         if page:
-            if page.owner_user_id and getattr(page.owner_user_id, 'is_suspended_from_websites', False):
+            if page.owner_user_id and page.owner_user_id.is_suspended_from_websites:
                 return False
-            if page.user_websites_group_id and getattr(page.user_websites_group_id, 'is_suspended_from_websites', False):
+            if page.user_websites_group_id and page.user_websites_group_id.is_suspended_from_websites:
                 return False
             return page.id
         return False
@@ -658,10 +667,18 @@ class WebsitePage(models.Model):
                         del_pipe.decrby(key, int(val))
                 del_pipe.execute()
 
-                if not getattr(self.env.registry, "test_cr", False):
+                try:
+                    is_test = self.env.registry.test_cr
+                except AttributeError:
+                    is_test = False
+                if not is_test:
                     self.env.cr.commit()
             except Exception: # audit-ignore-catch-all
-                if not getattr(self.env.registry, "test_cr", False):
+                try:
+                    is_test = self.env.registry.test_cr
+                except AttributeError:
+                    is_test = False
+                if not is_test:
                     self.env.cr.rollback()
                 _logger.exception("Error updating PostgreSQL view counts")
 

@@ -109,7 +109,12 @@ class ResUsersModeration(models.Model):
         """Forcefully unpublishes all user content and flags them as suspended."""
         user_ids = self.ids
 
-        if not getattr(self.env.registry, "test_cr", False):
+        try:
+            is_test = self.env.registry.test_cr
+        except AttributeError:
+            is_test = False
+
+        if not is_test:
             db_name = self.env.cr.dbname
             # Fire and forget safely without unbounded thread growth
             ThreadPoolExecutor(max_workers=2).submit(

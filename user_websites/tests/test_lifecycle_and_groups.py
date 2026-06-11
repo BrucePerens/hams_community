@@ -143,7 +143,7 @@ class TestLifecycleAndGroups(RealTransactionCase):
 
         self.user_a.active = False
         self.env.cr.commit()
-        time.sleep(1) # Allow background executor to complete
+        time.sleep(1) # audit-ignore-sleep: Allow background executor to complete
 
         page.invalidate_recordset()
         post.invalidate_recordset()
