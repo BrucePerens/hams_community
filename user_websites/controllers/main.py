@@ -189,7 +189,7 @@ class UserWebsitesController(http.Controller):
             </t>
         </t>"""
 
-        req_website_id = request.website.id if request.website else False
+        req_website_id = request.website.id
 
         create_vals = {
             "url": f"/{website_slug}/home",
@@ -226,7 +226,7 @@ class UserWebsitesController(http.Controller):
 
         entity_name = profile_user.name if profile_user else profile_group.name
 
-        req_website_id = request.website.id if request.website else False
+        req_website_id = request.website.id
 
         create_vals = {
             "name": f"{entity_name}'s Blog",
