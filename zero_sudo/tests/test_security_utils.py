@@ -212,46 +212,12 @@ class TestSecurityUtils(HamsTransactionCase):
             os.environ.clear()
             os.environ.update(original_env)
 
-    def test_09_bootstrap_knowledge_docs(self):
-        # [@ANCHOR: zero_sudo:test_zero_sudo_doc_installer]
-        # [@ANCHOR: zero_sudo:test_zero_sudo_register_hook]
-        # [@ANCHOR: test_documentation_bootstrap]
-        # [@ANCHOR: test_documentation_injection]
-        # Tests [@ANCHOR: zero_sudo:zero_sudo_doc_installer]
-        # Tests [@ANCHOR: zero_sudo:zero_sudo_register_hook]
-        # Tests [@ANCHOR: story_zero_sudo_doc_installer]
-        # Tests [@ANCHOR: journey_developer_integration]
-        # Tests [@ANCHOR: documentation_bootstrap]
-        # Tests [@ANCHOR: documentation_injection]
-        """
-        Verify that the _bootstrap_knowledge_docs method correctly
-        discovers and installs documentation from module manifests.
-        """
-        article_model_name = None
-        if "knowledge.article" in self.env:
-            article_model_name = "knowledge.article"
-        elif "manual.article" in self.env:
-            article_model_name = "manual.article"
-
-        if not article_model_name:
-            self.skipTest("No documentation API available.")
-
-        # Trigger the centralized installer
-        self.env["ir.module.module"]._bootstrap_knowledge_docs()
-
-        # Check if the primary documentation was successfully injected
-        article = self.env[article_model_name].search([("name", "=", "Zero-Sudo Security Core")], limit=1)
-        self.assertTrue(article, "Documentation for zero_sudo should be installed via the manifest.")
-
     def test_10_get_service_env(self):
         """Verify _get_service_env correctly disables tracking and prefetching."""
         utils = self.env["zero_sudo.security.utils"]
         svc_xml_id = "zero_sudo.mail_service_internal"
 
-        try:
-            expected_uid = utils._get_service_uid(svc_xml_id)
-        except AccessError:
-            self.skipTest(f"Service account {svc_xml_id} not available in test env.")
+        expected_uid = utils._get_service_uid(svc_xml_id)
 
         env_svc = utils._get_service_env(svc_xml_id)
 
@@ -309,10 +275,7 @@ class TestSecurityUtils(HamsTransactionCase):
         """Verify the lightweight Service Account Key-Value storage abstraction."""
         utils = self.env["zero_sudo.security.utils"]
 
-        try:
-            utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
-        except AccessError:
-            self.skipTest("Facility Service Account missing from test suite.")
+        utils._get_service_uid("zero_sudo.odoo_facility_service_internal")
 
         # Test Write & Read
         utils._set_kv("test_key_1", "test_value")

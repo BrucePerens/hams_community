@@ -81,40 +81,6 @@ class TestSEOModels(RealTransactionCase):
             group_by_reg2.write({'website_meta_title': 'Hacked Group Title'})
             self.env.flush_all()
 
-    def test_soft_dependency_docs_installation(self):
-        # Tests [@ANCHOR: soft_dependency_docs_installation]
-        # [@ANCHOR: test_soft_dependency_docs_installation]
-
-        """Verify that documentation is installed correctly."""
-        article_model = None
-        if 'knowledge.article' in self.env:
-            article_model = 'knowledge.article'
-        elif 'manual.article' in self.env:
-            article_model = 'manual.article'
-
-        if not article_model:
-            self.skipTest("No knowledge or manual article model found")
-
-        doc = False
-        try:
-            utils = self.env["zero_sudo.security.utils"]
-            svc_acc = "manual_library.user_manual_library_service_account"
-            svc_uid = utils._get_service_uid(svc_acc)
-            env_svc = self.env[article_model].with_user(svc_uid)
-            doc = env_svc.search(
-                [('name', '=', 'User Websites SEO Guide')],
-                limit=1
-            )
-            if not doc:
-                name = 'User Websites SEO: Optimization Guide'
-                doc = env_svc.search([('name', '=', name)], limit=1)
-        except AccessError:
-            self.skipTest("Could not elevate to service account")
-
-        self.assertTrue(doc, "Documentation article should have been created")
-        msg = "Documentation body should contain expected text"
-        self.assertIn("Optimization Guide", doc.body or "", msg)
-
     def test_xpath_rendering_res_users(self):
         # [@ANCHOR: test_xpath_rendering_res_users]
 

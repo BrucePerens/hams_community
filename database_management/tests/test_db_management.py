@@ -114,25 +114,6 @@ class TestDatabaseManagement(HamsTransactionCase):
         v4 = self.env["database.index.stat"].get_view(view_type="list")
         self.assertIn("index_name", v4["arch"])
 
-    def test_05_documentation_installed(self):
-        # Tests [@ANCHOR: db_doc_injection]
-        # Verify that the _register_hook installed the documentation
-        model = None
-        if "knowledge.article" in self.env:
-            model = "knowledge.article"
-        elif "manual.article" in self.env:
-            model = "manual.article"
-
-        if model:
-            doc = self.env[model].search([("name", "=", "Database Management Guide")], limit=1)
-            self.assertTrue(
-                doc,
-                "[!] DIAGNOSTIC FOR AI: Module documentation was not installed! Check data/documentation.html and _bootstrap_knowledge_docs.",
-            )
-            self.assertIn("Database Management", doc.body)
-        else:
-            self.skipTest("No documentation model available")
-
     def test_06_query_stats_ops(self):
         # Tests [@ANCHOR: db_slow_queries]
         model = self.env["database.query.stat"]

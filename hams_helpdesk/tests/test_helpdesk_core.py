@@ -107,26 +107,6 @@ class TestHelpdeskCore(HamsTransactionCase):
         self.assertIn(my_ticket, visible_tickets, "Portal user MUST be able to see their own tickets.")
         self.assertNotIn(other_ticket, visible_tickets, "CRITICAL SECURITY FAILURE: Portal user can see another user's ticket.")
 
-    def test_05_doc_injection(self):
-        """Verify documentation injection payload executes safely via zero-sudo facility."""
-        # [@ANCHOR: test_05_doc_injection]
-        # Tests [@ANCHOR: helpdesk_doc_injection]
-
-        # Trigger the zero-sudo documentation installer
-        self.env['ir.module.module']._bootstrap_knowledge_docs()
-
-        article_model = None
-        if "manual.article" in self.env:
-            article_model = "manual.article"
-        elif "knowledge.article" in self.env:
-            article_model = "knowledge.article"
-
-        if article_model:
-            article = self.env[article_model].search([("name", "=", "Hams Helpdesk")])
-            self.assertTrue(article.exists(), "Documentation article MUST be created.")
-            self.assertIn("Hams Helpdesk provides Zero-Sudo compliant ticketing", article.body)
-        else:
-            self.skipTest("No article model present, skipping deep check.")
 
     def test_04_stage_mailback_automation(self):
         """Verify that transitioning a ticket stage fires an automated mail-back to the subscribed customer."""

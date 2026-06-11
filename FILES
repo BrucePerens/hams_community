@@ -85,7 +85,6 @@ caching/static/src/js/register.js
 caching/static/src/sw/sw.js
 caching/static/tests/tours/caching_tour.js
 caching/tests/__init__.py
-caching/tests/test_documentation.py
 caching/tests/test_tour.py
 caching/tests/test_service_worker.py
 caching/tests/test_sw_fetch.py

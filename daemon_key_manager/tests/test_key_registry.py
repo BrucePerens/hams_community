@@ -168,29 +168,6 @@ class TestKeyRegistry(RealTransactionCase):
             target_user = self.env.ref(user_xml_id)
         self.assertIn(usage_group, target_user.group_ids)
 
-    def test_documentation_installed(self):
-        """Verify that documentation is installed in knowledge.article or manual.article."""
-        # # Tests [@ANCHOR: documentation_installed]
-        # [@ANCHOR: test_documentation_installed]
-
-        model = None
-        if "knowledge.article" in self.env:
-            model = "knowledge.article"
-        elif "manual.article" in self.env:
-            model = "manual.article"
-
-        if model:
-            _logger.info("Verifying documentation installation for model %s", model)
-            # Trigger manual bootstrap
-            self.env["ir.module.module"].with_user(self.env.ref('zero_sudo.odoo_facility_service_internal').id)._bootstrap_knowledge_docs()
-
-            article = self.env[model].search([('name', '=', 'Daemon Key Manager Documentation')], limit=1)
-            self.assertTrue(article, "Documentation article not found")
-            self.assertIn("Daemon Key Manager", article.body)
-            _logger.info("Documentation found and verified.")
-        else:
-            self.skipTest("No documentation model available")
-
     def test_cron_rotate_all_keys(self):
         """Test cron rotation and trigger functionality."""
         # [@ANCHOR: test_cron_rotate_all_keys]

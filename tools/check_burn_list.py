@@ -235,6 +235,11 @@ GENERAL_ERROR_RULES = [
         re.compile(r"\[[^\]\n]+\]\(https?://[^)\n]+\)"),
         "CRITICAL MARKDOWN BLEED: Found a Markdown-formatted URL `[text](url)` in a non-Markdown file. The Web UI occasionally corrupts raw URLs into markdown links. You MUST output URLs as raw strings.",
     ),
+    (
+        r"test_.*\.py$",
+        re.compile(r"(?:@unittest\.skip\b|@skip\b|@skipIf\b|@skipUnless\b|\bskipTest\s*\()"),
+        "CRITICAL AI LAZINESS: The use of skipTest or @skip decorators is strictly forbidden. You must repair the test instead of skipping it.",
+    ),
 ]
 
 ODOO_ERROR_RULES = [
