@@ -7,6 +7,7 @@ _logger = logging.getLogger(__name__)
 
 @tagged("post_install", "-at_install")
 class TestRealTransactionFacility(RealTransactionCase):
+    _integration_daemon_process = None
     # Tests [@ANCHOR: cursor_hijacking]
     # Tests [@ANCHOR: leak_snapshotting]
     # Tests [@ANCHOR: orm_instrumentation]
@@ -66,11 +67,8 @@ class TestRealTransactionFacility(RealTransactionCase):
         # Temporarily mock the tearDown leak detector to ensure it would raise
         leaks = []
         noisy_tables = set()
-        try:
-            noisy_tables_records = self.env['zero_sudo.noisy_table'].search([])
-            noisy_tables = {record.name for record in noisy_tables_records}
-        except KeyError as err:
-            _logger.debug("zero_sudo.noisy_table not found: %s", err)
+        noisy_tables_records = self.env['zero_sudo.noisy_table'].search([])
+        noisy_tables = {record.name for record in noisy_tables_records}
 
         self.cr.execute("SELECT count(1) FROM ir_module_category")
         final_count = self.cr.fetchone()[0]
@@ -184,11 +182,6 @@ class TestRealTransactionFacility(RealTransactionCase):
     @classmethod
     def tearDownClass(cls):
         # Stop integration daemon if active
-        try:
-            daemon_process = cls._integration_daemon_process
-        except AttributeError as err:
-            daemon_process = None
-            _logger.debug("No daemon process to terminate: %s", err)
-        if daemon_process:
-            daemon_process.terminate()
+        if cls._integration_daemon_process:
+            cls._integration_daemon_process.terminate()
         super().tearDownClass()

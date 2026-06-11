@@ -106,8 +106,8 @@ class DatabaseTableStat(models.Model):
             [("dead_percent", ">", 20.0), ("dead_tuples", ">", 10000)], limit=1000
         )
         if high_bloat:
+            # PagerDuty is explicitly declared in __manifest__.py dependencies
             try:
-                _ = self.env["pager.incident"]
                 env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "pager_duty.user_pager_service_internal"
                 )
@@ -121,9 +121,6 @@ class DatabaseTableStat(models.Model):
                 )
             except (AccessError, UserError) as e:
                 _logger.warning("Permission or configuration error reporting bloat incident: %s", e)
-            except Exception:  # audit-ignore-catch-all
-                # Catch-all is intentional here to ensure cron completion
-                # even if PagerDuty integration is broken.
                 _logger.exception("Unexpected error reporting bloat incident to PagerDuty")
 
 

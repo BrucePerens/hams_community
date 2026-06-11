@@ -13,6 +13,8 @@ class TestAppealsAndViews(RealTransactionCase):
 
     def setUp(self):
         super(TestAppealsAndViews, self).setUp()
+        self.user_public = None
+        self.page = None
 
         self.user_public = self.env["res.users"].create(
             {
@@ -48,17 +50,8 @@ class TestAppealsAndViews(RealTransactionCase):
 
     def tearDown(self):
         # Pre-fetch outside the loop to avoid N+1 DB LOCK
-        try:
-            visitors = self.env["website.visitor"].search([])
-        except KeyError as err:
-            visitors = None
-            _logger.debug("website.visitor not found: %s", err)
-
-        try:
-            tracks = self.env["website.track"].search([])
-        except KeyError as err:
-            tracks = None
-            _logger.debug("website.track not found: %s", err)
+        visitors = self.env["website.visitor"].search([])
+        tracks = self.env["website.track"].search([])
 
         # Explicit resilient cleanup to prevent website_visitor/website_track pollution
         for attempt in range(5):
@@ -66,13 +59,11 @@ class TestAppealsAndViews(RealTransactionCase):
                 with self.env.cr.savepoint():
                     if visitors and visitors.exists(): visitors.unlink()
                     if tracks and tracks.exists(): tracks.unlink()
-                    try:
-                        if self.page and self.page.exists():
-                            self.page.unlink()
-                        if self.user_public and self.user_public.exists():
-                            self.user_public.unlink()
-                    except AttributeError as err:
-                        _logger.debug("AttributeError in cleanup: %s", err)
+
+                    if self.page and self.page.exists():
+                        self.page.unlink()
+                    if self.user_public and self.user_public.exists():
+                        self.user_public.unlink()
                 break
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Resilient cleanup encountered exception: %s", e)

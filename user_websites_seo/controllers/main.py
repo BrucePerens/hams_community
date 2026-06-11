@@ -43,10 +43,7 @@ class UserWebsitesSEOController(UserWebsitesController):
 
         # Intercept and modify the rendering dictionary
         if isinstance(response, Response):
-            try:
-                qcontext = response.qcontext
-            except AttributeError:
-                qcontext = None
+            qcontext = response.qcontext
             if qcontext is None:
                 return response
 

@@ -43,32 +43,11 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_get_service_uid_sql_resolve]
         # Verified by [@ANCHOR: test_get_service_uid_sql_verify]
         # Verified by [@ANCHOR: test_god_mode_block_sql]
-        try:
-            # We use a sub-transaction (SAVEPOINT) to allow catching the DB-level RAISE EXCEPTION
-            # without poisoning the entire transaction, especially important for test stability.
-            with self.env.cr.savepoint():
-                self.env.cr.execute("SELECT zero_sudo_get_service_uid(%s)", (xml_id,))
-                return self.env.cr.fetchone()[0]
-        except Exception as e: # audit-ignore-catch-all
-            # Postgres procedure raises an exception on security failure.
-            # We catch it and re-raise as a proper Odoo AccessError if it's a security alert.
-            if "Security Alert" in str(e):
-                _logger.warning("Zero-Sudo Security Exception for %s: %s", xml_id, e)
-
-                # Log the god-mode trip if applicable
-                if "violates the Zero-Sudo mandate" in str(e):
-                    try:
-                        facility_env = self._get_service_env("zero_sudo.odoo_facility_service_internal")
-                        facility_env['zero_sudo.security.log'].create({
-                            'user_id': self.env.user.id,
-                            'reason': 'god_mode_trip',
-                            'login': xml_id,
-                        })
-                    except Exception as log_e: # audit-ignore-catch-all
-                        _logger.warning("Failed to log god-mode trip: %s", log_e) # Prevent recursion or secondary failure during logging
-
-                raise AccessError(str(e))
-            raise e
+        # FAIL FAST MANDATE: We execute the procedure natively.
+        # If the service account is missing, the PostgreSQL RAISE EXCEPTION
+        # will immediately crash the execution, exposing broken deployments.
+        self.env.cr.execute("SELECT zero_sudo_get_service_uid(%s)", (xml_id,))
+        return self.env.cr.fetchone()[0]
 
     @api.model
     def _get_service_env(self, xml_id):
@@ -90,14 +69,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         if path:
             return path
 
-        try:
-            _ = self.env["binary.manifest"]
-            has_manifest = True
-        except KeyError as e:
-            has_manifest = False
-            _logger.debug("binary.manifest not found: %s", e)
-
-        if has_manifest and svc_xml_id:
+        if svc_xml_id:
             env_svc = self._get_service_env(svc_xml_id)
             return env_svc["binary.manifest"].ensure_executable(cmd_name)
 
@@ -266,18 +238,14 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         Eliminates Python-side existence checks and round-trips.
         """
         self.env.cr.execute("SELECT zero_sudo_set_kv(%s, %s)", (key, value))
+
         # Ensure changes are visible to other transactions/round-trips
-        try:
-            is_test = self.env.registry.test_cr
-        except AttributeError:
-            is_test = False
+        is_test = tools.config.get('test_enable', False)
         if not is_test:
             self.env.cr.commit()
+
         # Direct SQL bypasses the ORM cache. We must invalidate it.
-        try:
-            self.env["zero_sudo.kv"].invalidate_recordset()
-        except KeyError as e:
-            _logger.debug("zero_sudo.kv not found: %s", e)
+        self.env["zero_sudo.kv"].invalidate_recordset()
 
     @api.model
     @tools.ormcache()

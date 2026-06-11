@@ -151,16 +151,14 @@ class TestPagerIncidentStandard(HamsTransactionCase):
 
 @tagged("integration", "post_install", "-at_install")
 class TestPagerIncidentIntegration(HamsTransactionCase):
+    _daemons_started = False
+
     def setUp(self):
         super(TestPagerIncidentIntegration, self).setUp()
         self.incident_model = self.env["pager.incident"]
         self.service_user = self.env.ref("pager_duty.user_pager_service_internal")
 
-        try:
-            started = self.__class__._daemons_started
-        except AttributeError:
-            started = False
-        if not started:
+        if not self.__class__._daemons_started:
             base_dir = os.path.join(os.path.dirname(__file__), "..", "daemon")
             daemons = ["pager_smart_spooler.py", "pager_log_analyzer.py", "pager_synthetic_spooler.py"]
             for d in daemons:

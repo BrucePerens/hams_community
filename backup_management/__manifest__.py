@@ -14,6 +14,7 @@
         "binary_downloader",
         "pager_duty",
         "website",
+        "manual_library",
     ],
     "external_dependencies": {
         "python": [],

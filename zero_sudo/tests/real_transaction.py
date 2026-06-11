@@ -8,6 +8,7 @@ import psycopg2
 from psycopg2 import sql
 from odoo.tools import mute_logger, _
 from odoo.addons.zero_sudo.tests.common import SafePatchMixin
+import unittest.mock
 
 _logger = logging.getLogger(__name__)
 
@@ -40,12 +41,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
         def _real_cursor_factory(readonly=False):
             return odoo.sql_db.db_connect(self.registry.db_name).cursor()
 
-        try:
-            has_side_effect = bool(self.registry.cursor.side_effect)
-        except AttributeError:
-            has_side_effect = False
-
-        if has_side_effect:
+        if isinstance(self.registry.cursor, unittest.mock.Mock):
             _original_cursor = self.registry.cursor
             _original_side_effect = self.registry.cursor.side_effect
             self.registry.cursor.side_effect = _real_cursor_factory
@@ -114,26 +110,20 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
                 pending_deletes = False
                 for model_name, ids in reversed(list(self._tracked_records.items())):
                     if ids:
+                        model_env = self.env[model_name]
                         try:
-                            model_env = self.env[model_name]
-                        except KeyError as err:
-                            model_env = None
-                            _logger.debug("Model %s not found for auto cleanup: %s", model_name, err)
-
-                        if model_env is not None:
-                            try:
-                                with self.env.cr.savepoint(), mute_logger("odoo.sql_db"), mute_logger("odoo.models.unlink"):
-                                    records = model_env.with_context(active_test=False).browse(list(ids)).exists()
-                                    if records:
-                                        records.sudo().unlink()  # burn-ignore-sudo: Administrative test environment cleanup
-                                self._tracked_records[model_name] = set()
-                            except (psycopg2.IntegrityError, psycopg2.OperationalError, odoo.exceptions.AccessError, odoo.exceptions.UserError, odoo.exceptions.RedirectWarning, odoo.exceptions.ValidationError) as e:
-                                pending_deletes = True
-                                if attempt == 4:
-                                    _logger.info("Auto-cleanup failed for %s %s after 5 attempts: %s", model_name, ids, e)
-                            except Exception as e: # audit-ignore-catch-all
-                                pending_deletes = True
-                                _logger.error("Unexpected error during auto-cleanup of %s %s: %s", model_name, ids, e, exc_info=True)
+                            with self.env.cr.savepoint(), mute_logger("odoo.sql_db"), mute_logger("odoo.models.unlink"):
+                                records = model_env.with_context(active_test=False).browse(list(ids)).exists()
+                                if records:
+                                    records.sudo().unlink()  # burn-ignore-sudo: Administrative test environment cleanup
+                            self._tracked_records[model_name] = set()
+                        except (psycopg2.IntegrityError, psycopg2.OperationalError, odoo.exceptions.AccessError, odoo.exceptions.UserError, odoo.exceptions.RedirectWarning, odoo.exceptions.ValidationError) as e:
+                            pending_deletes = True
+                            if attempt == 4:
+                                _logger.info("Auto-cleanup failed for %s %s after 5 attempts: %s", model_name, ids, e)
+                        except Exception as e: # audit-ignore-catch-all
+                            pending_deletes = True
+                            _logger.error("Unexpected error during auto-cleanup of %s %s: %s", model_name, ids, e, exc_info=True)
                 if not pending_deletes:
                     break
 
@@ -147,8 +137,6 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
             try:
                 noisy_records = self.env["zero_sudo.noisy_table"].search([('active', '=', True)], limit=1000)
                 noisy_tables = {r.name for r in noisy_records}
-            except KeyError as e:
-                _logger.debug("zero_sudo.noisy_table not found: %s", e)
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Could not fetch noisy tables during teardown: %s", e)
 

@@ -240,6 +240,31 @@ GENERAL_ERROR_RULES = [
         re.compile(r"(?:@unittest\.skip\b|@skip\b|@skipIf\b|@skipUnless\b|\bskipTest\s*\()"),
         "CRITICAL AI LAZINESS: The use of skipTest or @skip decorators is strictly forbidden. You must repair the test instead of skipping it.",
     ),
+    (
+        r"\.py$",
+        re.compile(r"tools\.mute_logger\(['\"]odoo\.sql_db['\"]\)", re.IGNORECASE),
+        "CRITICAL AI LAZINESS: Muting odoo.sql_db is strictly forbidden. It hides critical PostgreSQL RAISE EXCEPTION tracebacks from the test runner. Fail fast.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"except\s+AttributeError\b"),
+        "CRITICAL AI LAZINESS: Catch-all AttributeError is forbidden. Let missing dependencies or broken schema contracts fail loudly.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"except\s+KeyError\b"),
+        "CRITICAL AI LAZINESS: Catch-all KeyError is forbidden. Let missing models in self.env fail fast.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"in\s+dir\("),
+        "CRITICAL AI LAZINESS: 'in dir()' is forbidden. It hides values that should be present. Fix the architecture.",
+    ),
+    (
+        r"\.py$",
+        re.compile(r"registry\.models"),
+        "CRITICAL AI LAZINESS: Checking 'registry.models' to avoid soft-dependency failures is forbidden. Declare your dependencies.",
+    ),
 ]
 
 ODOO_ERROR_RULES = [

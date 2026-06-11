@@ -18,20 +18,8 @@ class Module(models.Model):
 
     @api.model
     def _bootstrap_knowledge_docs(self):
-        article_model_name = None
-        try:
-            _ = self.env['knowledge.article']
-            article_model_name = 'knowledge.article'
-        except KeyError as e:
-            _logger.debug("knowledge.article not found: %s", e)
-            try:
-                _ = self.env['manual.article']
-                article_model_name = 'manual.article'
-            except KeyError as e:
-                _logger.debug("manual.article not found: %s", e)
-
-        if not article_model_name:
-            return
+        # Dependencies formally guarantee manual.article
+        article_model_name = 'manual.article'
 
         utils = self.env['zero_sudo.security.utils']
 

@@ -20,6 +20,7 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
     def setUp(self):
         super(TestLongRunningSimulation, self).setUp()
         self.admin = self.env.ref("base.user_admin")
+        self.article = None
 
         # Ensure the admin has the explicit User Websites Administrator group for testing access rules
         self.admin.write(
@@ -62,17 +63,14 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
             )
             self.users.append(u)
 
-        # Setup manual library baseline
-        try:
-            self.article = self.env["knowledge.article"].create(
-                {
-                    "name": "Simulation Survival Guide",
-                    "body": "<p>This is a guide for the simulated environment.</p>",
-                    "is_published": True,
-                }
-            )
-        except KeyError as err:
-            _logger.debug("knowledge.article not present: %s", err)
+        # Setup manual library baseline unconditionally since it is a hard dependency
+        self.article = self.env["manual.article"].create(
+            {
+                "name": "Simulation Survival Guide",
+                "body": "<p>This is a guide for the simulated environment.</p>",
+                "is_published": True,
+            }
+        )
 
     def _execute_simulation_step(self, i, iterations, metrics):
         """Helper method to isolate ORM operations from the AST loop depth counter."""
@@ -114,22 +112,19 @@ class TestLongRunningSimulation(odoo.tests.common.HttpCase):
             method="POST",
         )
 
-        # Interact with the manual library
-        try:
-            if self.article:
-                track(
-                    "User: Manual Feedback",
-                    self.url_open,
-                    "/manual/feedback",
-                    data={
-                        "csrf_token": odoo.http.Request.csrf_token(self),
-                        "article_id": self.article.id,
-                        "is_helpful": secrets.choice(["0", "1"]),
-                    },
-                    method="POST",
-                )
-        except AttributeError as err:
-            _logger.debug("No article found: %s", err)
+        # Interact with the manual library safely without getattr
+        if self.article:
+            track(
+                "User: Manual Feedback",
+                self.url_open,
+                "/manual/feedback",
+                data={
+                    "csrf_token": odoo.http.Request.csrf_token(self),
+                    "article_id": self.article.id,
+                    "is_helpful": secrets.choice(["0", "1"]),
+                },
+                method="POST",
+            )
 
         # GDPR Portability check
         track(

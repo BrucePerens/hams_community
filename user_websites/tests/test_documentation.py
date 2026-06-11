@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import unittest
 import logging
 from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
@@ -12,6 +11,7 @@ class TestDocumentation(RealTransactionCase):
 
     def setUp(self):
         super(TestDocumentation, self).setUp()
+        self.regular_user = None
 
         # Create a standard internal user with no special administrative privileges
         self.regular_user = self.env["res.users"].create(
@@ -29,11 +29,8 @@ class TestDocumentation(RealTransactionCase):
         for attempt in range(5):
             try:
                 with self.env.cr.savepoint():
-                    try:
-                        if self.regular_user and self.regular_user.exists():
-                            self.regular_user.unlink()
-                    except AttributeError as err:
-                        _logger.debug("No regular_user attribute to clean up: %s", err)
+                    if self.regular_user and self.regular_user.exists():
+                        self.regular_user.unlink()
                 break
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Resilient cleanup encountered exception: %s", e)
@@ -48,16 +45,11 @@ class TestDocumentation(RealTransactionCase):
         and post_init_hook) correctly utilizes file_open to read the HTML
         documentation from the disk.
         """
-        if "knowledge.article" not in self.env.registry:
-            raise unittest.SkipTest(
-                "knowledge.article API is not installed. Skipping documentation hook test."
-            )
-
         # Trigger the hook directly to ensure it runs in this transaction
         post_init_hook(self.env)
         self.env.cr.commit()
 
-        article = self.env["knowledge.article"].search(
+        article = self.env["manual.article"].search(
             [("name", "=", "User Websites Documentation")], limit=1
         )
 
@@ -90,44 +82,28 @@ class TestDocumentation(RealTransactionCase):
         # Sync cursor state
         self.env.cr.commit()
 
-        if "knowledge.article" in self.env.registry:
-            article = self.env["knowledge.article"].search(
-                [("name", "=", "User Websites Documentation")]
+        article = self.env["manual.article"].search(
+            [("name", "=", "User Websites Documentation")]
+        )
+
+        # The manual.article model natively implements website_url
+        website_url = article.website_url
+
+        if website_url:
+            self.assertIn(
+                website_url.encode(),
+                response.url.encode(),
+                "Should redirect to the knowledge article URL.",
             )
-
-            # Check if the article model has the website_url routing capability
-            try:
-                website_url = article.website_url
-            except AttributeError:
-                website_url = False
-
-            if website_url:
-                self.assertIn(
-                    website_url.encode(),
-                    response.url.encode(),
-                    "Should redirect to the knowledge article URL.",
-                )
-            else:
-                # If API is present but lacks frontend publishing, it MUST fallback to QWeb
-                self.assertEqual(
-                    response.status_code, 200, "Should fallback to 200 OK."
-                )
-                self.assertIn(
-                    b"User Websites Module Documentation",
-                    response.content,
-                    "Should render fallback QWeb template.",
-                )
         else:
-            # API is entirely absent: MUST fallback to QWeb
+            # If API is present but lacks frontend publishing, it MUST fallback to QWeb
             self.assertEqual(
-                response.status_code,
-                200,
-                "Authenticated user should receive a 200 OK response.",
+                response.status_code, 200, "Should fallback to 200 OK."
             )
             self.assertIn(
                 b"User Websites Module Documentation",
                 response.content,
-                "The rendered page is missing the primary title.",
+                "Should render fallback QWeb template.",
             )
 
     def test_03_documentation_route_unauthenticated(self):
@@ -148,21 +124,3 @@ class TestDocumentation(RealTransactionCase):
             response.url.encode(),
             "Unauthenticated guest users should be redirected to the login screen.",
         )
-
-    def test_04_knowledge_api_absence_safety(self):
-        """
-        Explicitly test that if the API is absent, the system does not
-        attempt to call it and gracefully defaults to the QWeb menu.
-        """
-        if "knowledge.article" in self.env.registry:
-            raise unittest.SkipTest(
-                "knowledge.article API IS installed. Skipping API absence test."
-            )
-
-        self.authenticate(self.regular_user.login, self.regular_user.login)
-        try:
-            response = self.url_open("/user-websites/documentation")
-            self.assertEqual(response.status_code, 200)
-        except Exception as e:  # audit-ignore-catch-all
-            _logger.error("Route failed unexpectedly when API is absent: %s", e)
-            self.fail(f"Route failed unexpectedly when API is absent: {e}")
