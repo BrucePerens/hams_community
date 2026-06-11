@@ -281,7 +281,7 @@ class ResUsers(models.Model):
         # --- Content Lifecycle Policy ---
         if "active" in vals and not vals["active"]:
             users_to_archive = self.ids
-            if not odoo.tools.config.get("test_enable"):
+            if not getattr(self.env.registry, "test_cr", False):
                 db_name = self.env.cr.dbname
                 BACKGROUND_EXECUTOR.submit(
                     _async_unpublish_content, db_name, users_to_archive
@@ -407,7 +407,7 @@ class ResUsers(models.Model):
         self.ensure_one()
         user_id = self.id
         db_name = self.env.cr.dbname
-        is_test = odoo.tools.config.get("test_enable")
+        is_test = getattr(self.env.registry, "test_cr", False)
 
         if is_test:
             env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
@@ -550,7 +550,7 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not odoo.tools.config.get("test_enable"):
+            if not getattr(self.env.registry, "test_cr", False):
                 self.env.cr.commit()
             if len(pages) < 5000:
                 break
@@ -572,7 +572,7 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not odoo.tools.config.get("test_enable"):
+            if not getattr(self.env.registry, "test_cr", False):
                 self.env.cr.commit()
             if len(posts) < 5000:
                 break
@@ -594,7 +594,7 @@ class ResUsers(models.Model):
                     time.sleep(0.5) # audit-ignore-sleep: Retry backoff
                     continue
                 raise
-            if not odoo.tools.config.get("test_enable"):
+            if not getattr(self.env.registry, "test_cr", False):
                 self.env.cr.commit()
             if len(blogs) < 5000:
                 break

@@ -512,6 +512,17 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
             }
 
+            self.has_ham_base = False
+            if self.filepath:
+                current = os.path.abspath(self.filepath)
+                if os.path.isfile(current):
+                    current = os.path.dirname(current)
+                while current and current != os.path.dirname(current):
+                    if os.path.exists(os.path.join(current, "ham_base", "__manifest__.py")):
+                        self.has_ham_base = True
+                        break
+                    current = os.path.dirname(current)
+
         def add_error(self, lineno, msg):
             if lineno <= len(self.lines) and "burn-ignore" in self.lines[lineno - 1]:
                 return
@@ -896,6 +907,13 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
             self.generic_visit(node)
 
         def visit_Try(self, node):
+            if getattr(self, "has_ham_base", False):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call) and isinstance(getattr(child, "func", None), ast.Attribute) and child.func.attr == "_get_service_uid":
+                        self.add_error(
+                            getattr(child, "lineno", node.lineno),
+                            "CRITICAL FAST FAIL: _get_service_uid MUST NOT be wrapped in a try/except block. It must fail fast if the service account is missing."
+                        )
             for handler in node.handlers:
                 if (
                     isinstance(handler.type, ast.Name)

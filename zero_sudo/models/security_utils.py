@@ -33,6 +33,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
     def _get_service_uid(self, xml_id):
         # [@ANCHOR: get_service_uid]
         # Verified by [@ANCHOR: test_get_service_uid]
+        # Verified by [@ANCHOR: test_otp_mail_template]
         # Tests [@ANCHOR: story_secure_escalation]
         if not xml_id or not isinstance(xml_id, str) or "." not in xml_id:
             raise AccessError(_("Invalid XML ID format: %s. Expected 'module.name'.") % xml_id)
@@ -256,7 +257,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         """
         self.env.cr.execute("SELECT zero_sudo_set_kv(%s, %s)", (key, value))
         # Ensure changes are visible to other transactions/round-trips
-        if not tools.config.get("test_enable"):
+        if not getattr(self.env.registry, "test_cr", False):
             self.env.cr.commit()
         # Direct SQL bypasses the ORM cache. We must invalidate it.
         if "zero_sudo.kv" in self.env:

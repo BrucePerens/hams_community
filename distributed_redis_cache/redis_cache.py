@@ -87,7 +87,7 @@ def distributed_cache():
             # Sever Redis connection during standard automated testing
             # to prevent cross-test ghost cache poisoning after Postgres rollbacks.
             # RealTransactionCase and integration tests can re-enable it via system parameter.
-            if tools.config.get("test_enable"):
+            if getattr(self.env.registry, "test_cr", False):
                 # Use zero_sudo security utils for system parameter read to comply with security mandates
                 integration_active = self.env["zero_sudo.security.utils"]._get_system_param('distributed_redis_cache.test_integration_active')
                 if not integration_active:

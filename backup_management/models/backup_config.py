@@ -5,7 +5,6 @@ import os
 import datetime
 import shutil
 import pika
-import odoo
 import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, AccessError
@@ -241,8 +240,6 @@ class BackupConfig(models.Model):
             payload = json.dumps(payload_dict)
 
             def publish_task(msg=payload):
-                if odoo.tools.config.get("test_enable"):
-                    return
                 try:
                     # Use Service ID for security & audit trails
                     svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(

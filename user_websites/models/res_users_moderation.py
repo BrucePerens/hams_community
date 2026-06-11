@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import odoo
 from odoo import models, fields, api, _
 from .res_users import _async_unpublish_content
 import json
@@ -110,7 +109,7 @@ class ResUsersModeration(models.Model):
         """Forcefully unpublishes all user content and flags them as suspended."""
         user_ids = self.ids
 
-        if not odoo.tools.config.get("test_enable"):
+        if not getattr(self.env.registry, "test_cr", False):
             db_name = self.env.cr.dbname
             # Fire and forget safely without unbounded thread growth
             ThreadPoolExecutor(max_workers=2).submit(

@@ -2,7 +2,7 @@
 import os
 import logging
 import datetime
-from odoo import models, fields, api, SUPERUSER_ID, tools, _
+from odoo import models, fields, api, SUPERUSER_ID, _
 from odoo.exceptions import UserError, ValidationError, AccessError
 
 _logger = logging.getLogger(__name__)
@@ -361,17 +361,14 @@ class DaemonKeyRegistry(models.Model):
         for reg in registries:
             try:
                 reg._rotate_key_and_write_file()
-                if not tools.config.get("test_enable"):
-                    self.env.cr.commit()
+                self.env.cr.commit()
             except (OSError, UserError, ValidationError, AccessError) as e:
-                if not tools.config.get("test_enable"):
-                    self.env.cr.rollback()
+                self.env.cr.rollback()
                 _logger.error(
                     "Managed failure rotating key for daemon %s: %s", reg.name, e
                 )
             except Exception as e:  # audit-ignore-catch-all
-                if not tools.config.get("test_enable"):
-                    self.env.cr.rollback()
+                self.env.cr.rollback()
                 _logger.error(
                     "Unexpected error during key rotation for daemon %s: %s",
                     reg.name,

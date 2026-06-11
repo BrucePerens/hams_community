@@ -105,7 +105,6 @@ class IrHttp(models.AbstractModel):
         """
         global _listener_started, _executor
 
-        test_mode = tools.config.get("test_enable")
         init_mode = tools.config.get("init")
         update_mode = tools.config.get("update")
         stop_after_init = tools.config.get("stop_after_init")
@@ -113,7 +112,7 @@ class IrHttp(models.AbstractModel):
 
         # Allow integration tests to use the Redis listener if explicitly enabled
         integration_active = False
-        if test_mode:
+        if is_test_cr:
             # We use a try-except to handle cases where the registry might not be fully initialized
             try:
                 # Use zero_sudo security utils for system parameter read to comply with security mandates
@@ -124,11 +123,10 @@ class IrHttp(models.AbstractModel):
                 _logger.info("Failed to read integration status from request env: %s", e)
 
         if integration_active or not (
-            test_mode
+            is_test_cr
             or init_mode
             or update_mode
             or stop_after_init
-            or is_test_cr
         ):
             if not _listener_started:
                 with _listener_lock:

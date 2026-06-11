@@ -2,7 +2,7 @@
 import time
 import os
 import logging
-from odoo import models, fields, api, tools
+from odoo import models, fields, api
 from ..utils.cloudflare_api import purge_everything, purge_urls, purge_tags
 
 _logger = logging.getLogger(__name__)
@@ -162,12 +162,10 @@ class CloudflarePurgeQueue(models.Model):
                         tag_records.unlink()
 
             if not success:
-                if not tools.config.get("test_enable"):
-                    self.env.cr.commit()
+                self.env.cr.commit()
 
             batches_processed += 1
-            if not tools.config.get("test_enable"):
-                self.env.cr.commit()
+            self.env.cr.commit()
 
             if not os.environ.get("HAMS_DISABLE_SLEEPS"):
                 time.sleep(0.5)  # audit-ignore-sleep: Rate limiting  # fmt: skip

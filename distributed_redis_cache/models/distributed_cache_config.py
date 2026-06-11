@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from odoo import models, fields, tools, _
+from odoo import models, fields, _
 from odoo.addons.distributed_redis_cache.redis_cache import (
     notify_model_invalidation,
 )
@@ -46,7 +46,7 @@ class DistributedCacheConfig(models.TransientModel):
         # [@ANCHOR: check_redis_status_logic]
         use_redis = bool(redis and redis_pool)
 
-        if tools.config.get("test_enable"):
+        if getattr(self.env.registry, "test_cr", False):
             # Use zero_sudo security utils for system parameter read to comply with security mandates
             integration_active = self.env["zero_sudo.security.utils"]._get_system_param('distributed_redis_cache.test_integration_active')
             if not integration_active:

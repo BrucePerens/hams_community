@@ -4,7 +4,6 @@ import os
 import redis
 import logging
 import re
-import odoo
 import json
 from lxml import etree
 from odoo import models, fields, api, _
@@ -54,7 +53,7 @@ class WebsitePage(models.Model):
 
     def _invalidate_cloudflare_cache(self):
         """Soft-dependency hook to purge the global Cache-Tag at the edge."""
-        if "cloudflare.purge.queue" in self.env and not odoo.tools.config.get("test_enable"):
+        if "cloudflare.purge.queue" in self.env and not getattr(self.env.registry, "test_cr", False):
             # ADR 0078: Pre-fetch related fields to prevent N+1 queries in the loop
             self.mapped("owner_user_id.website_slug")
             self.mapped("user_websites_group_id.website_slug")
@@ -659,10 +658,10 @@ class WebsitePage(models.Model):
                         del_pipe.decrby(key, int(val))
                 del_pipe.execute()
 
-                if not odoo.tools.config.get("test_enable"):
+                if not getattr(self.env.registry, "test_cr", False):
                     self.env.cr.commit()
             except Exception: # audit-ignore-catch-all
-                if not odoo.tools.config.get("test_enable"):
+                if not getattr(self.env.registry, "test_cr", False):
                     self.env.cr.rollback()
                 _logger.exception("Error updating PostgreSQL view counts")
 

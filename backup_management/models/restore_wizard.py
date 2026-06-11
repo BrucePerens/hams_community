@@ -3,7 +3,7 @@ import json
 import os
 import pika
 import logging
-from odoo import models, fields, _, tools
+from odoo import models, fields, _
 from odoo.exceptions import UserError, AccessError
 from .utils import validate_backup_path
 
@@ -82,8 +82,6 @@ class BackupRestoreWizard(models.TransientModel):
         )
 
         def publish_task(msg=payload):
-            if tools.config.get("test_enable"):
-                return
             try:
                 # Use Service ID for security & audit trails
                 svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(

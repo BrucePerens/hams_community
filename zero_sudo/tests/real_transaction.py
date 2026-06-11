@@ -104,6 +104,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
                 _logger.warning("Ignored error during initial teardown rollback: %s", e)
 
             # 2. Automated ORM Cleanup (Multiple passes for Foreign Key cascades)
+            # Verified by [@ANCHOR: test_automated_cleanup]
             for attempt in range(5):
                 pending_deletes = False
                 for model_name, ids in reversed(list(self._tracked_records.items())):
@@ -128,6 +129,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
             self.env.cr.commit()
 
             # 3. Verify No Leaks
+            # Verified by [@ANCHOR: test_leak_verification]
             leaks = []
             noisy_tables = set()
             try:

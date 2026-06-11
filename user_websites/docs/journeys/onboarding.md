@@ -19,3 +19,8 @@ This journey describes the path a new user takes to establish their presence on 
 2. **First Post**: The user clicks "Create Blog Post" ([@ANCHOR: UX_CREATE_BLOG_POST]). Verified by `[@ANCHOR: test_tour_create_blog]`.
 3. **Provisioning**: The system initializes the `blog.blog` container for the user if it doesn't exist and creates a "Welcome" post.
 4. **Engagement**: Visitors can now subscribe to Alice's updates ([@ANCHOR: UX_SUBSCRIBE]). Verified by `[@ANCHOR: test_subscription_creation]`.
+
+## Path: Identity Verification
+
+1. **QRZ Token Generation**: The system provisions a QRZ linkage token for the user ([@ANCHOR: action_generate_qrz_token]).
+2. **Official OTP Verification**: The system verifies the identity using an official OTP pass-code ([@ANCHOR: action_verify_official_otp]).
