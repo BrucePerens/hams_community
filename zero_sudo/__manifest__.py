@@ -4,11 +4,6 @@
     "summary": "Foundational security utilities, service account patterns, and web isolation.",
     "description": """Zero-Sudo Security Core foundational module.
 
-Semantic Anchors mapping:
-[@ANCHOR: documentation_bootstrap]
-[@ANCHOR: documentation_injection]
-Verified by [@ANCHOR: test_documentation_bootstrap]
-Verified by [@ANCHOR: test_documentation_injection]
 """,
     "author": "Bruce Perens K6BP",
     "category": "Security",
