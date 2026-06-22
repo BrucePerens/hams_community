@@ -3,7 +3,6 @@ import odoo
 from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 import logging
-import time
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -141,9 +140,8 @@ class TestLifecycleAndGroups(RealTransactionCase):
         self.logout()
         self.authenticate("admin", "admin")
 
-        self.user_a.active = False
+        self.user_a.with_context(test_mode=True).active = False
         self.env.cr.commit()
-        time.sleep(1) # audit-ignore-sleep: Allow background executor to complete
 
         page.invalidate_recordset()
         post.invalidate_recordset()

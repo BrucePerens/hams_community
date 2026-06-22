@@ -12,7 +12,7 @@ class TestManualLibraryUITours(HamsHttpCase):
         article = self.env["knowledge.article"].create(
             {
                 "name": "TOC Test Article",
-                "body": "<h2>Section 1</h2><p>Content</p><h3>Subsection</h3>",
+                "body": "<div><h2>Section 1</h2><p>Content</p><h3>Subsection</h3></div>",
                 "is_published": True,
             }
         )

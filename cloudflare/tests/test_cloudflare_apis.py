@@ -155,7 +155,9 @@ class TestCloudflareAPIs(HamsTransactionCase):
         # Case 5: API failure
         mock_post.reset_mock()
         mock_post.side_effect = requests.exceptions.RequestException("API fail")
-        self.assertFalse(purge_urls(["https://a.com"], "tok1", "zone1"))
+        from odoo.tools import mute_logger
+        with mute_logger("odoo.addons.cloudflare.utils.cloudflare_api"):
+            self.assertFalse(purge_urls(["https://a.com"], "tok1", "zone1"))
 
     def test_07_purge_tags(self):
         # [@ANCHOR: test_purge_tags_api]
@@ -199,4 +201,6 @@ class TestCloudflareAPIs(HamsTransactionCase):
         # Case 5: API failure
         mock_post.reset_mock()
         mock_post.side_effect = requests.exceptions.RequestException("API fail")
-        self.assertFalse(purge_tags(["tag1"], "tok1", "zone1"))
+        from odoo.tools import mute_logger
+        with mute_logger("odoo.addons.cloudflare.utils.cloudflare_api"):
+            self.assertFalse(purge_tags(["tag1"], "tok1", "zone1"))

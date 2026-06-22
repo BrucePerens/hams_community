@@ -16,6 +16,7 @@ class TestPagerIncidentStandard(HamsTransactionCase):
         super(TestPagerIncidentStandard, self).setUp()
         self.incident_model = self.env["pager.incident"]
         self.service_user = self.env.ref("pager_duty.user_pager_service_internal")
+        self.creator_user = self.env.ref("pager_duty.user_pager_incident_creator")
 
     def test_01_rate_limiting_blocks_spam_standard(self):
         # Tests [@ANCHOR: report_incident_rate_limit]
@@ -62,7 +63,7 @@ class TestPagerIncidentStandard(HamsTransactionCase):
         incident = self.incident_model.browse(incident_id)
         self.assertEqual(
             incident.create_uid.id,
-            self.service_user.id,
+            self.creator_user.id,
             "Incident not under Zero-Sudo UID.",
         )
 
@@ -146,6 +147,7 @@ class TestPagerIncidentStandard(HamsTransactionCase):
         self.incident_model.report_incident(
             {"source": "Dashboard Board Test", "severity": "medium", "description": "test"}
         )
+        self.env.flush_all()
         data = self.incident_model.get_board_data()
         self.assertTrue(len(data["active"]) > 0)
         self.assertEqual(data["active"][0]["source"], "Dashboard Board Test")
@@ -159,6 +161,7 @@ class TestPagerIncidentIntegration(HamsTransactionCase):
         super(TestPagerIncidentIntegration, self).setUp()
         self.incident_model = self.env["pager.incident"]
         self.service_user = self.env.ref("pager_duty.user_pager_service_internal")
+        self.creator_user = self.env.ref("pager_duty.user_pager_incident_creator")
 
         if not self.__class__._daemons_started:
             base_dir = os.path.join(os.path.dirname(__file__), "..", "daemon")
@@ -213,7 +216,7 @@ class TestPagerIncidentIntegration(HamsTransactionCase):
         incident = self.incident_model.browse(incident_id)
         self.assertEqual(
             incident.create_uid.id,
-            self.service_user.id,
+            self.creator_user.id,
             "Incident not under Zero-Sudo UID.",
         )
 

@@ -6,6 +6,9 @@ from unittest.mock import MagicMock, mock_open, patch
 import os
 import odoo
 import psycopg2
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 @tagged("post_install", "-at_install")
@@ -295,16 +298,28 @@ class TestSecurityUtils(HamsTransactionCase):
         utils = self.env["zero_sudo.security.utils"]
 
         # 1. Invalid XML ID Format
-        with self.assertRaises((AccessError, UserError, psycopg2.errors.RaiseException)):
-            utils._get_service_uid("invalid_format_no_dot")
+        try:
+            with self.env.cr.savepoint():
+                utils._get_service_uid("invalid_format_no_dot")
+            self.fail("Expected exception")
+        except (AccessError, UserError, psycopg2.errors.RaiseException):
+            _logger.info("Caught expected exception for missing UID")
 
         # 2. Account Not Found
-        with self.assertRaises((AccessError, UserError, psycopg2.errors.RaiseException)):
-            utils._get_service_uid("base.non_existent_xml_id")
+        try:
+            with self.env.cr.savepoint():
+                utils._get_service_uid("base.non_existent_xml_id")
+            self.fail("Expected exception")
+        except (AccessError, UserError, psycopg2.errors.RaiseException):
+            _logger.info("Caught expected exception for Account Not Found")
 
         # 3. Deny Human Admin Pass-through
-        with self.assertRaises((AccessError, UserError, psycopg2.errors.RaiseException)):
-            utils._get_service_uid("base.user_admin")
+        try:
+            with self.env.cr.savepoint():
+                utils._get_service_uid("base.user_admin")
+            self.fail("Expected exception")
+        except (AccessError, UserError, psycopg2.errors.RaiseException):
+            _logger.info("Caught expected exception for human admin pass-through")
 
         # 4. Deny Disabled Accounts
         disabled_user = self.env["res.users"].create({
@@ -319,8 +334,12 @@ class TestSecurityUtils(HamsTransactionCase):
             "model": "res.users",
             "res_id": disabled_user.id,
         })
-        with self.assertRaises((AccessError, UserError, psycopg2.errors.RaiseException)):
-            utils._get_service_uid("test_module.disabled_sa_xml")
+        try:
+            with self.env.cr.savepoint():
+                utils._get_service_uid("test_module.disabled_sa_xml")
+            self.fail("Expected exception")
+        except (AccessError, UserError, psycopg2.errors.RaiseException):
+            _logger.info("Caught expected exception for disabled accounts")
 
     def test_14_service_account_password_generation(self):
         # [@ANCHOR: test_service_account_password]

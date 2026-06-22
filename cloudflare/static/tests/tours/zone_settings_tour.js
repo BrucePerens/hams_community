@@ -15,8 +15,20 @@ registry.category("web_tour.tours").add("cf_zone_settings_tour", {
         { trigger: '[data-menu-xmlid="cloudflare.menu_cloudflare_root"]', content: "Open Cloudflare Edge Menu", run: 'click' },
         {
             content: "Open Zone Settings Menu",
-            trigger: '.o_main_navbar a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"], header.o_navbar a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"]',
-            run: "click"
+            trigger: 'a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"]:not(:visible), a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"]',
+            run: function (actions) {
+                const link = document.querySelector('a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"]');
+                // Check if hidden (offsetHeight is 0)
+                if (link && link.offsetHeight === 0) {
+                    const moreBtn = document.querySelector('.o_menu_sections_more.dropdown-toggle');
+                    if (moreBtn) {
+                        moreBtn.click();
+                    }
+                }
+                setTimeout(() => {
+                    document.querySelector('a[data-menu-xmlid="cloudflare.menu_cf_zone_settings"]').click();
+                }, 100);
+            }
         },
         { trigger: '.modal-content', content: 'Wait for Zone Settings Modal to mount and render', run: function() {} },
         {

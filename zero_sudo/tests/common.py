@@ -8,48 +8,14 @@ import shutil
 import time
 import urllib.request
 import threading
-import json
 import concurrent
 import concurrent.futures
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
-from . import watchdog_shared
 
 _logger = logging.getLogger(__name__)
 
-def _apply_cdp_hook(browser_instance):
-    """
-    Applies the V8 hunger trace hook to the browser instance if available.
-    """
-    if not browser_instance:
-        return
-    watchdog_shared.global_captured_stack = None
-    watchdog_shared.global_active_browser = browser_instance
 
-    # Strictly enforce schema contract: _websocket must exist on browser_instance
-    websocket = browser_instance._websocket
-    if websocket:
-        original_recv = websocket.recv
-        def _intercepted_recv(*r_args, **r_kwargs):
-            msg = original_recv(*r_args, **r_kwargs)
-            if isinstance(msg, str) and 'Debugger.paused' in msg:
-                try:
-                    data = json.loads(msg)
-                    frames = data.get('params', {}).get('callFrames', [])
-                    stack_lines = ["🚨 V8 HUNG THREAD STACK TRACE 🚨"]
-                    for f in frames:
-                        func = f.get('functionName', '') or '(anonymous)'
-                        url = f.get('url', '') or 'unknown'
-                        loc = f.get('location', {})
-                        line = loc.get('lineNumber', 0) + 1
-                        col = loc.get('columnNumber', 0) + 1
-                        stack_lines.append(f"    at {func} ({url}:{line}:{col})")
-                    watchdog_shared.global_captured_stack = "\n".join(stack_lines)
-                    _logger.error("Successfully captured V8 stack trace via CDP!")
-                except Exception as e: # audit-ignore-catch-all
-                    _logger.error("Failed to parse Debugger.paused event: %s", e)
-            return msg
-        websocket.recv = _intercepted_recv
 
 # 🚨 NATIVE SCREENSHOT RESCUE 🚨
 original_take_screenshot = ChromeBrowser.take_screenshot
@@ -96,6 +62,9 @@ ChromeBrowser.take_screenshot = _patched_take_screenshot
 original_chrome_init = ChromeBrowser.__init__
 
 def _patched_chrome_init(self, *args, **kwargs):
+    if os.environ.get("HAMS_PAUSE_ON_FAIL") == "1":
+        self.__class__.remote_debugging_port = 9222
+        
     retries = 3
     for attempt in range(retries):
         try:
@@ -108,6 +77,19 @@ def _patched_chrome_init(self, *args, **kwargs):
             time.sleep(2) # audit-ignore-sleep
 
 ChromeBrowser.__init__ = _patched_chrome_init
+
+# 🚨 NATIVE CHROME PAUSE ON FAIL 🚨
+original_browser_js = HttpCase.browser_js
+def _patched_browser_js(self, *args, **kwargs):
+    try:
+        return original_browser_js(self, *args, **kwargs)
+    except Exception as e: # audit-ignore-catch-all
+        if os.environ.get("HAMS_PAUSE_ON_FAIL") == "1":
+            _logger.error("🛑 TOUR FAILED! Pausing indefinitely (--pause-on-fail active). Connect DevTools MCP to port 9222.\nError: %s", repr(e))
+            while True:
+                time.sleep(60) # audit-ignore-sleep
+        raise e
+HttpCase.browser_js = _patched_browser_js
 
 class DiagnosticMock(MagicMock):
     def __init__(self, *args, **kwargs):
@@ -207,8 +189,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
     def setUp(self):
         super().setUp()
         # Initialize CDP hook after super() creates self.browser
-        if self.browser:
-            _apply_cdp_hook(self.browser)
+            # Start Chrome
 
     @classmethod
     def tearDownClass(cls):
@@ -288,7 +269,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     def browser_js(self, *args, **kwargs):
         _logger.info("TRACING: Entering browser_js wrapper.")
-        _apply_cdp_hook(self.browser)
         try:
             # The Jules Headless Chrome Watchdog Suppressions
             jules_protections = """
@@ -374,7 +354,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             _logger.info("TRACING: Exiting browser_js wrapper.")
 
     def start_tour(self, *args, **kwargs):
-        _apply_cdp_hook(self.browser)
         args_list = list(args)
 
         tour_debug = os.environ.get("HAMS_TOUR_TOUR_DEBUG")
@@ -393,7 +372,8 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         try:
             super().start_tour(*args, **kwargs)
             _logger.info("TRACING: super().start_tour completed successfully.")
-        except Exception as e:
+        except Exception as e: # audit-ignore-catch-all
+            _logger.error("Caught exception in start_tour: %s", e)
             self.__class__._hams_tour_failed = True
             if isinstance(e, AssertionError):
                 raise e from None

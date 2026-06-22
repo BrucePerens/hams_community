@@ -14,6 +14,11 @@ class TestAuditEdgeCases(RealTransactionCase):
     def setUp(self):
         super(TestAuditEdgeCases, self).setUp()
 
+        # Prevent Cloudflare cache purge hooks from leaking queue records during tests and teardown
+        self.safe_patch("odoo.addons.cloudflare.models.purge_queue.CloudflarePurgeQueue.enqueue_urls", return_value=True)
+        self.safe_patch("odoo.addons.cloudflare.models.purge_queue.CloudflarePurgeQueue.enqueue_tags", return_value=True)
+
+
         self.test_user = self.env["res.users"].create(
             {
                 "name": "Edge Case User",

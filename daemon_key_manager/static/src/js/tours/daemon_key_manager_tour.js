@@ -41,12 +41,15 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
             content: 'Click away to force DOM blur and commit text input',
             run: 'click',
         }
-    ].concat([
+    ]).concat(TourUtils.safeSave()).concat([
         {
             trigger: 'button[name="action_force_provision_all"]:not([disabled])',
             content: 'Force provision all keys (ensuring button is active)',
             run: 'click',
         },
-        { content: 'Wait for success toast', trigger: '.o_notification_manager', run: function() { const discard = document.querySelector('.o_form_button_cancel'); if (discard) discard.click(); } }
+        { 
+            content: 'Wait for success toast', 
+            trigger: '.o_notification_manager .o_notification',
+        }
     ]),
 });

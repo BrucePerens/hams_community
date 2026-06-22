@@ -14,6 +14,17 @@ JavaScript UI Tours in Odoo are inherently brittle. This document centralizes al
 1. **NO SKIPPING:** You are STRICTLY FORBIDDEN from using `@unittest.skip` on UI tours due to "watchdog" or "Owl mounting" errors. The environment now supports them globally.
 2. **CLEAN TEARDOWN:** While the fatal crashes are suppressed, you MUST still ensure your JS tour step arrays end cleanly. Use `.concat(TourUtils.safeSave())` instead of clicking save buttons manually to guarantee RPC resolution.
 
+## Viewing Tour Failures (For AI Agents)
+When a tour fails, there are two ways to investigate the failure:
+
+1. **Active Debugging (Recommended):** You can use the `--pause-on-fail` flag when running tests:
+   ```bash
+   python3 tools/test.py -u <module_name> --pause-on-fail
+   ```
+   If a tour step fails, this flag prevents Odoo from tearing down the headless browser. The test execution will freeze, printing `🛑 TOUR FAILED! Pausing indefinitely`. At this point, Chrome's remote debugging port is exposed on `9222`. **You MUST activate your `chrome-devtools` MCP server, connect to port 9222, and actively inspect the DOM state or execute JS in the frozen browser.**
+
+2. **Static Analysis:** If you did not use `--pause-on-fail`, Odoo natively dumps a `.png` screenshot of the headless browser to `/var/tmp/` (mapped to `~/tmp/` on the host). You MUST use your `view_file` tool to visually analyze this `.png` screenshot. Do NOT attempt to build custom JS DOM dumpers.
+
 ## 1. Tour Registration & Setup
 * **Category:** Tours MUST be registered under `web_tour.tours` (e.g., `registry.category("web_tour.tours").add(...)`). Do not use legacy `tours` or `web_tours`.
 * **Starting URL:** Always use explicit query parameters and include the debug flag (e.g., `url: "/odoo?debug=1&action=..."`). Do not use hash-based routing (`/web#...`).

@@ -29,6 +29,15 @@ class TestMultiWebsiteCloudflare(RealTransactionCase):
             }
         )
 
+    def tearDown(self):
+        # Clean up Odoo core's automatic implied_ids when multiple websites exist
+        group_user_data = self.env["ir.model.data"].search([("module", "=", "base"), ("name", "=", "group_user")])
+        group_user = self.env["res.groups"].browse(group_user_data.res_id) if group_user_data else self.env["res.groups"]
+        group_multi = self.env.ref("website.group_multi_website", raise_if_not_found=False)
+        if group_user and group_multi:
+            group_user.write({'implied_ids': [(3, group_multi.id)]})
+        super().tearDown()
+
     def test_multi_website_purge_queue(self):
         """Verify that the purge queue correctly isolates zones and credentials."""
         # Clear any leftover 'everything' records from previous tests or init that would wipe our queue

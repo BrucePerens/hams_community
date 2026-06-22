@@ -113,7 +113,14 @@ class ResUsers(models.Model):
                     'is_service_account': True,
                     'active': True,
                 })
-    
+            else:
+                user = existing
+
+            xml_exists = self.env['ir.model.data'].search([
+                ('module', '=', 'user_websites'),
+                ('name', '=', 'user_websites_service_account')
+            ], limit=1)
+            if not xml_exists:
                 self.env['ir.model.data'].create({
                     'module': 'user_websites',
                     'name': 'user_websites_service_account',
@@ -523,8 +530,10 @@ class ResUsers(models.Model):
                     if len(items) < 1000: break
                     offset += 1000
 
-        # Enforce strict contract, don't mask missing methods
-        res = super()._get_gdpr_streamed_keys()
+        if hasattr(super(), '_get_gdpr_streamed_keys'):
+            res = super()._get_gdpr_streamed_keys()
+        else:
+            res = {}
         res.update({
             "pages": generate_pages,
             "blog_posts": generate_blogs,

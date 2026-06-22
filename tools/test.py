@@ -114,10 +114,11 @@ class FailureExtractor:
     Tracebacks and error blocks for writing to a filtered log file.
     """
 
-    def __init__(self, log_dir, disable_atexit=False):
+    def __init__(self, log_dir, disable_atexit=False, mcp_mode=False):
         base_dir = os.environ.get("HAMS_REAL_LOG_DIRECTORY") or os.path.abspath(
             os.path.expanduser(log_dir)
         )
+        self.mcp_mode = mcp_mode
         if os.environ.get("HAMS_ISOLATED_NS") != "1":
             os.makedirs(base_dir, exist_ok=True)
             try:
@@ -126,10 +127,7 @@ class FailureExtractor:
                 _logger.debug("Ignored OSError: %s", e)
         self.display_path = os.path.join(base_dir, "filtered_test.txt")
 
-        if os.environ.get("HAMS_ISOLATED_NS") == "1":
-            self.output_path = "/var/tmp/filtered_test.txt"
-        else:
-            self.output_path = self.display_path
+        self.output_path = self.display_path
 
         try:
             if os.path.exists(self.output_path):
@@ -310,9 +308,9 @@ class FailureExtractor:
         if getattr(self, "aborted", False):
             print("🛑 TEST RUN ABORTED: Did not complete due to pre-flight linter errors.")
         elif num_failures == 0:
-            print("🎉 TEST RUN COMPLETE: No test failures detected.")
+            print("🎉 TEST RUN COMPLETE: No test failures or system crashes detected.")
         else:
-            print(f"🚨 TEST RUN COMPLETE: {num_failures} test failure(s) detected!")
+            print(f"🚨 TEST RUN COMPLETE: {num_failures} issue(s) detected (test failures or system crashes)!")
             print(f"📄 Failure details extracted and saved to: {self.display_path}")
         print("==========================================================\n")
 
@@ -429,7 +427,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
                     # The test process died but something (like a Postgres background worker) is holding the pipe open
                     break
 
-                if time.time() - last_output_time > 60.0:
+                if not (extractor and extractor.mcp_mode) and not os.environ.get("HAMS_PAUSE_ON_FAIL") and (time.time() - last_output_time > 60.0):
                     print("\n[!] TEST TIMEOUT: No output received for 60 seconds. Tour or test likely hung. Terminating...\n")
 
                     if extractor:
@@ -924,11 +922,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
         os.setresgid(odoo_user.pw_gid, odoo_user.pw_gid, odoo_user.pw_gid)
         os.setresuid(odoo_user.pw_uid, odoo_user.pw_uid, odoo_user.pw_uid)
 
-    if os.path.exists("/var/tmp/filtered_test.txt"):
-        try:
-            os.remove("/var/tmp/filtered_test.txt")
-        except OSError as e:
-            _logger.warning("Ignored OSError during test runner log cleanup: %s", e)
+
 
     test_cmd = [sys.executable, os.path.abspath(__file__)] + sys_args
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
@@ -942,8 +936,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
     except KeyError:
         orig_uid = -1
 
-    if os.path.exists("/var/tmp/filtered_test.txt") and orig_uid != -1:
-        os.chown("/var/tmp/filtered_test.txt", orig_uid, -1)
+
 
     if orig_uid != -1:
         for prof in glob.glob("/var/tmp/*.prof"):
@@ -1099,7 +1092,12 @@ def main():
     parser.add_argument("-c", "--config", default="ignore_list.txt")
     parser.add_argument("--daemon")
     parser.add_argument("--profile", action="store_true")
+    parser.add_argument("--mcp", action="store_true", help="Launch the MCP server instead of running tests and shutting down.")
+    parser.add_argument("--pause-on-fail", action="store_true", help="Pause the browser indefinitely on tour failure (exposes port 9222).")
     args = parser.parse_args()
+
+    if args.pause_on_fail:
+        os.environ["HAMS_PAUSE_ON_FAIL"] = "1"
 
     if is_jules:
         start_jules_daemons(base_dir)
@@ -1129,12 +1127,35 @@ def main():
             cmd.extend(["-m", "cProfile", "-o", f"/var/tmp/odoo_test{suffix}.prof"])
         return cmd
 
-    extractor = FailureExtractor(args.log_directory)
+    extractor = FailureExtractor(args.log_directory, mcp_mode=args.mcp)
     print(f"==========================================================\n 🧪 ODOO TEST RUNNER [{args.mode.upper()} MODE]\n==========================================================")
 
     check_linters(python_exec, base_dir, ignore_filepath, extractor, target_modules)
 
     final_rc = 0
+
+    if args.mcp:
+        rebuild_db(args.db)
+
+        os.environ["ODOO_URL"] = "http://127.0.0.1:8069"
+        os.environ["DB_NAME"] = args.db
+        os.environ["ODOO_USER"] = "admin"
+        os.environ["ODOO_PASSWORD"] = "admin"
+
+        mcp_server_script = os.path.join(base_dir, "tools", "test_mcp_server.py")
+        cmd = get_odoo_test_cmd() + [
+            mcp_server_script, "--load=base,web,zero_sudo", "--addons-path", addons_path,
+            "--dev=all", "-d", args.db, "-i", mod_string, "--workers=0",
+            "--max-cron-threads=0", "--http-interface", "127.0.0.1", "--http-port", "8069"
+        ]
+
+        if is_jules:
+            os.environ["HOME"] = "/var/lib/odoo"
+            os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
+            cmd = ["sudo", "-E", "-u", "odoo"] + cmd
+
+        rc = run_cmd(cmd, extractor)
+        sys.exit(rc)
 
     if args.mode == "standard":
         rebuild_db(args.db)
