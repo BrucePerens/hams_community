@@ -87,10 +87,9 @@ exact ones used in the production environment. DO NOT EVER CREATE TEST-SPECIFIC
 FEATURES. USE THE SAME ONES USED IN PRODUCTION. THIS IS A MANDATORY RULE. DO NOT
 VIOLATE IT.
 
-See docs/TESTING_IN_JULES.md . Use the
-`--provision-jules` flag to provision the test environment. Create ~/tmp for
-the user that will run testing, the file filtered_test.txt will be deposited
-there. Use the --already-provisioned flag when running tests.
+See docs/TESTING_IN_JULES.md . Use the tools/provision.md program to provision
+the test environment. Create ~/tmp for the user that will run testing, the file
+filtered_test.txt will be deposited there.
 
 Testing is required before producing a PR. All tests must pass before the PR is
 produced.

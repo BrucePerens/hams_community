@@ -350,6 +350,41 @@ MANIFEST = {
             "runtime_mount": "rw",
             "environments": ["test"],
         },
+        {
+            "path": "/var/log/redis",
+            "owner": "redis:redis",
+            "provision_mode": "755",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
+            "path": "/var/lib/redis",
+            "owner": "redis:redis",
+            "provision_mode": "750",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
+            "path": "/var/log/rabbitmq",
+            "owner": "rabbitmq:rabbitmq",
+            "provision_mode": "755",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
+            "path": "/var/lib/rabbitmq",
+            "owner": "rabbitmq:rabbitmq",
+            "provision_mode": "750",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
+        {
+            "path": "/var/log/postgresql",
+            "owner": "postgres:postgres",
+            "provision_mode": "755",
+            "runtime_mount": "rw",
+            "environments": ["prod", "test"],
+        },
     ],
     "env_groups": {
         "db.env": [
@@ -1277,8 +1312,15 @@ def run_post_provision_smoketest(has_hams_com=True, is_test_env=False):
             services_to_test.append(svc)
 
     started_services = []
+    already_active_services = []
 
     for svc in services_to_test:
+        res_active = subprocess.run(["systemctl", "is-active", svc], capture_output=True, text=True)
+        if res_active.stdout.strip() == "active":
+            _logger.info("    %s is already active, skipping start.", svc)
+            already_active_services.append(svc)
+            continue
+
         _logger.info("    Starting %s...", svc)
         res = subprocess.run(["systemctl", "start", svc], capture_output=True, text=True)
         started_services.append(svc)
@@ -1294,7 +1336,7 @@ def run_post_provision_smoketest(has_hams_com=True, is_test_env=False):
     time.sleep(5)
 
     failed = False
-    for svc in started_services:
+    for svc in started_services + already_active_services:
         res = subprocess.run(["systemctl", "is-failed", svc], capture_output=True, text=True)
         state = res.stdout.strip()
         if state == "failed":
@@ -1442,6 +1484,10 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None, skip_ap
         is_jules = bool(os.environ.get("IN_JULES_VM")) or bool(os.environ.get("JULES_SESSION_ID"))
         is_test_env = is_isolated_ns or is_jules
 
+        _logger.info("[*] Preparing testing directories with production paths...")
+        apply_production_directories(run_cmd_func, environment="prod")
+        apply_production_directories(run_cmd_func, environment="test")
+
         try:
             _logger.info("[*] Locking down RabbitMQ to local loopback...")
             os.makedirs("/etc/rabbitmq", exist_ok=True)
@@ -1464,13 +1510,9 @@ def provision_environment(run_cmd_func, env_vars, orig_user, os_id=None, skip_ap
                 _logger.info("[*] Bootstrapping initial Odoo PostgreSQL role and test database...")
                 sql_create_roles = "DO $$BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'odoo') THEN CREATE ROLE odoo WITH SUPERUSER LOGIN PASSWORD 'odoo'; END IF; END$$;"
                 run_cmd_func(["sudo", "-u", "postgres", "psql", "-c", sql_create_roles])
-                run_cmd_func(["bash", "-c", "sudo -u postgres createdb hams_test || true"])
+                run_cmd_func(["bash", "-c", "sudo -u postgres dropdb --if-exists hams_test && sudo -u postgres createdb hams_test"])
         except Exception as e: # audit-ignore-catch-all
             _logger.warning("[*] Failed to configure PostgreSQL settings: %s", e)
-
-        _logger.info("[*] Preparing testing directories with production paths...")
-        apply_production_directories(run_cmd_func, environment="prod")
-        apply_production_directories(run_cmd_func, environment="test")
 
         _logger.info("[*] Writing environment configuration files...")
         write_env_files("/opt/hams/etc", env_vars, run_cmd_func)
