@@ -11,12 +11,12 @@ User=odoo
 WorkingDirectory=/opt/odoo/addons/distributed_redis_cache/daemons
 
 # Database & Redis Configuration
-Environment="DB_HOST=127.0.0.1"
+Environment="DB_HOST=localhost"
 Environment="DB_PORT=5432"
 Environment="DB_NAME=odoo"
 Environment="DB_USER=odoo"
 Environment="DB_PASS=odoo"
-Environment="REDIS_HOST=127.0.0.1"
+Environment="REDIS_HOST=localhost"
 Environment="REDIS_PORT=6379"
 
 ExecStart=/usr/bin/env python3 cache_manager.py

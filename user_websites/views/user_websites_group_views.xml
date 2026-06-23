@@ -28,14 +28,14 @@
                             type="object"
                             string="Suspend Group Websites"
                             invisible="is_suspended_from_websites == True"
-                            groups="user_websites.group_user_websites_moderator"
+                            groups="user_websites.group_user_websites_administrator"
                             class="btn-danger"
                             confirm="Are you sure you want to suspend this group and unpublish all their content?"/>
                     <button name="action_pardon_group_websites"
                             type="object"
                             string="Pardon Group"
                             invisible="is_suspended_from_websites == False"
-                            groups="user_websites.group_user_websites_moderator"
+                            groups="user_websites.group_user_websites_administrator"
                             class="btn-success"/>
                 </header>
                 <sheet>

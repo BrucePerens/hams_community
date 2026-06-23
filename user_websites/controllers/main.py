@@ -248,15 +248,26 @@ class UserWebsitesController(http.Controller):
         # avoiding artificial AccessErrors from the backend service account.
 
         # Enforce strict schema contract. Let missing models fail loudly.
-        article = request.env['knowledge.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
+        article = request.env[
+            'knowledge.article'
+        ].search(
+            [
+                (
+                    'name',
+                    'ilike',
+                    'User Websites Documentation%',
+                )
+            ],
+            limit=1,
+        )
         if article and article.website_url:
-            return request.redirect(article.website_url)
+            return request.redirect(
+                article.website_url
+            )
 
-        article = request.env['knowledge.article'].search([('name', 'ilike', 'User Websites Documentation%')], limit=1)
-        if article and article.website_url:
-            return request.redirect(article.website_url)
-
-        return request.render("user_websites.documentation_page", {})
+        return request.render(
+            "user_websites.documentation_page", {}
+        )
 
     @http.route("/community", type="http", auth="public", website=True)
     def community_directory(self, **kwargs):
@@ -353,9 +364,24 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
+        if model not in ("res.partner", "user.websites.group"):
+            res_content = json.dumps({"error": "Forbidden"})
+            res_headers = [("Content-Type", "application/json")]
+            return request.make_response(
+                res_content,
+                status=403,
+                headers=res_headers,
+            )
+
         record = env_svc[model].browse(record_id)
         if not record.exists():
-            return request.make_response(json.dumps({"error": "Forbidden"}), status=403, headers=[("Content-Type", "application/json")])
+            res_content = json.dumps({"error": "Forbidden"})
+            res_headers = [("Content-Type", "application/json")]
+            return request.make_response(
+                res_content,
+                status=403,
+                headers=res_headers,
+            )
 
         db_secret = utils._get_crypto_secret()
         if not db_secret:

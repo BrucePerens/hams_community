@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from odoo import models, _
-from odoo.exceptions import UserError
 
 
 class BinaryVersionPager(models.Model):
@@ -8,14 +7,6 @@ class BinaryVersionPager(models.Model):
 
     def action_notify_tenants(self):
         """Integrates with PagerDuty to alert tenants of a new upstream binary version."""
-        # Fail fast: Require pager_duty for explicit tenant notification actions
-        if "pager.incident" not in self.env:
-            raise UserError(
-                _(
-                    "PagerDuty integration is not installed. Please install the 'pager_duty' module to use this feature."
-                )
-            )
-
         # Security: Elevate using micro-privilege architecture instead of sudo()
         svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
             "binary_downloader.user_binary_downloader_service"

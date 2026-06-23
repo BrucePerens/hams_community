@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from .res_users import _async_unpublish_content
+from .res_users import _async_unpublish_content, BACKGROUND_EXECUTOR
 import json
-from concurrent.futures import ThreadPoolExecutor
 from odoo.addons.distributed_redis_cache.redis_cache import (
     distributed_cache,
     invalidate_model_cache,
@@ -114,7 +113,7 @@ class ResUsersModeration(models.Model):
         if not is_test:
             db_name = self.env.cr.dbname
             # Fire and forget safely without unbounded thread growth
-            ThreadPoolExecutor(max_workers=2).submit(
+            BACKGROUND_EXECUTOR.submit(
                 _async_unpublish_content, db_name, user_ids
             )
         else:

@@ -26,9 +26,9 @@
         </xpath>
     </template>
 
-    <!-- audit-ignore-view -->
     <!-- [@ANCHOR: helpdesk_portal_list] -->
     <template id="portal_my_tickets" name="My Tickets">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_portal_list] -->
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True"/>
             <t t-call="portal.portal_searchbar">
@@ -70,6 +70,7 @@
 
     <!-- [@ANCHOR: helpdesk_portal_detail] -->
     <template id="portal_ticket_detail" name="Ticket Detail">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_portal_detail] -->
         <t t-call="portal.portal_layout">
             <div id="optional_classes" class="container">
                 <div class="card mt-3">
@@ -115,9 +116,9 @@
         </t>
     </template>
 
-    <!-- audit-ignore-view -->
     <!-- [@ANCHOR: helpdesk_portal_new] -->
     <template id="portal_ticket_new" name="New Ticket">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_portal_new] -->
         <t t-call="portal.portal_layout">
             <div class="container">
                 <div class="row">

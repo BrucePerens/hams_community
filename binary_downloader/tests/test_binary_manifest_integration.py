@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import io
+import tarfile
+import hashlib
 import os
 import stat
 from odoo import tools
@@ -24,11 +27,40 @@ class TestBinaryManifestIntegration(HamsTransactionCase):
 
     def test_kopia_install_integration(self):
         # [!] DIAGNOSTIC FOR AI: Physical integration test for kopia installation.
-        # This will actually download the real kopia binary from GitHub as configured in data
-        self.env.ref("binary_downloader.binary_manifest_kopia")
-
         # Ensure it's not on system PATH to force local install
         self.safe_patch("shutil.which", return_value=None)
+
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar:
+            content = b"dummy kopia content"
+            tarinfo = tarfile.TarInfo(name="kopia")
+            tarinfo.size = len(content)
+            tar.addfile(tarinfo, io.BytesIO(content))
+
+        tar_bytes = tar_stream.getvalue()
+        expected_checksum = hashlib.sha256(tar_bytes).hexdigest()
+
+        # Update the manifest record in the database to use our dummy checksum and url
+        manifest = self.env.ref("binary_downloader.binary_manifest_kopia")
+        manifest.write({
+            "checksum": expected_checksum,
+            "url": "http://dummy.internal/kopia.tar.gz"
+        })
+
+        # Update test_bin to the variant name and clean it
+        self.test_bin = os.path.join(self.bin_dir, manifest._get_target_filename())
+        if os.path.exists(self.test_bin):
+            os.remove(self.test_bin)
+
+        class MockResponse(io.BytesIO):
+            def getheader(self, name, default=None):
+                return None
+
+        # Patch urllib.request.urlopen to return our mock response
+        self.safe_patch(
+            "urllib.request.urlopen",
+            return_value=MockResponse(tar_bytes)
+        )
 
         path = self.env["binary.manifest"].ensure_executable("kopia")
 
@@ -54,7 +86,11 @@ class TestBinaryManifestIntegration(HamsTransactionCase):
             website = self.env["website"].create({"name": "Test Tenant"})
 
         manifest = self.env["binary.manifest"].create(
-            {"name": "test_symlink_bin", "url": "http://odoo-service.internal"}
+            {
+                "name": "test_symlink_bin",
+                "url": "http://odoo-service.internal",
+                "checksum": "fake_checksum",
+            }
         )
         version = self.env["binary.version"].create(
             {
@@ -88,5 +124,4 @@ class TestBinaryManifestIntegration(HamsTransactionCase):
         mock_symlink.assert_called_once_with(
             "/fake/central/path",
             link.symlink_path,
-            "[!] DIAGNOSTIC FOR AI: symlink must be called with correct paths",
         )

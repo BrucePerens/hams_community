@@ -57,4 +57,4 @@ class SEOMetadataMixin(models.AbstractModel):
                     self.with_user(svc_uid).with_context(mail_notrack=True),
                 ).write(seo_vals)
 
-        return True
+        return res

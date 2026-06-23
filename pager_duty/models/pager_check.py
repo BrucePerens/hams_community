@@ -594,6 +594,7 @@ class PagerCheck(models.Model):
                 ],
                 capture_output=True,
                 text=True,
+                shell=False,
             )
             active_services = res.stdout
 
