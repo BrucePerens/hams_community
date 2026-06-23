@@ -246,5 +246,9 @@ class PagerIncident(models.Model):
         # Performance optimization: Use Postgres procedure to fetch dashboard data in one round-trip.
         # [@ANCHOR: pager_board_stats]
         website_id = self.env.context.get("website_id")
+        if not website_id:
+            current_website = self.env["website"].get_current_website()
+            if current_website:
+                website_id = current_website.id
         self.env.cr.execute("SELECT pager_get_board_data(%s)", [website_id])
         return self.env.cr.fetchone()[0]

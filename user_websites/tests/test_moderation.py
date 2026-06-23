@@ -101,7 +101,9 @@ class TestModeration(RealTransactionCase):
         self.env.cr.commit()
         for _ in range(20):
             self.env.invalidate_all()
-            if not self.spam_page.is_published:
+            if not self.spam_page.is_published and not self.spam_post.is_published:
+                # Wait for the background transaction to fully commit
+                time.sleep(0.5) # audit-ignore-sleep
                 break
             time.sleep(0.5) # audit-ignore-sleep
 
@@ -132,7 +134,9 @@ class TestModeration(RealTransactionCase):
         self.env.cr.commit()
         for _ in range(20):
             self.env.invalidate_all()
-            if not self.spam_page.is_published:
+            if not self.spam_page.is_published and not self.spam_post.is_published:
+                # Wait for the background transaction to fully commit
+                time.sleep(0.5) # audit-ignore-sleep
                 break
             time.sleep(0.5) # audit-ignore-sleep
 

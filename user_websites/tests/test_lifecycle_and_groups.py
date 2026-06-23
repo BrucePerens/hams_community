@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import odoo
+import time
 from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 import logging
@@ -20,7 +21,7 @@ class TestLifecycleAndGroups(RealTransactionCase):
         self.user_a = self.env["res.users"].create(
             {
                 "name": "Alice Life",
-                "login": "alicelife",
+                "login": "alicelife", "password": "alicelife",
                 "email": "alice@example.com",
                 "website_slug": "alicelife",
                 "group_ids": [
@@ -143,6 +144,13 @@ class TestLifecycleAndGroups(RealTransactionCase):
 
         self.user_a.with_context(test_mode=True).active = False
         self.env.cr.commit()
+
+        for _ in range(20):
+            self.env.invalidate_all()
+            if not page.website_published:
+                time.sleep(0.5) # audit-ignore-sleep
+                break
+            time.sleep(0.5) # audit-ignore-sleep
 
         page.invalidate_recordset()
         post.invalidate_recordset()

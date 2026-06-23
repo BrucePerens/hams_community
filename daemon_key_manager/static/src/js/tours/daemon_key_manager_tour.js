@@ -50,6 +50,15 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
         { 
             content: 'Wait for success toast', 
             trigger: '.o_notification_manager .o_notification',
+        },
+        {
+            content: 'Go back to list via breadcrumb to close the form',
+            trigger: '.o_control_panel .breadcrumb-item a, .o_control_panel .o_back_button, .o_breadcrumb a',
+            run: 'click',
+        },
+        {
+            content: 'Wait for list view to load',
+            trigger: '.o_list_table',
         }
     ]),
 });
