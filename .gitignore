@@ -1,6 +1,9 @@
 # Internationalization
 i18n/hams_master.pot
 
+# Sub-repository.
+hams_shared/
+
 # Python / Bytecode
 __pycache__/
 *.py[cod]
