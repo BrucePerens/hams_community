@@ -7,7 +7,7 @@ from odoo.modules.registry import Registry
 import psycopg2
 from psycopg2 import sql
 from odoo.tools import mute_logger, _
-from odoo.addons.zero_sudo.tests.common import SafePatchMixin
+from odoo.addons.zero_sudo.tests.common import SafePatchMixin, wait_for_werkzeug_threads
 import unittest.mock
 
 _logger = logging.getLogger(__name__)
@@ -92,10 +92,14 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
 
         odoo.models.BaseModel.create = tracking_create
         self.addCleanup(setattr, odoo.models.BaseModel, "create", _original_create)
+        self.addCleanup(self._real_teardown)
 
-    def tearDown(self):
+    def _real_teardown(self):
         # Guarantee that our raw PostgreSQL cursor is ALWAYS rolled back and closed
         # even if an ORM AccessError occurs during the leak verification phase.
+        # Wait for any lingering backend HTTP threads to finish, preventing teardown serialization failures.
+        wait_for_werkzeug_threads(timeout=5.0)
+
         try:
             # Rollback any lingering, uncommitted test state to drop REPEATABLE READ
             # snapshot locks and abort pending dirty-form submissions.
@@ -168,11 +172,14 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
             # 4. Close OUR real DB connection NO MATTER WHAT
             try:
                 self.cr.rollback()
+                self.registry.clear_cache()
+                self.env.clear()
                 self.cr.close()
             except Exception as e: # audit-ignore-catch-all
                 _logger.error("Failed to cleanly close DB connection during teardown: %s", e)
 
-            # 5. Hand off teardown to Odoo framework
+            # 4. Cleanly restore the underlying HttpCase TestCursor so its own teardown succeeds.
+            # Verified by [@ANCHOR: test_cursor_restoration]
+            self.registry.cursor = self._test_cursor
             self.cr = self._test_cursor
             self.env = self._test_env
-            super().tearDown()

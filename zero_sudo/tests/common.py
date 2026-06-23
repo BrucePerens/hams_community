@@ -18,6 +18,33 @@ import pathlib
 
 _logger = logging.getLogger(__name__)
 
+import werkzeug.serving
+
+_active_werkzeug_threads = set()
+_original_process_request_thread = getattr(werkzeug.serving.ThreadedWSGIServer, 'process_request_thread', None)
+
+if _original_process_request_thread:
+    def _patched_process_request_thread(self, request, client_address):
+        t = threading.current_thread()
+        _active_werkzeug_threads.add(t)
+        try:
+            return _original_process_request_thread(self, request, client_address)
+        finally:
+            _active_werkzeug_threads.discard(t)
+
+    werkzeug.serving.ThreadedWSGIServer.process_request_thread = _patched_process_request_thread
+
+def wait_for_werkzeug_threads(timeout=5.0):
+    """Wait for all tracked background Werkzeug request threads to finish."""
+    start_time = time.time()
+    for t in list(_active_werkzeug_threads):
+        remaining = timeout - (time.time() - start_time)
+        if remaining <= 0:
+            _logger.warning("Timeout exceeded waiting for Werkzeug threads.")
+            break
+        if t is not threading.current_thread():
+            t.join(remaining)
+
 
 
 # 🚨 NATIVE SCREENSHOT RESCUE 🚨
