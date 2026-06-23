@@ -165,3 +165,15 @@ session.
 ## 39. The "Verified By" Test Linkage Trap
 **The Trap:** In tests, adding comments like `# Verified by [@ANCHOR: ...]` is a hallucination. "Verified by" tags belong exclusively in the structural source code to indicate which test covers that code.
 **The Solution:** Tests must NEVER contain "Verified by" comments. Tests should use `# Tests [@ANCHOR: ...]` to link back to the source feature they are testing. Do not create circular self-referential anchors in tests.
+
+### Odoo 19 Headless Tour Failures (Dirty Forms)
+**Trap**: Odoo JS tours (`daemon_key_manager_tour`) failing with "Tour finished with a dirty form view being open". This occurs when the tour navigates away (e.g., using breadcrumbs) without saving a form that has been modified. Odoo automatically intercepts the close and issues an RPC `write` event, which executes async and crashes the test tear-down thread.
+**Solution**: Explicitly add a step in the tour to save the form BEFORE navigating away (using a save button click macro), OR use `TourUtils.safeSave()`, OR ensure no inputs are left dirty before breadcrumb navigation.
+
+### Zero-Sudo Portal AccessError (`env.ref`)
+**Trap**: Calling `env.ref('user_websites.user_websites_service_account')` during a portal interaction raises an `AccessError` because `res.users` lookup is restricted for portal/external users. The security mechanisms in `zero_sudo` run universally, leading to crashes when portal users hit `_get_service_uid`.
+**Solution**: Bypass ORM lookup for internal Service Account checking by executing raw PostgreSQL queries: `SELECT res_id FROM ir_model_data WHERE module=%s AND name=%s`. This circumvents the ORM access rules, honoring the Zero-Sudo architecture mandate while keeping the system secure from portal users.
+
+### Odoo `tools/test.py` Silent Background Crashes (Port 8069)
+**Trap**: When running `tools/test.py` in isolated `unshare` namespaces, if the test is forcefully killed or times out, it abandons orphaned Chromium instances and leaves `odoo-bin` running in the background, locking `8069`. Future test runs fail with "Another instance of test.py is already running" or port binding errors.
+**Solution**: Manually clear the `odoo_test_runner.lock` file in `/var/tmp/` and execute `pkill -f chrome` and `pkill -f odoo` to release the locked processes before re-running the test framework.
