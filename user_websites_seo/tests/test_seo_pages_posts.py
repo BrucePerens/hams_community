@@ -43,21 +43,18 @@ class TestSEOPagesPosts(RealTransactionCase):
         """Test that a user can write to their own page's SEO fields."""
         page_by_user = self.page.with_user(self.regular_user)
         page_by_user.write({'website_meta_title': 'Page SEO Title'})
-
-        # Odoo 19: Check if the field was correctly written.
-        if self.page.website_meta_title != 'Page SEO Title':
-            _logger.warning("SEO field write failed.")
-            return
-
-        self.assertEqual(self.page.website_meta_title, 'Page SEO Title')
+        self.page.invalidate_recordset()
+        self.assertEqual(
+            self.page.website_meta_title,
+            'Page SEO Title',
+        )
 
     def test_post_seo_write(self):
         """Test that a user can write to their own post's SEO fields."""
         post_by_user = self.post.with_user(self.regular_user)
         post_by_user.write({'website_meta_title': 'Post SEO Title'})
-
-        if self.post.website_meta_title != 'Post SEO Title':
-            _logger.warning("SEO field write failed.")
-            return
-
-        self.assertEqual(self.post.website_meta_title, 'Post SEO Title')
+        self.post.invalidate_recordset()
+        self.assertEqual(
+            self.post.website_meta_title,
+            'Post SEO Title',
+        )

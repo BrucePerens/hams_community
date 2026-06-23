@@ -60,5 +60,7 @@ def get_redis_connection(env=None):
                 )
             return redis.Redis(connection_pool=_custom_pools[pool_key])
 
+    _logger.debug(
+        "Returning default Redis Connection Pool."
+    )
     return redis.Redis(connection_pool=redis_pool)
-_logger.debug("Initialized Centralized Redis Connection Pool.")

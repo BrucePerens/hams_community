@@ -1,7 +1,4 @@
 from odoo import _, fields, models
-import logging
-
-_logger = logging.getLogger(__name__)
 
 class ShiftHandoffWizard(models.TransientModel):
     _name = "hams_helpdesk.shift_handoff"

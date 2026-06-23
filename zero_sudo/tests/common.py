@@ -1,24 +1,21 @@
 # -*- coding: utf-8 -*-
+import ctypes
 import glob
 import logging
 import os
+import pathlib
 import pwd
 import re
-import shutil
+import threading
 import time
 import urllib.request
-import threading
-import concurrent
-import concurrent.futures
+import werkzeug.serving
 from unittest.mock import MagicMock, patch
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 import odoo.tests.common
 from odoo import fields
-import pathlib
 
 _logger = logging.getLogger(__name__)
-
-import werkzeug.serving
 
 _active_werkzeug_threads = set()
 _original_process_request_thread = werkzeug.serving.ThreadedWSGIServer.process_request_thread
@@ -32,8 +29,6 @@ def _patched_process_request_thread(self, request, client_address, *args, **kwar
         _active_werkzeug_threads.discard(t)
 
 werkzeug.serving.ThreadedWSGIServer.process_request_thread = _patched_process_request_thread
-
-import ctypes
 
 def wait_for_werkzeug_threads(timeout=5.0):
     """Wait for all tracked background Werkzeug request threads to finish. Kill if they time out."""
@@ -241,12 +236,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         # Initialize CDP hook after super() creates self.browser
             # Start Chrome
 
-    @classmethod
-    def tearDownClass(cls):
-        _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
-
-        if cls.server_thread:
-            cls.server_thread.join = lambda *args, **kwargs: None
 
     def start_hams_browser(self):
         if not self.browser:
@@ -273,6 +262,9 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     @classmethod
     def tearDownClass(cls):
+        _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
+        if cls.server_thread:
+            cls.server_thread.join = lambda *args, **kwargs: None
         if cls.server:
             try:
                 if cls.server.server and cls.server.server.socket:
@@ -401,7 +393,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
                     // 3. Exterminate UI Overlays that block clicks
                     const s = document.createElement('style');
-                    s.innerHTML = '#cookie-banner, .o_cookies_discrete, .cookie-consent-banner { display: none !important; pointer-events: none !important; } body.modal-open { overflow: auto !important; }';
+                    s.textContent = '#cookie-banner, .o_cookies_discrete, .cookie-consent-banner { display: none !important; pointer-events: none !important; } body.modal-open { overflow: auto !important; }';
                     document.head.appendChild(s);
                 }
             """

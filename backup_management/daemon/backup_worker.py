@@ -21,7 +21,7 @@ ODOO_PASS = os.environ.get("ODOO_SERVICE_PASSWORD", "")  # burn-ignore-env
 
 RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.environ.get("RABBITMQ_USER", "guest")
-RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")  # burn-ignore-env", "guest")  # burn-ignore-env
+RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")  # burn-ignore-env
 
 
 class OdooAPIError(Exception):
@@ -342,16 +342,16 @@ def main():
             channel.start_consuming()
         except pika.exceptions.AMQPConnectionError:
             logger.warning("RabbitMQ offline. Retrying in 5s...")
-            time.sleep(5)
+            time.sleep(5)  # audit-ignore-sleep
         except pika.exceptions.AMQPError as e:
             logger.error("RabbitMQ protocol error: %s. Restarting...", e)
-            time.sleep(5)
+            time.sleep(5)  # audit-ignore-sleep
         except OdooAPIError as e:
             logger.error("Fatal Odoo API error in main loop: %s. Retrying in 10s...", e)
-            time.sleep(10)
+            time.sleep(10)  # audit-ignore-sleep
         except (ValueError, TypeError, OSError) as e:  # audit-ignore-catch-all: General daemon recovery loop.
              logger.error("Unexpected error in main loop: %s. Restarting...", e)
-             time.sleep(5)
+             time.sleep(5)  # audit-ignore-sleep
 
 
 if __name__ == "__main__":

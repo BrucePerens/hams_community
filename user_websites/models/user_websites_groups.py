@@ -6,6 +6,7 @@ This file defines the Odoo model for User Websites Groups.
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
+import psycopg2
 from ..utils import slugify, RESERVED_SLUGS
 import json
 from odoo.addons.distributed_redis_cache.redis_cache import (
@@ -13,7 +14,7 @@ from odoo.addons.distributed_redis_cache.redis_cache import (
     invalidate_model_cache,
 )
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from .res_users import BACKGROUND_EXECUTOR
 import time
 import os
 import odoo
@@ -263,7 +264,7 @@ class UserWebsitesGroup(models.Model):
                 if privilege:
                     group_vals["privilege_id"] = privilege.id
                 elif category:
-                    group_vals["category_id"] = category.id
+                    group_vals["privilege_id"] = category.id
 
                 groups_to_create_vals.append(group_vals)
                 indices_needing_groups.append(i)
@@ -393,7 +394,7 @@ class UserWebsitesGroup(models.Model):
 
         if not is_test:
             db_name = self.env.cr.dbname
-            ThreadPoolExecutor(max_workers=2).submit(
+            BACKGROUND_EXECUTOR.submit(
                 _async_unpublish_group_content, db_name, group_ids
             )
         else:

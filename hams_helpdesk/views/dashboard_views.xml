@@ -15,6 +15,7 @@
 
     <!-- burn-ignore-tour -->
     <record id="view_hams_helpdesk_ticket_pivot" model="ir.ui.view">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_ticket_lifecycle] -->
         <field name="name">hams_helpdesk.ticket.pivot</field>
         <field name="model">hams_helpdesk.ticket</field>
         <field name="arch" type="xml">

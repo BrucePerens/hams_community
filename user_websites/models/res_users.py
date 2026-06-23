@@ -535,7 +535,13 @@ class ResUsers(models.Model):
                     if len(items) < 1000: break
                     offset += 1000
 
-        if hasattr(super(), '_get_gdpr_streamed_keys'):
+        mro = self.__class__.__mro__
+        start_idx = mro.index(ResUsers) + 1
+        has_parent_method = any(
+            "_get_gdpr_streamed_keys" in cls.__dict__
+            for cls in mro[start_idx:]
+        )
+        if has_parent_method:
             res = super()._get_gdpr_streamed_keys()
         else:
             res = {}

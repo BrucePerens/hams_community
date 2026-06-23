@@ -2,6 +2,7 @@
 <odoo>
     <!-- [@ANCHOR: helpdesk_ticket_form] -->
     <record id="view_hams_helpdesk_ticket_form" model="ir.ui.view">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_ticket_form] -->
         <field name="name">hams_helpdesk.ticket.form</field>
         <field name="model">hams_helpdesk.ticket</field>
         <field name="arch" type="xml">
@@ -43,6 +44,7 @@
 
     <!-- [@ANCHOR: helpdesk_ticket_list] -->
     <record id="view_hams_helpdesk_ticket_list" model="ir.ui.view">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: helpdesk_ticket_list] -->
         <field name="name">hams_helpdesk.ticket.list</field>
         <field name="model">hams_helpdesk.ticket</field>
         <field name="arch" type="xml">

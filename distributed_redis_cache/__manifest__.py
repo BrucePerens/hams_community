@@ -15,7 +15,10 @@ Distributed Redis Cache
     "category": "Technical",
     "version": "1.0",
     "license": "AGPL-3",
-    "depends": ["base", "zero_sudo"],
+    "external_dependencies": {
+        "python": ["redis", "asyncpg", "python-dotenv"],
+    },
+    "depends": ["base", "zero_sudo", "daemon_key_manager"],
     "data": [
         "security/distributed_redis_cache_security.xml",
         "security/ir.model.access.csv",

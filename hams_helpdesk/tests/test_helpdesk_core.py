@@ -165,3 +165,14 @@ class TestHelpdeskCore(HamsTransactionCase):
         ticket_new = self.env['hams_helpdesk.ticket'].new({'partner_id': self.portal_partner.id})
         ticket_new._onchange_partner_id()
         self.assertEqual(ticket_new.callsign, 'K1AAA', "Callsign MUST be populated via onchange.")
+
+    def test_view_rendering(self):
+        """Verify views render correctly without syntax errors."""
+        # Tests [@ANCHOR: helpdesk_shift_handoff]
+        # Tests [@ANCHOR: helpdesk_ticket_lifecycle]
+        self.env['hams_helpdesk.shift_handoff'].get_view(
+            view_id=self.env.ref('hams_helpdesk.view_hams_helpdesk_shift_handoff_form').id
+        )
+        self.env['hams_helpdesk.ticket'].get_view(
+            view_id=self.env.ref('hams_helpdesk.view_hams_helpdesk_ticket_pivot').id
+        )

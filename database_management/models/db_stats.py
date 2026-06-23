@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import re
 import subprocess
 
+from psycopg2 import sql as psql
 from odoo import models, fields, api, tools, _
 from odoo.exceptions import UserError, AccessError
 
@@ -111,17 +113,34 @@ class DatabaseTableStat(models.Model):
                 env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
                     "pager_duty.user_pager_service_internal"
                 )
-                tables = ", ".join([f"{t.table_name} ({t.dead_percent:.1f}%%)" for t in high_bloat])
+                tables = ", ".join(
+                    [
+                        f"{t.table_name}"
+                        f" ({t.dead_percent:.1f}%)"
+                        for t in high_bloat
+                    ]
+                )
+                desc = (
+                    "Database Bloat Warning! The"
+                    " following tables have >20%"
+                    " dead tuples and require a"
+                    " manual Vacuum Analyze: "
+                    + tables
+                )
                 env_svc["pager.incident"].report_incident(
                     {
                         "source": "DBA Autovacuum Monitor",
                         "severity": "medium",
-                        "description": f"Database Bloat Warning! The following tables have >20%% dead tuples and require a manual Vacuum Analyze: {tables}",
+                        "description": desc,
                     }
                 )
             except (AccessError, UserError) as e:
-                _logger.warning("Permission or configuration error reporting bloat incident: %s", e)
-                _logger.exception("Unexpected error reporting bloat incident to PagerDuty")
+                _logger.warning(
+                    "Permission or configuration"
+                    " error reporting bloat"
+                    " incident: %s",
+                    e,
+                )
 
 
 class DatabaseQueryStat(models.Model):
@@ -144,16 +163,17 @@ class DatabaseQueryStat(models.Model):
 
         can_query = False
         try:
-            # Safely check the postgres catalog and settings to confirm the extension
-            # is loaded without triggering a hard 'bad query' ERROR log in odoo.sql_db
-            self.env.cr.execute("""
-                SELECT 1 FROM pg_extension e
-                JOIN pg_settings s ON s.name = 'shared_preload_libraries'
-                WHERE e.extname = 'pg_stat_statements'
-                AND s.setting LIKE '%pg_stat_statements%'
-            """)
-            if self.env.cr.fetchone():
-                can_query = True
+            with self.env.cr.savepoint():
+                # Safely check the postgres catalog and settings to confirm the extension
+                # is loaded without triggering a hard 'bad query' ERROR log in odoo.sql_db
+                self.env.cr.execute("""
+                    SELECT 1 FROM pg_extension e
+                    JOIN pg_settings s ON s.name = 'shared_preload_libraries'
+                    WHERE e.extname = 'pg_stat_statements'
+                    AND s.setting LIKE '%pg_stat_statements%'
+                """)
+                if self.env.cr.fetchone():
+                    can_query = True
         except Exception as e:  # audit-ignore-catch-all
             _logger.warning("Graceful degradation check failed: %s", e)
 
@@ -409,11 +429,30 @@ class DatabaseQueryStatInherit(models.Model):
             # WARNING: This executes the query. Since it's a SELECT, it's generally safe
             # but in production, we should be careful with side-effecting functions.
             # We strictly enforce that it MUST be a SELECT query for this tool.
-            query_upper = self.query.strip().upper()
+            query_text = self.query.strip()
+            query_upper = query_text.upper()
             if not query_upper.startswith("SELECT"):
-                raise UserError(_("Only SELECT queries can be analyzed via Explain."))
+                msg = _(
+                    "Only SELECT queries can"
+                    " be analyzed via Explain."
+                )
+                raise UserError(msg)
 
-            explain_query = "EXPLAIN (ANALYZE, BUFFERS) " + self.query
+            # Reject multi-statement payloads
+            if re.search(r";\s*\S", query_text):
+                msg = _(
+                    "Multi-statement queries"
+                    " are not permitted."
+                )
+                raise UserError(msg)
+
+            explain_prefix = psql.SQL(
+                "EXPLAIN (ANALYZE, BUFFERS) "
+            )
+            explain_query = (
+                explain_prefix
+                + psql.SQL(query_text)
+            )
             cr_svc.execute(explain_query)
             plan = "\n".join([row[0] for row in cr_svc.fetchall()])
 

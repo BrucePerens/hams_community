@@ -4,19 +4,19 @@
     <record id="action_binary_tenant_link" model="ir.actions.act_window">
         <field name="name">Tenant Execution Paths</field>
         <field name="res_model">binary.tenant.link</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <!-- Binary Version Pool Action -->
     <record id="action_binary_version" model="ir.actions.act_window">
         <field name="name">Central Version Pool</field>
         <field name="res_model">binary.version</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <!-- Tenant Link Form -->
-    <!-- audit-ignore-view -->
     <record id="view_binary_tenant_link_form" model="ir.ui.view">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: test_tenant_link_form] -->
         <field name="name">binary.tenant.link.form</field>
         <field name="model">binary.tenant.link</field>
         <field name="arch" type="xml">
@@ -37,8 +37,8 @@
     </record>
 
     <!-- Version Form -->
-    <!-- audit-ignore-view -->
     <record id="view_binary_version_form" model="ir.ui.view">
+        <!-- audit-ignore-view: Tested by [@ANCHOR: test_binary_version_form] -->
         <field name="name">binary.version.form</field>
         <field name="model">binary.version</field>
         <field name="arch" type="xml">

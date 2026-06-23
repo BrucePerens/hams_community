@@ -31,7 +31,12 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
             env.update(env_vars)
 
         _logger.info("Starting daemon: %s", " ".join(cmd))
-        process = subprocess.Popen(cmd, env=env, start_new_session=True)
+        process = subprocess.Popen(
+            cmd,
+            env=env,
+            start_new_session=True,
+            shell=False,
+        )
         return process
 
     @api.model

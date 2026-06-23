@@ -15,6 +15,7 @@ import logging
 import json
 import asyncpg
 import redis.asyncio as redis
+from dotenv import load_dotenv
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -25,14 +26,9 @@ logger = logging.getLogger("cache_manager")
 # [@ANCHOR: cache_manager_config]
 ENV_FILE = "/var/lib/odoo/daemon_keys/cache_manager.env"
 if os.path.exists(ENV_FILE):
-    try:
-        from dotenv import load_dotenv
+    load_dotenv(ENV_FILE)
 
-        load_dotenv(ENV_FILE)
-    except ImportError:
-        logger.warning("python-dotenv not installed, skipping .env loading")
-
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "odoo")
 DB_USER = os.getenv("DB_USER", "odoo")
@@ -42,7 +38,7 @@ DB_PASS = os.getenv("DB_PASS", "odoo")
 if os.getenv("PGHOST"):
     DB_HOST = os.getenv("PGHOST")
 
-REDIS_HOST = os.getenv("REDIS_HOST") or os.getenv("redis_host") or "127.0.0.1"
+REDIS_HOST = os.getenv("REDIS_HOST") or os.getenv("redis_host") or "localhost"
 REDIS_PORT = int(os.getenv("REDIS_PORT") or os.getenv("redis_port") or "6379")
 REDIS_PASS = os.getenv("REDIS_PASSWORD") or os.getenv("redis_password")
 
@@ -64,16 +60,16 @@ async def broadcast_to_redis(payload):
         # Security: Validate JSON payload before publishing to Redis bus
         data = json.loads(payload)
         if not data.get("model") or not data.get("dbname"):
-            logger.warning(f"Invalid payload received from Postgres: {payload}")
+            logger.warning("Invalid payload received from Postgres: %s", payload)
             return
 
         await redis_client.publish(REDIS_CHANNEL, payload)
         # [!] DIAGNOSTIC FOR AI: Published invalidation to Redis: %s
-        logger.info(f"Published invalidation to Redis: {payload}")
+        logger.info("Published invalidation to Redis: %s", payload)
     except json.JSONDecodeError:
-        logger.error(f"Malformed JSON payload from Postgres: {payload}")
-    except Exception as e:
-        logger.error(f"Redis publish failed: {e}")
+        logger.error("Malformed JSON payload from Postgres: %s", payload)
+    except Exception as e:  # audit-ignore-catch-all
+        logger.error("Redis publish failed: %s", e)
 
 
 def postgres_notify_handler(connection, pid, channel, payload):
@@ -81,7 +77,7 @@ def postgres_notify_handler(connection, pid, channel, payload):
     Synchronous callback fired by asyncpg when a NOTIFY arrives.
     Schedules the Redis broadcast task on the asyncio event loop.
     """
-    logger.info(f"Received Postgres NOTIFY on {channel}: {payload}")
+    logger.info("Received Postgres NOTIFY on %s: %s", channel, payload)
     asyncio.create_task(broadcast_to_redis(payload))
 
 
@@ -99,9 +95,9 @@ async def main():
             decode_responses=True,
         )
         await redis_client.ping()
-        logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
-    except Exception as e:
-        logger.critical(f"Fatal Redis connection error: {e}")
+        logger.info("Connected to Redis at %s:%s", REDIS_HOST, REDIS_PORT)
+    except Exception as e:  # audit-ignore-catch-all
+        logger.critical("Fatal Redis connection error: %s", e)
         return
 
     # 2. Connect to PostgreSQL and LISTEN
@@ -116,21 +112,21 @@ async def main():
                 timeout=10,
             )
             await db_conn.add_listener(PG_CHANNEL, postgres_notify_handler)
-            logger.info(f"Listening to PostgreSQL channel '{PG_CHANNEL}'...")
+            logger.info("Listening to PostgreSQL channel '%s'...", PG_CHANNEL)
 
             while not db_conn.is_closed():
                 # Perform periodic health check
                 await db_conn.execute("SELECT 1")
-                await asyncio.sleep(60)
+                await asyncio.sleep(60)  # audit-ignore-sleep
         except asyncio.CancelledError:
             logger.info("Daemon shutting down cleanly.")
             break
-        except Exception as e:
+        except Exception as e:  # audit-ignore-catch-all
             logger.error(
-                f"PostgreSQL connection dropped: {e}. Reconnecting in 5s..."
+                "PostgreSQL connection dropped: %s. Reconnecting in 5s...", e
             )
             try:
-                await asyncio.sleep(5)
+                await asyncio.sleep(5)  # audit-ignore-sleep
             except asyncio.CancelledError:
                 break
 

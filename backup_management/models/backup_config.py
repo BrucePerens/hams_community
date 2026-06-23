@@ -474,7 +474,10 @@ class BackupConfig(models.Model):
                     if sid:
                         ts = snap.get("timestamp", {}).get("start", 0)
                         dt = (
-                            datetime.datetime.utcfromtimestamp(ts).strftime(
+                            datetime.datetime.fromtimestamp(
+                                ts,
+                                tz=datetime.timezone.utc,
+                            ).strftime(
                                 "%Y-%m-%d %H:%M:%S"
                             )
                             if ts
