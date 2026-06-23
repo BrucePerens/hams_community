@@ -185,7 +185,6 @@ class HamsTestMixin(SafePatchMixin):
                 _logger.warning("Failed to terminate daemon: %s", repr(e))
         cls._active_daemons.clear()
         
-        import threading
         thread_count = threading.active_count()
         if thread_count > 60:
             raise RuntimeError(f"Thread leak detected! {thread_count} active threads at teardown.")
