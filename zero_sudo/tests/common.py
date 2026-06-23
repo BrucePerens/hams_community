@@ -187,6 +187,10 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
         cls._active_daemons.clear()
         super().tearDownClass()
 
+    def tearDown(self):
+        wait_for_werkzeug_threads(timeout=5.0)
+        super().tearDown()
+
     def start_daemon(self, script_path, args=None, env_vars=None, health_url=None, timeout=600):
         # Verified by [@ANCHOR: test_integration_daemon_testing]
         daemon_utils = self.env["zero_sudo.daemon.utils"]
@@ -247,8 +251,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         url = self.base_url() + url_path
         
         # We need a browser
-        browser = ChromeBrowser(self)
-        self.browser = browser # save for tearDown
+        browser = self.start_hams_browser()
         
         with self.allow_requests(browser=browser):
             browser.navigate_to(url, wait_stop=True)

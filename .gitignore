@@ -23,6 +23,7 @@ env/
 Thumbs.db
 
 # Odoo Local Dev
+LOG
 *.log
 filestore/
 sessions/
