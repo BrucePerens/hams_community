@@ -1019,7 +1019,22 @@ def check_host_apt_packages():
         sys.exit(1)
 
 
+_single_instance_lock = None
+
 def main():
+    global _single_instance_lock
+    lock_file_path = "/var/tmp/odoo_test_runner.lock"
+    try:
+        _single_instance_lock = open(lock_file_path, "a")
+        os.chmod(lock_file_path, 0o777)
+    except Exception:
+        _single_instance_lock = open(lock_file_path, "r")
+    try:
+        fcntl.flock(_single_instance_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        print("🛑 ERROR: Another instance of test.py is already running. Exiting.")
+        sys.exit(1)
+
     cwd = os.getcwd()
     if not os.path.isdir(os.path.join(cwd, ".git")) or not os.path.isfile(os.path.join(cwd, "tools", "test.py")):
         print("================================================================================")

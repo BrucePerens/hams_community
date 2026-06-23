@@ -53,13 +53,30 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
         },
         TourUtils.waitForAbsence('.o_notification', 'success toast to disappear'),
         {
-            content: 'Go back to list via breadcrumb to close the form',
-            trigger: '.o_control_panel .breadcrumb-item a, .o_control_panel .o_back_button, .o_breadcrumb a',
-            run: 'click',
+            content: 'Discard form via JS to bypass concurrency or dirty state issues, or click breadcrumb if clean',
+            trigger: 'body',
+            run: function () {
+                const btn = document.querySelector('.o_form_button_cancel');
+                const modalClose = document.querySelector('.modal-footer .btn-secondary');
+                
+                if (modalClose) {
+                    modalClose.click();
+                }
+
+                if (btn && btn.offsetParent !== null) {
+                    btn.click();
+                } else {
+                    const breadcrumb = document.querySelector('.o_control_panel .breadcrumb-item:not(.active):first, .o_control_panel .o_back_button');
+                    if (breadcrumb) {
+                        breadcrumb.click();
+                    }
+                }
+            }
         },
         {
             content: 'Wait for list view to load',
             trigger: '.o_list_button_add',
-        }
+        },
+        TourUtils.waitForAbsence('.o_form_view', 'form view to disappear'),
     ]),
 });

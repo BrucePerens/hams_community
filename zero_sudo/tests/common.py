@@ -59,7 +59,7 @@ def _patched_save_test_file(test_name, content, prefix, extension='png', logger=
                     os.chown(host_path, user_info.pw_uid, user_info.pw_gid)
                 except OSError as e:
                     logger.warning("Ignored chown failure: %s", e)
-            logger.error("TRACING: Successfully moved screenshot to host partition: %s", host_path)
+            logger.info("TRACING: Successfully moved screenshot to host partition: %s", host_path)
         except Exception as e: # audit-ignore-catch-all
             logger.error("TRACING: Failed to move screenshot to host partition: %s", e)
 
