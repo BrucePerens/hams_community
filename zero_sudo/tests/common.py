@@ -34,16 +34,33 @@ if _original_process_request_thread:
 
     werkzeug.serving.ThreadedWSGIServer.process_request_thread = _patched_process_request_thread
 
+import ctypes
+
 def wait_for_werkzeug_threads(timeout=5.0):
-    """Wait for all tracked background Werkzeug request threads to finish."""
+    """Wait for all tracked background Werkzeug request threads to finish. Kill if they time out."""
     start_time = time.time()
     for t in list(_active_werkzeug_threads):
+        if t is threading.current_thread():
+            continue
         remaining = timeout - (time.time() - start_time)
-        if remaining <= 0:
-            _logger.warning("Timeout exceeded waiting for Werkzeug threads.")
-            break
-        if t is not threading.current_thread():
+        if remaining > 0:
             t.join(remaining)
+        
+        if t.is_alive():
+            _logger.warning("Timeout exceeded waiting for Werkzeug thread %s. Killing it...", t.name)
+            try:
+                thread_id = t.ident
+                if thread_id:
+                    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), ctypes.py_object(SystemExit))
+                    if res == 0:
+                        _logger.error("Failed to kill Werkzeug thread %s: Invalid thread ID", t.name)
+                    elif res > 1:
+                        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), 0)
+                        _logger.error("Failed to kill Werkzeug thread %s: PyThreadState_SetAsyncExc failed", t.name)
+                    else:
+                        _logger.warning("Successfully sent SystemExit to Werkzeug thread %s.", t.name)
+            except Exception as e: # audit-ignore-catch-all
+                _logger.error("Exception while trying to kill Werkzeug thread %s: %s", t.name, e)
 
 
 
