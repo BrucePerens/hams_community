@@ -118,5 +118,5 @@ class TestManualFeatures(HamsHttpCase):
 
         article = self.env["knowledge.article"].search([("name", "=", "Knowledge: User Guide")])
         self.assertTrue(article.exists(), "User Guide article should have been installed.")
-        self.assertIn("Welcome to the Knowledge", article.body)
+        self.assertIn("Welcome to Manuals", article.body)
         self.assertTrue(article.is_published)
