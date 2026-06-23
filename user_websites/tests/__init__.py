@@ -26,3 +26,5 @@ from . import test_simulation
 from . import test_ui_tours
 from . import test_documentation
 from . import test_moderation
+from . import test_ui_personas
+

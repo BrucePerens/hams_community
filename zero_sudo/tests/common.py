@@ -198,6 +198,30 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         if cls.server_thread:
             cls.server_thread.join = lambda *args, **kwargs: None
 
+    def start_hams_browser(self):
+        if not self.browser:
+            self.browser = ChromeBrowser(self, headless=not os.environ.get("HAMS_PAUSE_ON_FAIL"))
+        return self.browser
+
+    def navigate_and_screenshot(self, url_path, prefix="screenshot_"):
+        browser = self.start_hams_browser()
+        url = self.base_url() + url_path
+        browser.navigate_to(url, wait_stop=True)
+        # Give it a moment to render JS components
+        time.sleep(1.0)
+        try:
+            future = browser.take_screenshot(prefix=prefix)
+            if hasattr(future, 'result'):
+                future.result(timeout=10.0)
+        except Exception as e:
+            _logger.warning("Failed to take screenshot for %s: %s", url_path, e)
+
+    def tearDown(self):
+        super().tearDown()
+        if self.browser:
+            self.browser._websocket_request('Browser.close')
+            self.browser = None
+
         if cls.server:
             try:
                 if cls.server.server and cls.server.server.socket:
