@@ -459,6 +459,15 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         robust_reap(process.pid)
         process.wait()
         sys.exit(1)
+    finally:
+        # Always reap stray processes like headless chrome to prevent zombie exhaustion
+        print(f"[*] [DEBUG-RUNNER] Ensuring all child processes are reaped for PID {process.pid}...")
+        try:
+            subprocess.run(["pkill", "-TERM", "-f", "chrome"], check=False)
+            pgid = os.getpgid(process.pid)
+            os.killpg(pgid, signal.SIGTERM)
+        except OSError:
+            pass
 
     print(f"[*] [DEBUG-RUNNER] Waiting for process {process.pid} to cleanly terminate...")
     process.wait()
@@ -469,6 +478,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
         return 1 if final_errors > initial_errors else 0
 
     return process.returncode
+
 
 
 def get_local_modules(base_dir, ignore_patterns):
