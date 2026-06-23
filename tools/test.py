@@ -10,6 +10,9 @@ and prone to race conditions if native macros are ignored.
 """
 
 import infrastructure
+import sys
+# Enforce a strict recursion limit to immediately detect runaway functions
+sys.setrecursionlimit(800)
 import argparse
 import atexit
 import contextlib
@@ -954,6 +957,12 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     odoo_user = pwd.getpwnam("odoo")
     def preexec_odoo():
+        try:
+            import resource
+            # 1200 seconds (20 minutes) of ACTIVE CPU TIME. Safe for tests, deadly for infinite loops.
+            resource.setrlimit(resource.RLIMIT_CPU, (1200, 1200))
+        except OSError:
+            pass
         os.initgroups("odoo", odoo_user.pw_gid)
         os.setresgid(odoo_user.pw_gid, odoo_user.pw_gid, odoo_user.pw_gid)
         os.setresuid(odoo_user.pw_uid, odoo_user.pw_uid, odoo_user.pw_uid)

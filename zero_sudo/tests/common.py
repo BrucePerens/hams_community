@@ -172,8 +172,7 @@ class SafePatchMixin:
         self.addCleanup(patcher.stop)
         return mock_obj
 
-class HamsTransactionCase(TransactionCase, SafePatchMixin):
-    # [@ANCHOR: hams_transaction_case]
+class HamsTestMixin(SafePatchMixin):
     _active_daemons = []
 
     @classmethod
@@ -185,6 +184,12 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
             except Exception as e: # audit-ignore-catch-all
                 _logger.warning("Failed to terminate daemon: %s", repr(e))
         cls._active_daemons.clear()
+        
+        import threading
+        thread_count = threading.active_count()
+        if thread_count > 60:
+            raise RuntimeError(f"Thread leak detected! {thread_count} active threads at teardown.")
+            
         super().tearDownClass()
 
     def tearDown(self):
@@ -216,7 +221,11 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
                 raise TimeoutError("Daemon health check timed out.")
         return process
 
-class HamsHttpCase(HttpCase, SafePatchMixin):
+class HamsTransactionCase(HamsTestMixin, TransactionCase):
+    # [@ANCHOR: hams_transaction_case]
+    pass
+
+class HamsHttpCase(HamsTestMixin, HttpCase):
     # [@ANCHOR: hams_http_case]
     _hams_tour_failed = False
     server_thread = None
