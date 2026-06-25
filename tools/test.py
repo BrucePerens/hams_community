@@ -376,7 +376,7 @@ def run_cmd(cmd, extractor=None, cwd=None, env=None):
             os.chmod(host_tmp_dir, 0o777)
         except OSError as e:
             _logger.debug("Ignored OSError: %s", e)
-    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading")
+    env.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --ignore-certificate-errors --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading")
     env.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     def preexec_child():
@@ -947,7 +947,7 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
     # Inside the namespace, /var/tmp is perfectly bound to the real log dir.
     host_tmp_dir = "/var/tmp"
-    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,dbus,OptimizationGuideModelDownloading"
+    os.environ["ODOO_TEST_CHROME_ARGS"] = "--headless --ignore-certificate-errors --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,dbus,OptimizationGuideModelDownloading"
     os.environ["HAMS_REAL_LOG_DIRECTORY"] = real_log_dir
     os.environ["HOME"] = "/var/lib/odoo"
     os.environ["XDG_DATA_HOME"] = "/var/lib/odoo/.local/share"
@@ -960,10 +960,18 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
 
 
+    cert_path = "/var/tmp/hams_test_cert.pem"
+    key_path = "/var/tmp/hams_test_key.pem"
+    if not os.path.exists(cert_path):
+        subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", key_path, "-out", cert_path, "-days", "365", "-nodes", "-subj", "/CN=localhost"], check=False)
+    
+    socat_proc = subprocess.Popen(["socat", f"OPENSSL-LISTEN:8443,cert={cert_path},key={key_path},verify=0,fork", "TCP:127.0.0.1:8069"])
+
     test_cmd = [sys.executable, os.path.abspath(__file__)] + sys_args
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
 
     # 7. Graceful Ephemeral Teardown
+    socat_proc.terminate()
     subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False)
     redis_proc.terminate()
 
@@ -1117,7 +1125,7 @@ def main():
             os.chmod(host_tmp_dir, 0o777)
         except OSError as e:
             _logger.debug("Ignored OSError: %s", e)
-    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading")
+    os.environ.setdefault("ODOO_TEST_CHROME_ARGS", "--headless --ignore-certificate-errors --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --disable-extensions --disable-background-networking --disable-default-apps --disable-sync --disable-translate --mute-audio --no-first-run --hide-scrollbars --metrics-recording-only --safebrowsing-disable-auto-update --disable-features=ServiceWorker,SharedWorker,DialMediaRouteProvider,dbus,OptimizationGuideModelDownloading")
     os.environ.setdefault("DBUS_SESSION_BUS_ADDRESS", "autolaunch:")
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

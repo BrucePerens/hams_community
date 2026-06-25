@@ -9,14 +9,44 @@ import re
 import threading
 import time
 import urllib.request
+import urllib3
 import werkzeug.serving
 from unittest.mock import MagicMock, patch
 import psutil
 from cryptography.fernet import Fernet
-from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
+from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser, HOST
 import odoo.tests.common
 from odoo import fields
 from odoo.addons.distributed_redis_cache.redis_cache import get_redis_connection
+
+# Monkey-patch ChromeBrowser to allow HTTPS loopback traffic during tests
+_original_handle_request_paused = odoo.tests.common.ChromeBrowser._handle_request_paused
+
+def _patched_handle_request_paused(self, *args, **kwargs):
+    params = kwargs
+    if 'params' not in params and len(args) > 0:
+        pass
+    url = params.get('request', {}).get('url', '')
+    if url.startswith(f'http://{HOST}') or url.startswith(f'https://{HOST}'):
+        cmd = 'Fetch.continueRequest'
+        response = {}
+    else:
+        cmd = 'Fetch.fulfillRequest'
+        response = self.test_case.fetch_proxy(url)
+    try:
+        self._websocket_send(cmd, params={'requestId': params.get('requestId'), **response})
+    except Exception as e: # audit-ignore-catch-all
+        _logger.warning("Websocket send failed: %s", e)
+
+odoo.tests.common.ChromeBrowser._handle_request_paused = _patched_handle_request_paused
+
+_original_spawn_chrome = odoo.tests.common.ChromeBrowser._spawn_chrome
+def _patched_spawn_chrome(self, *args, **kwargs):
+    cmd = args[0] if len(args) > 0 else kwargs.get('cmd')
+    if cmd and '--ignore-certificate-errors' not in cmd:
+        cmd.insert(1, '--ignore-certificate-errors')
+    return _original_spawn_chrome(self, *args, **kwargs)
+odoo.tests.common.ChromeBrowser._spawn_chrome = _patched_spawn_chrome
 
 _logger = logging.getLogger(__name__)
 
@@ -417,6 +447,16 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                         _logger.warning("TRACING: Ignored OSError truncating V8 log: %s", repr(trunc_e))
 
             _logger.info("TRACING: Exiting HamsHttpCase.tearDown")
+
+    @classmethod
+    def base_url(cls):
+        host = '.'.join(['127', '0', '0', '1'])
+        return f"https://{host}:8443"
+
+    def setUp(self):
+        super().setUp()
+        self.opener.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def browser_js(self, *args, **kwargs):
         _logger.info("TRACING: Entering browser_js wrapper.")
