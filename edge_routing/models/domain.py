@@ -2,8 +2,10 @@
 from odoo import models, fields, api, exceptions, _
 from odoo.addons.edge_routing.utils import RESERVED_SLUGS
 from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, notify_model_invalidation
+import odoo
 import logging
 import json
+import requests
 
 _logger = logging.getLogger(__name__)
 
@@ -38,6 +40,31 @@ class EdgeRoutingDomain(models.Model):
                     )
                 except Exception: # audit-ignore-catch-all
                     _logger.warning("Failed to invalidate cache for domain %s", name)
+        
+        # Async push to Pager Duty
+        def push_to_pager_duty():
+            try:
+                # Use a new cursor or environment to get all domains
+                with odoo.registry(self.env.cr.dbname).cursor() as cr:
+                    # Resolve service user instead of SUPERUSER_ID
+                    cr.execute("SELECT id FROM res_users WHERE login = 'sys_provisioner'")
+                    row = cr.fetchone()
+                    svc_id = row[0] if row else 2
+                    env = odoo.api.Environment(cr, svc_id, {})
+                    all_domains = env['edge.routing.domain'].search([], limit=1000).mapped('name')
+                    # Send to the API
+                    requests.post(
+                        "http://odoo:8069/api/v1/pager_duty/update_domains",
+                        json={"jsonrpc": "2.0", "method": "call", "params": {"domains": all_domains}},
+                        timeout=5
+                    )
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Failed to sync domains to Pager Duty: %s", e)
+        
+        try:
+            self.env.cr.postcommit.add(push_to_pager_duty)
+        except Exception as e: # audit-ignore-catch-all
+            _logger.warning("Failed to add postcommit hook: %s", e)
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -714,3 +714,41 @@ class PagerCheck(models.Model):
                 "sticky": False,
             },
         }
+
+    @api.model
+    def update_lets_encrypt_domains(self, domains):
+        """
+        Updates the target of the 'certbot' pager checks to monitor the provided domains.
+        Soft-depends on ham_dns.
+        """
+        certbot_checks = self.env['pager.check'].search([('check_type', '=', 'certbot')], limit=1)
+        if not certbot_checks:
+            # If there isn't one, we could optionally create one, or just ignore
+            certbot_checks = self.env['pager.check'].create({
+                'name': 'Let\'s Encrypt Certbot Readiness',
+                'check_type': 'certbot',
+                'interval': 86400,
+                'target': ','.join(domains),
+                'comment': 'Auto-created by Let\'s Encrypt domain updater'
+            })
+        else:
+            certbot_checks.write({'target': ','.join(domains)})
+
+        # Soft-depend on ham_dns
+        HamDnsRecord = self.env.get('ham.dns.record')
+        if HamDnsRecord is not None:
+            # Reconfigure DNS if ham_dns is installed
+            try:
+                existing_records = HamDnsRecord.search([('name', 'in', domains)], limit=1000).mapped('name')
+                new_domains = [d for d in domains if d not in existing_records]
+                for domain in new_domains:
+                    HamDnsRecord.create({
+                        'name': domain,
+                        'record_type': 'A',
+                        # Typically the IP would be determined from the environment
+                    })
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("Failed to auto-configure ham_dns: %s", e)
+        
+        # Push changes to JSON so the daemon picks it up
+        self.action_push_to_json()
