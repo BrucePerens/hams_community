@@ -118,3 +118,23 @@ class UserWebsitesWeeklyDigestView(models.Model):
                 GROUP BY f.partner_id, g.id, g.name
             )
         """)
+
+class UserWebsitesDbFunctions(models.AbstractModel):
+    _name = "user_websites.db_functions"
+    _description = "User Websites DB Functions"
+
+    def init(self):
+        self.env.cr.execute("""
+            CREATE OR REPLACE FUNCTION increment_strike_count(tbl_name text, rec_id integer)
+            RETURNS void AS $$
+            BEGIN
+                IF tbl_name = 'res_users' THEN
+                    PERFORM id FROM res_users WHERE id = rec_id FOR NO KEY UPDATE;
+                    UPDATE res_users SET violation_strike_count = violation_strike_count + 1 WHERE id = rec_id;
+                ELSIF tbl_name = 'user_websites_group' THEN
+                    PERFORM id FROM user_websites_group WHERE id = rec_id FOR NO KEY UPDATE;
+                    UPDATE user_websites_group SET violation_strike_count = violation_strike_count + 1 WHERE id = rec_id;
+                END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)

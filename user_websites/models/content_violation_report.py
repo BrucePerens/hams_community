@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.addons.distributed_redis_cache.redis_cache import notify_model_invalidation
 
 
 class ContentViolationReport(models.Model):
@@ -108,17 +109,12 @@ class ContentViolationReport(models.Model):
                 # The caller (Admin) already has explicit write access to res.users
                 owner = report.content_owner_id
 
-                # RACE CONDITION FIX: Row-level lock to prevent 'Lost Update' on concurrent strikes
+                # Use stored procedure to atomically lock and increment against the raw DB state
                 self.env.cr.execute(
-                    "SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE",
+                    "SELECT increment_strike_count('res_users', %s)",
                     (owner.id,),
                 )
-
-                # Bypass ORM to ensure atomic increment against the raw DB state
-                self.env.cr.execute(
-                    "UPDATE res_users SET violation_strike_count = violation_strike_count + 1 WHERE id = %s",
-                    (owner.id,),
-                )
+                notify_model_invalidation(self.env, "res.users")
                 owner.invalidate_recordset(["violation_strike_count"])
 
                 # Enforce the 3-Strike Rule
@@ -141,29 +137,25 @@ class ContentViolationReport(models.Model):
             elif report.content_group_id:
                 group = report.content_group_id
 
-                if group.member_ids:
-                    # RACE CONDITION FIX: Lock all group members to prevent 'Lost Update' on concurrent strikes
+                if group:
+                    # Use stored procedure to atomically lock and increment
                     self.env.cr.execute(
-                        "SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE",
-                        (tuple(group.member_ids.ids),),
+                        "SELECT increment_strike_count('user_websites_group', %s)",
+                        (group.id,),
                     )
+                    notify_model_invalidation(self.env, "user.websites.group")
+                    group.invalidate_recordset(["violation_strike_count"])
 
-                    self.env.cr.execute(
-                        "UPDATE res_users SET violation_strike_count = violation_strike_count + 1 WHERE id IN %s",
-                        (tuple(group.member_ids.ids),),
-                    )
-                    group.member_ids.invalidate_recordset(["violation_strike_count"])
+                    if (
+                        group.violation_strike_count >= 3
+                        and not group.is_suspended_from_websites
+                    ):
+                        group.action_suspend_group_websites()
 
-                    for member in group.member_ids:
-                        if (
-                            member.violation_strike_count >= 3
-                            and not member.is_suspended_from_websites
-                        ):
-                            member.action_suspend_user_websites()
                 mail_svc = self.env["zero_sudo.security.utils"]._get_service_uid(
                     "zero_sudo.mail_service_internal"
                 )
                 report.with_user(mail_svc).message_post(
-                    body=_("You applied a strike to all members of the group."),
+                    body=_("You applied a strike to the group. Current strike count: %s") % group.violation_strike_count,
                     subtype_xmlid="mail.mt_note",
                 )

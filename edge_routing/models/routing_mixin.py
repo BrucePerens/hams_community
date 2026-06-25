@@ -2,7 +2,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from odoo.addons.edge_routing.utils import slugify, RESERVED_SLUGS
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, notify_model_invalidation
 
 import json
 
@@ -188,7 +188,7 @@ class EdgeRoutingMixin(models.AbstractModel):
                         self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                             self._name, record.website_slug
                         )
-                        invalidate_model_cache(self.env, self._name)
+                        notify_model_invalidation(self.env, self._name)
                         self.env.cr.execute(
                             "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
                         )
@@ -206,7 +206,7 @@ class EdgeRoutingMixin(models.AbstractModel):
                     self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                         self._name, slug
                     )
-                    invalidate_model_cache(self.env, self._name)
+                    notify_model_invalidation(self.env, self._name)
                     self.env.cr.execute(
                         "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
                     )

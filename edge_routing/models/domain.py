@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, exceptions, _
 from odoo.addons.edge_routing.utils import RESERVED_SLUGS
-from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, invalidate_model_cache
+from odoo.addons.distributed_redis_cache.redis_cache import distributed_cache, notify_model_invalidation
 import logging
 import json
 
@@ -32,7 +32,7 @@ class EdgeRoutingDomain(models.Model):
                     self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
                         self._name, name
                     )
-                    invalidate_model_cache(self.env, self._name)
+                    notify_model_invalidation(self.env, self._name)
                     self.env.cr.execute(
                         "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
                     )

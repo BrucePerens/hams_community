@@ -7,6 +7,7 @@ import os
 import redis
 import hashlib
 import hmac
+from urllib.parse import urlparse
 
 _logger = logging.getLogger(__name__)
 
@@ -47,6 +48,11 @@ class UserWebsitesController(http.Controller):
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
         try:
+            parsed = urlparse(url)
+            path = parsed.path
+            parts = [p for p in path.split('/') if p]
+            slug = parts[0] if parts else None
+
             create_vals = {
                 "target_url": url,
                 "description": description,
@@ -54,6 +60,16 @@ class UserWebsitesController(http.Controller):
             }
             if email:
                 create_vals["reported_by_email"] = email
+
+            if slug:
+                # Resolve the owner or group
+                user_id = env_svc["res.users"].get_record_by_slug(slug)
+                group_id = env_svc["user.websites.group"].get_record_by_slug(slug)
+
+                if user_id:
+                    create_vals["content_owner_id"] = user_id
+                elif group_id:
+                    create_vals["content_group_id"] = group_id
 
             env_svc["content.violation.report"].create(create_vals)
         except Exception as e: # audit-ignore-catch-all

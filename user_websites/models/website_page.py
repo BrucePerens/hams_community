@@ -10,7 +10,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, AccessError
 from odoo.addons.distributed_redis_cache.redis_cache import (
     distributed_cache,
-    invalidate_model_cache,
+    notify_model_invalidation,
 )
 
 _logger = logging.getLogger(__name__)
@@ -568,7 +568,7 @@ class WebsitePage(models.Model):
                 urls_to_notify.append(vals["url"])
             if urls_to_notify:
                 utils._notify_cache_invalidation("website.page", urls_to_notify)
-                invalidate_model_cache(self.env, self._name)
+                notify_model_invalidation(self.env, self._name)
                 payload = json.dumps({"model": self._name})
                 self.env.cr.execute(
                     "SELECT pg_notify(%s, %s)",
@@ -605,7 +605,7 @@ class WebsitePage(models.Model):
         utils = self.env["zero_sudo.security.utils"]
         if pages_to_invalidate:
             utils._notify_cache_invalidation("website.page", pages_to_invalidate)
-            invalidate_model_cache(self.env, self._name)
+            notify_model_invalidation(self.env, self._name)
             payload = json.dumps({"model": self._name})
             self.env.cr.execute(
                 "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)

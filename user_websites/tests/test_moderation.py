@@ -209,12 +209,9 @@ class TestModeration(RealTransactionCase):
         report.action_take_action_and_strike()
 
         self.assertEqual(
-            self.bad_user.violation_strike_count,
+            bad_group.violation_strike_count,
             1,
-            "Strike should cascade to member 1.",
-        )
-        self.assertEqual(
-            user_2.violation_strike_count, 1, "Strike should cascade to member 2."
+            "Strike should be recorded on the group.",
         )
 
         # Apply 2 more strikes to trigger the automated 3-strike suspension rule
@@ -229,12 +226,8 @@ class TestModeration(RealTransactionCase):
             r.action_take_action_and_strike()
 
         self.assertTrue(
-            self.bad_user.is_suspended_from_websites,
-            "Member 1 should be suspended after 3 strikes.",
-        )
-        self.assertTrue(
-            user_2.is_suspended_from_websites,
-            "Member 2 should be suspended after 3 strikes.",
+            bad_group.is_suspended_from_websites,
+            "Group should be suspended after 3 strikes.",
         )
 
         for _ in range(20):
@@ -265,8 +258,8 @@ class TestModeration(RealTransactionCase):
         )
         report.action_take_action_and_strike()
 
-        # Assert the lock query was injected
-        lock_query = "SELECT id FROM res_users WHERE id = %s FOR NO KEY UPDATE"
+        # Assert the DB function query was injected
+        lock_query = "SELECT increment_strike_count('res_users', %s)"
         mock_execute.assert_any_call(lock_query, (self.bad_user.id,))
 
         # 2. Test Group Member Lock
@@ -292,8 +285,8 @@ class TestModeration(RealTransactionCase):
         group_report.action_take_action_and_strike()
 
         lock_query_group = (
-            "SELECT id FROM res_users WHERE id IN %s FOR NO KEY UPDATE"
+            "SELECT increment_strike_count('user_websites_group', %s)"
         )
         mock_execute.assert_any_call(
-            lock_query_group, (tuple(group_report.content_group_id.member_ids.ids),)
+            lock_query_group, (group_report.content_group_id.id,)
         )

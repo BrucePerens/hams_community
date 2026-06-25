@@ -328,6 +328,8 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     def setUp(self):
         super().setUp()
+        self.opener.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         # Initialize CDP hook after super() creates self.browser
         # Start Chrome
         self.start_hams_browser()
@@ -453,10 +455,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         host = '.'.join(['127', '0', '0', '1'])
         return f"https://{host}:8443"
 
-    def setUp(self):
-        super().setUp()
-        self.opener.verify = False
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
     def browser_js(self, *args, **kwargs):
         _logger.info("TRACING: Entering browser_js wrapper.")
