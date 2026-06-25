@@ -15,7 +15,7 @@ from odoo.exceptions import ValidationError, AccessError
 from psycopg2 import IntegrityError
 import psycopg2
 from odoo.modules.registry import Registry
-from ..utils import slugify, RESERVED_SLUGS
+
 
 BACKGROUND_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 _logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class ResUsers(models.Model):
     Inherits from `res.users` to add features for personal user websites.
     """
 
-    _inherit = "res.users"
+    _inherit = ["res.users", "edge.routing.mixin"]
 
     def _register_hook(self):
         super(ResUsers, self)._register_hook()
@@ -202,112 +202,34 @@ class ResUsers(models.Model):
         """Helper to check if the user has administration rights."""
         return self.has_group("user_websites.group_user_websites_administrator") or self.has_group("base.group_system")
 
-    @api.constrains("website_slug")
-    def _check_reserved_slugs(self):
-        for record in self:
-            if record.website_slug and record.website_slug in RESERVED_SLUGS:
-                raise ValidationError(
-                    _("The slug '%s' is reserved and cannot be used.")
-                    % record.website_slug
-                )
-
-    # --- Slug Generation & Management ---
-
     @api.model
-    def _generate_unique_slug(self, base_string, record_id=False):
-        """
-        Generates a URL-safe, globally unique slug. Cross-references reserved routes,
-        other users, and groups.
-        """
-        if not base_string:
-            return ""
+    @odoo.tools.ormcache('slug')
+    def _get_user_id_by_slug(self, slug, override_svc_uid=None):
+        if not slug:
+            return False
+        # ADR-0001 / Zero-Sudo: Use direct SQL to resolve the slug to an ID.
+        # This prevents AccessError loops in public routes and avoids
+        # transaction isolation issues in HttpCase tests. 
+        # It is safe because it only returns the ID; the caller must still
+        # use the ORM to browse and read the record, which enforces ACLs.
+        
+        # We must flush the ORM cache first, otherwise test records created
+        # in setUp() (which do not auto-commit) will be invisible to this raw SQL query.
+        self.env.flush_all()
+        self.env.cr.execute("SELECT id FROM res_users WHERE website_slug = %s LIMIT 1", (slug,))
+        row = self.env.cr.fetchone()
+        return row[0] if row else False
 
-        base_slug = slugify(base_string)
-        slug = base_slug
-        counter = 1
-        max_retries = 1000
 
-        while True:
-            if counter > max_retries:
-                raise ValidationError(
-                    _("Unable to generate a unique website slug after %s attempts.")
-                    % max_retries
-                )
-
-            if slug in RESERVED_SLUGS:
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-                continue
-
-            user_domain = [("website_slug", "=", slug)]
-            if record_id:
-                user_domain.append(("id", "!=", record_id))
-
-            svc_user = self.env.ref("user_websites.user_websites_service_account", raise_if_not_found=False)
-            if not svc_user or not svc_user.active:
-                env_user = self.env["res.users"]
-                env_group = self.env["user.websites.group"]
-            else:
-                try:
-                    with self.env.cr.savepoint():
-                        env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                            "user_websites.user_websites_service_account"
-                        )
-                        env_user = env_svc["res.users"]
-                        env_group = env_svc["user.websites.group"]
-                except (AccessError, psycopg2.Error) as e:
-                    if "not found" in str(e).lower() or "disabled" in str(e).lower():
-                         env_user = self.env["res.users"]
-                         env_group = self.env["user.websites.group"]
-                    else:
-                         raise
-
-            user_collision = env_user.search_count(user_domain)
-            group_collision = env_group.search_count([("website_slug", "=", slug)])
-
-            if not user_collision and not group_collision:
-                # TOCTOU FIX: If it looks clear, lock the transaction to prevent a concurrent writer
-                # from snagging it before we finish returning and inserting.
-                lock_hash = self.env[
-                    "zero_sudo.security.utils"
-                ]._get_deterministic_hash(slug)
-                self.env.cr.execute(
-                    "SELECT pg_try_advisory_xact_lock(%s)", (lock_hash,)
-                )
-                lock_acquired = self.env.cr.fetchone()[0]
-                if lock_acquired:
-                    return slug
-
-            slug = f"{base_slug}-{counter}"
-            counter += 1
 
     @api.model_create_multi
     def create(self, vals_list):
-        """
-        Intercept creation to inject a default generated slug if none was explicitly provided.
-        """
-        for vals in vals_list:
-            if vals.get("website_slug"):
-                vals["website_slug"] = slugify(vals["website_slug"])
-            elif vals.get("name"):
-                vals["website_slug"] = self._generate_unique_slug(vals["name"])
 
         return super(ResUsers, self).create(vals_list)
 
     def write(self, vals):
-        import logging
         old_slugs = {}
         if "website_slug" in vals:
-            # Safely format the incoming slug directly
-            if vals.get("website_slug"):
-                if len(self) == 1:
-                    vals["website_slug"] = self._generate_unique_slug(
-                        vals["website_slug"], record_id=self.id
-                    )
-                else:
-                    # If bulk updating, enforce formatting but let DB handle collision detection
-                    vals["website_slug"] = slugify(vals["website_slug"])
-
             old_slugs = {
                 user.id: user.website_slug for user in self if user.website_slug
             }

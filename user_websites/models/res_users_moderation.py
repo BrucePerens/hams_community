@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api, _
+from odoo import models, fields, _
 from .res_users import _async_unpublish_content, BACKGROUND_EXECUTOR
-import json
-from odoo.addons.distributed_redis_cache.redis_cache import (
-    distributed_cache,
-    invalidate_model_cache,
-)
 
 
 class ResUsersModeration(models.Model):
@@ -27,82 +22,7 @@ class ResUsersModeration(models.Model):
         help="If True, all personal pages and blogs are forcefully unpublished and locked.",
     )
 
-    @api.model
-    @distributed_cache()
-    def _get_user_id_by_slug(self, slug, override_svc_uid=None):
-        """
-        High-performance RAM cache for slug resolution.
-        Prevents full DB queries on every public profile view.
-        """
-        if not slug:
-            return False
-        # Case-insensitive search requires ilike, but cache key is exact.
-        # We lowercase the slug in the controller to ensure cache hits.
-        svc_uid = override_svc_uid or self.env[
-            "zero_sudo.security.utils"
-        ]._get_service_uid("user_websites.user_websites_service_account")
-        user = (
-            self.env["res.users"]
-            .with_user(svc_uid)
-            .search([("website_slug", "=ilike", slug)], limit=1)
-        )
 
-        # Virtual Slug Fallback: If no explicit slug exists, check if the URL matches their unique login (e.g. Callsign)
-        if not user:
-            user = (
-                self.env["res.users"]
-                .with_user(svc_uid)
-                .search([("login", "=ilike", slug)], limit=1)
-            )
-
-        return user.id if user else False
-
-    def write(self, vals):
-        # [@ANCHOR: slug_cache_invalidation]
-        # Verified by [@ANCHOR: test_slug_cache_invalidation]
-        if "website_slug" in vals or "active" in vals:
-            slugs = [user.website_slug for user in self if user.website_slug]
-            if slugs:
-                self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                    "res.users", slugs
-                )
-                invalidate_model_cache(self.env, self._name)
-                payload = json.dumps({"model": self._name})
-                self.env.cr.execute(
-                    "SELECT pg_notify(%s, %s)",
-                    ("distributed_cache_invalidation", payload),
-                )
-
-        res = super(ResUsersModeration, self).write(vals)
-
-        # Emit NOTIFY for the new slug if it changed
-        if "website_slug" in vals and vals["website_slug"]:
-            self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                "res.users", vals["website_slug"]
-            )
-            invalidate_model_cache(self.env, self._name)
-            payload = json.dumps({"model": self._name})
-            self.env.cr.execute(
-                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
-            )
-
-        return res
-
-    def unlink(self):
-        # [@ANCHOR: slug_cache_invalidation_unlink]
-        # Verified by [@ANCHOR: test_slug_cache_invalidation]
-        slugs = [user.website_slug for user in self if user.website_slug]
-        if slugs:
-            self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                "res.users", slugs
-            )
-            invalidate_model_cache(self.env, self._name)
-            payload = json.dumps({"model": self._name})
-            self.env.cr.execute(
-                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
-            )
-
-        return super(ResUsersModeration, self).unlink()
 
     def action_suspend_user_websites(self):
         """Forcefully unpublishes all user content and flags them as suspended."""

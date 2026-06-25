@@ -368,7 +368,7 @@ class BackupConfig(models.Model):
             "restore_drill", {"script": self.restore_drill_script}
         )
 
-    def _report_backup_failure(self, message):
+    def report_backup_failure(self, message):
         # [@ANCHOR: backup_management:backup_pager_synergy]
         # Verified by [@ANCHOR: backup_management:test_backup_cron]
         # Verified by [@ANCHOR: test_trigger_kopia_and_pgbackrest]
@@ -515,7 +515,7 @@ class BackupConfig(models.Model):
                 for c in new_snaps:
                     snap_mb = c.get("size_bytes", 0) / (1024 * 1024)
                     if snap_mb < self.minimum_size_mb:
-                        self._report_backup_failure(
+                        self.report_backup_failure(
                             f"Snapshot Anomaly: Snapshot {c.get('snapshot_id')} is {snap_mb:.2f} MB, below the {self.minimum_size_mb} MB minimum."
                         )
 
@@ -539,7 +539,7 @@ class BackupConfig(models.Model):
                 if delta > (
                     26 * 60 * 60
                 ):  # 26 hours (allows for 24h cron jitter without false positives)
-                    conf._report_backup_failure(
+                    conf.report_backup_failure(
                         f"Stale Backup Alert: No new snapshots detected for {conf.name} in over 26 hours."
                     )
 

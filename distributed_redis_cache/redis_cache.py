@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © Bruce Perens K6BP. AGPL-3.0.
 import json
-import logging; import sys
+import logging
 import hashlib
 import datetime
 import time

@@ -5,6 +5,7 @@ from odoo.exceptions import AccessError, UserError
 from unittest.mock import MagicMock, mock_open, patch
 import os
 import odoo
+from odoo.tools import mute_logger
 import psycopg2
 import logging
 
@@ -106,6 +107,7 @@ class TestSecurityUtils(HamsTransactionCase):
         utils._notify_cache_invalidation("test.model", None)
         self.assertEqual(mock_execute.call_count, 0, "Should not notify for empty model or key")
 
+    @mute_logger('odoo.sql_db')
     def test_04_god_mode_block_enforcement(self):
         # [@ANCHOR: test_god_mode_block_sql]
         # Tests [@ANCHOR: god_mode_block_sql]
@@ -293,6 +295,7 @@ class TestSecurityUtils(HamsTransactionCase):
         # Test Missing Key
         self.assertIsNone(utils._get_kv("non_existent_key"))
 
+    @mute_logger('odoo.sql_db')
     def test_13_service_uid_error_paths(self):
         """Audit all rejection branches within the service account lookup logic."""
         utils = self.env["zero_sudo.security.utils"]

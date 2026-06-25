@@ -15,6 +15,14 @@ When adding a new to-do, use `write_to_file` (with Overwrite=True) to rewrite th
   - Wait Condition: DO NOT start this until all test failures are resolved.
   - Linked Proposal: docs/proposals/website_moderation.md (Example)
 
+- [ ] Implement full remote operation for ham_shack and ham_relay_bridge. (Priority: Medium)
+  - Details: Provide full remote operation of the user's radio and facilities based on the approved implementation plan.
+  - Linked Proposal: docs/proposals/HAM_SHACK_REMOTE_OPERATION.md
+
+- [ ] Refactor Moderation Dashboard into `ham_moderation` module. (Priority: Medium)
+  - Details: Move `moderation_dashboard.py` out of `ham_base` and into a dedicated `ham_moderation` module that cleanly depends on `ham_base`, `user_websites`, `ham_events`, and `ham_onboarding`. This will eliminate all soft-dependency hacks in the codebase by explicitly declaring module dependencies.
+  - Linked Proposal: [docs/proposals/soft_dependency_refactoring.md](file:///home/bruce/workspace/hams_com/docs/proposals/soft_dependency_refactoring.md)
+
 ## Instructions for the AI
 
 1. Whenever the user requests adding something to the to-do list, append it here by rewriting this SKILL.md file.

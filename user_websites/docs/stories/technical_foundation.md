@@ -6,7 +6,7 @@ As a **Developer**, I want to use reliable utility functions and a robust securi
 
 ### Slug Generation
 - **When** a user's name or a group's name needs to be converted into a URL-friendly slug.
-- **Then** the system uses a robust `slugify` utility ([@ANCHOR: utils_slugify]). Verified by `[@ANCHOR: test_utils_slugify]`.
+- **Then** the system uses a robust `slugify` utility ([@ANCHOR: edge_routing:utils_slugify]). Verified by `[@ANCHOR: edge_routing:test_utils_slugify]`.
 - **And** it handles special characters and normalization consistently.
 
 ### Documentation Access

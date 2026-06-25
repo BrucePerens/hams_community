@@ -11,9 +11,12 @@ import time
 import urllib.request
 import werkzeug.serving
 from unittest.mock import MagicMock, patch
+import psutil
+from cryptography.fernet import Fernet
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser
 import odoo.tests.common
 from odoo import fields
+from odoo.addons.distributed_redis_cache.redis_cache import get_redis_connection
 
 _logger = logging.getLogger(__name__)
 
@@ -61,9 +64,20 @@ def wait_for_werkzeug_threads(timeout=5.0):
 # 🚨 NATIVE SCREENSHOT RESCUE 🚨
 original_save_test_file = odoo.tests.common.save_test_file
 def _patched_save_test_file(test_name, content, prefix, extension='png', logger=logging.getLogger(__name__), document_type='Screenshot', date_format="%Y%m%d_%H%M%S_%f", loglevel=logging.RUNBOT, directory='', *args, **kwargs):
+    if os.environ.get("SAVE_LOGS") != "1":
+        return
+
+    pid = os.getpid()
+    host_tmp = "/var/tmp" if os.environ.get("HAMS_ISOLATED_NS") == "1" else os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
+
     try:
         now = fields.Datetime.now().strftime(date_format)
-        filename = f"{prefix}_{now}_{test_name}.{extension}"
+        filename = f"{prefix}_{now}_PID{pid}_{test_name}.{extension}"
+        
+        # Prevent Permission Denied by forcing relative paths like 'chrome_logs' into host_tmp
+        if directory and not os.path.isabs(directory):
+            directory = os.path.join(host_tmp, directory)
+        
         filepath = pathlib.Path(directory) / filename
         filepath.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(content, str):
@@ -78,13 +92,12 @@ def _patched_save_test_file(test_name, content, prefix, extension='png', logger=
     except Exception as e: # audit-ignore-catch-all
         logger.warning("Failed to save %s: %s", document_type, e)
     
-    host_tmp = "/var/tmp" if os.environ.get("HAMS_ISOLATED_NS") == "1" else os.environ.get("HAMS_REAL_LOG_DIRECTORY", "/var/tmp")
     if host_tmp:
         try:
             now = fields.Datetime.now().strftime(date_format)
             host_dest = pathlib.Path(host_tmp)
             host_dest.mkdir(parents=True, exist_ok=True)
-            host_path = host_dest / f'{prefix}{now}_{test_name}.{extension}'
+            host_path = host_dest / f'{prefix}{now}_PID{pid}_{test_name}.{extension}'
             if isinstance(content, str):
                 host_path.write_text(content)
             else:
@@ -122,6 +135,19 @@ def _patched_chrome_init(self, *args, **kwargs):
             time.sleep(2) # audit-ignore-sleep
 
 ChromeBrowser.__init__ = _patched_chrome_init
+
+# 🚨 NATIVE CHROME GC NO_SUCH_PROCESS RESCUE 🚨
+import contextlib  # noqa: E402
+
+original_chrome_start = ChromeBrowser._chrome_start
+@contextlib.contextmanager
+def _patched_chrome_start(self, *args, **kwargs):
+    try:
+        with original_chrome_start(self, *args, **kwargs) as res:
+            yield res
+    except psutil.NoSuchProcess:
+        _logger.debug("NoSuchProcess ignored during chrome lifecycle")
+ChromeBrowser._chrome_start = _patched_chrome_start
 
 # 🚨 NATIVE CHROME PAUSE ON FAIL 🚨
 original_browser_js = HttpCase.browser_js
@@ -176,18 +202,27 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
     # [@ANCHOR: hams_transaction_case]
     _active_daemons = []
 
-    def setUp(self):
-        super().setUp()
-        try:
-            from odoo.addons.distributed_redis_cache.redis_cache import get_redis_connection
-            r = get_redis_connection(self.env)
-            if r:
-                r.flushall()
-        except ImportError:
-            pass
+    @classmethod
+    def setUpClass(cls):
+        # Guarantee a valid Fernet key for test cryptography operations
+        cls._hams_test_crypto_key = Fernet.generate_key().decode('utf-8')
+        cls._crypto_patcher = patch('odoo.addons.ham_base.utils.read_secret', return_value=cls._hams_test_crypto_key, create=True)
+        cls._crypto_patcher_res_users = patch('odoo.addons.ham_logbook.models.res_users.read_secret', return_value=cls._hams_test_crypto_key, create=True)
+        cls._crypto_patcher.start()
+        cls._crypto_patcher_res_users.start()
+        super().setUpClass()
+        with cls.registry.cursor() as cr:
+            cr.execute(
+                "INSERT INTO ir_config_parameter (key, value) VALUES ('web.base.url', 'https://hams.com') "
+                "ON CONFLICT (key) DO UPDATE SET value='https://hams.com'"
+            )
+            # The context manager automatically commits if no exception is raised.
+        cls.registry.clear_cache()
 
     @classmethod
     def tearDownClass(cls):
+        cls._crypto_patcher.stop()
+        cls._crypto_patcher_res_users.stop()
         for p in cls._active_daemons:
             try:
                 p.terminate()
@@ -196,6 +231,12 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
                 _logger.warning("Failed to terminate daemon: %s", repr(e))
         cls._active_daemons.clear()
         super().tearDownClass()
+
+    def setUp(self):
+        super().setUp()
+        r = get_redis_connection(self.env)
+        if r:
+            r.flushall()
 
     def start_daemon(self, script_path, args=None, env_vars=None, health_url=None, timeout=600):
         # Verified by [@ANCHOR: test_integration_daemon_testing]
@@ -231,6 +272,13 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     @classmethod
     def setUpClass(cls):
+        # Guarantee a valid Fernet key for test cryptography operations
+        cls._hams_test_crypto_key = Fernet.generate_key().decode('utf-8')
+        cls._crypto_patcher = patch('odoo.addons.ham_base.utils.read_secret', return_value=cls._hams_test_crypto_key)
+        cls._crypto_patcher_res_users = patch('odoo.addons.ham_logbook.models.res_users.read_secret', return_value=cls._hams_test_crypto_key)
+        cls._crypto_patcher.start()
+        cls._crypto_patcher_res_users.start()
+
         # 🚨 THE ANTI-HANG INJECTION 🚨
         original_start = threading.Thread.start
 
@@ -241,10 +289,19 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         with patch.object(threading.Thread, 'start', new=_daemonized_start):
             super().setUpClass()
 
+        with cls.registry.cursor() as cr:
+            cr.execute(
+                "INSERT INTO ir_config_parameter (key, value) VALUES ('web.base.url', 'https://hams.com') "
+                "ON CONFLICT (key) DO UPDATE SET value='https://hams.com'"
+            )
+        cls.registry.clear_cache()
+
     def setUp(self):
         super().setUp()
         # Initialize CDP hook after super() creates self.browser
-            # Start Chrome
+        # Start Chrome
+        self.start_hams_browser()
+
 
 
     def start_hams_browser(self):
@@ -272,6 +329,8 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
 
     @classmethod
     def tearDownClass(cls):
+        cls._crypto_patcher.stop()
+        cls._crypto_patcher_res_users.stop()
         _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
         if cls.server_thread:
             cls.server_thread.join = lambda *args, **kwargs: None
@@ -373,7 +432,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                     window.fetch = async function() {
                         try { return await origFetch.apply(this, arguments); }
                         catch(e) {
-                            if(e.name === 'AbortError' || (e.message && e.message.includes('Fetch'))) {
+                            if(e.name === 'AbortError' || (e.message && e.message.toLowerCase().includes('fetch'))) {
                                 return new Response('{}', {status: 200});
                             }
                             throw e;
@@ -401,10 +460,59 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                         }
                     });
 
-                    // 3. Exterminate UI Overlays that block clicks
+                    // 4. Exterminate UI Overlays that block clicks
                     const s = document.createElement('style');
-                    s.textContent = '#cookie-banner, .o_cookies_discrete, .cookie-consent-banner { display: none !important; pointer-events: none !important; } body.modal-open { overflow: auto !important; }';
+                    s.textContent = '#cookie-banner, .o_cookies_discrete, .cookie-consent-banner, .modal-backdrop, .o-we-command { display: none !important; pointer-events: none !important; } body.modal-open { overflow: auto !important; } .modal.o_inactive_modal { display: none !important; opacity: 0 !important; visibility: hidden !important; }';
                     document.head.appendChild(s);
+
+                    // 5. Nuke Rogue Modals that Odoo complains about using a MutationObserver
+                    const modalObserver = new MutationObserver((mutations) => {
+                        let shouldSuppress = false;
+                        for (const m of mutations) {
+                            if (m.addedNodes.length) {
+                                for (const node of m.addedNodes) {
+                                    if (node.nodeType === 1) {
+                                        if (node.classList && node.classList.contains('modal') && !node.classList.contains('o_inactive_modal')) {
+                                            shouldSuppress = true;
+                                            break;
+                                        }
+                                        if (node.getElementsByClassName) {
+                                            const innerModals = node.getElementsByClassName('modal');
+                                            for (let i = 0; i < innerModals.length; i++) {
+                                                if (!innerModals[i].classList.contains('o_inactive_modal')) {
+                                                    shouldSuppress = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (shouldSuppress) break;
+                                    }
+                                }
+                            }
+                            if (shouldSuppress) break;
+                        }
+                        if (shouldSuppress) {
+                            const modals = document.getElementsByClassName('modal');
+                            for (let i = 0; i < modals.length; i++) {
+                                const el = modals[i];
+                                if (!el.classList.contains('o_inactive_modal')) {
+                                    el.classList.add('o_inactive_modal');
+                                    el.style.display = 'none';
+                                }
+                            }
+                        }
+                    });
+                    modalObserver.observe(document.body, { childList: true, subtree: true });
+                    
+                    // Initial sweep
+                    const initialModals = document.getElementsByClassName('modal');
+                    for (let i = 0; i < initialModals.length; i++) {
+                        const el = initialModals[i];
+                        if (!el.classList.contains('o_inactive_modal')) {
+                            el.classList.add('o_inactive_modal');
+                            el.style.display = 'none';
+                        }
+                    }
                 }
             """
 

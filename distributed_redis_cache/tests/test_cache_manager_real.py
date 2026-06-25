@@ -51,12 +51,12 @@ class TestRealCacheManager(RealTransactionCase):
         pubsub.subscribe("odoo_cache_invalidation_bus")
 
         message_received = False
-        user = self.env.user
+        partner = self.env.user.partner_id
         start_time = time.time()
 
         while time.time() - start_time < 60.0:
             # Repeatedly trigger since we don't know exactly when daemon connects
-            user.write({"name": f"Cache Trigger Test {time.time()}"})
+            partner.write({"name": f"Cache Trigger Test {time.time()}"})
             self.env.cr.commit()
 
             # In test environments, web request teardown hooks do not run automatically.

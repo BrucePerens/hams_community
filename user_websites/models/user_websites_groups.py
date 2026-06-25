@@ -4,15 +4,9 @@ This file defines the Odoo model for User Websites Groups.
 """
 
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError, AccessError
+from odoo.exceptions import ValidationError
 from psycopg2 import IntegrityError
 import psycopg2
-from ..utils import slugify, RESERVED_SLUGS
-import json
-from odoo.addons.distributed_redis_cache.redis_cache import (
-    distributed_cache,
-    invalidate_model_cache,
-)
 import logging
 from .res_users import BACKGROUND_EXECUTOR
 import time
@@ -83,7 +77,7 @@ class UserWebsitesGroup(models.Model):
 
     _name = "user.websites.group"
     _description = "User Websites Group"
-    _inherit = ["mail.thread", "mail.activity.mixin"]
+    _inherit = ["mail.thread", "mail.activity.mixin", "edge.routing.mixin"]
 
     # --- Fields Definition ---
     name = fields.Char(string="Group Name", required=True, tracking=True)
@@ -97,12 +91,6 @@ class UserWebsitesGroup(models.Model):
         string="Suspended from Websites",
         default=False,
         help="If True, all group pages and blogs are forcefully unpublished and locked.",
-    )
-
-    website_slug = fields.Char(
-        string="Website Slug",
-        index="trigram",
-        help="The URL-friendly identifier for the group site. Alphanumeric and hyphens only.",
     )
 
     odoo_group_id = fields.Many2one(
@@ -142,94 +130,6 @@ class UserWebsitesGroup(models.Model):
         default=lambda self: self.env.company,
     )
 
-    # --- Odoo 19 Constraint Syntax ---
-    _website_slug_unique = models.Constraint(
-        "UNIQUE(website_slug)", "The Group Website Slug must be unique!"
-    )
-
-    _website_slug_format = models.Constraint(
-        r"CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\-]+$')",
-        "The Group Website Slug can only contain lowercase letters, numbers, and hyphens.",
-    )
-
-    @api.constrains("website_slug")
-    def _check_reserved_slugs(self):
-        for record in self:
-            if record.website_slug and record.website_slug in RESERVED_SLUGS:
-                raise ValidationError(
-                    _("The slug '%s' is reserved and cannot be used.")
-                    % record.website_slug
-                )
-
-    @api.model
-    @distributed_cache()
-    def _get_group_id_by_slug(self, slug, override_svc_uid=None):
-        # Tested by [@ANCHOR: user_websites:test_group_site_routing]
-        if not slug:
-            return False
-        svc_uid = override_svc_uid or self.env[
-            "zero_sudo.security.utils"
-        ]._get_service_uid("user_websites.user_websites_service_account")
-        group = (
-            self.env["user.websites.group"]
-            .with_user(svc_uid)
-            .search([("website_slug", "=ilike", slug)], limit=1)
-        )
-        return group.id if group else False
-
-    # --- Slug Generation & Management ---
-
-    @api.model
-    def _generate_unique_slug(self, base_string, record_id=False):
-        """
-        Generates a URL-safe, globally unique slug across groups and users.
-        """
-        if not base_string:
-            return ""
-
-        base_slug = slugify(base_string)
-        slug = base_slug
-        counter = 1
-        max_retries = 1000
-
-        while True:
-            if counter > max_retries:
-                raise ValidationError(
-                    _("Unable to generate a unique website slug after %s attempts.")
-                    % max_retries
-                )
-
-            if slug in RESERVED_SLUGS:
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-                continue
-
-            group_domain = [("website_slug", "=", slug)]
-            if record_id:
-                group_domain.append(("id", "!=", record_id))
-
-            try:
-                svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
-                    "user_websites.user_websites_service_account"
-                )
-                env_group = self.env["user.websites.group"].with_user(svc_uid)
-                env_user = self.env["res.users"].with_user(svc_uid)
-            except AccessError:
-                if self.env.su:
-                    env_group = self.env["user.websites.group"]
-                    env_user = self.env["res.users"]
-                else:
-                    raise
-
-            group_collision = env_group.search_count(group_domain)
-            user_collision = env_user.search_count([("website_slug", "=", slug)])
-
-            if not user_collision and not group_collision:
-                return slug
-
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-
     @api.model_create_multi
     def create(self, vals_list):
         # Tested by [@ANCHOR: user_websites:test_group_site_creation]
@@ -248,12 +148,6 @@ class UserWebsitesGroup(models.Model):
         )
 
         for i, vals in enumerate(vals_list):
-            # Default Slug Generation
-            if vals.get("website_slug"):
-                vals["website_slug"] = slugify(vals["website_slug"])
-            elif vals.get("name"):
-                vals["website_slug"] = self._generate_unique_slug(vals["name"])
-
             # Auto-Create Security Group
             if "odoo_group_id" not in vals:
                 group_name = vals.get("name", "New Group")
@@ -283,29 +177,7 @@ class UserWebsitesGroup(models.Model):
 
     def write(self, vals):
         old_slugs = {}
-        # [@ANCHOR: group_slug_cache_invalidation]
-        # Verified by [@ANCHOR: test_group_slug_cache_invalidation]
         if "website_slug" in vals:
-            slugs = [group.website_slug for group in self if group.website_slug]
-            if slugs:
-                self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                    "user.websites.group", slugs
-                )
-                invalidate_model_cache(self.env, self._name)
-                payload = json.dumps({"model": self._name})
-                self.env.cr.execute(
-                    "SELECT pg_notify(%s, %s)",
-                    ("distributed_cache_invalidation", payload),
-                )
-
-            if vals.get("website_slug"):
-                if len(self) == 1:
-                    vals["website_slug"] = self._generate_unique_slug(
-                        vals["website_slug"], record_id=self.id
-                    )
-                else:
-                    vals["website_slug"] = slugify(vals["website_slug"])
-
             old_slugs = {
                 group.id: group.website_slug for group in self if group.website_slug
             }
@@ -318,13 +190,6 @@ class UserWebsitesGroup(models.Model):
 
         # --- 301 Redirect Automation ---
         if "website_slug" in vals:
-            # Send targeted NOTIFY to prevent global cache wipe
-            slugs2 = [group.website_slug for group in self if group.website_slug]
-            if slugs2:
-                self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                    "user.websites.group", slugs2
-                )
-
             svc_uid = self.env["zero_sudo.security.utils"]._get_service_uid(
                 "user_websites.user_websites_service_account"
             )
@@ -371,21 +236,6 @@ class UserWebsitesGroup(models.Model):
                     redirect_env.create(redirects)
 
         return result
-
-    def unlink(self):
-        # [@ANCHOR: group_slug_cache_invalidation_unlink]
-        # Verified by [@ANCHOR: test_group_slug_cache_invalidation]
-        slugs = [group.website_slug for group in self if group.website_slug]
-        if slugs:
-            self.env["zero_sudo.security.utils"]._notify_cache_invalidation(
-                "user.websites.group", slugs
-            )
-            invalidate_model_cache(self.env, self._name)
-            payload = json.dumps({"model": self._name})
-            self.env.cr.execute(
-                "SELECT pg_notify(%s, %s)", ("distributed_cache_invalidation", payload)
-            )
-        return super(UserWebsitesGroup, self).unlink()
 
     def action_suspend_group_websites(self):
         """Forcefully unpublishes all group content and flags them as suspended."""

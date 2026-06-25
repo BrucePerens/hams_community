@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from odoo.tools import mute_logger
 from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 from unittest.mock import MagicMock
@@ -120,6 +121,7 @@ class TestAuditEdgeCases(RealTransactionCase):
         )
         self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
 
+    @mute_logger("odoo.addons.user_websites.models.website_page")
     def test_03_service_account_tamper_resistance(self):
         """
         Verify that if the Zero-Sudo Service Account is tampered with (e.g., archived),
@@ -167,21 +169,21 @@ class TestAuditEdgeCases(RealTransactionCase):
         )
 
         # 1. Prime the cache
-        self.env["res.users"]._get_user_id_by_slug("cacheuser")
+        self.env["res.users"].get_record_by_slug("cacheuser")
 
         # 2. Verify 0 queries on hit
         mock_execute = self.safe_patch_object(
             self.env.cr, "execute", wraps=self.env.cr.execute
         )
-        self.env["res.users"]._get_user_id_by_slug("cacheuser")
+        self.env["res.users"].get_record_by_slug("cacheuser")
         for call in mock_execute.call_args_list:
             self.assertNotIn("res_users", call[0][0])
 
-        # 3. Trigger Invalidation
+        # 3. Mutate the slug to trigger cache invalidation hook
         user.write({"website_slug": "newslug"})
 
         # 4. Verify cache was cleared (next call must execute SQL)
-        user_id = self.env["res.users"]._get_user_id_by_slug("newslug")
+        user_id = self.env["res.users"].get_record_by_slug("newslug")
         self.assertEqual(
             user_id,
             user.id,
@@ -204,13 +206,13 @@ class TestAuditEdgeCases(RealTransactionCase):
         )
 
         # 1. Prime the cache
-        self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
+        self.env["user.websites.group"].get_record_by_slug("cachegroup")
 
         # 2. Verify 0 queries on hit
         mock_execute = self.safe_patch_object(
             self.env.cr, "execute", wraps=self.env.cr.execute
         )
-        self.env["user.websites.group"]._get_group_id_by_slug("cachegroup")
+        self.env["user.websites.group"].get_record_by_slug("cachegroup")
         for call in mock_execute.call_args_list:
             self.assertNotIn("user_websites_group", call[0][0])
 
@@ -218,7 +220,7 @@ class TestAuditEdgeCases(RealTransactionCase):
         group.write({"website_slug": "newcachegroup"})
 
         # 4. Verify cache was cleared (next call must execute SQL)
-        group_id = self.env["user.websites.group"]._get_group_id_by_slug(
+        group_id = self.env["user.websites.group"].get_record_by_slug(
             "newcachegroup"
         )
         self.assertEqual(

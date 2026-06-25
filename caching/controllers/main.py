@@ -24,7 +24,7 @@ class ServiceWorkerController(http.Controller):
         """
         # Gating for Jules VM stability during Odoo initialization.
         # Prevent scanner during --init phase of tests.
-        is_test = getattr(request.env.registry, 'test_cr', False)
+        is_test = 'test_cr' in request.env.registry.__dict__
         is_boot = tools.config.get("init") or tools.config.get(
             "stop_after_init"
         )
@@ -35,12 +35,17 @@ class ServiceWorkerController(http.Controller):
         ):
             return (0.0, [])
 
-        if type(self)._fs_cache:
-            return type(self)._fs_cache
+        registry = request.env.registry
+        if not request.env.context.get("force_fs_scan"):
+            cache = registry.__dict__.get("caching_fs_cache")
+            if cache is not None:
+                return cache
 
         with type(self)._fs_lock:
-            if type(self)._fs_cache:
-                return type(self)._fs_cache
+            if not request.env.context.get("force_fs_scan"):
+                cache = registry.__dict__.get("caching_fs_cache")
+                if cache is not None:
+                    return cache
 
             max_mtime = 0.0
             file_sizes = []
@@ -93,7 +98,7 @@ class ServiceWorkerController(http.Controller):
 
             file_sizes.sort(reverse=True)
             res = (max_mtime, file_sizes)
-            type(self)._fs_cache = res
+            registry.caching_fs_cache = res
             return res
 
     def _get_global_static_info(self, quota_override=None):
@@ -105,7 +110,7 @@ class ServiceWorkerController(http.Controller):
         """
         # Clear FS cache if requested (e.g., during tests or manual refresh)
         if request.env.context.get("force_fs_scan"):
-            type(self)._fs_cache = None
+            registry.__dict__.pop("caching_fs_cache", None)
 
         max_mtime, file_sizes = self._get_fs_stats()
 
@@ -170,28 +175,24 @@ class ServiceWorkerController(http.Controller):
         Serves the Service Worker script from the root scope.
         Injects mtime (invalidation) and max file size (quota).
         """
-        try:
-            # audit-ignore-path: Internal module file access.
-            with tools.file_open(
-                "caching/static/src/sw/sw.js", "r"
-            ) as f:
-                content = f.read()
-        except FileNotFoundError:
-            return request.not_found()
+        registry = request.env.registry
+        content = registry.__dict__.get("caching_sw_js_content")
+        if not content:
+            try:
+                # audit-ignore-path: Internal module file access.
+                with tools.file_open(
+                    "caching/static/src/sw/sw.js", "r"
+                ) as f:
+                    content = f.read()
+                registry.caching_sw_js_content = content
+            except FileNotFoundError:
+                return request.not_found()
 
         # Multi-Website Awareness: Get params using high-performance procedure.
         website = request.website
-        website_id = website.id if website else None
-
-        # Optimization: Single database round-trip via Postgres procedure.
-        # Verified by [@ANCHOR: test_caching_postgres_procedures]
-        request.env.cr.execute(
-            "SELECT quota_mb, invalidation_version FROM caching_get_sw_params(%s)",
-            (website_id,),
-        )
-        proc_res = request.env.cr.fetchone()
-        if proc_res:
-            quota_mb, in_v = proc_res
+        if website:
+            quota_mb = website.caching_safe_quota_mb
+            in_v = website.caching_invalidation_version
         else:
             quota_mb, in_v = 35, 1
 

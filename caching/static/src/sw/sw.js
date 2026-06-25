@@ -60,8 +60,10 @@ self.addEventListener('fetch', (event) => {
                     // as they fit within the 10MB system reservation.
                     const isBundle = url.pathname.startsWith('/web/assets/');
                     const contentLength = networkResponse.headers.get('Content-Length');
-                    if (!isBundle && contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) {
-                        console.warn(`[Caching SW] Skipping cache for large file: ${request.url} (${contentLength} bytes)`);
+                    const parsedLength = contentLength ? parseInt(contentLength, 10) : NaN;
+                    
+                    if (!isBundle && (isNaN(parsedLength) || parsedLength > MAX_FILE_SIZE_BYTES)) {
+                        console.warn(`[Caching SW] Skipping cache for large or chunked file: ${request.url}`);
                         return networkResponse;
                     }
 

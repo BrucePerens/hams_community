@@ -9,9 +9,7 @@
         "knowledge", "base", "website", "zero_sudo"],
     "data": [
         "data/security_data.xml",
-        "data/procedures.xml",
         "security/ir.model.access.csv",
-        "views/layout_inherit.xml",
         "views/res_config_settings_views.xml",
     ],
     "knowledge_docs": [
@@ -23,6 +21,9 @@
         }
     ],
     "assets": {
+        "web.assets_frontend": [
+            "caching/static/src/js/register.js",
+        ],
         "web.assets_tests": [
             "caching/static/tests/tours/caching_tour.js",
         ],

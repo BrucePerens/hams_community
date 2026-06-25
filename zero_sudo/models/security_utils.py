@@ -35,7 +35,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_get_service_uid]
         # Verified by [@ANCHOR: ham_onboarding:test_otp_mail_template]
         # Tests [@ANCHOR: story_secure_escalation]
-        import sys
+        
         if not xml_id or not isinstance(xml_id, str) or "." not in xml_id:
             raise AccessError(_("Invalid XML ID format: %s. Expected 'module.name'.") % xml_id)
 
@@ -217,7 +217,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo READ whitelist. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
 
         env_svc = self._get_service_env("zero_sudo.config_service_internal")
-        import sys
+        
         return env_svc["ir.config_parameter"].get_param(key, default)
 
     @api.model
@@ -236,7 +236,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             raise AccessError(_("Security Alert: Parameter '%s' is not in the Zero-Sudo WRITE whitelist. You must explicitly register it in zero_sudo/models/security_utils.py.") % key)
 
         env_svc = self._get_service_env("zero_sudo.config_service_internal")
-        import sys
+        
         return env_svc["ir.config_parameter"].set_param(key, value)
 
     @api.model

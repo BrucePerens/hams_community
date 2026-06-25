@@ -426,6 +426,7 @@ class WebsitePage(models.Model):
             )
             # ADR-0001: All service account mutations must include appropriate context
             self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
+            _logger.error(f"DEBUG CREATE: vals_list={vals_list} context={self_svc.env.context}")
             records = super(WebsitePage, self_svc).create(vals_list)
         except Exception as e:  # audit-ignore-catch-all
             if "not found" in str(e).lower():
@@ -549,6 +550,7 @@ class WebsitePage(models.Model):
             )
             # ADR-0001: All service account mutations must include appropriate context
             self_svc = self.with_user(svc_uid).with_context(mail_notrack=True)
+            _logger.error(f"DEBUG WRITE: vals={vals} ids={self.ids}")
             res = super(WebsitePage, self_svc).write(vals)
         except Exception as e:  # audit-ignore-catch-all
              if "not found" in str(e).lower():
@@ -593,6 +595,9 @@ class WebsitePage(models.Model):
              if "not found" in str(e).lower():
                   _logger.debug("Service account not found during page unlink bypass: %s", e)
                   res = super(WebsitePage, self).unlink()
+             elif type(e).__name__ in ('SerializationFailure', 'OperationalError') or 'could not serialize' in str(e):
+                  _logger.debug("SerializationFailure during page unlink bypass, allowing retry: %s", e)
+                  raise
              else:
                   _logger.error("Failed page unlink bypass execution: %s", e)
                   raise

@@ -266,7 +266,7 @@ def execute_job(ch, method, properties, body):
                     logger.error("Failed to parse sync data for engine %s: %s", engine, e)
                     _json2_call(
                         "backup.config",
-                        "_report_backup_failure",
+                        "report_backup_failure",
                         svc_uid=svc_uid,
                         ids=[config_id],
                         message=f"Sync Parse Error: {e}",
@@ -286,7 +286,7 @@ def execute_job(ch, method, properties, body):
             )
             _json2_call(
                 "backup.config",
-                "_report_backup_failure",
+                "report_backup_failure",
                 svc_uid=svc_uid,
                 ids=[config_id],
                 message=error_msg,
@@ -314,7 +314,7 @@ def execute_job(ch, method, properties, body):
             if config_id:
                 _json2_call(
                     "backup.config",
-                    "_report_backup_failure",
+                    "report_backup_failure",
                     svc_uid=svc_uid,
                     ids=[config_id],
                     message=f"Worker Error ({type(e).__name__}): {e}",

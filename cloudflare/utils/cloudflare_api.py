@@ -289,3 +289,61 @@ def delete_cfd_tunnel(account_id, token, tunnel_id):
     except requests.exceptions.RequestException as e:
         _logger.error(f"Cloudflare Delete Tunnel API failed: {e}")
         return False, str(e)
+
+def create_custom_hostname(hostname, token, zone_id):
+    if not token or not zone_id or not hostname:
+        return False, "Missing credentials or hostname"
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/custom_hostnames"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    
+    payload = {
+        "hostname": hostname,
+        "ssl": {
+            "method": "http",
+            "type": "dv",
+            "settings": {
+                "min_tls_version": "1.2"
+            }
+        }
+    }
+
+    try:
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, response.json().get("result", {})
+    except requests.exceptions.RequestException as e:
+        _logger.error(f"Cloudflare Create Custom Hostname API failed: {e}")
+        return False, str(e)
+
+
+def get_custom_hostname(hostname_id, token, zone_id):
+    if not token or not zone_id or not hostname_id:
+        return False, "Missing credentials or hostname ID"
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/custom_hostnames/{hostname_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, response.json().get("result", {})
+    except requests.exceptions.RequestException as e:
+        _logger.error(f"Cloudflare Get Custom Hostname API failed: {e}")
+        return False, str(e)
+
+
+def delete_custom_hostname(hostname_id, token, zone_id):
+    if not token or not zone_id or not hostname_id:
+        return False, "Missing credentials or hostname ID"
+
+    endpoint = f"https://api.cloudflare.com/client/v4/zones/{zone_id}/custom_hostnames/{hostname_id}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    try:
+        response = requests.delete(endpoint, headers=headers, timeout=15)
+        response.raise_for_status()
+        return True, "Custom hostname deleted successfully."
+    except requests.exceptions.RequestException as e:
+        _logger.error(f"Cloudflare Delete Custom Hostname API failed: {e}")
+        return False, str(e)

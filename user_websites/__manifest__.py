@@ -27,6 +27,7 @@ This module enables:
         "cloudflare",
         "knowledge",
         "compliance",
+        "edge_routing",
     ],
     "external_dependencies": {
         "python": [],

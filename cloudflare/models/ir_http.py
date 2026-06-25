@@ -75,7 +75,8 @@ class IrHttp(models.AbstractModel):
 
         # Inject Website-specific Cache-Tag for granular site-wide purging if needed.
         # Direct attribute access enforces schema contract
-        website_id = request.website.id if request.website else False
+        website = request.__dict__.get("website")
+        website_id = website.id if website else False
 
         if website_id:
             existing_tags = response.headers.get("Cache-Tag", "")

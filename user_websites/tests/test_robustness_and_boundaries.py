@@ -33,8 +33,8 @@ class TestRobustnessAndBoundaries(HamsHttpCase):
 
     def test_01_slug_generation_exhaustion(self):
         """Verify that if the slug namespace is completely exhausted (1000 retries), it raises a ValidationError."""
-        # We mock the search_count to always return 1 (simulating a permanent collision across both users and groups)
-        self.safe_patch("odoo.models.BaseModel.search_count", return_value=1)
+        # We mock the collision check to always return True (simulating a permanent collision)
+        self.safe_patch("odoo.addons.edge_routing.models.routing_mixin.EdgeRoutingMixin._check_slug_collision", return_value=True)
         with self.assertRaises(
             ValidationError,
             msg="Must raise ValidationError if 1000 slug variations are exhausted.",

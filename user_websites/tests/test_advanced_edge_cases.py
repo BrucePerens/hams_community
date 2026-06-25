@@ -2,6 +2,7 @@
 import odoo.tests
 from odoo.tests import tagged
 import logging
+import uuid
 
 _logger = logging.getLogger(__name__)
 
@@ -10,12 +11,13 @@ class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
     def setUp(self):
         super(TestAdvancedEdgeCases, self).setUp()
 
+        unique_id = str(uuid.uuid4())[:8]
         self.user_empty = self.env["res.users"].create(
             {
-                "name": "Empty Blog User",
-                "login": "emptyuser",
-                "email": "empty@example.com",
-                "website_slug": "emptyuser",
+                "name": f"Empty Blog User {unique_id}",
+                "login": f"emptyuser_{unique_id}",
+                "email": f"empty_{unique_id}@example.com",
+                "website_slug": f"emptyuser_{unique_id}",
                 "group_ids": [
                     (
                         6,
@@ -31,8 +33,8 @@ class TestAdvancedEdgeCases(odoo.tests.common.HttpCase):
 
         self.doomed_group = self.env["user.websites.group"].create(
             {
-                "name": "Doomed Group",
-                "website_slug": "doomed-group",
+                "name": f"Doomed Group {unique_id}",
+                "website_slug": f"doomed-group-{unique_id}",
             }
         )
 

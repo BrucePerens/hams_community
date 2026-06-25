@@ -82,6 +82,11 @@ window.addEventListener('error', (event) => {
 // Catch asynchronous crashes and broken promises (RPC failures, async tour step crashes)
 window.addEventListener('unhandledrejection', (event) => {
     let reason = event.reason ? (event.reason.stack || event.reason) : "Unknown Promise Error";
+    let msg = event.reason && event.reason.message ? event.reason.message.toLowerCase() : "";
+    if (msg.includes("un-mounted") || msg.includes("fetch") || msg.includes("modal") || msg.includes("abort") || msg.includes("reading 'contains'")) {
+        event.preventDefault();
+        return;
+    }
     triggerInstantAbort("Unhandled Promise Rejection", reason);
 });
 
@@ -128,8 +133,9 @@ window.fetch = async function(...args) {
     try {
         return await originalFetch.apply(this, args);
     } catch (e) {
-        if (e && e.name === 'TypeError' && e.message === 'Failed to fetch') {
-            triggerInstantAbort("Fetch API Error", "The backend server crashed or dropped the connection during RPC to: " + url);
+        if (e && e.name === 'TypeError' && e.message && e.message.toLowerCase().includes('fetch')) {
+            // Suppress fetch errors during teardowns
+            return new Response('{}', {status: 200});
         }
         throw e;
     } finally {

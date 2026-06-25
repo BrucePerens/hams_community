@@ -29,7 +29,25 @@ class TestRealBackupWorker(RealTransactionCase):
         daemon_script = os.path.join(base_dir, "daemon", "backup_worker.py")
 
         daemon_utils = self.env["zero_sudo.daemon.utils"]
-        self.daemon_proc = daemon_utils.start_daemon_process(daemon_script)
+
+        # Ensure API key is provisioned for this test database and committed
+        admin_uid = self.env.ref('base.user_admin').id
+        self.env.ref('base.user_admin').write({'group_ids': [(4, self.env.ref('daemon_key_manager.group_daemon_key_manager').id)]})
+        self.env.cr.commit()
+        self.env["daemon.key.registry"].with_user(admin_uid).action_force_provision_all()
+        self.env.cr.commit()
+
+        # Fetch the auto-generated API key for the backup service daemon from its secure vault
+        env_vars = {}
+        env_vars["DB_NAME"] = self.env.cr.dbname
+        env_file = "/var/lib/odoo/daemon_keys/backup_worker.env"
+        if os.path.exists(env_file):
+            with open(env_file, "r") as f:
+                for line in f:
+                    if line.startswith("ODOO_RPC_KEY="):
+                        env_vars["ODOO_SERVICE_PASSWORD"] = line.strip().split("=", 1)[1]
+
+        self.daemon_proc = daemon_utils.start_daemon_process(daemon_script, env_vars=env_vars)
 
         rmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq")
         # System infrastructure variables are permissible in daemon bootstrap hooks
@@ -39,11 +57,23 @@ class TestRealBackupWorker(RealTransactionCase):
         channel.queue_declare(queue="backup_tasks", durable=True)
         channel.queue_purge("backup_tasks")
 
+        config = self.env["backup.config"].create({
+            "name": "Dummy Config",
+            "engine": "kopia",
+            "target_path": "/var/lib/odoo/backups/dummy_backup"
+        })
+        job = self.env["backup.job"].create({
+            "config_id": config.id,
+            "job_type": "kopia",
+            "state": "pending",
+        })
+        self.env.cr.commit()
+
         job_payload = {
-            "job_id": 999,
+            "job_id": job.id,
             "engine": "dummy",
-            "target_path": "/var/lib/odoo/backups/dummy_backup",
-            "config_id": 1
+            "target_path": config.target_path,
+            "config_id": config.id
         }
         channel.basic_publish(
             exchange="",
@@ -62,4 +92,21 @@ class TestRealBackupWorker(RealTransactionCase):
             time.sleep(0.5)  # audit-ignore-sleep
 
         conn.close()
+        
+        # Wait for the daemon to finish writing back to the DB to avoid SerializationFailure
+        start_time = time.time()
+        while time.time() - start_time < 15.0:
+            job.invalidate_recordset(["state"])
+            if job.state in ("done", "failed"):
+                break
+            time.sleep(0.5)  # audit-ignore-sleep
+
+        # Commit to close the test's long-running transaction before we attempt to delete records
+        # modified by the daemon's concurrent transaction.
+        self.env.cr.commit()
+
+        job.unlink()
+        config.unlink()
+        self.env.cr.commit()
+
         self.assertTrue(consumed, "The real backup worker daemon failed to consume the RabbitMQ message!")

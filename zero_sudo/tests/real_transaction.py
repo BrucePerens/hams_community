@@ -23,6 +23,15 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
     exactly like a live production environment.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with cls.registry.cursor() as cr:
+            cr.execute(
+                "INSERT INTO ir_config_parameter (key, value) VALUES ('web.base.url', 'https://hams.com') "
+                "ON CONFLICT (key) DO UPDATE SET value='https://hams.com'"
+            )
+
     def setUp(self):
         super().setUp()
 
@@ -151,6 +160,7 @@ class RealTransactionCase(HttpCase, SafePatchMixin):
                 "http_session", "database_pg_setting", "database_table_stat", "database_query_stat",
                 "database_activity", "database_index_stat", "ir_attachment", "ir_model_data",
                 "website_visitor", "website_track", "ir_ui_view", "cloudflare_purge_queue", "res_groups_implied_rel",
+                "res_users_apikeys",
             }
             noisy_tables.update(fallback_tables)
 

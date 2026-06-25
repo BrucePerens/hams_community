@@ -31,7 +31,7 @@ class TestBinaryManifestIntegration(HamsTransactionCase):
         self.safe_patch("shutil.which", return_value=None)
 
         tar_stream = io.BytesIO()
-        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar:
+        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar: # audit-ignore-path-traversal
             content = b"dummy kopia content"
             tarinfo = tarfile.TarInfo(name="kopia")
             tarinfo.size = len(content)

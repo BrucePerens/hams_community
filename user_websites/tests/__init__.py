@@ -24,5 +24,5 @@ from . import test_subscriptions
 from . import test_ui_personas
 from . import test_ui_tours
 from . import test_user_websites_blog_post
-from . import test_utils
+
 from . import test_xpath_rendering

@@ -8,6 +8,7 @@ from . import turnstile
 from . import edge_context
 from . import waf_rule
 from . import config_backup
+from . import domain
 from . import config_manager
 from . import ip_ban
 from . import tunnel_wizard

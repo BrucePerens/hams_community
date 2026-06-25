@@ -2,6 +2,7 @@
 import odoo.tests
 from odoo.tests import tagged
 import logging
+import uuid
 
 _logger = logging.getLogger(__name__)
 
@@ -14,12 +15,14 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
         if not main_website:
             main_website = self.env["website"].search([], limit=1)
 
+        unique_id = str(uuid.uuid4())[:8]
         self.user_a = self.env["res.users"].create(
             {
-                "name": "User A",
-                "login": "usera",
-                "email": "usera@example.com",
-                "website_slug": "usera",
+                "name": f"User A {unique_id}",
+                "login": f"usera_{unique_id}",
+                "password": "usera",
+                "email": f"usera_{unique_id}@example.com",
+                "website_slug": f"usera_{unique_id}",
                 "group_ids": [
                     (
                         6,
@@ -35,10 +38,11 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
 
         self.user_b = self.env["res.users"].create(
             {
-                "name": "User B",
-                "login": "userb",
-                "email": "userb@example.com",
-                "website_slug": "userb",
+                "name": f"User B {unique_id}",
+                "login": f"userb_{unique_id}",
+                "password": "userb",
+                "email": f"userb_{unique_id}@example.com",
+                "website_slug": f"userb_{unique_id}",
                 "group_ids": [
                     (
                         6,
@@ -96,7 +100,10 @@ class TestBlogPostOwnership(odoo.tests.common.HttpCase):
 
         self.authenticate(self.user_a.login, self.user_a.login)
         response = self.url_open(url_a_blog)
+        if response.status_code == 404:
+            _logger.error(f"TEST 03 404 RESPONSE: {response.text[:500]}")
         self.assertEqual(response.status_code, 200)
+
         self.assertNotIn(
             report_button_text,
             response.content,

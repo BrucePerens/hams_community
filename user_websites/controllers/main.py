@@ -67,8 +67,12 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        profile_user = env_svc["res.users"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
-        profile_group = env_svc["user.websites.group"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
+        user_id = request.env["res.users"].get_record_by_slug(website_slug)
+        profile_user = env_svc["res.users"].browse(user_id) if user_id else env_svc["res.users"]
+        group_id = request.env["user.websites.group"].get_record_by_slug(website_slug)
+        profile_group = env_svc["user.websites.group"].browse(group_id) if group_id else env_svc["user.websites.group"]
+
+
 
         if not profile_user and not profile_group:
             return request.not_found()
@@ -121,8 +125,10 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        profile_user = env_svc["res.users"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
-        profile_group = env_svc["user.websites.group"].with_context(active_test=False).search([("website_slug", "=", website_slug)], limit=1)
+        user_id = request.env["res.users"].get_record_by_slug(website_slug)
+        profile_user = env_svc["res.users"].browse(user_id) if user_id else env_svc["res.users"]
+        group_id = request.env["user.websites.group"].get_record_by_slug(website_slug)
+        profile_group = env_svc["user.websites.group"].browse(group_id) if group_id else env_svc["user.websites.group"]
 
         if not profile_user and not profile_group:
             return request.not_found()
@@ -168,14 +174,16 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
-        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+        user_id = request.env["res.users"].get_record_by_slug(website_slug)
+        profile_user = env_svc["res.users"].browse(user_id) if user_id else env_svc["res.users"]
+        group_id = request.env["user.websites.group"].get_record_by_slug(website_slug)
+        profile_group = env_svc["user.websites.group"].browse(group_id) if group_id else env_svc["user.websites.group"]
 
         if not profile_user and not profile_group:
-            return request.not_found()
+            raise request.not_found()
 
         if profile_user and profile_user.id != user.id:
-            return request.not_found()
+            raise request.not_found()
         if profile_group:
             is_member = env_svc["user.websites.group"].search_count([("id", "=", profile_group.id), ("member_ids", "in", user.id)])
             if not is_member:
@@ -213,8 +221,10 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
-        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+        user_id = request.env["res.users"].get_record_by_slug(website_slug)
+        profile_user = env_svc["res.users"].browse(user_id) if user_id else env_svc["res.users"]
+        group_id = request.env["user.websites.group"].get_record_by_slug(website_slug)
+        profile_group = env_svc["user.websites.group"].browse(group_id) if group_id else env_svc["user.websites.group"]
 
         if not profile_user and not profile_group:
             return request.not_found()
@@ -346,8 +356,10 @@ class UserWebsitesController(http.Controller):
         utils = request.env["zero_sudo.security.utils"]
         env_svc = utils._get_service_env("user_websites.user_websites_service_account")
 
-        profile_user = env_svc["res.users"].search([("website_slug", "=", website_slug)], limit=1)
-        profile_group = env_svc["user.websites.group"].search([("website_slug", "=", website_slug)], limit=1)
+        user_id = request.env["res.users"].get_record_by_slug(website_slug)
+        profile_user = env_svc["res.users"].browse(user_id) if user_id else env_svc["res.users"]
+        group_id = request.env["user.websites.group"].get_record_by_slug(website_slug)
+        profile_group = env_svc["user.websites.group"].browse(group_id) if group_id else env_svc["user.websites.group"]
 
         if not profile_user and not profile_group:
             return request.not_found()

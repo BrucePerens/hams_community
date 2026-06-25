@@ -160,7 +160,7 @@ class DaemonKeyRegistry(models.Model):
                 (user.id, usage_group.id)
             )
             # Invalidate cache for the user's groups to ensure the new privilege is recognized.
-            user.invalidate_recordset(['group_ids'])
+            user.env['res.users'].invalidate_model(['group_ids', 'all_group_ids'])
 
         registry._rotate_key_and_write_file()
         return True
