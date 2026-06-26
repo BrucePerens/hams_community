@@ -52,10 +52,21 @@ class EdgeRoutingDomain(models.Model):
                     svc_id = row[0] if row else 2
                     env = odoo.api.Environment(cr, svc_id, {})
                     all_domains = env['edge.routing.domain'].search([], limit=1000).mapped('name')
+                    
+                    if 'ham.dns.zone' in env:
+                        try:
+                            # Soft-dependency on ham_dns to include subdomains
+                            dns_env_svc = env["zero_sudo.security.utils"]._get_service_env("ham_dns.user_dns_api_service")
+                            dns_domains = dns_env_svc['ham.dns.zone'].search([], limit=5000).mapped('name')
+                            all_domains.extend(dns_domains)
+                        except Exception as e: # audit-ignore-catch-all
+                            _logger.warning("Soft dependency ham.dns.zone failed: %s", e)
+                            
+                    unique_domains = list(set(all_domains))
                     # Send to the API
                     requests.post(
                         "http://odoo:8069/api/v1/pager_duty/update_domains",
-                        json={"jsonrpc": "2.0", "method": "call", "params": {"domains": all_domains}},
+                        json={"jsonrpc": "2.0", "method": "call", "params": {"domains": unique_domains}},
                         timeout=5
                     )
             except Exception as e: # audit-ignore-catch-all

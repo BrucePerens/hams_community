@@ -11,11 +11,13 @@ import time
 import urllib.request
 import urllib3
 import werkzeug.serving
+import subprocess
 from unittest.mock import MagicMock, patch
 import psutil
 from cryptography.fernet import Fernet
 from odoo.tests.common import HttpCase, TransactionCase, ChromeBrowser, HOST
 import odoo.tests.common
+import odoo
 from odoo import fields
 from odoo.addons.distributed_redis_cache.redis_cache import get_redis_connection
 
@@ -299,6 +301,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
     server_thread = None
     server = None
     browser = None
+    _socat_proc = None
 
     @classmethod
     def setUpClass(cls):
@@ -325,6 +328,19 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 "ON CONFLICT (key) DO UPDATE SET value='https://hams.com'"
             )
         cls.registry.clear_cache()
+        
+        # 🚨 PROVISION SOCAT PROXY FOR HTTPS 🚨
+        cert_path = "/var/tmp/hams_test_cert.pem"
+        key_path = "/var/tmp/hams_test_key.pem"
+        if not os.path.exists(cert_path):
+            subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", key_path, "-out", cert_path, "-days", "365", "-nodes", "-subj", f"/CN={HOST}"], check=False)
+        
+        target_port = cls.http_port() or odoo.tools.config['xmlrpc_port']
+        cls._socat_log_file = open(f"/var/tmp/socat_{cls.__name__}.log", "w")
+        cls._socat_proc = subprocess.Popen(
+            ["socat", "-d", "-d", f"OPENSSL-LISTEN:8443,cert={cert_path},key={key_path},verify=0,fork,reuseaddr", f"TCP:{HOST}:{target_port}"],
+            stdout=cls._socat_log_file, stderr=cls._socat_log_file
+        )
 
     def setUp(self):
         super().setUp()
@@ -364,6 +380,17 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         cls._crypto_patcher.stop()
         cls._crypto_patcher_res_users.stop()
         _logger.info("TRACING: Entering HamsHttpCase.tearDownClass.")
+        
+        if cls._socat_proc:
+            try:
+                parent = psutil.Process(cls._socat_proc.pid)
+                for child in parent.children(recursive=True):
+                    child.terminate()
+                cls._socat_proc.terminate()
+                cls._socat_proc.wait(timeout=2.0)
+            except Exception as e: # audit-ignore-catch-all
+                _logger.warning("TRACING: Failed to terminate socat proxy: %s", repr(e))
+                
         if cls.server_thread:
             cls.server_thread.join = lambda *args, **kwargs: None
         if cls.server:

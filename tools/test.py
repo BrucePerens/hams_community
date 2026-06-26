@@ -960,18 +960,10 @@ def setup_namespace_and_run_tests(real_log_dir, sys_args):
 
 
 
-    cert_path = "/var/tmp/hams_test_cert.pem"
-    key_path = "/var/tmp/hams_test_key.pem"
-    if not os.path.exists(cert_path):
-        subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-keyout", key_path, "-out", cert_path, "-days", "365", "-nodes", "-subj", "/CN=localhost"], check=False)
-    
-    socat_proc = subprocess.Popen(["socat", f"OPENSSL-LISTEN:8443,cert={cert_path},key={key_path},verify=0,fork", "TCP:127.0.0.1:8069"])
-
     test_cmd = [sys.executable, os.path.abspath(__file__)] + sys_args
     ret = subprocess.run(test_cmd, preexec_fn=preexec_odoo).returncode
 
     # 7. Graceful Ephemeral Teardown
-    socat_proc.terminate()
     subprocess.run(["rabbitmqctl", "stop"], preexec_fn=preexec_rmq, check=False)
     redis_proc.terminate()
 
