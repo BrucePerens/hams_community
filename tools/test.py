@@ -182,6 +182,8 @@ class FailureExtractor:
     def set_context(self, context_name):
         if self.capturing and self.current_block:
             self.captured_blocks.append((self.current_context, self.current_block))
+            if len(self.captured_blocks) > 50:
+                self.captured_blocks = self.captured_blocks[-50:]
             self.capturing = False
             self.current_block = []
             
@@ -241,6 +243,8 @@ class FailureExtractor:
             if is_safe:
                 if self.capturing:
                     self.captured_blocks.append((self.current_context, self.current_block))
+                    if len(self.captured_blocks) > 50:
+                        self.captured_blocks = self.captured_blocks[-50:]
                     self.current_block = []
                     self.capturing = False
             else:
