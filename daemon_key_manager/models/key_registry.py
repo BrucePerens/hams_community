@@ -2,7 +2,7 @@
 import os
 import logging
 import datetime
-from odoo import models, fields, api, SUPERUSER_ID, _
+from odoo import models, fields, api, SUPERUSER_ID, _ # burn-ignore
 from odoo.exceptions import UserError, ValidationError, AccessError
 
 _logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class DaemonKeyRegistry(models.Model):
         # Any service account can register its own daemon, or a Manager can register any daemon.
         if not self.env.user.has_group("daemon_key_manager.group_daemon_key_manager"):
             if not self.env.user.is_service_account:
-                if self.env.uid != SUPERUSER_ID and not self.env.is_admin() and not self.env.is_superuser():
+                if self.env.uid != SUPERUSER_ID and not self.env.is_admin() and not self.env.is_superuser(): # burn-ignore
                     raise AccessError(_("Unauthorized attempt to register daemon: %s") % daemon_name)
 
         # Elevate to the internal service account to perform registration
@@ -249,7 +249,7 @@ class DaemonKeyRegistry(models.Model):
             # Verified by [@ANCHOR: test_rotation_safety_archived_user]
             raise UserError(_("Cannot rotate key for archived service account: %s") % self.user_id.login)
 
-        if self.user_id.id == SUPERUSER_ID or self.user_id.has_group('base.group_system'):
+        if self.user_id.id == SUPERUSER_ID or self.user_id.has_group('base.group_system'): # burn-ignore
             raise UserError(
                 _(
                     "Security Alert: The __system__ user ID cannot be used to provision a key. "

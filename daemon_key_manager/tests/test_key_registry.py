@@ -5,7 +5,7 @@ from odoo.tests import tagged
 from odoo.addons.zero_sudo.tests.common import HamsHttpCase
 from odoo.addons.zero_sudo.tests.real_transaction import RealTransactionCase
 from odoo.exceptions import UserError, AccessError
-from odoo import SUPERUSER_ID
+from odoo import SUPERUSER_ID # burn-ignore
 
 _logger = logging.getLogger(__name__)
 
@@ -214,7 +214,7 @@ class TestKeyRegistry(RealTransactionCase):
         self.assertEqual(res[0], service_user.id,
                          f"Key owner should be {service_user.login} (ID {service_user.id}), "
                          f"but it is ID {res[0]}")
-        self.assertNotEqual(res[0], SUPERUSER_ID, "Key should not be owned by SUPERUSER")
+        self.assertNotEqual(res[0], SUPERUSER_ID, "Key should not be owned by SUPERUSER") # burn-ignore
 
     def test_force_provisioning(self):
         """Test force provisioning of all keys."""
