@@ -177,6 +177,7 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
             "user_websites.max_sites_per_user",
             "user_websites_seo.docs_installed",
             "web.base.url",
+            "content_security_policy.report_url",
         ]
 
     @api.model

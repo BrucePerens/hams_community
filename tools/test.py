@@ -159,11 +159,44 @@ class FailureExtractor:
         if not disable_atexit:
             atexit.register(self.finish_and_write)
 
+        if os.environ.get("HAMS_ISOLATED_NS") == "1":
+            self.progress_path = "/mnt/real_tmp/test_progress.txt"
+        else:
+            self.progress_path = os.path.join(base_dir, "test_progress.txt")
+        self.passed_tests = 0
+        self.failed_tests = 0
+        self.current_test = "Initializing..."
+        self.update_progress()
+
+    def update_progress(self):
+        try:
+            with open(self.progress_path, "w") as f:
+                f.write(f"Currently Running: {self.current_test}\n")
+                f.write(f"Passed: {self.passed_tests}\n")
+                f.write(f"Failed: {self.failed_tests}\n")
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            pass
+
     def set_context(self, context_name):
         if self.capturing and self.current_block:
             self.captured_blocks.append((self.current_context, self.current_block))
             self.capturing = False
             self.current_block = []
+            
+        if "Starting " in context_name:
+            test_name = context_name.split("Starting ")[-1].strip()
+            # Avoid hasattr by using getattr with a default or checking truthiness if always initialized
+            if getattr(self, 'current_test', None) and self.current_test != "Initializing..." and self.current_test != test_name:
+                failed = any(self.current_test in ctx for ctx, _ in self.captured_blocks)
+                if failed:
+                    self.failed_tests += 1
+                else:
+                    self.passed_tests += 1
+            self.current_test = test_name
+            self.update_progress()
+
         self.current_context = context_name
 
     def process_line(self, line):

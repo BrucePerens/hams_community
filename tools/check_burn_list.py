@@ -1019,6 +1019,13 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     node.lineno,
                     "CRITICAL DEPRECATION: 'get_module_resource' is removed.",
                 )
+                
+            if any(alias.name == "SUPERUSER_ID" for alias in node.names):
+                self.add_error(
+                    node.lineno,
+                    "[!] DIAGNOSTIC FOR AI: `.sudo()` and `SUPERUSER_ID` are completely forbidden on this platform to prevent privilege escalation. Use the service account architecture (`with_user()`) instead."
+                )
+                
             self.generic_visit(node)
 
         def visit_Constant(self, node):
@@ -1045,6 +1052,8 @@ def check_ast_vulnerabilities(filepath, content, lines, is_odoo_module=False):
                     self.add_error(node.lineno, "Remove 'numbercall'.")
                 elif node.id == "_sql_constraints":
                     self.add_error(node.lineno, "[!] DIAGNOSTIC FOR AI: Use 'models.Constraint' instead of '_sql_constraints'.")
+                elif node.id == "SUPERUSER_ID":
+                    self.add_error(node.lineno, "[!] DIAGNOSTIC FOR AI: `.sudo()` and `SUPERUSER_ID` are completely forbidden on this platform to prevent privilege escalation. Use the service account architecture (`with_user()`) instead.")
             self.generic_visit(node)
 
         def visit_keyword(self, node):
