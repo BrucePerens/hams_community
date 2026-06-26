@@ -91,6 +91,54 @@ class VirtualClockThread(threading.Thread):
 global_vclock = VirtualClockThread()
 global_vclock.start()
 
+class ResourceMonitorThread(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True)
+
+    def get_available_memory_mb(self):
+        try:
+            with open("/proc/meminfo", "r") as f:
+                for line in f:
+                    if line.startswith("MemAvailable:"):
+                        return int(line.split()[1]) // 1024
+        except Exception:
+            pass
+        return None
+
+    def get_chrome_count(self):
+        try:
+            res = subprocess.run(["pgrep", "-c", "-f", "chrom"], capture_output=True, text=True)
+            if res.returncode == 0:
+                return int(res.stdout.strip())
+        except Exception:
+            pass
+        return 0
+
+    def run(self):
+        while True:
+            time.sleep(10)
+            mem_mb = self.get_available_memory_mb()
+            chrome_count = self.get_chrome_count()
+            
+            alerts = []
+            if mem_mb is not None and mem_mb < 512:
+                alerts.append(f"CRITICAL MEMORY: Only {mem_mb} MB available!")
+            elif mem_mb is not None and mem_mb < 2048:
+                alerts.append(f"LOW MEMORY: {mem_mb} MB available.")
+            
+            if chrome_count > 40:
+                alerts.append(f"POSSIBLE BROWSER LEAK: {chrome_count} active Chromium processes detected!")
+                
+            if alerts:
+                msg = f"\n\x1b[91m{'!' * 60}\n[!] RESOURCE MONITOR ALERT:\n"
+                for a in alerts:
+                    msg += f"  - {a}\n"
+                msg += f"{'!' * 60}\x1b[0m\n"
+                print(msg, flush=True)
+
+global_resource_monitor = ResourceMonitorThread()
+global_resource_monitor.start()
+
 def load_ignore_file(filepath):
     patterns = []
     if os.path.exists(filepath):
