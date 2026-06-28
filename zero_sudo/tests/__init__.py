@@ -7,6 +7,7 @@ from . import test_views
 from . import test_controllers
 from . import test_json_rpc_client
 from . import test_integration
+from . import dummy_daemon
 
 import logging
 import psycopg2
