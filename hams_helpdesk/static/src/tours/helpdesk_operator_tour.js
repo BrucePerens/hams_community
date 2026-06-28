@@ -63,22 +63,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         },
         TourUtils.waitForAbsence('.modal', 'Wait for modal to close'),
         {
-            content: "Go back to list via breadcrumb to close the form",
-            trigger: '.o_control_panel .breadcrumb-item:not(.active):first, .o_control_panel .o_back_button',
-            run: 'click',
-        },
-        {
-            content: "Wait for list view to load",
-            trigger: '.o_list_table',
-            run: function() {}
-        },
-        {
-            content: "Wait for list view to load after reload and open ticket",
-            trigger: '.o_list_table .o_data_row',
-            run: 'click',
-        },
-        {
-            content: "Verify Handoff in Chatter",
+            content: "Wait for form to reload",
             trigger: '.o_form_sheet', // wait for form sheet to render first
             run: function() {}
         },

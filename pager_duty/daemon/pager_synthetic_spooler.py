@@ -135,6 +135,7 @@ def execute_check(check):
                     res["error"] = proc.stderr.strip()
                 else:
                     res["success"] = True
+                    res["output"] = proc.stdout.strip()
 
             elif ctype == "executable":
                 exe_path = check.get("executable_path", "")
