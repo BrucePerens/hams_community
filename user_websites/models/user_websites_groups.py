@@ -46,7 +46,8 @@ def _async_unpublish_group_content(db_name, group_ids):
                 if len(pages) < 5000:
                     break
                 if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                    time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    time.sleep(0.1)
 
             while True:
                 posts = env_svc["blog.post"].search(
@@ -63,7 +64,8 @@ def _async_unpublish_group_content(db_name, group_ids):
                 if len(posts) < 5000:
                     break
                 if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                    time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    time.sleep(0.1)
 
         finally:
             env.cr.rollback()

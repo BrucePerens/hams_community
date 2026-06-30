@@ -22,7 +22,9 @@ class EdgeRoutingDomain(models.Model):
         "Target Slug", required=True, help="The website_slug this domain maps to"
     )
 
-    _name_uniq = models.Constraint("UNIQUE(name)", "This domain is already mapped!")
+    _sql_constraints = [
+        ("name_uniq", "UNIQUE(name)", "This domain is already mapped!"),
+    ]
 
     @api.constrains("name")
     def _check_name(self):

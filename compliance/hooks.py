@@ -25,10 +25,56 @@ def post_init_hook(env):
         "compliance.user_compliance_service"
     )
 
+    # Execute DDL directly instead of using ir.actions.server
+    sql = """
+    CREATE OR REPLACE FUNCTION compliance_enforce_protection() RETURNS VOID AS $$
+    BEGIN
+        -- 1. Enforce Cookie Bar on all websites
+        UPDATE website SET cookies_bar = TRUE;
+
+        -- 2. Shield boilerplate pages where custom versions exist
+        -- We identify boilerplate by the 'compliance.compliance_' key prefix
+        UPDATE website_page bp
+        SET is_published = FALSE
+        FROM ir_ui_view v
+        WHERE bp.view_id = v.id
+          AND v.key LIKE 'compliance.compliance_%'
+          AND bp.is_published = TRUE
+          AND EXISTS (
+              SELECT 1 FROM website_page cp
+              JOIN ir_ui_view cv ON cp.view_id = cv.id
+              WHERE cp.url = bp.url
+                AND (cp.website_id = bp.website_id OR (cp.website_id IS NULL AND bp.website_id IS NULL))
+                AND cp.id != bp.id
+                AND cv.key NOT LIKE 'compliance.compliance_%'
+          );
+
+        -- 3. Restore boilerplate pages where no custom versions exist
+        UPDATE website_page bp
+        SET is_published = TRUE
+        FROM ir_ui_view v
+        WHERE bp.view_id = v.id
+          AND v.key LIKE 'compliance.compliance_%'
+          AND bp.is_published = FALSE
+          AND NOT EXISTS (
+              SELECT 1 FROM website_page cp
+              JOIN ir_ui_view cv ON cp.view_id = cv.id
+              WHERE cp.url = bp.url
+                AND (cp.website_id = bp.website_id OR (cp.website_id IS NULL AND bp.website_id IS NULL))
+                AND cp.id != bp.id
+                AND cv.key NOT LIKE 'compliance.compliance_%'
+          );
+    END;
+    $$ LANGUAGE plpgsql;
+    """
+    env_svc.cr.execute(sql)
+
     _logger.info("Executing Compliance Enforcement via Postgres Procedure.")
     # Performance Optimization: Reduced dozens of ORM round-trips to a single Postgres procedure call.
     # Verified by [@ANCHOR: test_compliance_postgres_procedures]
     env_svc.cr.execute("SELECT compliance_enforce_protection()")
+
+    env_svc["ir.module.module"]._bootstrap_knowledge_docs()
 
     # We must invalidate the ORM cache because the Postgres procedure modified records directly.
     env_svc["website"].invalidate_model(["cookies_bar"])

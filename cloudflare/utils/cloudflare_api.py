@@ -1,10 +1,21 @@
-# -*- coding: utf-8 -*-
 import requests
 import logging
 import base64
 import os
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 _logger = logging.getLogger(__name__)
+
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "DELETE", "PUT", "PATCH"],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session.mount("https://", adapter)
+session.mount("http://", adapter)
 
 
 def purge_urls(urls, token, zone_id):
@@ -23,9 +34,7 @@ def purge_urls(urls, token, zone_id):
         chunk = urls[i : i + 30]
         payload = {"files": chunk}
         try:
-            response = requests.post(
-                endpoint, json=payload, headers=headers, timeout=10
-            )
+            response = session.post(endpoint, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             _logger.error(f"Cloudflare URL purge API failed for chunk: {e}")
@@ -48,9 +57,7 @@ def purge_tags(tags, token, zone_id):
         chunk = tags[i : i + 30]
         payload = {"tags": chunk}
         try:
-            response = requests.post(
-                endpoint, json=payload, headers=headers, timeout=10
-            )
+            response = session.post(endpoint, json=payload, headers=headers, timeout=10)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             _logger.error(f"Cloudflare Tag purge API failed for chunk: {e}")
@@ -73,7 +80,7 @@ def ban_ip(ip_address, mode, notes, token, zone_id):
     }
 
     try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
         rule_id = response.json().get("result", {}).get("id")
         return True, rule_id
@@ -90,7 +97,7 @@ def unban_ip(rule_id, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.delete(endpoint, headers=headers, timeout=10)
+        response = session.delete(endpoint, headers=headers, timeout=10)
         response.raise_for_status()
         return True, "Success"
     except requests.exceptions.RequestException as e:
@@ -109,7 +116,7 @@ def verify_turnstile(token, remote_ip, secret):
         data["remoteip"] = remote_ip
 
     try:
-        response = requests.post(endpoint, data=data, timeout=10)
+        response = session.post(endpoint, data=data, timeout=10)
         response.raise_for_status()
         return response.json().get("success", False)
     except requests.exceptions.RequestException as e:
@@ -125,7 +132,7 @@ def get_zone_ruleset(phase, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(endpoint, headers=headers, timeout=15)
+        response = session.get(endpoint, headers=headers, timeout=15)
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -145,7 +152,7 @@ def update_zone_ruleset(ruleset_id, payload, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.put(endpoint, json=payload, headers=headers, timeout=15)
+        response = session.put(endpoint, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
         return True, "Ruleset updated successfully."
     except requests.exceptions.RequestException as e:
@@ -161,7 +168,7 @@ def create_zone_ruleset(payload, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
         return True, "Ruleset created successfully."
     except requests.exceptions.RequestException as e:
@@ -181,7 +188,7 @@ def create_cfd_tunnel(account_id, token, tunnel_name):
     payload = {"name": tunnel_name, "tunnel_secret": secret}
 
     try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
         return True, response.json().get("result", {}).get("id")
     except requests.exceptions.RequestException as e:
@@ -197,7 +204,7 @@ def get_cfd_tunnel_token(account_id, token, tunnel_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(endpoint, headers=headers, timeout=15)
+        response = session.get(endpoint, headers=headers, timeout=15)
         response.raise_for_status()
         return True, response.json().get("result", "")
     except requests.exceptions.RequestException as e:
@@ -214,7 +221,7 @@ def purge_everything(token, zone_id):
     payload = {"purge_everything": True}
 
     try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
         return True
     except requests.exceptions.RequestException as e:
@@ -230,7 +237,7 @@ def get_zone_settings(token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(endpoint, headers=headers, timeout=10)
+        response = session.get(endpoint, headers=headers, timeout=10)
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -251,7 +258,7 @@ def update_zone_setting(setting_name, value, token, zone_id):
     payload = {"value": value}
 
     try:
-        response = requests.patch(endpoint, json=payload, headers=headers, timeout=10)
+        response = session.patch(endpoint, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
         return True, "Setting updated successfully."
     except requests.exceptions.RequestException as e:
@@ -267,7 +274,7 @@ def list_cfd_tunnels(account_id, token):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(endpoint, headers=headers, timeout=15)
+        response = session.get(endpoint, headers=headers, timeout=15)
         response.raise_for_status()
         return response.json().get("result", [])
     except requests.exceptions.RequestException as e:
@@ -283,7 +290,7 @@ def delete_cfd_tunnel(account_id, token, tunnel_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.delete(endpoint, headers=headers, timeout=15)
+        response = session.delete(endpoint, headers=headers, timeout=15)
         response.raise_for_status()
         return True, "Tunnel deleted successfully."
     except requests.exceptions.RequestException as e:
@@ -304,7 +311,7 @@ def create_custom_hostname(hostname, token, zone_id):
     }
 
     try:
-        response = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
         return True, response.json().get("result", {})
     except requests.exceptions.RequestException as e:
@@ -320,7 +327,7 @@ def get_custom_hostname(hostname_id, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.get(endpoint, headers=headers, timeout=15)
+        response = session.get(endpoint, headers=headers, timeout=15)
         response.raise_for_status()
         return True, response.json().get("result", {})
     except requests.exceptions.RequestException as e:
@@ -336,7 +343,7 @@ def delete_custom_hostname(hostname_id, token, zone_id):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
     try:
-        response = requests.delete(endpoint, headers=headers, timeout=15)
+        response = session.delete(endpoint, headers=headers, timeout=15)
         response.raise_for_status()
         return True, "Custom hostname deleted successfully."
     except requests.exceptions.RequestException as e:

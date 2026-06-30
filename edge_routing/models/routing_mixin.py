@@ -24,14 +24,17 @@ class EdgeRoutingMixin(models.AbstractModel):
         help="The URL-friendly identifier for the site. Alphanumeric and hyphens only.",
     )
 
-    _website_slug_unique = models.Constraint(
-        "UNIQUE(website_slug)", "The Website Slug must be unique!"
-    )
+    _sql_constraints = [
+        (
+            "website_slug_unique",
+            "UNIQUE(website_slug)",
+            "The Website Slug must be unique!",
+        ),
+    ]
 
-    _website_slug_format = models.Constraint(
-        r"CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\-]+$')",
-        "The Website Slug can only contain lowercase letters, numbers, and hyphens.",
-    )
+    _sql_constraints = [
+        ('_website_slug_format', "CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\\-]+$')", 'The Website Slug can only contain lowercase letters, numbers, and hyphens.'),
+    ]
 
     @api.constrains("website_slug")
     def _check_reserved_slugs(self):

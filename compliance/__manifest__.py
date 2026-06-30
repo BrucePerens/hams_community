@@ -21,7 +21,6 @@ Upon installation, it:
     "data": [
         "security/security_data.xml",
         "security/ir.model.access.csv",
-        "data/procedures.xml",
         "data/legal_pages_data.xml",
         "views/website_templates.xml",
     ],

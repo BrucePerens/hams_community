@@ -41,7 +41,6 @@ class TestSEOModels(RealTransactionCase):
     def test_self_writeable_fields(self):
         # Tests [@ANCHOR: res_users_self_writeable_fields]
         # [@ANCHOR: test_self_writeable_fields]
-
         """Test that SEO fields are added to writeable fields for users."""
         fields = self.env["res.users"].SELF_WRITEABLE_FIELDS
         seo_fields = [
@@ -57,7 +56,6 @@ class TestSEOModels(RealTransactionCase):
     def test_check_access_rule_res_users(self):
         # Tests [@ANCHOR: res_users_seo_write_elevation]
         # [@ANCHOR: test_check_access_rule_res_users]
-
         """Test that a user can write to their own SEO fields but not others."""
         # reg1 can write to their own profile
         reg1_record = self.regular_user1.with_user(self.regular_user1)
@@ -74,7 +72,6 @@ class TestSEOModels(RealTransactionCase):
     def test_check_access_rule_user_websites_group(self):
         # Tests [@ANCHOR: user_websites_group_seo_write_elevation]
         # [@ANCHOR: test_check_access_rule_user_websites_group]
-
         """Test that a user can write to a group they are a member of."""
         # reg1 is a member, can write
         group_by_reg1 = self.group.with_user(self.regular_user1)
@@ -90,7 +87,6 @@ class TestSEOModels(RealTransactionCase):
 
     def test_xpath_rendering_res_users(self):
         # [@ANCHOR: test_xpath_rendering_res_users]
-
         """Prove that the SEO notebook page correctly renders in res.users."""
         res = self.env["res.users"].get_view(
             view_id=self.env.ref("base.view_users_form").id, view_type="form"
@@ -108,7 +104,6 @@ class TestSEOModels(RealTransactionCase):
 
     def test_xpath_rendering_user_websites_group(self):
         # [@ANCHOR: test_xpath_rendering_user_websites_group]
-
         """Prove that the SEO notebook page renders in user.websites.group."""
         res = self.env["user.websites.group"].get_view(
             view_id=self.env.ref("user_websites.view_user_websites_group_form").id,
@@ -127,7 +122,6 @@ class TestSEOModels(RealTransactionCase):
 
     def test_xpath_rendering_pages_posts(self):
         # [@ANCHOR: test_xpath_rendering_pages_posts]
-
         """Prove that the SEO page renders in website.page and blog.post."""
         # Test website.page
         res_page = self.env["website.page"].get_view(

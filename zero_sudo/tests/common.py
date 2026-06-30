@@ -54,6 +54,7 @@ _original_handle_request_paused = odoo.tests.common.ChromeBrowser._handle_reques
 
 odoo.tests.common.HttpCase.fetch_proxy = None
 
+
 def _patched_handle_request_paused(self, *args, **kwargs):
     params = kwargs if kwargs else (args[0] if args else {})
     url = params.get("request", {}).get("url", "")
@@ -113,7 +114,7 @@ def _patched_spawn_chrome(self, *args, **kwargs):
             psutil.ZombieProcess,
             KeyError,
         ) as e:
-            _logger.warning('Failed process kill: %s', e)
+            _logger.warning("Failed process kill: %s", e)
 
     time.sleep(0.5)  # Wait for processes to terminate
     for p in psutil.process_iter(["pid", "name", "uids"]):
@@ -132,7 +133,7 @@ def _patched_spawn_chrome(self, *args, **kwargs):
             psutil.TimeoutExpired,
             KeyError,
         ) as e:
-            _logger.warning('Failed wait: %s', e)
+            _logger.warning("Failed wait: %s", e)
 
     cmd = args[0] if len(args) > 0 else kwargs.get("cmd")
     if cmd:
@@ -147,10 +148,18 @@ def _patched_spawn_chrome(self, *args, **kwargs):
         ]:
             if flag not in cmd:
                 cmd.insert(1, flag)
-                
+
         # Wrap chrome in a PID namespace to guarantee all descendants (GPU, renderers)
         # are killed when the test teardown terminates the unshare parent.
-        unshare_cmd = ["unshare", "-c", "-m", "-p", "-f", "--mount-proc", "--kill-child=SIGTERM"]
+        unshare_cmd = [
+            "unshare",
+            "-c",
+            "-m",
+            "-p",
+            "-f",
+            "--mount-proc",
+            "--kill-child=SIGTERM",
+        ]
         cmd[:] = unshare_cmd + cmd
 
     return _original_spawn_chrome(self, *args, **kwargs)
@@ -562,8 +571,7 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
                 p.wait(timeout=2.0)
             except subprocess.TimeoutExpired:
                 _logger.warning(
-                    "Daemon PID %s did not exit"
-                    " after SIGTERM. Escalating.",
+                    "Daemon PID %s did not exit" " after SIGTERM. Escalating.",
                     p.pid,
                 )
                 try:
@@ -572,9 +580,7 @@ class HamsTransactionCase(TransactionCase, SafePatchMixin):
                         signal.SIGKILL,
                     )
                 except OSError as e:
-                    _logger.warning(
-                        "Ignored killpg error: %s", e
-                    )
+                    _logger.warning("Ignored killpg error: %s", e)
                 try:
                     p.kill()
                     p.wait(timeout=2)
@@ -746,25 +752,17 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
             if cls.__dict__.get("_socat_proc"):
                 try:
                     try:
-                        pgid = os.getpgid(
-                            cls._socat_proc.pid
-                        )
+                        pgid = os.getpgid(cls._socat_proc.pid)
                         os.killpg(pgid, signal.SIGTERM)
                     except OSError as e:
-                        _logger.warning(
-                            "Ignored killpg error: %s", e
-                        )
+                        _logger.warning("Ignored killpg error: %s", e)
                     cls._socat_proc.terminate()
                     try:
                         cls._socat_proc.wait(timeout=2.0)
                     except subprocess.TimeoutExpired:
                         try:
-                            pgid = os.getpgid(
-                                cls._socat_proc.pid
-                            )
-                            os.killpg(
-                                pgid, signal.SIGKILL
-                            )
+                            pgid = os.getpgid(cls._socat_proc.pid)
+                            os.killpg(pgid, signal.SIGKILL)
                         except OSError as e:
                             _logger.warning(
                                 "Ignored killpg error: %s",
@@ -773,9 +771,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                         cls._socat_proc.kill()
                         cls._socat_proc.wait()
                 except OSError as e:
-                    _logger.warning(
-                        "Error terminating socat: %s", e
-                    )
+                    _logger.warning("Error terminating socat: %s", e)
                 finally:
                     cls._socat_proc = None
             log_fh = cls.__dict__.get("_socat_log_file")
@@ -844,25 +840,17 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
         if cls.__dict__.get("_socat_proc"):
             try:
                 try:
-                    pgid = os.getpgid(
-                        cls._socat_proc.pid
-                    )
+                    pgid = os.getpgid(cls._socat_proc.pid)
                     os.killpg(pgid, signal.SIGTERM)
                 except OSError as e:
-                    _logger.warning(
-                        "Ignored killpg error: %s", e
-                    )
+                    _logger.warning("Ignored killpg error: %s", e)
                 cls._socat_proc.terminate()
                 try:
                     cls._socat_proc.wait(timeout=2.0)
                 except subprocess.TimeoutExpired:
                     try:
-                        pgid = os.getpgid(
-                            cls._socat_proc.pid
-                        )
-                        os.killpg(
-                            pgid, signal.SIGKILL
-                        )
+                        pgid = os.getpgid(cls._socat_proc.pid)
+                        os.killpg(pgid, signal.SIGKILL)
                     except OSError as e:
                         _logger.warning(
                             "Ignored killpg error: %s",
@@ -872,8 +860,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                     cls._socat_proc.wait()
             except Exception as e:  # audit-ignore-catch-all
                 _logger.warning(
-                    "TRACING: Failed to terminate"
-                    " socat proxy: %s",
+                    "TRACING: Failed to terminate" " socat proxy: %s",
                     repr(e),
                 )
             finally:
@@ -954,7 +941,6 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                 ws_thread = vars(cls.browser).get("_websocket_thread")
                 if ws_thread:
                     ws_thread.join = lambda *args, **kwargs: None
-
 
             threads = sys._current_frames()
             if len(threads) > 100:

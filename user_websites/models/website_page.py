@@ -36,9 +36,13 @@ class WebsitePage(models.Model):
         string="View Count", default=0, help="Privacy-friendly tracking of page views."
     )
 
-    _url_website_uniq = models.Constraint(
-        "UNIQUE(url, website_id)", "The page URL must be unique per website!"
-    )
+    _sql_constraints = [
+        (
+            "url_website_uniq",
+            "UNIQUE(url, website_id)",
+            "The page URL must be unique per website!",
+        ),
+    ]
 
     def _serve_page(self):
         # Verified by [@ANCHOR: test_privacy_friendly_view_counter]

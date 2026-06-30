@@ -27,8 +27,6 @@ RABBITMQ_PASS = os.environ.get("RABBITMQ_PASS", "guest")  # burn-ignore-env
 class OdooAPIError(Exception):
     """Custom exception for Odoo JSON-2 API failures."""
 
-    pass
-
 
 def _json2_call(model, method_name, svc_uid=None, **kwargs):
     headers = {
@@ -351,7 +349,8 @@ def execute_job(ch, method, properties, body):
             OdooAPIError,
             json.JSONDecodeError,
             urllib.error.URLError,
-        ) as inner_e:  # audit-ignore-catch-all: Reporting failure is best-effort.
+            # audit-ignore-catch-all: Reporting failure is best-effort.
+        ) as inner_e:
             logger.error("Failed to report failure back to Odoo: %s", inner_e)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 

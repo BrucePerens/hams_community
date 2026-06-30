@@ -33,7 +33,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
         website.write({"cloudflare_turnstile_secret": "my_super_secret_key"})
 
         mock_post = self.safe_patch(
-            "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
+            "odoo.addons.cloudflare.utils.cloudflare_api.session.post"
         )
         mock_response = MagicMock()
         mock_response.json.return_value = {"success": True}
@@ -118,7 +118,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
         # [@ANCHOR: test_purge_urls_api]
 
         mock_post = self.safe_patch(
-            "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
+            "odoo.addons.cloudflare.utils.cloudflare_api.session.post"
         )
 
         # Case 1: Missing credentials
@@ -163,7 +163,7 @@ class TestCloudflareAPIs(HamsTransactionCase):
         # [@ANCHOR: test_purge_tags_api]
 
         mock_post = self.safe_patch(
-            "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
+            "odoo.addons.cloudflare.utils.cloudflare_api.session.post"
         )
 
         # Case 1: Missing credentials

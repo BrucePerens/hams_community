@@ -335,4 +335,5 @@ class TestAuditEdgeCases(RealTransactionCase):
             raise_if_not_found=False,
         )
         if template:
-            template.send_mail(self.env.company.id, force_send=False)  # audit-ignore-mail: Tested by [@ANCHOR: test_cron_pending_reports]  # fmt: skip
+            # audit-ignore-mail: Tested by [@ANCHOR: test_cron_pending_reports]  # fmt: skip
+            template.send_mail(self.env.company.id, force_send=False)

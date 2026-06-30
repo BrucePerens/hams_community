@@ -22,7 +22,7 @@ class TestPurgeQueue(RealTransactionCase):
         # Tests [@ANCHOR: ir_cron_process_cf_purge_queue]
         # Tests [@ANCHOR: cf_process_queue_logic]
         mock_post = self.safe_patch(
-            "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
+            "odoo.addons.cloudflare.utils.cloudflare_api.session.post"
         )
         mock_sleep = self.safe_patch("time.sleep")
 
@@ -99,7 +99,7 @@ class TestPurgeQueue(RealTransactionCase):
         # Tests [@ANCHOR: cf_enqueue_tags_api]
         """Verify that tag purges in the queue are processed correctly."""
         mock_post = self.safe_patch(
-            "odoo.addons.cloudflare.utils.cloudflare_api.requests.post"
+            "odoo.addons.cloudflare.utils.cloudflare_api.session.post"
         )
 
         mock_response = MagicMock()

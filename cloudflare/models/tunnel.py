@@ -43,61 +43,63 @@ class CloudflareTunnel(models.Model):
         # [@ANCHOR: cf_sync_tunnels]
         # Verified by [@ANCHOR: test_cf_sync_tunnels]
         websites = self.env["website"].search([], limit=1000)
-        synced_tunnel_ids = []
-
-        # Load all existing tunnels into a dict
-        existing_tunnels = {
-            t.cf_tunnel_id: t
-            for t in self.env["cloudflare.tunnel"].search([], limit=10000)
-        }
-        tunnels_to_create = []
-
         for website in websites:
-            token, _zone = website._get_cloudflare_credentials()
-            account_id = website.cloudflare_account_id
-
-            if not token or not account_id:
-                continue
-
-            tunnels = list_cfd_tunnels(account_id, token)
-            for t in tunnels:
-                tunnel_id = t.get("id")
-                synced_tunnel_ids.append(tunnel_id)
-
-                created_at_raw = t.get("created_at", "")
-                created_at = False
-                if created_at_raw:
-                    # Cloudflare returns ISO 8601 like 2021-01-01T00:00:00Z
-                    created_at = created_at_raw[:19].replace("T", " ")
-
-                vals = {
-                    "cf_tunnel_id": tunnel_id,
-                    "name": t.get("name"),
-                    "status": t.get("status"),
-                    "created_at": created_at,
-                    "website_id": website.id,
-                }
-
-                existing = existing_tunnels.get(tunnel_id)
-                if existing:
-                    # ADR-0001: Headless Mutation Context
-                    existing.with_context(mail_notrack=True).write(vals)
-                else:
-                    tunnels_to_create.append(vals)
-
-        if tunnels_to_create:
-            # ADR-0001: Headless Mutation Context
-            self.env["cloudflare.tunnel"].with_context(mail_notrack=True).create(
-                tunnels_to_create
-            )
+            # We defer the actual sync for each website to a background job to avoid synchronous loops
+            self.with_delay()._sync_tunnels_for_website(website.id)
 
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
                 "title": _("Success"),
-                "message": _("Tunnels synced successfully."),
+                "message": _("Tunnels sync queued successfully."),
                 "type": "success",
                 "sticky": False,
             },
         }
+
+    @api.model
+    def _sync_tunnels_for_website(self, website_id):
+        website = self.env["website"].browse(website_id)
+        if not website.exists():
+            return
+            
+        token, _zone = website._get_cloudflare_credentials()
+        account_id = website.cloudflare_account_id
+
+        if not token or not account_id:
+            return
+
+        tunnels = list_cfd_tunnels(account_id, token)
+        existing_tunnels = {
+            t.cf_tunnel_id: t
+            for t in self.env["cloudflare.tunnel"].search([("website_id", "=", website.id)], limit=10000)
+        }
+        
+        tunnels_to_create = []
+        for t in tunnels:
+            tunnel_id = t.get("id")
+
+            created_at_raw = t.get("created_at", "")
+            created_at = False
+            if created_at_raw:
+                created_at = created_at_raw[:19].replace("T", " ")
+
+            vals = {
+                "cf_tunnel_id": tunnel_id,
+                "name": t.get("name"),
+                "status": t.get("status"),
+                "created_at": created_at,
+                "website_id": website.id,
+            }
+
+            existing = existing_tunnels.get(tunnel_id)
+            if existing:
+                existing.with_context(mail_notrack=True).write(vals)
+            else:
+                tunnels_to_create.append(vals)
+
+        if tunnels_to_create:
+            self.env["cloudflare.tunnel"].with_context(mail_notrack=True).create(
+                tunnels_to_create
+            )

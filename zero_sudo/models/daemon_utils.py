@@ -39,9 +39,7 @@ class ZeroSudoDaemonUtils(models.AbstractModel):
                 libc = ctypes.CDLL("libc.so.6")
                 libc.prctl(1, signal.SIGTERM)
             except OSError:  # audit-ignore-catch-all
-                sys.stderr.write(
-                    "PR_SET_PDEATHSIG unavailable\n"
-                )
+                sys.stderr.write("PR_SET_PDEATHSIG unavailable\n")
 
         _logger.info("Starting daemon: %s", " ".join(cmd))
         process = subprocess.Popen(

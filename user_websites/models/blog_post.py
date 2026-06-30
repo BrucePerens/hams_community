@@ -19,10 +19,9 @@ class BlogPost(models.Model):
         string="View Count", default=0, help="Privacy-friendly tracking of post views."
     )
 
-    _name_owner_uniq = models.Constraint(
-        "UNIQUE(name, owner_user_id, user_websites_group_id)",
-        "You already have a blog post with this exact title!",
-    )
+    _sql_constraints = [
+        ('_name_owner_uniq', 'UNIQUE(name, owner_user_id, user_websites_group_id)', 'You already have a blog post with this exact title!'),
+    ]
 
     def _invalidate_cloudflare_cache(self):
         """Purge the global Cache-Tag at the edge."""

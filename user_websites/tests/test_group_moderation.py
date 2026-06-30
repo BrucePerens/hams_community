@@ -45,7 +45,8 @@ class TestGroupModeration(RealTransactionCase):
         # Suspend the group
         self.group.action_suspend_group_websites()
         self.env.cr.commit()
-        time.sleep(1.0)  # audit-ignore-sleep: Give background thread time to unpublish
+        # audit-ignore-sleep: Give background thread time to unpublish
+        time.sleep(1.0)
 
         # Verify suspension
         self.assertTrue(self.group.is_suspended_from_websites)

@@ -36,8 +36,7 @@ class WebsitePage(models.Model):
         # Total Context Annihilation to prevent ORM KeyError: 'record'
         sterile_env = self.env(context={})
         QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-        for wid, urls in purge_map.items():
-            QueueModel.enqueue_urls(urls, website_id=wid)
+        QueueModel.enqueue_urls_batch(purge_map)
 
         return res
 
@@ -69,8 +68,7 @@ class WebsitePage(models.Model):
 
         sterile_env = self.env(context={})
         QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-        for wid, urls in purge_map.items():
-            QueueModel.enqueue_urls(urls, website_id=wid)
+        QueueModel.enqueue_urls_batch(purge_map)
 
         return res
 
@@ -106,8 +104,7 @@ class BlogPost(models.Model):
         if purge_map:
             sterile_env = self.env(context={})
             QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-            for wid, urls in purge_map.items():
-                QueueModel.enqueue_urls(urls, website_id=wid)
+            QueueModel.enqueue_urls_batch(purge_map)
 
         return res
 
@@ -132,9 +129,8 @@ class WebsiteMenu(models.Model):
 
         sterile_env = self.env(context={})
         QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-        for wid in set(website_ids):
-            # Menu changes affect HTML content globally. We must purge everything for the website.
-            QueueModel.enqueue_everything(website_id=wid)
+        if website_ids:
+            QueueModel.enqueue_everything(website_ids=list(set(website_ids)))
 
         return res
 
@@ -153,9 +149,8 @@ class WebsiteMenu(models.Model):
 
         sterile_env = self.env(context={})
         QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-        for wid in set(website_ids):
-            # Menu changes affect HTML content globally. We must purge everything for the website.
-            QueueModel.enqueue_everything(website_id=wid)
+        if website_ids:
+            QueueModel.enqueue_everything(website_ids=list(set(website_ids)))
 
         return res
 
@@ -192,7 +187,6 @@ class ProductTemplate(models.Model):
         if purge_map:
             sterile_env = self.env(context={})
             QueueModel = sterile_env["cloudflare.purge.queue"].with_user(svc_uid)
-            for wid, urls in purge_map.items():
-                QueueModel.enqueue_urls(urls, website_id=wid)
+            QueueModel.enqueue_urls_batch(purge_map)
 
         return res

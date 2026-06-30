@@ -5,6 +5,7 @@ from odoo.tests import tagged
 
 from odoo.addons.distributed_redis_cache.redis_cache import invalidate_model_cache
 
+
 @tagged("post_install", "-at_install")
 class TestCustomDomains(HamsTransactionCase):
 

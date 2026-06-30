@@ -30,3 +30,9 @@ class ResUsersZeroSudo(models.Model):
                 # to guarantee the account cannot be logged into interactively.
                 vals["password"] = secrets.token_urlsafe(128)
         return super().create(vals_list)
+
+    def write(self, vals):
+        if "is_service_account" in vals and vals["is_service_account"]:
+            vals.pop("password", None)
+            vals["password"] = secrets.token_urlsafe(128)
+        return super().write(vals)

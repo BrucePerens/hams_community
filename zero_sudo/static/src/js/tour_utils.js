@@ -68,17 +68,8 @@ export const TourUtils = {
         description = description || "";
         return {
             content: "[MACRO] Wait for DOM absence: " + (description || selector),
-            trigger: 'body',
-            run: function () {
-                return new Promise((resolve) => {
-                    const interval = setInterval(() => {
-                        if (!document.querySelector(selector)) {
-                            clearInterval(interval);
-                            resolve();
-                        }
-                    }, 250);
-                });
-            }
+            trigger: 'body:not(:has(' + selector + '))',
+            run: function () {}
         };
     },
 

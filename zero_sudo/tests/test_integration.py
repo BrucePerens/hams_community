@@ -12,7 +12,6 @@ class TestIntegrationFacility(HamsTransactionCase):
 
     def test_01_daemon_lifecycle(self):
         # [@ANCHOR: test_integration_daemon_testing]
-
         """
         Verify that HamsTransactionCase correctly starts a daemon and polls its health.
         """

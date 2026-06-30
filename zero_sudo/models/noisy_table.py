@@ -21,4 +21,6 @@ class NoisyTable(models.Model):
         default=True, help="If unchecked, it will allow leak detection for this table."
     )
 
-    _name_uniq = models.Constraint("UNIQUE(name)", "The table name must be unique!")
+    _sql_constraints = [
+        ("name_uniq", "UNIQUE(name)", "The table name must be unique!"),
+    ]

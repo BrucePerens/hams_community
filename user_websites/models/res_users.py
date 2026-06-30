@@ -51,7 +51,8 @@ def _async_unpublish_content(db_name, user_ids):
                 if len(pages) < 5000:
                     break
                 if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                    time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    time.sleep(0.1)
 
             while True:
                 posts = env_svc["blog.post"].search(
@@ -68,7 +69,8 @@ def _async_unpublish_content(db_name, user_ids):
                 if len(posts) < 5000:
                     break
                 if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                    time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    time.sleep(0.1)
 
             while True:
                 blogs = env_svc["blog.blog"].search(
@@ -81,7 +83,8 @@ def _async_unpublish_content(db_name, user_ids):
                 if len(blogs) < 5000:
                     break
                 if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                    time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                    time.sleep(0.1)
         except (odoo.exceptions.AccessError, odoo.exceptions.ValidationError) as e:
             env.cr.rollback()
             logging.getLogger(__name__).warning(
@@ -102,6 +105,9 @@ class ResUsers(models.Model):
     """
 
     _inherit = ["res.users", "edge.routing.mixin"]
+    _sql_constraints = [
+        ('_website_slug_format', "CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\\-]+$')", 'The Website Slug can only contain lowercase letters, numbers, and hyphens.'),
+    ]
 
     def _register_hook(self):
         super(ResUsers, self)._register_hook()
@@ -207,14 +213,15 @@ class ResUsers(models.Model):
     )
 
     # --- Odoo 19 Constraint Syntax ---
-    _website_slug_unique = models.Constraint(
-        "UNIQUE(website_slug)", "The Website Slug must be unique!"
-    )
 
-    _website_slug_format = models.Constraint(
-        r"CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\-]+$')",
-        "The Website Slug can only contain lowercase letters, numbers, and hyphens.",
-    )
+    _sql_constraints = [
+        (
+            "website_slug_unique",
+            "UNIQUE(website_slug)",
+            "The Website Slug must be unique!",
+        ),
+    ]
+
 
     def _is_admin(self):
         """Helper to check if the user has administration rights."""
@@ -657,7 +664,8 @@ class ResUsers(models.Model):
             if len(pages) < 5000:
                 break
             if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                time.sleep(0.1)
 
         while True:
             posts = self.env["blog.post"].search(
@@ -687,7 +695,8 @@ class ResUsers(models.Model):
             if len(posts) < 5000:
                 break
             if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                time.sleep(0.1)
 
         while True:
             blogs = self.env["blog.blog"].search(
@@ -717,7 +726,8 @@ class ResUsers(models.Model):
             if len(blogs) < 5000:
                 break
             if not os.environ.get("ODOO_DISABLE_SLEEPS"):
-                time.sleep(0.1) # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                # audit-ignore-sleep: Rate limiting background thread  # fmt: skip
+                time.sleep(0.1)
 
         # ADR-0001: All service account mutations must include appropriate context
         self.with_env(env_svc).write({"privacy_show_in_directory": False})

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import time
-import os
 import logging
 from odoo import models, fields, api
 from ..utils.cloudflare_api import purge_everything, purge_urls, purge_tags
@@ -24,38 +22,50 @@ class CloudflarePurgeQueue(models.Model):
     website_id = fields.Many2one("website", string="Website", ondelete="cascade")
 
     @api.model
+    def enqueue_urls_batch(self, purge_map):
+        if not purge_map:
+            return
+
+        website_ids = list(purge_map.keys())
+        websites = self.env["website"].browse(website_ids)
+        website_dict = {w.id: w for w in websites}
+
+        default_base_url = (
+            self.env["zero_sudo.security.utils"]
+            ._get_system_param("web.base.url", "https://odoo")
+            .rstrip("/")
+        )
+
+        create_vals = []
+        for wid, urls in purge_map.items():
+            website = website_dict.get(wid)
+            base_url = (
+                website.domain.rstrip("/")
+                if website and website.domain
+                else default_base_url
+            )
+            for u in urls:
+                if not u:
+                    continue
+                full_url = f"{base_url}{u}" if str(u).startswith("/") else u
+                create_vals.append(
+                    {
+                        "target_item": full_url,
+                        "purge_type": "url",
+                        "website_id": wid if wid else False,
+                    }
+                )
+
+        if create_vals:
+            self.env["cloudflare.purge.queue"].create(create_vals)
+
+    @api.model
     def enqueue_urls(self, urls, website_id=None):
         # [@ANCHOR: enqueue_urls_base_url]
         # Verified by [@ANCHOR: test_purge_queue_base_url_sudo]
         if not website_id:
             website_id = self.env["cloudflare.utils"].get_current_website_id()
-
-        website = self.env["website"].browse(website_id)
-
-        if website and website.domain:
-            base_url = website.domain.rstrip("/")
-        else:
-            base_url = (
-                self.env["zero_sudo.security.utils"]
-                ._get_system_param("web.base.url", "https://odoo")
-                .rstrip("/")
-            )
-
-        create_vals = []
-        for u in urls:
-            if not u:
-                continue
-            full_url = f"{base_url}{u}" if str(u).startswith("/") else u
-            create_vals.append(
-                {
-                    "target_item": full_url,
-                    "purge_type": "url",
-                    "website_id": website.id if website else False,
-                }
-            )
-
-        if create_vals:
-            self.env["cloudflare.purge.queue"].create(create_vals)
+        self.enqueue_urls_batch({website_id: urls})
 
     @api.model
     def enqueue_tags(self, tags, website_id=None):
@@ -74,14 +84,21 @@ class CloudflarePurgeQueue(models.Model):
             self.env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
-    def enqueue_everything(self, website_id=None):
+    def enqueue_everything(self, website_ids=None):
         # [@ANCHOR: cf_enqueue_everything]
-        if not website_id:
-            website_id = self.env["cloudflare.utils"].get_current_website_id()
+        if not website_ids:
+            website_ids = [self.env["cloudflare.utils"].get_current_website_id()]
 
-        self.env["cloudflare.purge.queue"].create(
-            {"purge_type": "everything", "website_id": website_id}
-        )
+        if not isinstance(website_ids, (list, tuple, set)):
+            website_ids = [website_ids]
+
+        create_vals = [
+            {"purge_type": "everything", "website_id": wid}
+            for wid in website_ids
+            if wid
+        ]
+        if create_vals:
+            self.env["cloudflare.purge.queue"].create(create_vals)
 
     @api.model
     def process_queue(self):
@@ -129,13 +146,10 @@ class CloudflarePurgeQueue(models.Model):
                     else:
                         everything_records.unlink()
                         # Optimization: Clear all other pending records for this website since we just wiped everything
-                        self.env["cloudflare.purge.queue"].search(
-                            [
-                                ("website_id", "=", first_website.id),
-                                ("state", "=", "pending"),
-                            ],
-                            limit=10000,
-                        ).unlink()
+                        self.env.cr.execute(
+                            "DELETE FROM cloudflare_purge_queue WHERE website_id = %s AND state = 'pending'",
+                            (first_website.id,)
+                        )
 
                 # Refresh batch_records by filtering out non-existent ones before further processing
                 batch_records = batch_records.filtered(lambda r: r.exists())
@@ -166,9 +180,6 @@ class CloudflarePurgeQueue(models.Model):
 
             batches_processed += 1
             self.env.cr.commit()
-
-            if not os.environ.get("HAMS_DISABLE_SLEEPS"):
-                time.sleep(0.5)  # audit-ignore-sleep: Rate limiting  # fmt: skip
 
         if batches_processed >= max_batches:
             cron = self.env.ref(

@@ -28,7 +28,8 @@ class PagerLogAPI(http.Controller):
             raise AccessError(_("Illegal path traversal detected."))
 
         if not redis or not redis_pool:
-            return {"error": _("Redis not available for IPC.")}  # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            return {"error": _("Redis not available for IPC.")}
 
         req_uuid = str(uuid.uuid4())
         payload = {"uuid": req_uuid, "file": file_path, "regex": regex_query}
@@ -51,10 +52,12 @@ class PagerLogAPI(http.Controller):
                 return data
 
             pubsub.unsubscribe()
-            return {"error": _("Search timeout. Daemon may be offline.")}  # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            return {"error": _("Search timeout. Daemon may be offline.")}
         except redis.RedisError as e:
             _logger.error("Redis IPC Failure during log search: %s", e)
-            return {"error": _("IPC Failure: %s") % e}  # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            # # Tests [@ANCHOR: pd_log_api_i18n]  # fmt: skip
+            return {"error": _("IPC Failure: %s") % e}
         except json.JSONDecodeError as e:
             _logger.error("JSON Decode Failure during log search: %s", e)
             return {"error": _("Protocol Error: Failed to parse response.")}

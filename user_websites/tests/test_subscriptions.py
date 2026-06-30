@@ -179,7 +179,8 @@ class TestSubscriptionsAndDigest(HamsHttpCase):
             test_post = self.env["blog.post"].search(
                 [("owner_user_id", "=", self.creator.id)], limit=1
             )
-            template.send_mail(test_post.id, force_send=False)  # audit-ignore-mail: Tested by [@ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            # audit-ignore-mail: Tested by [@ANCHOR: test_weekly_digest_mail_template]  # fmt: skip
+            template.send_mail(test_post.id, force_send=False)
 
     def test_02_invalid_unsubscribe_token(self):
         """
@@ -189,7 +190,8 @@ class TestSubscriptionsAndDigest(HamsHttpCase):
         # Attempt an unsubscribe with a forged token
         fake_token = "1234abcd5678"
         current_ts = int(time.time())
-        url = f"/website/unsubscribe/res.partner/{self.creator.partner_id.id}/{self.follower.partner_id.id}/{current_ts}/{fake_token}"  # burn-ignore-route
+        # burn-ignore-route
+        url = f"/website/unsubscribe/res.partner/{self.creator.partner_id.id}/{self.follower.partner_id.id}/{current_ts}/{fake_token}"
 
         self.authenticate(None, None)
         response = self.url_open(url)

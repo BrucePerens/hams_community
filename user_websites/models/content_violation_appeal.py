@@ -49,7 +49,11 @@ class ContentViolationAppeal(models.Model):
     def _check_appeal_target(self):
         for appeal in self:
             if bool(appeal.user_id) == bool(appeal.group_id):
-                raise ValidationError(_("An appeal must be tied to either a User or a Group, but not both."))
+                raise ValidationError(
+                    _(
+                        "An appeal must be tied to either a User or a Group, but not both."
+                    )
+                )
 
     def action_approve(self):
         # Tested by [@ANCHOR: user_websites:test_tour_moderation_appeal]
@@ -62,10 +66,14 @@ class ContentViolationAppeal(models.Model):
             appeal.state = "approved"
             if appeal.group_id:
                 appeal.group_id.action_pardon_group_websites()
-                message = _("Appeal approved. You pardoned the group and lifted their suspension.")
+                message = _(
+                    "Appeal approved. You pardoned the group and lifted their suspension."
+                )
             else:
                 appeal.user_id.action_pardon_user_websites()
-                message = _("Appeal approved. You pardoned the user and lifted their suspension.")
+                message = _(
+                    "Appeal approved. You pardoned the user and lifted their suspension."
+                )
             appeal.with_user(mail_svc).message_post(
                 body=message,
                 subtype_xmlid="mail.mt_note",
@@ -79,7 +87,11 @@ class ContentViolationAppeal(models.Model):
         )
         for appeal in self:
             appeal.state = "rejected"
-            message = _("Appeal rejected. The group remains suspended.") if appeal.group_id else _("Appeal rejected. The user remains suspended.")
+            message = (
+                _("Appeal rejected. The group remains suspended.")
+                if appeal.group_id
+                else _("Appeal rejected. The user remains suspended.")
+            )
             appeal.with_user(mail_svc).message_post(
                 body=message,
                 subtype_xmlid="mail.mt_note",

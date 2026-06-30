@@ -50,16 +50,11 @@ class BinaryVersion(models.Model):
         string="Downloaded to Central Pool", compute="_compute_is_downloaded"
     )
 
-    _version_uniq = models.Constraint(
-        "unique(manifest_id, version_number)",
-        "This version number already exists for this software.",
-    )
-    _url_not_empty = models.Constraint(
-        "CHECK(LENGTH(TRIM(url)) > 0)", "The download URL cannot be empty."
-    )
-    _chksum_not_empty = models.Constraint(
-        "CHECK(LENGTH(TRIM(checksum)) > 0)", "The checksum cannot be empty."
-    )
+    _sql_constraints = [
+        ('_version_uniq', 'unique(manifest_id, version_number)', 'This version number already exists for this software.'),
+        ('_url_not_empty', 'CHECK(LENGTH(TRIM(url)) > 0)', 'The download URL cannot be empty.'),
+        ('_chksum_not_empty', 'CHECK(LENGTH(TRIM(checksum)) > 0)', 'The checksum cannot be empty.'),
+    ]
 
     @api.constrains("version_number")
     def _check_version_no_slashes(self):

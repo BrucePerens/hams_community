@@ -42,9 +42,6 @@ class CloudflareConfigManager(models.AbstractModel):
     _name = "cloudflare.config.manager"
     _description = "Cloudflare Configuration Manager"
 
-    def _register_hook(self):
-        super()._register_hook()
-        self._check_static_mtime_and_purge()
 
     @api.model
     def _check_static_mtime_and_purge(self):

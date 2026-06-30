@@ -29,17 +29,17 @@ class ResUsersModeration(models.Model):
     )
 
     def _compute_suspended_group_ids(self):
-        groups = self.env["user.websites.group"].search([
-            ("member_ids", "in", self.ids),
-            ("is_suspended_from_websites", "=", True)
-        ], limit=1000)
-        
+        groups = self.env["user.websites.group"].search(
+            [("member_ids", "in", self.ids), ("is_suspended_from_websites", "=", True)],
+            limit=1000,
+        )
+
         mapping = {u.id: [] for u in self}
         for g in groups:
             for m in g.member_ids:
                 if m.id in mapping:
                     mapping[m.id].append(g.id)
-        
+
         for user in self:
             user.suspended_group_ids = mapping[user.id]
 

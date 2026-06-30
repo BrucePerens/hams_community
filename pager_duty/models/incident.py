@@ -137,7 +137,8 @@ class PagerIncident(models.Model):
                 partners = pager_admin_group.user_ids.mapped("partner_id")
 
             msg_body = _("🚨 ESCALATION: Incident open for > 15 minutes!")
-            inc.with_user(mail_svc).message_post(body=msg_body, partner_ids=partners.ids)   # fmt: skip
+            inc.with_user(mail_svc).message_post(
+                body=msg_body, partner_ids=partners.ids)   # fmt: skip
         incidents.write({"is_escalated": True})
 
     @api.model
@@ -209,7 +210,8 @@ class PagerIncident(models.Model):
             )
             msg_body = _("New Incident Created")
             partner_ids = [on_duty_user.partner_id.id]
-            incident.with_user(mail_svc).message_post(body=msg_body, partner_ids=partner_ids)   # fmt: skip
+            incident.with_user(mail_svc).message_post(
+                body=msg_body, partner_ids=partner_ids)   # fmt: skip
         return incident.id
 
     @api.model
@@ -232,7 +234,8 @@ class PagerIncident(models.Model):
             )
             msg_body = _("Auto-resolved by NOC monitor recovery sequence.")
             for incident in open_incidents:
-                incident.with_user(mail_svc).message_post(body=msg_body)   # fmt: skip
+                incident.with_user(mail_svc).message_post(
+                    body=msg_body)   # fmt: skip
         return True
 
     @api.model_create_multi

@@ -23,6 +23,10 @@ class CloudflareWAF(models.AbstractModel):
             "cloudflare.user_cloudflare_waf"
         )
         ban_env = self.env["cloudflare.ip.ban"].with_user(svc_uid)
+        if hasattr(ban_env, "with_delay"):
+            return ban_env.with_delay()._execute_ban(
+                ip_address, mode=mode, notes=notes, website_id=website_id
+            )
         return ban_env._execute_ban(
             ip_address, mode=mode, notes=notes, website_id=website_id
         )

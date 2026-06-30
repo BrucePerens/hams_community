@@ -47,27 +47,6 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
         # Verified by [@ANCHOR: test_get_service_uid_sql_resolve]
         # Verified by [@ANCHOR: test_get_service_uid_sql_verify]
         # Verified by [@ANCHOR: test_god_mode_block_sql]
-        # PRE-FLIGHT CHECK: Prevent odoo.sql_db from logging expected test errors
-        # Use SQL to bypass ORM access rules, as Portal users cannot read Internal Service Accounts
-        module, name = xml_id.split(".")
-        self.env.cr.execute(
-            """
-            SELECT u.active 
-            FROM ir_model_data d 
-            JOIN res_users u ON d.res_id = u.id 
-            WHERE d.model = 'res.users' AND d.module = %s AND d.name = %s
-        """,
-            (module, name),
-        )
-        row = self.env.cr.fetchone()
-        if not row:
-            raise AccessError(
-                _("Security Alert: Service Account %s not found.") % xml_id
-            )
-        if not row[0]:
-            raise AccessError(
-                _("Security Alert: Service Account %s is disabled.") % xml_id
-            )
 
         self.env.cr.execute("SELECT zero_sudo_get_service_uid(%s)", (xml_id,))
         uid = self.env.cr.fetchone()[0]
@@ -334,12 +313,13 @@ class ZeroSudoSecurityUtils(models.AbstractModel):
                 secret_path = "/var/lib/odoo/hams_crypto.secret"
                 if os.path.exists(secret_path):
                     with open(  # audit-ignore-path
-                        secret_path, "r"
-                    ) as f:  # audit-ignore-path: Tested by [@ANCHOR: test_deterministic_hash]
+                        secret_path,
+                        "r",
+                        # audit-ignore-path: Tested by [@ANCHOR: test_deterministic_hash]
+                    ) as f:
                         secret = f.read().strip()
             except OSError as e:
                 _logger.warning("Failed to read crypto secret file: %s", e)
-                pass
 
         if not secret:
             # Fallback to Odoo's admin password as a last resort entropy source

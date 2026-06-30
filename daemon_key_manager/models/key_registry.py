@@ -44,15 +44,12 @@ class DaemonKeyRegistry(models.Model):
     )
     last_rotated = fields.Datetime(string="Last Rotated", readonly=True)
 
-    _name_uniq = models.Constraint("UNIQUE(name)", "The daemon name must be unique!")
 
-    _name_not_empty = models.Constraint(
-        "CHECK(LENGTH(TRIM(name)) > 0)", "The daemon name cannot be empty."
-    )
-    _path_not_empty = models.Constraint(
-        "CHECK(LENGTH(TRIM(env_file_path)) > 0)",
-        "The environment file path cannot be empty.",
-    )
+    _sql_constraints = [
+        ('_name_uniq', 'UNIQUE(name)', 'The daemon name must be unique!'),
+        ('_name_not_empty', 'CHECK(LENGTH(TRIM(name)) > 0)', 'The daemon name cannot be empty.'),
+        ('_path_not_empty', 'CHECK(LENGTH(TRIM(env_file_path)) > 0)', 'The environment file path cannot be empty.'),
+    ]
 
     @api.constrains("user_id")
     def _check_user_is_service_account(self):
