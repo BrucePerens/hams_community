@@ -18,12 +18,12 @@ class TestKeyRegistry(RealTransactionCase):
 
         # Centralize test paths to ensure they match the production environment directory structure
         self.test_env_paths = [
-            "/var/lib/odoo/daemon_keys/test_daemon.env",
-            "/var/lib/odoo/daemon_keys/cron_test_daemon.env",
-            "/var/lib/odoo/daemon_keys/ownership_test_daemon.env",
-            "/var/lib/odoo/daemon_keys/api_test.env",
-            "/var/lib/odoo/daemon_keys/force_provision.env",
-            "/var/lib/odoo/daemon_keys/unauthorized.env",
+            "/opt/hams/etc/keys/test_daemon.env",
+            "/opt/hams/etc/keys/cron_test_daemon.env",
+            "/opt/hams/etc/keys/ownership_test_daemon.env",
+            "/opt/hams/etc/keys/api_test.env",
+            "/opt/hams/etc/keys/force_provision.env",
+            "/opt/hams/etc/keys/unauthorized.env",
         ]
 
         # Ensure a clean slate before each test runs to prevent state collision
@@ -93,7 +93,7 @@ class TestKeyRegistry(RealTransactionCase):
 
         # Test symlink attack prevention
         # Create a directory that is within the allowed prefix
-        allowed_dir = "/var/lib/odoo/daemon_keys/trusted"
+        allowed_dir = "/opt/hams/etc/keys/trusted"
         if not os.path.exists(allowed_dir):
             os.makedirs(allowed_dir, mode=0o700, exist_ok=True)
 
@@ -167,7 +167,7 @@ class TestKeyRegistry(RealTransactionCase):
         # Tests [@ANCHOR: daemon_self_healing]
         daemon_name = "API Test Daemon"
         user_xml_id = "daemon_key_manager.user_daemon_key_manager_service"
-        env_file_path = "/var/lib/odoo/daemon_keys/api_test.env"
+        env_file_path = "/opt/hams/etc/keys/api_test.env"
 
         result = (
             self.env["daemon.key.registry"]
@@ -273,7 +273,7 @@ class TestKeyRegistry(RealTransactionCase):
         # Tests [@ANCHOR: force_provision_logic]
         # Tests [@ANCHOR: force_provision_error_handling]
         daemon_name = "Force Provision Test"
-        env_file_path = "/var/lib/odoo/daemon_keys/force_provision.env"
+        env_file_path = "/opt/hams/etc/keys/force_provision.env"
 
         self.env["daemon.key.registry"].with_user(self.manager_user.id).create(
             {
@@ -338,7 +338,7 @@ class TestKeyRegistry(RealTransactionCase):
         # [@ANCHOR: test_action_rotate_key]
         # Tests [@ANCHOR: action_rotate_key_api]
         daemon_name = "Single Rotation Test"
-        env_file_path = "/var/lib/odoo/daemon_keys/single_rotation.env"
+        env_file_path = "/opt/hams/etc/keys/single_rotation.env"
         self.test_env_paths.append(env_file_path)
 
         registry = (

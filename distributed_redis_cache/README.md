@@ -38,7 +38,7 @@ Because this is a standalone Open Source module that spawns external Python daem
    * Enter your Redis host, port, and password. These are stored securely in `ir.config_parameter`.
 4. Start the background sync daemon:
    * Execute `daemons/cache_manager.py` as a systemd service.
-   * The daemon requires read access to `/var/lib/odoo/daemon_keys/cache_manager.env` (managed automatically by the Daemon Key Manager module).
+   * The daemon requires read access to `/opt/hams/etc/keys/cache_manager.env` (managed automatically by the Daemon Key Manager module).
    * The daemon will use configurations from the environment file if available, or fall back to standard defaults.
 5. Navigate to **Settings > Technical > Distributed Cache** in Odoo to verify the connection status.
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
 from odoo import models, fields, api
 from ..utils.cloudflare_api import purge_everything, purge_urls, purge_tags
 
@@ -180,6 +181,7 @@ class CloudflarePurgeQueue(models.Model):
 
             batches_processed += 1
             self.env.cr.commit()
+            time.sleep(0.1)  # Drop DB locks and respect rate limit
 
         if batches_processed >= max_batches:
             cron = self.env.ref(

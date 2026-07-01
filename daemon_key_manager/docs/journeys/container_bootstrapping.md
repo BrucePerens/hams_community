@@ -3,7 +3,7 @@
 This journey covers the steps required to provision credentials in a modern, containerized Odoo deployment.
 
 1.  **Deployment**
-    - Orchestrator (e.g., Docker Compose) mounts `/var/lib/odoo/daemon_keys/` as a shared volume between Odoo and the daemons.
+    - Orchestrator (e.g., Docker Compose) mounts `/opt/hams/etc/keys/` as a shared volume between Odoo and the daemons.
 
 2.  **Initialization**
     - Odoo container starts and performs database migrations.

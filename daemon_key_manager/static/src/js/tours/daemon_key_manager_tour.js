@@ -34,7 +34,7 @@ registry.category("web_tour.tours").add("daemon_key_manager_tour", {
         {
             trigger: 'div[name="env_file_path"] input',
             content: 'Enter environment file path',
-            run: 'edit /var/lib/odoo/daemon_keys/test.env',
+            run: 'edit /opt/hams/etc/keys/test.env',
         },
         {
             trigger: '.o_form_sheet',

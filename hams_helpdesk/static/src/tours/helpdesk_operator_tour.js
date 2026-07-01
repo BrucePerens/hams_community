@@ -38,7 +38,7 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         },
         {
             content: "Pick First User",
-            trigger: '.o-autocomplete--dropdown-item',
+            trigger: '.o-autocomplete--dropdown-item:contains("tour")',
             run: 'click',
         },
         {

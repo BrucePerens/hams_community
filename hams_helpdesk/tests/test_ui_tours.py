@@ -8,6 +8,10 @@ class TestHelpdeskTours(HamsHttpCase):
 
     def setUp(self):
         super().setUp()
+        # Activate the service account so it can execute shift handoff
+        service_account = self.env.ref("hams_helpdesk.user_helpdesk_service", raise_if_not_found=False)
+        if service_account:
+            service_account.active = True
         # Provision test roles
         self.manager_user = self.env["res.users"].create(
             {

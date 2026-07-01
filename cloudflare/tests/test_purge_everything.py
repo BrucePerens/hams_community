@@ -57,7 +57,7 @@ class TestPurgeEverything(RealTransactionCase):
         # website_a has 3 unique target items: /a1, /a2, / but 4 records were created.
         # enqueue_tags adds: atag1
         # Total Website A: 5 records initially.
-        self.PurgeQueue.enqueue_everything(website_id=self.website_a.id)
+        self.PurgeQueue.enqueue_everything(website_ids=self.website_a.ids)
         self.PurgeQueue.process_queue()
 
         # Website A should have called purge_everything and all its records should be gone
@@ -92,8 +92,8 @@ class TestPurgeEverything(RealTransactionCase):
 
         mock_purge_everything.side_effect = side_effect
 
-        self.PurgeQueue.enqueue_everything(website_id=self.website_a.id)
-        self.PurgeQueue.enqueue_everything(website_id=self.website_b.id)
+        self.PurgeQueue.enqueue_everything(website_ids=self.website_a.ids)
+        self.PurgeQueue.enqueue_everything(website_ids=self.website_b.ids)
 
         self.PurgeQueue.process_queue()
 

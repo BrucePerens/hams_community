@@ -57,7 +57,7 @@ def validate_backup_path(path):
     # Ensure it's not trying to overwrite Odoo core or sensitive data
     if abs_path.startswith("/var/lib/odoo"):
         # Allow /var/lib/odoo/backups or similar if needed, but block core dirs
-        # We explicitly allow /var/lib/odoo/backups and /var/lib/odoo/daemon_keys (read-only usually)
+        # We explicitly allow /var/lib/odoo/backups and /opt/hams/etc/keys (read-only usually)
         # but block critical ones.
         blocked_odoo = [
             "/var/lib/odoo/sessions",

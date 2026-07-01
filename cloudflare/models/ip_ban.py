@@ -98,7 +98,7 @@ class CloudflareIPBan(models.Model):
         # Verified by [@ANCHOR: test_cf_action_lift_ban]
         for rec in self:
             if rec.state == "active" and rec.cf_rule_id:
-                rec.with_delay()._action_lift_ban_sync()
+                rec._action_lift_ban_sync()
 
     def _action_lift_ban_sync(self):
         self.ensure_one()

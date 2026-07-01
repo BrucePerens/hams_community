@@ -49,7 +49,7 @@ class TestRealBackupWorker(RealTransactionCase):
         # Fetch the auto-generated API key for the backup service daemon from its secure vault
         env_vars = {}
         env_vars["DB_NAME"] = self.env.cr.dbname
-        env_file = "/var/lib/odoo/daemon_keys/backup_worker.env"
+        env_file = "/opt/hams/etc/keys/backup_worker.env"
         if os.path.exists(env_file):
             with open(env_file, "r") as f:
                 for line in f:

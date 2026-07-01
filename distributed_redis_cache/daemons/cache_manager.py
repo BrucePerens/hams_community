@@ -24,7 +24,7 @@ logger = logging.getLogger("cache_manager")
 
 # --- Configuration ---
 # [@ANCHOR: cache_manager_config]
-ENV_FILE = "/var/lib/odoo/daemon_keys/cache_manager.env"
+ENV_FILE = "/opt/hams/etc/keys/cache_manager.env"
 if os.path.exists(ENV_FILE):
     load_dotenv(ENV_FILE)
 

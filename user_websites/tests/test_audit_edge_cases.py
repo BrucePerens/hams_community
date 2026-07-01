@@ -15,6 +15,10 @@ class TestAuditEdgeCases(RealTransactionCase):
     def setUp(self):
         super(TestAuditEdgeCases, self).setUp()
 
+        service_account = self.env.ref("user_websites.user_websites_service_account", raise_if_not_found=False)
+        if service_account:
+            service_account.active = True
+
         # Prevent Cloudflare cache purge hooks from leaking queue records during tests and teardown
         self.safe_patch(
             "odoo.addons.cloudflare.models.purge_queue.CloudflarePurgeQueue.enqueue_urls",
@@ -126,7 +130,7 @@ class TestAuditEdgeCases(RealTransactionCase):
         )
         self.env.ref("user_websites.ir_cron_send_weekly_digest")._trigger()
 
-    @mute_logger("odoo.addons.user_websites.models.website_page")
+    @mute_logger("odoo.addons.user_websites.models.website_page", "odoo.sql_db")
     def test_03_service_account_tamper_resistance(self):
         """
         Verify that if the Zero-Sudo Service Account is tampered with (e.g., archived),

@@ -11,7 +11,7 @@ so that it receives a secure, auto-rotating API key without me having to manage 
 3.  The `daemon_key_manager` verifies the service account and the requested file path [@ANCHOR: register_daemon_logic].
 4.  A new entry is created in the `daemon.key.registry`.
 5.  An initial API key is generated and securely written to the specified `.env` file on disk [@ANCHOR: write_secure_env_file_logic].
-6.  The daemon can now boot and read its credentials from `/var/lib/odoo/daemon_keys/my_daemon.env`.
+6.  The daemon can now boot and read its credentials from `/opt/hams/etc/keys/my_daemon.env`.
 
 ## Key Logic
 - The registration is idempotent; calling it again updates the existing registration [@ANCHOR: register_daemon_idempotency].
