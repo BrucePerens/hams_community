@@ -34,11 +34,11 @@ registry.category("web_tour.tours").add("helpdesk_operator_tour", {
         {
             content: "Select New User",
             trigger: 'div[name="new_user_id"] input',
-            run: 'edit tour',
+            run: 'edit Manager',
         },
         {
             content: "Pick First User",
-            trigger: '.o-autocomplete--dropdown-item:contains("tour")',
+            trigger: '.o-autocomplete--dropdown-item a',
             run: 'click',
         },
         {

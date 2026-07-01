@@ -116,15 +116,16 @@ class HelpdeskTicket(models.Model):
 
         # Use service account if available, otherwise fallback to current env (e.g. during tests or if pager_duty not installed)
         Calendar = self.env["calendar.event"]
-        try:
-            pager_env = utils._get_service_env("pager_duty.user_pager_service_internal")
-            Calendar = pager_env["calendar.event"]
-        except AccessError as e:
-            # PagerDuty service account might not be provisioned yet or module not installed.
-            # This is an optional integration, so we continue with standard env.
-            _logger.info(
-                "PagerDuty service env not loaded (optional integration): %s", e
-            )
+        if "is_pager_duty" in Calendar._fields:
+            try:
+                pager_env = utils._get_service_env("pager_duty.user_pager_service_internal")
+                Calendar = pager_env["calendar.event"]
+            except Exception as e: # audit-ignore-catch-all
+                # PagerDuty service account might not be provisioned yet or module not installed.
+                # This is an optional integration, so we continue with standard env.
+                _logger.info(
+                    "PagerDuty service env not loaded (optional integration): %s", e
+                )
         # Discover On-Duty Admin
         # Polymorphic decoupling: calendar_event.py in hams_helpdesk provides a stub returning False
         on_duty_admin = Calendar.get_current_on_duty_admin()

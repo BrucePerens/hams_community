@@ -32,9 +32,7 @@ class PagerLogPattern(models.Model):
     )
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ("name_uniq", "UNIQUE(name, website_id)", "The pattern name must be unique per website!")
-    ]
+    _name_uniq = models.Constraint("UNIQUE(name, website_id)", "The pattern name must be unique per website!")
 
 
 class PagerLogFile(models.Model):
@@ -52,6 +50,4 @@ class PagerLogFile(models.Model):
     website_id = fields.Many2one("website", string="Website", ondelete="cascade")
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ("path_uniq", "UNIQUE(filepath, website_id)", "The file path must be unique per website!")
-    ]
+    _path_uniq = models.Constraint("UNIQUE(filepath, website_id)", "The file path must be unique per website!")

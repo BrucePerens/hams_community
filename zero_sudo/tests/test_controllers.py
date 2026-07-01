@@ -75,6 +75,7 @@ class TestZeroSudoControllers(RealTransactionCase):
         )
 
         # 4. Verify security log entry
+        self.env.invalidate_all()
         log_entry = self.env["zero_sudo.security.log"].search(
             [("user_id", "=", user.id), ("reason", "=", "service_account_blocked")]
         )
