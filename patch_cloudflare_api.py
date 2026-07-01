@@ -1,6 +1,10 @@
+import os
 import re
 
-with open("/home/bruce/workspace/hams_open/cloudflare/utils/cloudflare_api.py", "r") as f:
+base_dir = os.path.dirname(os.path.abspath(__file__))
+target_path = os.path.join(base_dir, "cloudflare/utils/cloudflare_api.py")
+
+with open(target_path, "r") as f:
     content = f.read()
 
 # Add _handle_api_error helper
@@ -23,5 +27,5 @@ content = re.sub(
     content
 )
 
-with open("/home/bruce/workspace/hams_open/cloudflare/utils/cloudflare_api.py", "w") as f:
+with open(target_path, "w") as f:
     f.write(content)

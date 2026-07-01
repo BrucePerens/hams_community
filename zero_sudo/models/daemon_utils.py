@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import ctypes
 import logging
 import os
-import signal
 import subprocess
 import sys
 import time

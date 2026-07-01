@@ -10,7 +10,6 @@ import markdown
 from werkzeug.urls import url_parse
 from markupsafe import Markup
 from odoo.tools import lru
-import hashlib
 
 _logger = logging.getLogger(__name__)
 
@@ -231,6 +230,14 @@ class ManualLibraryController(http.Controller):
                 or request.env.user.has_group("base.group_portal"),
             },
         )
+
+    @http.route(["/manual/by_name/<string:name>"], type="http", auth="public", website=True)
+    def manual_article_by_name(self, name, **kwargs):
+        normalized_name = name.replace("+", " ")
+        article = request.env["knowledge.article"].search([("name", "=ilike", normalized_name)], limit=1)
+        if article:
+            return request.redirect(article.website_url)
+        raise werkzeug.exceptions.NotFound()
 
     @http.route(
         ["/manual/feedback"], type="http", auth="public", methods=["POST"], website=True

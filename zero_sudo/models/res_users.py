@@ -2,7 +2,6 @@
 import secrets
 
 from odoo import api, fields, models
-from odoo.exceptions import AccessDenied
 
 
 class ResUsersZeroSudo(models.Model):
