@@ -24,17 +24,9 @@ class EdgeRoutingMixin(models.AbstractModel):
         help="The URL-friendly identifier for the site. Alphanumeric and hyphens only.",
     )
 
-    _sql_constraints = [
-        (
-            "website_slug_unique",
-            "UNIQUE(website_slug)",
-            "The Website Slug must be unique!",
-        ),
-    ]
+    _website_slug_unique = models.Constraint("UNIQUE(website_slug)", "The Website Slug must be unique!")
 
-    _sql_constraints = [
-        ('_website_slug_format', "CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\\-]+$')", 'The Website Slug can only contain lowercase letters, numbers, and hyphens.'),
-    ]
+    _website_slug_format = models.Constraint("CHECK(website_slug IS NULL OR website_slug = '' OR website_slug ~ '^[a-z0-9\\-]+$')", 'The Website Slug can only contain lowercase letters, numbers, and hyphens.')
 
     @api.constrains("website_slug")
     def _check_reserved_slugs(self):
@@ -89,16 +81,19 @@ class EdgeRoutingMixin(models.AbstractModel):
                 if record_id and model_name == self._name:
                     domain.append(("id", "!=", record_id))
 
-                try:
-                    with self.env.cr.savepoint():
-                        env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
-                            "edge_routing.edge_routing_service_account"
+                if self.env.registry.loaded:
+                    try:
+                        with self.env.cr.savepoint():
+                            env_svc = self.env["zero_sudo.security.utils"]._get_service_env(
+                                "edge_routing.edge_routing_service_account"
+                            )
+                            env_target = env_svc[model_name]
+                    except Exception as e:  # audit-ignore-catch-all
+                        _logger.warning(
+                            "Failed to get service env for %s: %s", model_name, e
                         )
-                        env_target = env_svc[model_name]
-                except Exception as e:  # audit-ignore-catch-all
-                    _logger.warning(
-                        "Failed to get service env for %s: %s", model_name, e
-                    )
+                        env_target = self.env[model_name]
+                else:
                     env_target = self.env[model_name]
 
                 if self._check_slug_collision(env_target, domain):
@@ -134,12 +129,15 @@ class EdgeRoutingMixin(models.AbstractModel):
         if override_svc_uid:
             target_env = self.with_user(override_svc_uid).env
         else:
-            try:
-                target_env = self.env["zero_sudo.security.utils"]._get_service_env(
-                    "edge_routing.edge_routing_service_account"
-                )
-            except Exception as e:  # audit-ignore-catch-all
-                _logger.warning("Failed to get service env: %s", e)
+            if self.env.registry.loaded:
+                try:
+                    target_env = self.env["zero_sudo.security.utils"]._get_service_env(
+                        "edge_routing.edge_routing_service_account"
+                    )
+                except Exception as e:  # audit-ignore-catch-all
+                    _logger.warning("Failed to get service env: %s", e)
+                    target_env = self.env
+            else:
                 target_env = self.env
 
         record = (

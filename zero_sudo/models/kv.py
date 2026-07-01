@@ -13,6 +13,4 @@ class ZeroSudoKV(models.Model):
     key = fields.Char(string="Key", required=True, index=True)
     value = fields.Text(string="Value")
 
-    _sql_constraints = [
-        ("key_uniq", "UNIQUE(key)", "The key must be mathematically unique."),
-    ]
+    _key_uniq = models.Constraint("UNIQUE(key)", "The key must be mathematically unique.")

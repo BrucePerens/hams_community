@@ -8,9 +8,7 @@ class BlogBlog(models.Model):
     _name = "blog.blog"
     _inherit = ["blog.blog", "user_websites.owned.mixin"]
 
-    _sql_constraints = [
-        ('_name_owner_uniq', 'UNIQUE(name, owner_user_id, user_websites_group_id)', 'You already have a blog with this exact title!'),
-    ]
+    _name_owner_uniq = models.Constraint("UNIQUE(name, owner_user_id, user_websites_group_id)", "You already have a blog with this exact title!")
 
     @api.model_create_multi
     def create(self, vals_list):

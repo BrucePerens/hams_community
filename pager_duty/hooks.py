@@ -24,5 +24,5 @@ def post_init_hook(env):
         env["daemon.key.registry"].register_daemon(
             daemon_name="Pager Duty - Generalized Monitor",
             user_xml_id="pager_duty.user_pager_service_internal",
-            env_file_path="/var/lib/odoo/daemon_keys/pager_duty.env",
+            env_file_path="/opt/hams/etc/keys/pager_duty.env",
         )

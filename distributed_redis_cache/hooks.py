@@ -12,7 +12,7 @@ def post_init_hook(env):
     env["daemon.key.registry"].register_daemon(
         daemon_name="Redis Cache Manager",
         user_xml_id="distributed_redis_cache.cache_manager_service_internal",
-        env_file_path="/var/lib/odoo/daemon_keys/cache_manager.env",
+        env_file_path="/opt/hams/etc/keys/cache_manager.env",
     )
     _logger.info("Registered Redis Cache Manager daemon keys.")
 

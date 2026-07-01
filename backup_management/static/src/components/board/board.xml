@@ -9,7 +9,7 @@
                 </div>
 
                 <div class="row">
-                    <t t-foreach="state.configs" t-as="conf" t-key="conf.id">
+                    <t t-foreach="state.configs || []" t-as="conf" t-key="conf.id">
                         <div class="col-md-6 mb-4">
                             <div t-attf-class="card shadow-sm h-100 {{ conf.is_stale ? 'border-danger' : 'border-success' }}" style="background: #1e1e1e; border-width: 2px;">
                                 <div class="card-body">

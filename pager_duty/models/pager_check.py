@@ -172,14 +172,11 @@ class PagerCheck(models.Model):
     )
     last_heartbeat = fields.Datetime(string="Last Heartbeat", readonly=True)
 
-
-    _sql_constraints = [
-        ('_name_uniq', 'UNIQUE(name, website_id)', 'The check name must be unique per website!'),
-        ('_uuid_uniq', 'UNIQUE(heartbeat_uuid)', 'The heartbeat UUID must be unique!'),
-        ('_name_not_empty', 'CHECK(LENGTH(TRIM(name)) > 0)', 'The check name cannot be empty or just spaces.'),
-        ('_interval_positive', 'CHECK(interval > 0)', 'The polling interval must be strictly greater than zero.'),
-        ('_grace_period_non_negative', 'CHECK(grace_period >= 0)', 'The grace period cannot be negative.'),
-    ]
+    _name_uniq = models.Constraint("UNIQUE(name, website_id)", "The check name must be unique per website!")
+    _uuid_uniq = models.Constraint("UNIQUE(heartbeat_uuid)", "The heartbeat UUID must be unique!")
+    _name_not_empty = models.Constraint("CHECK(LENGTH(TRIM(name)) > 0)", "The check name cannot be empty or just spaces.")
+    _interval_positive = models.Constraint("CHECK(interval > 0)", "The polling interval must be strictly greater than zero.")
+    _grace_period_non_negative = models.Constraint("CHECK(grace_period >= 0)", "The grace period cannot be negative.")
 
     @api.model
     @distributed_cache()

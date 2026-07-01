@@ -98,14 +98,17 @@ _original_spawn_chrome = odoo.tests.common.ChromeBrowser._spawn_chrome
 
 
 def _patched_spawn_chrome(self, *args, **kwargs):
-    # 1. Kill any existing chrome processes owned by the user
+    # 1. Kill any existing headless chrome processes owned by the user
     my_uid = os.getuid()
-    for p in psutil.process_iter(["pid", "name", "uids"]):
+    for p in psutil.process_iter(["pid", "name", "uids", "cmdline"]):
         try:
+            cmdline = p.info.get("cmdline") or []
+            is_headless = any("--headless" in str(arg) for arg in cmdline)
             if (
-                p.info["name"] in ("chrome", "chromium", "chromium-browser")
-                and p.info["uids"]
+                p.info.get("name") in ("chrome", "chromium", "chromium-browser")
+                and p.info.get("uids")
                 and p.info["uids"].real == my_uid
+                and is_headless
             ):
                 p.kill()
         except (
@@ -117,12 +120,15 @@ def _patched_spawn_chrome(self, *args, **kwargs):
             _logger.warning("Failed process kill: %s", e)
 
     time.sleep(0.5)  # Wait for processes to terminate
-    for p in psutil.process_iter(["pid", "name", "uids"]):
+    for p in psutil.process_iter(["pid", "name", "uids", "cmdline"]):
         try:
+            cmdline = p.info.get("cmdline") or []
+            is_headless = any("--headless" in str(arg) for arg in cmdline)
             if (
-                p.info["name"] in ("chrome", "chromium", "chromium-browser")
-                and p.info["uids"]
+                p.info.get("name") in ("chrome", "chromium", "chromium-browser")
+                and p.info.get("uids")
                 and p.info["uids"].real == my_uid
+                and is_headless
             ):
                 p.kill()  # Ensure it's dead
                 p.wait(timeout=1.0)
@@ -1052,17 +1058,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                     window._jules_watchdog_suppressed = true;
                     console.log("🛠️ Injecting Jules Watchdog Suppressions...");
 
-                    // 1. Suppress Fetch Abort Errors during teardown
-                    const origFetch = window.fetch;
-                    window.fetch = async function() {
-                        try { return await origFetch.apply(this, arguments); }
-                        catch(e) {
-                            if(e.name === 'AbortError') {
-                                return new Promise(() => {});
-                            }
-                            throw e;
-                        }
-                    };
+                    // 1. Suppress Fetch Abort Errors during teardown (REMOVED)
 
                     // 2. Suppress Synchronous Framework Crashes (InteractionService)
                     window.addEventListener("error", (e) => {
@@ -1085,59 +1081,7 @@ class HamsHttpCase(HttpCase, SafePatchMixin):
                         }
                     });
 
-                    // 4. Exterminate UI Overlays that block clicks
-                    const s = document.createElement('style');
-                    s.textContent = '#cookie-banner, .o_cookies_discrete, .cookie-consent-banner, .modal-backdrop, .o-we-command { display: none !important; pointer-events: none !important; } body.modal-open { overflow: auto !important; } .modal.o_inactive_modal { display: none !important; opacity: 0 !important; visibility: hidden !important; }';
-                    document.head.appendChild(s);
-
-                    // 5. Nuke Rogue Modals that Odoo complains about using a MutationObserver
-                    const modalObserver = new MutationObserver((mutations) => {
-                        let shouldSuppress = false;
-                        for (const m of mutations) {
-                            if (m.addedNodes.length) {
-                                for (const node of m.addedNodes) {
-                                    if (node.nodeType === 1) {
-                                        if (node.classList && node.classList.contains('modal') && !node.classList.contains('o_inactive_modal')) {
-                                            shouldSuppress = true;
-                                            break;
-                                        }
-                                        if (node.getElementsByClassName) {
-                                            const innerModals = node.getElementsByClassName('modal');
-                                            for (let i = 0; i < innerModals.length; i++) {
-                                                if (!innerModals[i].classList.contains('o_inactive_modal')) {
-                                                    shouldSuppress = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        if (shouldSuppress) break;
-                                    }
-                                }
-                            }
-                            if (shouldSuppress) break;
-                        }
-                        if (shouldSuppress) {
-                            const modals = document.getElementsByClassName('modal');
-                            for (let i = 0; i < modals.length; i++) {
-                                const el = modals[i];
-                                if (!el.classList.contains('o_inactive_modal')) {
-                                    el.classList.add('o_inactive_modal');
-                                    el.style.display = 'none';
-                                }
-                            }
-                        }
-                    });
-                    modalObserver.observe(document.body, { childList: true, subtree: true });
-                    
-                    // Initial sweep
-                    const initialModals = document.getElementsByClassName('modal');
-                    for (let i = 0; i < initialModals.length; i++) {
-                        const el = initialModals[i];
-                        if (!el.classList.contains('o_inactive_modal')) {
-                            el.classList.add('o_inactive_modal');
-                            el.style.display = 'none';
-                        }
-                    }
+                    // 4 & 5. Modal suppression (REMOVED)
                 }
             """
 

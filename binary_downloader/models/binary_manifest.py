@@ -60,28 +60,10 @@ class BinaryManifest(models.Model):
 
     is_installed = fields.Boolean(string="Installed", compute="_compute_is_installed")
 
-    _sql_constraints = [
-        (
-            "name_uniq",
-            "UNIQUE(name, company_id)",
-            "The binary name must be unique per company!",
-        ),
-        (
-            "name_not_empty",
-            "CHECK(LENGTH(TRIM(name)) > 0)",
-            "The binary name cannot be empty.",
-        ),
-        (
-            "url_not_empty",
-            "CHECK(LENGTH(TRIM(url)) > 0)",
-            "The download URL cannot be empty.",
-        ),
-        (
-            "chksum_not_empty",
-            "CHECK(LENGTH(TRIM(checksum)) > 0)",
-            "The checksum cannot be empty.",
-        ),
-    ]
+    _name_uniq = models.Constraint("UNIQUE(name, company_id)", "The binary name must be unique per company!")
+    _name_not_empty = models.Constraint("CHECK(LENGTH(TRIM(name)) > 0)", "The binary name cannot be empty.")
+    _url_not_empty = models.Constraint("CHECK(LENGTH(TRIM(url)) > 0)", "The download URL cannot be empty.")
+    _chksum_not_empty = models.Constraint("CHECK(LENGTH(TRIM(checksum)) > 0)", "The checksum cannot be empty.")
 
     @api.constrains("name")
     def _check_name_no_slashes(self):

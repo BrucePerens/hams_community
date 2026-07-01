@@ -35,9 +35,7 @@ class BinaryTenantLink(models.Model):
         string="Tenant Execution Path", compute="_compute_symlink_path"
     )
 
-    _sql_constraints = [
-        ('_tenant_manifest_uniq', 'unique(website_id, manifest_id)', 'A tenant can only have one active version of a specific binary at a time.'),
-    ]
+    _tenant_manifest_uniq = models.Constraint("unique(website_id, manifest_id)", "A tenant can only have one active version of a specific binary at a time.")
 
     @api.depends("website_id", "manifest_id")
     def _compute_symlink_path(self):

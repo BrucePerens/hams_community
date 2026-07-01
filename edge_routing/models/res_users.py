@@ -22,12 +22,15 @@ class ResUsersEdgeRouting(models.Model):
             if override_svc_uid:
                 target_env = self.with_user(override_svc_uid).env
             else:
-                try:
-                    target_env = self.env["zero_sudo.security.utils"]._get_service_env(
-                        "edge_routing.edge_routing_service_account"
-                    )
-                except Exception as e:  # audit-ignore-catch-all
-                    _logger.warning("Failed to access website settings: %s", e)
+                if self.env.registry.loaded:
+                    try:
+                        target_env = self.env["zero_sudo.security.utils"]._get_service_env(
+                            "edge_routing.edge_routing_service_account"
+                        )
+                    except Exception as e:  # audit-ignore-catch-all
+                        _logger.warning("Failed to access website settings: %s", e)
+                        target_env = self.env
+                else:
                     target_env = self.env
 
             user = (

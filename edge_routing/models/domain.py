@@ -22,9 +22,7 @@ class EdgeRoutingDomain(models.Model):
         "Target Slug", required=True, help="The website_slug this domain maps to"
     )
 
-    _sql_constraints = [
-        ("name_uniq", "UNIQUE(name)", "This domain is already mapped!"),
-    ]
+    _name_uniq = models.Constraint("UNIQUE(name)", "This domain is already mapped!")
 
     @api.constrains("name")
     def _check_name(self):
@@ -142,12 +140,15 @@ class EdgeRoutingDomain(models.Model):
             return False
         domain = str(domain).lower().strip()
 
-        try:
-            target_env = self.env["zero_sudo.security.utils"]._get_service_env(
-                "edge_routing.edge_routing_service_account"
-            )
-        except Exception:  # audit-ignore-catch-all
-            _logger.warning("Failed to get service env")
+        if self.env.registry.loaded:
+            try:
+                target_env = self.env["zero_sudo.security.utils"]._get_service_env(
+                    "edge_routing.edge_routing_service_account"
+                )
+            except Exception:  # audit-ignore-catch-all
+                _logger.warning("Failed to get service env")
+                target_env = self.env
+        else:
             target_env = self.env
 
         record = (

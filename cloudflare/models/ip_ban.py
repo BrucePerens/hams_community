@@ -37,18 +37,8 @@ class CloudflareIPBan(models.Model):
         default=lambda self: self.env["website"].get_current_website().id,
     )
 
-    _sql_constraints = [
-        (
-            "ip_website_uniq",
-            "UNIQUE(ip_address, website_id)",
-            "This IP is already banned for this website!",
-        ),
-        (
-            "ip_not_empty",
-            "CHECK(LENGTH(TRIM(ip_address)) > 0)",
-            "The IP address cannot be empty.",
-        ),
-    ]
+    _ip_website_uniq = models.Constraint("UNIQUE(ip_address, website_id)", "This IP is already banned for this website!")
+    _ip_not_empty = models.Constraint("CHECK(LENGTH(TRIM(ip_address)) > 0)", "The IP address cannot be empty.")
 
     @api.model
     def _execute_ban(
@@ -108,10 +98,7 @@ class CloudflareIPBan(models.Model):
         # Verified by [@ANCHOR: test_cf_action_lift_ban]
         for rec in self:
             if rec.state == "active" and rec.cf_rule_id:
-                if hasattr(rec, "with_delay"):
-                    rec.with_delay()._action_lift_ban_sync()
-                else:
-                    rec._action_lift_ban_sync()
+                rec.with_delay()._action_lift_ban_sync()
 
     def _action_lift_ban_sync(self):
         self.ensure_one()

@@ -23,7 +23,7 @@
                                 <i class="fa fa-check-circle me-2 text-success" aria-hidden="true"/> No active incidents. The system is healthy.
                             </div>
                         </t>
-                        <t t-foreach="state.active_incidents" t-as="inc" t-key="inc.id">
+                        <t t-foreach="state.active_incidents || []" t-as="inc" t-key="inc.id">
                             <div t-attf-class="d-flex justify-content-between align-items-center shadow-sm mb-3 p-3 rounded {{ inc.severity === 'critical' ? 'bg-danger text-white' : (inc.severity === 'high' ? 'bg-warning text-dark' : 'bg-info text-dark') }}">
                                 <div>
                                     <strong class="fs-5"><t t-out="inc.name"/></strong>: <span class="fs-6"><t t-out="inc.source"/> (<t t-out="inc.severity"/>)</span><br/>
@@ -47,7 +47,7 @@
                     <div class="col-md-4">
                         <h2 class="mb-3 text-light">Recently Resolved</h2>
                         <ul class="list-group shadow-sm">
-                            <t t-foreach="state.resolved_incidents" t-as="res" t-key="res.id">
+                            <t t-foreach="state.resolved_incidents || []" t-as="res" t-key="res.id">
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background: #1e1e1e; color: #aaa; border-color: #333;">
                                     <span><strong class="text-light"><t t-out="res.name"/></strong>: <t t-out="res.source"/></span>
                                     <span class="badge rounded-pill bg-success">Resolved</span>

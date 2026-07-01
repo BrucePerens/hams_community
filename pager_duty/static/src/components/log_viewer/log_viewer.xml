@@ -10,7 +10,7 @@
                 <div class="col-md-3">
                     <select class="form-select bg-dark text-light border-secondary" t-model="state.selectedFile">
                         <option value="">Select a Log File...</option>
-                        <t t-foreach="state.files" t-as="file" t-key="file">
+                        <t t-foreach="state.files || []" t-as="file" t-key="file">
                             <option t-att-value="file"><t t-out="file"/></option>
                         </t>
                     </select>
@@ -32,7 +32,7 @@
                 <t t-elif="state.results.length === 0 and !state.loading">
                     <div class="text-muted">No matches found or awaiting query...</div>
                 </t>
-                <t t-foreach="state.results" t-as="line" t-key="line_index">
+                <t t-foreach="state.results || []" t-as="line" t-key="line_index">
                     <div style="border-bottom: 1px dashed #222; padding: 4px 0;"><t t-out="line"/></div>
                 </t>
             </div>

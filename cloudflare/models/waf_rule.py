@@ -31,19 +31,6 @@ class CloudflareWafRule(models.Model):
         default=lambda self: self.env["website"].get_current_website().id,
     )
 
-
-    _sql_constraints = [
-        (
-            "name_not_empty",
-            "CHECK(LENGTH(TRIM(name)) > 0)",
-            "The rule name cannot be empty.",
-        ),
-        (
-            "expr_not_empty",
-            "CHECK(LENGTH(TRIM(expression)) > 0)",
-            "The expression cannot be empty.",
-        ),
-    ]
-    _sql_constraints = [
-        ('_name_website_uniq', 'UNIQUE(name, website_id)', 'A rule with this name already exists for this website!'),
-    ]
+    _name_not_empty = models.Constraint("CHECK(LENGTH(TRIM(name)) > 0)", "The rule name cannot be empty.")
+    _expr_not_empty = models.Constraint("CHECK(LENGTH(TRIM(expression)) > 0)", "The expression cannot be empty.")
+    _name_website_uniq = models.Constraint("UNIQUE(name, website_id)", "A rule with this name already exists for this website!")

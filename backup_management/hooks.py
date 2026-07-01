@@ -13,5 +13,5 @@ def post_init_hook(env):
     env_svc["daemon.key.registry"].register_daemon(
         daemon_name="Backup Worker RabbitMQ Consumer",
         user_xml_id="backup_management.user_backup_service_internal",
-        env_file_path="/var/lib/odoo/daemon_keys/backup_worker.env",
+        env_file_path="/opt/hams/etc/keys/backup_worker.env",
     )

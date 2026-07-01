@@ -42,7 +42,6 @@ class CloudflareConfigManager(models.AbstractModel):
     _name = "cloudflare.config.manager"
     _description = "Cloudflare Configuration Manager"
 
-
     @api.model
     def _check_static_mtime_and_purge(self):
         """
